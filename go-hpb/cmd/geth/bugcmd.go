@@ -41,9 +41,9 @@ var bugCommand = cli.Command{
 	Category:  "MISCELLANEOUS COMMANDS",
 }
 
-const issueUrl = "https://github.com/ethereum/go-ethereum/issues/new"
+const issueUrl = "https://github.com/hpb-project/go-hpb/issues/new"
 
-// reportBug reports a bug by opening a new URL to the go-ethereum GH issue
+// reportBug reports a bug by opening a new URL to the go-hpb GH issue
 // tracker and setting default values as the issue body.
 func reportBug(ctx *cli.Context) error {
 	// execute template and write contents to buff

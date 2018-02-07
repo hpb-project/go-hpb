@@ -39,7 +39,7 @@ import (
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth
 // node embedded into a mobile process. The available values are a subset of the
-// entire API provided by go-ethereum to reduce the maintenance surface and dev
+// entire API provided by go-hpb to reduce the maintenance surface and dev
 // complexity.
 type NodeConfig struct {
 	// Bootstrap nodes used to establish connectivity with the rest of the network.

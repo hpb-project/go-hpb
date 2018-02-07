@@ -178,7 +178,7 @@ func doInstall(cmdline []string) {
 	// failure with outdated Go. This should save them the trouble.
 	if runtime.Version() < "go1.7" && !strings.Contains(runtime.Version(), "devel") {
 		log.Println("You have Go version", runtime.Version())
-		log.Println("go-ethereum requires at least Go version 1.7 and cannot")
+		log.Println("go-hpb requires at least Go version 1.7 and cannot")
 		log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
 		os.Exit(1)
 	}
