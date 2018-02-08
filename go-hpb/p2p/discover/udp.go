@@ -109,6 +109,7 @@ type (
 		UDP uint16 // for discovery protocol
 		TCP uint16 // for RLPx protocol
 		ID  NodeID
+		ROLE uint8
 	}
 
 	rpcEndpoint struct {
@@ -136,17 +137,17 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
 	if t.netrestrict != nil && !t.netrestrict.Contains(rn.IP) {
 		return nil, errors.New("not contained in netrestrict whitelist")
 	}
-	n := NewNode(rn.ID, rn.IP, rn.UDP, rn.TCP)
+	n := NewNode(rn.ID, rn.ROLE, rn.IP, rn.UDP, rn.TCP)
 	err := n.validateComplete()
 	return n, err
 }
 
 func nodeToRPC(n *Node) rpcNode {
-	return rpcNode{ID: n.ID, IP: n.IP, UDP: n.UDP, TCP: n.TCP}
+	return rpcNode{ID: n.ID, ROLE: n.Role, IP: n.IP, UDP: n.UDP, TCP: n.TCP}
 }
 
 type packet interface {
-	handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error
+	handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, mac []byte) error
 	name() string
 }
 
@@ -162,6 +163,7 @@ type udp struct {
 	conn        conn
 	netrestrict *netutil.Netlist
 	priv        *ecdsa.PrivateKey
+	ourRole     uint8
 	ourEndpoint rpcEndpoint
 
 	addpending chan *pending
@@ -211,7 +213,7 @@ type reply struct {
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, error) {
+func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, error) {
 	addr, err := net.ResolveUDPAddr("udp", laddr)
 	if err != nil {
 		return nil, err
@@ -220,7 +222,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 	if err != nil {
 		return nil, err
 	}
-	tab, _, err := newUDP(priv, conn, natm, nodeDBPath, netrestrict)
+	tab, _, err := newUDP(priv, ourRole, conn, natm, nodeDBPath, netrestrict)
 	if err != nil {
 		return nil, err
 	}
@@ -228,10 +230,11 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 	return tab, nil
 }
 
-func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
+func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
 	udp := &udp{
 		conn:        c,
 		priv:        priv,
+		ourRole:     ourRole,
 		netrestrict: netrestrict,
 		closing:     make(chan struct{}),
 		gotreply:    make(chan reply),
@@ -249,7 +252,7 @@ func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath strin
 	}
 	// TODO: separate TCP port
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
-	tab, err := newTable(udp, PubkeyID(&priv.PublicKey), realaddr, nodeDBPath)
+	tab, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, realaddr, nodeDBPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -460,7 +463,7 @@ func init() {
 }
 
 func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
-	packet, err := encodePacket(t.priv, ptype, req)
+	packet, err := encodePacket(t.priv, t.ourRole, ptype, req)
 	if err != nil {
 		return err
 	}
@@ -469,10 +472,11 @@ func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 	return err
 }
 
-func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) ([]byte, error) {
+func encodePacket(priv *ecdsa.PrivateKey, ourRole uint8, ptype byte, req interface{}) ([]byte, error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
+	b.WriteByte(ourRole)
 	if err := rlp.Encode(b, req); err != nil {
 		log.Error("Can't encode discv4 packet", "err", err)
 		return nil, err
@@ -514,31 +518,33 @@ func (t *udp) readLoop() {
 }
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
-	packet, fromID, hash, err := decodePacket(buf)
+	packet, fromID, fromRole, hash, err := decodePacket(buf)
 	if err != nil {
 		log.Debug("Bad discv4 packet", "addr", from, "err", err)
 		return err
 	}
-	err = packet.handle(t, from, fromID, hash)
+	err = packet.handle(t, from, fromID, fromRole, hash)
 	log.Trace("<< "+packet.name(), "addr", from, "err", err)
 	return err
 }
 
-func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
-	if len(buf) < headSize+1 {
-		return nil, NodeID{}, nil, errPacketTooSmall
+func decodePacket(buf []byte) (packet, NodeID, uint8, []byte, error) {
+	// +2, the first byte is pkt type(Stay consistent with the previous implementation)
+	// the second byte represents node role
+	if len(buf) < headSize + 2 {
+		return nil, NodeID{}, UnKnowRole, nil, errPacketTooSmall
 	}
-	hash, sig, sigdata := buf[:macSize], buf[macSize:headSize], buf[headSize:]
-	shouldhash := crypto.Keccak256(buf[macSize:])
-	if !bytes.Equal(hash, shouldhash) {
-		return nil, NodeID{}, nil, errBadHash
+	hash, sig, sigData := buf[:macSize], buf[macSize:headSize], buf[headSize:]
+	shouldHash := crypto.Keccak256(buf[macSize:])
+	if !bytes.Equal(hash, shouldHash) {
 	}
 	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), sig)
 	if err != nil {
-		return nil, NodeID{}, hash, err
+		return nil, NodeID{}, UnKnowRole, hash, err
 	}
+	nodeRole := sigData[1]
 	var req packet
-	switch ptype := sigdata[0]; ptype {
+	switch ptype := sigData[0]; ptype {
 	case pingPacket:
 		req = new(ping)
 	case pongPacket:
@@ -548,14 +554,14 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	case neighborsPacket:
 		req = new(neighbors)
 	default:
-		return nil, fromID, hash, fmt.Errorf("unknown type: %d", ptype)
+		return nil, fromID, nodeRole, hash, fmt.Errorf("unknown type: %d", ptype)
 	}
-	s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
+	s := rlp.NewStream(bytes.NewReader(sigData[2:]), 0)
 	err = s.Decode(req)
-	return req, fromID, hash, err
+	return req, fromID, nodeRole, hash, err
 }
 
-func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -566,14 +572,14 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	})
 	if !t.handleReply(fromID, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		go t.bond(true, fromID, from, req.From.TCP)
+		go t.bond(true, fromID, fromRole, from, req.From.TCP)
 	}
 	return nil
 }
 
 func (req *ping) name() string { return "PING/v4" }
 
-func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -585,7 +591,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *pong) name() string { return "PONG/v4" }
 
-func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -622,7 +628,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 
 func (req *findnode) name() string { return "FINDNODE/v4" }
 
-func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}

@@ -91,7 +91,7 @@ type transport interface {
 // that was most recently active is the first element in entries.
 type bucket struct{ entries []*Node }
 
-func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string) (*Table, error) {
+func newTable(t transport, ourID NodeID, ourRole uint8, ourAddr *net.UDPAddr, nodeDBPath string) (*Table, error) {
 	// If no node database was given, use an in-memory one
 	db, err := newNodeDB(nodeDBPath, Version, ourID)
 	if err != nil {
@@ -100,7 +100,7 @@ func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string
 	tab := &Table{
 		net:        t,
 		db:         db,
-		self:       NewNode(ourID, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
 		bonding:    make(map[NodeID]*bondproc),
 		bondslots:  make(chan struct{}, maxBondingPingPongs),
 		refreshReq: make(chan chan struct{}),
@@ -427,7 +427,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
-			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
+			nn, _ := tab.bond(false, n.ID, n.Role, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])
 	}
@@ -455,7 +455,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 //
 // If pinged is true, the remote node has just pinged us and one half
 // of the process can be skipped.
-func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
+func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
 	if id == tab.self.ID {
 		return nil, errors.New("is self")
 	}
@@ -482,7 +482,7 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 			tab.bonding[id] = w
 			tab.bondmu.Unlock()
 			// Do the ping/pong. The result goes into w.
-			tab.pingpong(w, pinged, id, addr, tcpPort)
+			tab.pingpong(w, pinged, id, role, addr, tcpPort)
 			// Unregister the process after it's done.
 			tab.bondmu.Lock()
 			delete(tab.bonding, id)
@@ -504,12 +504,12 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	return node, result
 }
 
-func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) {
+func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) {
 	// Request a bonding slot to limit network usage
 	<-tab.bondslots
 	defer func() { tab.bondslots <- struct{}{} }()
 
-	// Ping the remote side and wait for a pong.
+	// Ping the remote side and wait for a pong, ping-pong don't care node role
 	if w.err = tab.ping(id, addr); w.err != nil {
 		close(w.done)
 		return
@@ -521,7 +521,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
-	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort)
+	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
 	tab.db.updateNode(w.n)
 	close(w.done)
 }
