@@ -257,11 +257,15 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, n
 	}
 	// TODO: separate TCP port
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
-	lightTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, realaddr, nodeDBPath)
+	db, dbErr := newDB(PubkeyID(&priv.PublicKey), nodeDBPath)
+	if dbErr != nil {
+		return nil, nil, nil, dbErr
+	}
+	lightTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, realaddr, db)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	accessTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, realaddr, nodeDBPath)
+	accessTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, realaddr, db)
 	if err != nil {
 		return lightTable, nil, nil, err
 	}

@@ -91,12 +91,16 @@ type transport interface {
 // that was most recently active is the first element in entries.
 type bucket struct{ entries []*Node }
 
-func newTable(t transport, ourID NodeID, ourRole uint8, ourAddr *net.UDPAddr, nodeDBPath string) (*Table, error) {
+func newDB(ourID NodeID, nodeDBPath string) (*nodeDB, error) {
 	// If no node database was given, use an in-memory one
 	db, err := newNodeDB(nodeDBPath, Version, ourID)
 	if err != nil {
 		return nil, err
 	}
+	return db, nil
+}
+
+func newTable(t transport, ourID NodeID, ourRole uint8, ourAddr *net.UDPAddr, db *nodeDB) (*Table, error) {
 	tab := &Table{
 		net:        t,
 		db:         db,
