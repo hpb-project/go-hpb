@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// bootnode runs a bootstrap node for the Ethereum Discovery Protocol.
+// bootnode runs a bootstrap node for the HPB Discovery Protocol.
 package main
 
 import (
@@ -27,21 +27,20 @@ import (
 	"github.com/hpb-project/go-hpb/crypto"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/p2p/discover"
-	"github.com/hpb-project/go-hpb/p2p/discv5"
 	"github.com/hpb-project/go-hpb/p2p/nat"
 	"github.com/hpb-project/go-hpb/p2p/netutil"
 )
 
 func main() {
 	var (
-		listenAddr  = flag.String("addr", ":30301", "listen address")
+		listenAddr  = flag.String("addr", ":30301", "listen address for find light nodes")
 		genKey      = flag.String("genkey", "", "generate a node key")
+		Role        = flag.Uint("role", uint(discover.LightRole), "role type of node")
 		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
 		nodeKeyFile = flag.String("nodekey", "", "private key filename")
 		nodeKeyHex  = flag.String("nodekeyhex", "", "private key as hex (for testing)")
 		natdesc     = flag.String("nat", "none", "port mapping mechanism (any|none|upnp|pmp|extip:<IP>)")
 		netrestrict = flag.String("netrestrict", "", "restrict network communication to the given IP networks (CIDR masks)")
-		runv5       = flag.Bool("v5", false, "run a v5 topic discovery bootnode")
 		verbosity   = flag.Int("verbosity", int(log.LvlInfo), "log verbosity (0-9)")
 		vmodule     = flag.String("vmodule", "", "log verbosity pattern")
 
@@ -96,14 +95,8 @@ func main() {
 		}
 	}
 
-	if *runv5 {
-		if _, err := discv5.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList); err != nil {
-			utils.Fatalf("%v", err)
-		}
-	} else {
-		if _, err := discover.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList); err != nil {
-			utils.Fatalf("%v", err)
-		}
+	if _, _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
+		utils.Fatalf("%v", err)
 	}
 
 	select {}
