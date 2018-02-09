@@ -551,6 +551,7 @@ func decodePacket(buf []byte) (packet, NodeID, uint8, []byte, error) {
 	hash, sig, sigData := buf[:macSize], buf[macSize:headSize], buf[headSize:]
 	shouldHash := crypto.Keccak256(buf[macSize:])
 	if !bytes.Equal(hash, shouldHash) {
+		return nil, NodeID{}, UnKnowRole, nil, errBadHash
 	}
 	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), sig)
 	if err != nil {
