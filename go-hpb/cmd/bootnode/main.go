@@ -33,7 +33,7 @@ import (
 
 func main() {
 	var (
-		listenAddr  = flag.String("addr", ":30301", "listen address")
+		listenAddr  = flag.String("addr", ":30301", "listen address for find light nodes")
 		genKey      = flag.String("genkey", "", "generate a node key")
 		Role        = flag.Uint("roletype", uint(discover.LightRole), "role type of node")
 		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
@@ -95,7 +95,7 @@ func main() {
 		}
 	}
 
-	if _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
+	if _, _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
 	}
 
