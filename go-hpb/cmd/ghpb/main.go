@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// geth is the official command-line client for Hpbereum.
+// ghpb is the official command-line client for Hpbereum.
 package main
 
 import (
@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
 
 var (
@@ -138,7 +138,7 @@ var (
 
 func init() {
 	// Initialize the CLI app and start Geth
-	app.Action = geth
+	app.Action = ghpb
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2017 The go-hpb Authors"
 	app.Commands = []cli.Command{
@@ -201,10 +201,10 @@ func main() {
 	}
 }
 
-// geth is the main entry point into the system if no special subcommand is ran.
+// ghpb is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
-func geth(ctx *cli.Context) error {
+func ghpb(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
