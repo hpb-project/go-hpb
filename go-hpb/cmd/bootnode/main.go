@@ -35,7 +35,7 @@ func main() {
 	var (
 		listenAddr  = flag.String("addr", ":30301", "listen address for find light nodes")
 		genKey      = flag.String("genkey", "", "generate a node key")
-		Role        = flag.Uint("roletype", uint(discover.LightRole), "role type of node")
+		Role        = flag.Uint("role", uint(discover.LightRole), "role type of node")
 		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
 		nodeKeyFile = flag.String("nodekey", "", "private key filename")
 		nodeKeyHex  = flag.String("nodekeyhex", "", "private key as hex (for testing)")

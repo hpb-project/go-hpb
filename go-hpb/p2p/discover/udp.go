@@ -230,7 +230,8 @@ func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Int
 		return nil, nil, err
 	}
 
-	log.Info("UDP listener up", "light-table self", lightTab.self, "access-table self", accessTab.self)
+	// either light_Tab or access_Tab has the same self, lightTab.self is used here.
+	log.Info("UDP listener up", "light_Tab and access_Tab's self", lightTab.self)
 	return lightTab, accessTab, nil
 }
 
@@ -590,7 +591,6 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 		case PreCommRole:
 		case UnKnowRole:
 		default:
-
 		}
 	}
 	return nil
@@ -614,7 +614,6 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole u
 	if expired(req.Expiration) {
 		return errExpired
 	}
-
 	switch fromRole {
 	case LightRole:
 		err := req.sendNeibors(t, from, t.lightTab, fromID); if err != nil {return err}
@@ -622,8 +621,8 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole u
 		err := req.sendNeibors(t, from, t.accessTab, fromID); if err != nil {return err}
 	case CommRole:
 	case PreCommRole:
+	default:
 	}
-
 	return nil
 }
 

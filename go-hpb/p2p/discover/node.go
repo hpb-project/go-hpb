@@ -115,7 +115,7 @@ func (n *Node) String() string {
 		u.Host = fmt.Sprintf("%x", n.ID[:])
 	} else {
 		addr := net.TCPAddr{IP: n.IP, Port: int(n.TCP)}
-		u.User = url.User(fmt.Sprintf("%x%d", n.ID[:], n.Role))
+		u.User = url.User(fmt.Sprintf("%x&%d", n.ID[:], n.Role))
 		u.Host = addr.String()
 		if n.UDP != n.TCP {
 			u.RawQuery = "discport=" + strconv.Itoa(int(n.UDP))
