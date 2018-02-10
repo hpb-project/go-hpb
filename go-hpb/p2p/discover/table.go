@@ -281,8 +281,8 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 					r, err := tab.net.findnode(n.ID, n.addr(), targetID, tab.roleType)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
-						fails := tab.db.findFails(n.ID) + 1
-						tab.db.updateFindFails(n.ID, fails)
+						fails := tab.db.findFails(n.ID, nodeDBDiscoverFindFails) + 1
+						tab.db.updateFindFails(n.ID, nodeDBDiscoverFindFails, fails)
 						log.Trace("Bumping findnode failure counter", "id", n.ID, "failcount", fails)
 
 						if fails >= maxFindnodeFailures {
@@ -387,14 +387,14 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// The table is empty. Load nodes from the database and insert
 	// them. This should yield a few previously seen nodes that are
 	// (hopefully) still alive.
-	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
+	seeds := tab.db.querySeeds(seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
 		log.Debug("No discv4 seed nodes found")
 	}
 	for _, n := range seeds {
-		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID)) }}
+		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID, nodeDBDiscoverPong)) }}
 		log.Trace("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
 	}
 	tab.mutex.Lock()
@@ -482,13 +482,13 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		return nil, errors.New("is self")
 	}
 	// Retrieve a previously known node and any recent findnode failures
-	node, fails := tab.db.node(id), 0
+	node, fails := tab.db.node(id, nodeDBDiscoverRoot), 0
 	if node != nil {
-		fails = tab.db.findFails(id)
+		fails = tab.db.findFails(id, nodeDBDiscoverFindFails)
 	}
 	// If the node is unknown (non-bonded) or failed (remotely unknown), bond from scratch
 	var result error
-	age := time.Since(tab.db.lastPong(id))
+	age := time.Since(tab.db.lastPong(id, nodeDBDiscoverPong))
 	if node == nil || fails > 0 || age > nodeDBNodeExpiration {
 		log.Trace("Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
@@ -521,7 +521,7 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
 		tab.add(node)
-		tab.db.updateFindFails(id, 0)
+		tab.db.updateFindFails(id, nodeDBDiscoverFindFails,0)
 	}
 	return node, result
 }
@@ -544,25 +544,25 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
-	tab.db.updateNode(w.n)
+	tab.db.updateNode(w.n, nodeDBDiscoverRoot)
 	close(w.done)
 }
 
 // ping a remote endpoint and wait for a reply, also updating the node
 // database accordingly.
 func (tab *Table) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
-	tab.db.updateLastPing(id, time.Now())
+	tab.db.updateLastPing(id, nodeDBDiscoverPing, time.Now())
 	if err := tab.net.ping(id, role, tab.roleType, addr); err != nil {
 		return err
 	}
-	tab.db.updateLastPong(id, time.Now())
+	tab.db.updateLastPong(id, nodeDBDiscoverPong, time.Now())
 
 	// Start the background expiration goroutine after the first
 	// successful communication. Subsequent calls have no effect if it
 	// is already running. We do this here instead of somewhere else
 	// so that the search for seed nodes also considers older nodes
 	// that would otherwise be removed by the expiration.
-	tab.db.ensureExpirer()
+	tab.db.ensureExpirer(nodeDBDiscoverRoot, nodeDBDiscoverPong)
 	return nil
 }
 

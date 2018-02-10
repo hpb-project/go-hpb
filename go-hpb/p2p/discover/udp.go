@@ -655,7 +655,7 @@ func expired(ts uint64) bool {
 }
 
 func (req *findnode)sendNeibors(trans *udp, from *net.UDPAddr, table *Table, fromID NodeID, forRole uint8) error {
-	if table.db.node(fromID) == nil {
+	if table.db.node(fromID, nodeDBDiscoverRoot) == nil {
 		// No bond exists, we don't process the packet. This prevents
 		// an attack vector where the discovery protocol could be used
 		// to amplify traffic in a DDOS attack. A malicious actor
