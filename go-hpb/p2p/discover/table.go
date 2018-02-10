@@ -53,6 +53,7 @@ const (
 
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, their content, and nursery
+	roleType    uint8             // buckets type
 	buckets [nBuckets]*bucket // index of known nodes by distance
 	nursery []*Node           // bootstrap nodes
 	db      *nodeDB           // database of known nodes
@@ -81,9 +82,9 @@ type bondproc struct {
 // it is an interface so we can test without opening lots of UDP
 // sockets and without generating a private key.
 type transport interface {
-	ping(NodeID, *net.UDPAddr) error
-	waitping(NodeID) error
-	findnode(toid NodeID, addr *net.UDPAddr, target NodeID) ([]*Node, error)
+	ping(NodeID, uint8, uint8, *net.UDPAddr) error
+	waitping(NodeID, uint8, uint8) error
+	findnode(toid NodeID, addr *net.UDPAddr, target NodeID, tabRole uint8) ([]*Node, error)
 	close()
 }
 
@@ -91,16 +92,21 @@ type transport interface {
 // that was most recently active is the first element in entries.
 type bucket struct{ entries []*Node }
 
-func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string) (*Table, error) {
+func newDB(ourID NodeID, nodeDBPath string) (*nodeDB, error) {
 	// If no node database was given, use an in-memory one
 	db, err := newNodeDB(nodeDBPath, Version, ourID)
 	if err != nil {
 		return nil, err
 	}
+	return db, nil
+}
+
+func newTable(t transport, ourID NodeID, ourRole uint8, tabRoleType uint8, ourAddr *net.UDPAddr, db *nodeDB) (*Table, error) {
 	tab := &Table{
 		net:        t,
 		db:         db,
-		self:       NewNode(ourID, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		roleType:   tabRoleType,
+		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
 		bonding:    make(map[NodeID]*bondproc),
 		bondslots:  make(chan struct{}, maxBondingPingPongs),
 		refreshReq: make(chan chan struct{}),
@@ -272,7 +278,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 				pendingQueries++
 				go func() {
 					// Find potential neighbors to bond with
-					r, err := tab.net.findnode(n.ID, n.addr(), targetID)
+					r, err := tab.net.findnode(n.ID, n.addr(), targetID, tab.roleType)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
 						fails := tab.db.findFails(n.ID) + 1
@@ -414,6 +420,21 @@ func (tab *Table) closest(target common.Hash, nresults int) *nodesByDistance {
 	return close
 }
 
+func (tab *Table) closestByForRole(target common.Hash, nresults int, forRole uint8) *nodesByDistance {
+	// This is a very wasteful way to find the closest nodes but
+	// obviously correct. I believe that tree-based buckets would make
+	// this easier to implement efficiently.
+	close := &nodesByDistance{target: target}
+	for _, b := range tab.buckets {
+		for _, n := range b.entries {
+			if n.Role == forRole {
+				close.push(n, nresults)
+			}
+		}
+	}
+	return close
+}
+
 func (tab *Table) len() (n int) {
 	for _, b := range tab.buckets {
 		n += len(b.entries)
@@ -427,7 +448,8 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
-			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
+			// n.Role is already known
+			nn, _ := tab.bond(false, n.ID, n.Role, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])
 	}
@@ -455,7 +477,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 //
 // If pinged is true, the remote node has just pinged us and one half
 // of the process can be skipped.
-func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
+func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
 	if id == tab.self.ID {
 		return nil, errors.New("is self")
 	}
@@ -482,7 +504,7 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 			tab.bonding[id] = w
 			tab.bondmu.Unlock()
 			// Do the ping/pong. The result goes into w.
-			tab.pingpong(w, pinged, id, addr, tcpPort)
+			tab.pingpong(w, pinged, id, role, addr, tcpPort)
 			// Unregister the process after it's done.
 			tab.bondmu.Lock()
 			delete(tab.bonding, id)
@@ -504,13 +526,13 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	return node, result
 }
 
-func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) {
+func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) {
 	// Request a bonding slot to limit network usage
 	<-tab.bondslots
 	defer func() { tab.bondslots <- struct{}{} }()
 
-	// Ping the remote side and wait for a pong.
-	if w.err = tab.ping(id, addr); w.err != nil {
+	// Ping the remote side and wait for a pong, ping-pong don't care node role
+	if w.err = tab.ping(id, role, addr); w.err != nil {
 		close(w.done)
 		return
 	}
@@ -518,19 +540,19 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		// Give the remote node a chance to ping us before we start
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
-		tab.net.waitping(id)
+		tab.net.waitping(id, role, tab.roleType)
 	}
 	// Bonding succeeded, update the node database.
-	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort)
+	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
 	tab.db.updateNode(w.n)
 	close(w.done)
 }
 
 // ping a remote endpoint and wait for a reply, also updating the node
 // database accordingly.
-func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
+func (tab *Table) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
 	tab.db.updateLastPing(id, time.Now())
-	if err := tab.net.ping(id, addr); err != nil {
+	if err := tab.net.ping(id, role, tab.roleType, addr); err != nil {
 		return err
 	}
 	tab.db.updateLastPong(id, time.Now())
@@ -569,7 +591,7 @@ func (tab *Table) add(new *Node) {
 		// Let go of the mutex so other goroutines can access
 		// the table while we ping the least recently active node.
 		tab.mutex.Unlock()
-		err := tab.ping(oldest.ID, oldest.addr())
+		err := tab.ping(oldest.ID, oldest.Role, oldest.addr())
 		tab.mutex.Lock()
 		oldest.contested = false
 		if err == nil {
