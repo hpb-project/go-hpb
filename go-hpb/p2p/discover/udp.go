@@ -32,7 +32,7 @@ import (
 	"github.com/hpb-project/go-hpb/rlp"
 )
 
-const Version = 4
+const Version = 0
 
 // Errors
 var (
@@ -407,9 +407,9 @@ func (t *udp) loop() {
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				// send for role and req for role must be consistent
-				if p.from == r.from && p.ptype == r.ptype && p.forRole == r.forRole{
+				if p.from == r.from && p.ptype == r.ptype && (p.forRole == r.forRole || r.forRole == BootRole) {
 					matched = true
-					// Remove the matcher if its callback indicates
+					// Remove the matcher if its callback indicatess
 					// that all replies have been received. This is
 					// required for packet types that expect multiple
 					// reply packets.

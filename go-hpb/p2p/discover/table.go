@@ -427,7 +427,7 @@ func (tab *Table) closestByForRole(target common.Hash, nresults int, forRole uin
 	close := &nodesByDistance{target: target}
 	for _, b := range tab.buckets {
 		for _, n := range b.entries {
-			if n.Role == forRole {
+			if n.Role == forRole || n.Role == BootRole {
 				close.push(n, nresults)
 			}
 		}
