@@ -30,7 +30,6 @@ import (
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/p2p/discover"
-	"github.com/hpb-project/go-hpb/p2p/discv5"
 	"github.com/hpb-project/go-hpb/p2p/nat"
 	"github.com/hpb-project/go-hpb/p2p/netutil"
 )
@@ -76,10 +75,10 @@ type Config struct {
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
-	DiscoveryV5 bool `toml:",omitempty"`
+	//DiscoveryV5 bool `toml:",omitempty"`
 
 	// Listener address for the V5 discovery protocol UDP traffic.
-	DiscoveryV5Addr string `toml:",omitempty"`
+	//DiscoveryV5Addr string `toml:",omitempty"`
 
 	// Name sets the node name of this server.
 	// Use common.MakeName to create a name that follows existing conventions.
@@ -92,7 +91,7 @@ type Config struct {
 	// BootstrapNodesV5 are used to establish connectivity
 	// with the rest of the network using the V5 discovery
 	// protocol.
-	BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
+	//BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
 
 	// Static nodes are used as pre-configured connections which are always
 	// maintained and re-connected on disconnects.
@@ -158,7 +157,7 @@ type Server struct {
 	listener     net.Listener
 	ourHandshake *protoHandshake
 	lastLookup   time.Time
-	DiscV5       *discv5.Network
+	//DiscV5       *discv5.Network
 
 	// These are for Peers, PeerCount (and nothing else).
 	peerOp     chan peerOpFunc
@@ -392,6 +391,7 @@ func (srv *Server) Start() (err error) {
 		srv.ntab = ntab
 	}
 
+	/*
 	if srv.DiscoveryV5 {
 		ntab, err := discv5.ListenUDP(srv.PrivateKey, srv.DiscoveryV5Addr, srv.NAT, "", srv.NetRestrict) //srv.NodeDatabase)
 		if err != nil {
@@ -402,6 +402,7 @@ func (srv *Server) Start() (err error) {
 		}
 		srv.DiscV5 = ntab
 	}
+	*/
 
 	dynPeers := (srv.MaxPeers + 1) / 2
 	if srv.NoDiscovery {
@@ -591,9 +592,12 @@ running:
 	if srv.ntab != nil {
 		srv.ntab.Close()
 	}
-	if srv.DiscV5 != nil {
-		srv.DiscV5.Close()
-	}
+	/*
+		if srv.DiscV5 != nil {
+			srv.DiscV5.Close()
+		}
+	*/
+
 	// Disconnect all peers.
 	for _, p := range peers {
 		p.Disconnect(DiscQuitting)
