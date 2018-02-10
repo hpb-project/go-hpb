@@ -49,7 +49,7 @@ import (
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/p2p"
 	"github.com/hpb-project/go-hpb/p2p/discover"
-	"github.com/hpb-project/go-hpb/p2p/discv5"
+	//"github.com/hpb-project/go-hpb/p2p/discv5"
 	"github.com/hpb-project/go-hpb/p2p/nat"
 	"github.com/hpb-project/go-hpb/p2p/netutil"
 	"github.com/hpb-project/go-hpb/params"
@@ -569,6 +569,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 
 // setBootstrapNodesV5 creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
+/*
 func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 	urls := params.DiscoveryV5Bootnodes
 	switch {
@@ -594,6 +595,7 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.BootstrapNodesV5 = append(cfg.BootstrapNodesV5, node)
 	}
 }
+*/
 
 // setListenAddress creates a TCP listening address string from set command
 // line flags.
@@ -605,12 +607,13 @@ func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 
 // setDiscoveryV5Address creates a UDP listening address string from set command
 // line flags for the V5 discovery protocol.
+/*
 func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
 	}
 }
-
+*/
 // setNAT creates a port mapper from command line flags.
 func setNAT(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
@@ -764,9 +767,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
-	setDiscoveryV5Address(ctx, cfg)
+	//setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
-	setBootstrapNodesV5(ctx, cfg)
+	//setBootstrapNodesV5(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -781,12 +784,14 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
-	forceV5Discovery := (ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalInt(LightServFlag.Name) > 0) && !ctx.GlobalBool(NoDiscoverFlag.Name)
-	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
-		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
-	} else if forceV5Discovery {
-		cfg.DiscoveryV5 = true
-	}
+	/*
+		forceV5Discovery := (ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalInt(LightServFlag.Name) > 0) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+		if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
+			cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
+		} else if forceV5Discovery {
+			cfg.DiscoveryV5 = true
+		}
+	*/
 
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
 		list, err := netutil.ParseNetlist(netrestrict)
@@ -800,9 +805,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		// --dev mode can't use p2p networking.
 		cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
+		//cfg.DiscoveryV5Addr = ":0"
 		cfg.NoDiscovery = true
-		cfg.DiscoveryV5 = false
+		//cfg.DiscoveryV5 = false
 	}
 }
 
