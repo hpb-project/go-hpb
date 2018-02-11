@@ -576,7 +576,7 @@ func decodePacket(buf []byte) (packet, NodeID, uint8, uint8, []byte, error) {
 	default:
 		return nil, fromID, nodeRole, forRole, hash, fmt.Errorf("unknown type: %d", ptype)
 	}
-	s := rlp.NewStream(bytes.NewReader(sigData[2:]), 0)
+	s := rlp.NewStream(bytes.NewReader(sigData[3:]), 0)
 	err = s.Decode(req)
 	return req, fromID, nodeRole, forRole, hash, err
 }
