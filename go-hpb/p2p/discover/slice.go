@@ -72,6 +72,26 @@ func (sl *Slice) Fetch() []*Node {
 	return slice
 }
 
+func (sl *Slice) Delete(n *Node) {
+	sl.db.deleteNode(n.ID)
+	sl.mutex.Lock()
+	defer sl.mutex.Unlock()
+	var index = 0
+	for _, m := range sl.members {
+		if m.ID == n.ID {
+			sl.members = append(sl.members[:index], sl.members[index+1:]...)
+		}
+		index++
+	}
+}
+
+// If the pingPong test is successful, it will be added to the DB.
+func (sl *Slice) Add(n *Node) {
+	sl.mutex.Lock()
+	defer sl.mutex.Unlock()
+	sl.members = append(sl.members, n)
+}
+
 func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr *net.UDPAddr, initNodes []*Node, orgnode *Node, db *nodeDB) (*Slice, error) {
 	slice := &Slice{
 		net:        t,
