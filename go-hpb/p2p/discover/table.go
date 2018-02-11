@@ -531,7 +531,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 	<-tab.bondslots
 	defer func() { tab.bondslots <- struct{}{} }()
 
-	// Ping the remote side and wait for a pong, ping-pong don't care node role
+	// Ping the remote side and wait for a pong
 	if w.err = tab.ping(id, role, addr); w.err != nil {
 		close(w.done)
 		return

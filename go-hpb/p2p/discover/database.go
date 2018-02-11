@@ -254,7 +254,7 @@ func (db *nodeDB) expireNodes(subKeyRoot string, subKeyPong string) error {
 	defer it.Release()
 
 	for it.Next() {
-		// Skip the item if not a discovery node
+		// Skip the item by root type
 		id, field := splitKey(it.Key())
 		if field != subKeyRoot {
 			continue
