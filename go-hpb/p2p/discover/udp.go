@@ -215,27 +215,36 @@ type reply struct {
 	matched chan<- bool
 }
 
+type Gether struct {
+	LightTab     *Table
+	AccessTab    *Table
+	CommSlice    *Slice
+	PreCommSlice *Slice
+}
+
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, NodeDBPath string, netrestrict *netutil.Netlist) (*Table, *Table, error) {
+func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, initNodes []*Node, orgNode *Node,
+	NodeDBPath string, netrestrict *netutil.Netlist) (*Gether, error) {
 	addr, err := net.ResolveUDPAddr("udp", laddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	lightTab, accessTab, _, err := newUDP(priv, ourRole, conn, natm, NodeDBPath, netrestrict)
+	ga, _, err := newUDP(priv, ourRole, conn, natm, initNodes, orgNode, NodeDBPath, netrestrict)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// either light_Tab or access_Tab has the same self, lightTab.self is used here.
-	log.Info("UDP listener up", "light_Tab and access_Tab's self", lightTab.self)
-	return lightTab, accessTab, nil
+	log.Info("UDP listener up", "light_Tab and access_Tab's self", ga.LightTab.self)
+	return ga, nil
 }
 
-func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *Table, *udp, error) {
+func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, initNodes []*Node, orgNode *Node,
+	nodeDBPath string, netrestrict *netutil.Netlist) (*Gether, *udp, error) {
 	udp := &udp{
 		conn:        c,
 		priv:        priv,
@@ -257,24 +266,43 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, n
 	}
 	// TODO: separate TCP port
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
+
+	ga := new(Gether)
+
 	db, dbErr := newDB(PubkeyID(&priv.PublicKey), nodeDBPath)
 	if dbErr != nil {
-		return nil, nil, nil, dbErr
+		return ga, nil, dbErr
 	}
-	lightTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, LightRole, realaddr, db)
+
+	light, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, LightRole, realaddr, db)
+	ga.LightTab = light
 	if err != nil {
-		return nil, nil, nil, err
+		return ga, nil, err
 	}
-	accessTable, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, AccessRole, realaddr, db)
+	access, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, AccessRole, realaddr, db)
+	ga.AccessTab = access
 	if err != nil {
-		return lightTable, nil, nil, err
+		return ga, nil, err
 	}
-	udp.lightTab = lightTable
-	udp.accessTab = accessTable
+
+	comm, err := newSlice(udp, PubkeyID(&priv.PublicKey), ourRole, CommRole, realaddr, initNodes, orgNode, db)
+	ga.CommSlice = comm
+	if err != nil {
+		return ga, nil, err
+	}
+	pre, err := newSlice(udp, PubkeyID(&priv.PublicKey), ourRole, PreCommRole, realaddr, initNodes, orgNode, db)
+	ga.PreCommSlice = pre
+	if err != nil {
+		return ga, nil, err
+	}
+
+	udp.lightTab = light
+	udp.accessTab = access
 
 	go udp.loop()
 	go udp.readLoop()
-	return udp.lightTab, udp.accessTab, udp, nil
+
+	return ga, udp, nil
 }
 
 func (t *udp) close() {

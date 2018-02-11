@@ -382,14 +382,14 @@ func (srv *Server) Start() (err error) {
 
 	// node table
 	if !srv.NoDiscovery {
-		ntab, _, err := discover.ListenUDP(srv.PrivateKey, discover.LightRole, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
+		ga, err := discover.ListenUDP(srv.PrivateKey, discover.LightRole, srv.ListenAddr, srv.NAT,nil,nil, srv.NodeDatabase, srv.NetRestrict)
 		if err != nil {
 			return err
 		}
-		if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+		if err := ga.LightTab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
 			return err
 		}
-		srv.ntab = ntab
+		srv.ntab = ga.LightTab
 	}
 
 	if srv.DiscoveryV5 {
