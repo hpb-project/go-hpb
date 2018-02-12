@@ -53,6 +53,7 @@ const (
 
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, their content, and nursery
+	roleType    uint8             // buckets type
 	buckets [nBuckets]*bucket // index of known nodes by distance
 	nursery []*Node           // bootstrap nodes
 	db      *nodeDB           // database of known nodes
@@ -81,9 +82,9 @@ type bondproc struct {
 // it is an interface so we can test without opening lots of UDP
 // sockets and without generating a private key.
 type transport interface {
-	ping(NodeID, *net.UDPAddr) error
-	waitping(NodeID) error
-	findnode(toid NodeID, addr *net.UDPAddr, target NodeID) ([]*Node, error)
+	ping(NodeID, uint8, uint8, *net.UDPAddr) error
+	waitping(NodeID, uint8, uint8) error
+	findnode(toid NodeID, addr *net.UDPAddr, target NodeID, tabRole uint8) ([]*Node, error)
 	close()
 }
 
@@ -100,10 +101,11 @@ func newDB(ourID NodeID, nodeDBPath string) (*nodeDB, error) {
 	return db, nil
 }
 
-func newTable(t transport, ourID NodeID, ourRole uint8, ourAddr *net.UDPAddr, db *nodeDB) (*Table, error) {
+func newTable(t transport, ourID NodeID, ourRole uint8, tabRoleType uint8, ourAddr *net.UDPAddr, db *nodeDB) (*Table, error) {
 	tab := &Table{
 		net:        t,
 		db:         db,
+		roleType:   tabRoleType,
 		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
 		bonding:    make(map[NodeID]*bondproc),
 		bondslots:  make(chan struct{}, maxBondingPingPongs),
@@ -276,11 +278,11 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 				pendingQueries++
 				go func() {
 					// Find potential neighbors to bond with
-					r, err := tab.net.findnode(n.ID, n.addr(), targetID)
+					r, err := tab.net.findnode(n.ID, n.addr(), targetID, tab.roleType)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
-						fails := tab.db.findFails(n.ID) + 1
-						tab.db.updateFindFails(n.ID, fails)
+						fails := tab.db.findFails(n.ID, nodeDBDiscoverFindFails) + 1
+						tab.db.updateFindFails(n.ID, nodeDBDiscoverFindFails, fails)
 						log.Trace("Bumping findnode failure counter", "id", n.ID, "failcount", fails)
 
 						if fails >= maxFindnodeFailures {
@@ -385,14 +387,14 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// The table is empty. Load nodes from the database and insert
 	// them. This should yield a few previously seen nodes that are
 	// (hopefully) still alive.
-	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
+	seeds := tab.db.querySeeds(seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
 		log.Debug("No discv4 seed nodes found")
 	}
 	for _, n := range seeds {
-		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID)) }}
+		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID, nodeDBDiscoverPong)) }}
 		log.Trace("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
 	}
 	tab.mutex.Lock()
@@ -418,6 +420,21 @@ func (tab *Table) closest(target common.Hash, nresults int) *nodesByDistance {
 	return close
 }
 
+func (tab *Table) closestByForRole(target common.Hash, nresults int, forRole uint8) *nodesByDistance {
+	// This is a very wasteful way to find the closest nodes but
+	// obviously correct. I believe that tree-based buckets would make
+	// this easier to implement efficiently.
+	close := &nodesByDistance{target: target}
+	for _, b := range tab.buckets {
+		for _, n := range b.entries {
+			if n.Role == forRole || n.Role == BootRole {
+				close.push(n, nresults)
+			}
+		}
+	}
+	return close
+}
+
 func (tab *Table) len() (n int) {
 	for _, b := range tab.buckets {
 		n += len(b.entries)
@@ -431,6 +448,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
+			// n.Role is already known
 			nn, _ := tab.bond(false, n.ID, n.Role, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])
@@ -464,13 +482,13 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		return nil, errors.New("is self")
 	}
 	// Retrieve a previously known node and any recent findnode failures
-	node, fails := tab.db.node(id), 0
+	node, fails := tab.db.node(id, nodeDBDiscoverRoot), 0
 	if node != nil {
-		fails = tab.db.findFails(id)
+		fails = tab.db.findFails(id, nodeDBDiscoverFindFails)
 	}
 	// If the node is unknown (non-bonded) or failed (remotely unknown), bond from scratch
 	var result error
-	age := time.Since(tab.db.lastPong(id))
+	age := time.Since(tab.db.lastPong(id, nodeDBDiscoverPong))
 	if node == nil || fails > 0 || age > nodeDBNodeExpiration {
 		log.Trace("Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
@@ -503,7 +521,7 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
 		tab.add(node)
-		tab.db.updateFindFails(id, 0)
+		tab.db.updateFindFails(id, nodeDBDiscoverFindFails,0)
 	}
 	return node, result
 }
@@ -513,8 +531,8 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 	<-tab.bondslots
 	defer func() { tab.bondslots <- struct{}{} }()
 
-	// Ping the remote side and wait for a pong, ping-pong don't care node role
-	if w.err = tab.ping(id, addr); w.err != nil {
+	// Ping the remote side and wait for a pong
+	if w.err = tab.ping(id, role, addr); w.err != nil {
 		close(w.done)
 		return
 	}
@@ -522,29 +540,29 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 		// Give the remote node a chance to ping us before we start
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
-		tab.net.waitping(id)
+		tab.net.waitping(id, role, tab.roleType)
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
-	tab.db.updateNode(w.n)
+	tab.db.updateNode(w.n, nodeDBDiscoverRoot)
 	close(w.done)
 }
 
 // ping a remote endpoint and wait for a reply, also updating the node
 // database accordingly.
-func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
-	tab.db.updateLastPing(id, time.Now())
-	if err := tab.net.ping(id, addr); err != nil {
+func (tab *Table) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
+	tab.db.updateLastPing(id, nodeDBDiscoverPing, time.Now())
+	if err := tab.net.ping(id, role, tab.roleType, addr); err != nil {
 		return err
 	}
-	tab.db.updateLastPong(id, time.Now())
+	tab.db.updateLastPong(id, nodeDBDiscoverPong, time.Now())
 
 	// Start the background expiration goroutine after the first
 	// successful communication. Subsequent calls have no effect if it
 	// is already running. We do this here instead of somewhere else
 	// so that the search for seed nodes also considers older nodes
 	// that would otherwise be removed by the expiration.
-	tab.db.ensureExpirer()
+	tab.db.ensureExpirer(nodeDBDiscoverRoot, nodeDBDiscoverPong)
 	return nil
 }
 
@@ -573,7 +591,7 @@ func (tab *Table) add(new *Node) {
 		// Let go of the mutex so other goroutines can access
 		// the table while we ping the least recently active node.
 		tab.mutex.Unlock()
-		err := tab.ping(oldest.ID, oldest.addr())
+		err := tab.ping(oldest.ID, oldest.Role, oldest.addr())
 		tab.mutex.Lock()
 		oldest.contested = false
 		if err == nil {

@@ -39,11 +39,12 @@ const NodeIDBits = 512
 
 //node roles
 const(
-	UnKnowRole uint8 = 0 + iota
-	LightRole
-	AccessRole
-	CommRole
-	PreCommRole
+	UnKnowRole uint8 = 0
+	BootRole         = 1
+	LightRole        = 2
+	AccessRole       = 3
+	CommRole         = 4
+	PreCommRole      = 5
 )
 // Node represents a host on the network.
 // The fields of Node may not be modified.
