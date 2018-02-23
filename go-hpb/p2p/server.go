@@ -382,7 +382,7 @@ func (srv *Server) Start() (err error) {
 
 	// node table
 	if !srv.NoDiscovery {
-		ga, err := discover.ListenUDP(srv.PrivateKey, discover.LightRole, srv.ListenAddr, srv.NAT,nil,nil, srv.NodeDatabase, srv.NetRestrict)
+		ga, err := discover.ListenUDP(srv.PrivateKey, discover.LightRole, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 		if err != nil {
 			return err
 		}

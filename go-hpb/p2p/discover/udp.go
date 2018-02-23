@@ -231,8 +231,7 @@ type commInfo struct {
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, initNodes []*Node, orgNode *Node,
-	NodeDBPath string, netrestrict *netutil.Netlist) (*Gather, error) {
+func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, NodeDBPath string, netrestrict *netutil.Netlist) (*Gather, error) {
 	addr, err := net.ResolveUDPAddr("udp", laddr)
 	if err != nil {
 		return nil, err
@@ -241,7 +240,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Int
 	if err != nil {
 		return nil, err
 	}
-	ga, _, err := newUDP(priv, ourRole, conn, natm, initNodes, orgNode, NodeDBPath, netrestrict)
+	ga, _, err := newUDP(priv, ourRole, conn, natm, NodeDBPath, netrestrict)
 	if err != nil {
 		return nil, err
 	}
@@ -251,8 +250,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Int
 	return ga, nil
 }
 
-func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, initNodes []*Node, orgNode *Node,
-	nodeDBPath string, netrestrict *netutil.Netlist) (*Gather, *udp, error) {
+func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Gather, *udp, error) {
 	udp := &udp{
 		conn:        c,
 		priv:        priv,
@@ -301,12 +299,12 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, i
 		return ga, nil, err
 	}
 
-	comm, err := newSlice(ci, CommRole, initNodes, orgNode)
+	comm, err := newSlice(ci, CommRole)
 	ga.CommSlice = comm
 	if err != nil {
 		return ga, nil, err
 	}
-	pre, err := newSlice(ci, PreCommRole, initNodes, orgNode)
+	pre, err := newSlice(ci, PreCommRole)
 	ga.PreCommSlice = pre
 	if err != nil {
 		return ga, nil, err

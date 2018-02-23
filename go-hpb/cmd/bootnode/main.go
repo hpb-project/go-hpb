@@ -30,7 +30,7 @@ import (
 	"github.com/hpb-project/go-hpb/p2p/nat"
 	"github.com/hpb-project/go-hpb/p2p/netutil"
 )
-var tmpga *discover.Gather
+
 func main() {
 	var (
 		listenAddr  = flag.String("addr", ":30301", "listen address for find light nodes")
@@ -95,46 +95,32 @@ func main() {
 		}
 	}
 
-	//var initNodesTestString = []string{
-	//	// HPB Foundation Go Bootnodes Test
-	//	"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&1@192.168.8.133:30303",
-	//}
-	//var initNodesTest []*discover.Node
-//
-	//for _, url := range initNodesTestString {
-	//	node, err := discover.ParseNode(url)
-	//	if err != nil {
-	//		log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-	//		continue
-	//	}
-	//	initNodesTest = append(initNodesTest, node)
-	//	log.Info("fall back initNode", "id", node)
-	//}
-
-	if ga, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, nil, nil,"", restrictList); err != nil {
+	if ga, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
 	} else {// else only for test
 
-		var bootNodesTestString = []string{
+		var nodesTestString = []string{
 			// HPB Foundation Go Bootnodes Test
-			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&1@192.168.31.119:30303",
+			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&4@192.168.31.119:30303",
 		}
-		var bootNodesTest []*discover.Node
+		var nodesTest []*discover.Node
 
-		for _, url := range bootNodesTestString {
+		for _, url := range nodesTestString {
 			node, err := discover.ParseNode(url)
 			if err != nil {
 				log.Error("Bootstrap URL invalid", "enode", url, "err", err)
 				continue
 			}
-			bootNodesTest = append(bootNodesTest, node)
+			nodesTest = append(nodesTest, node)
 			log.Info("fall back bootNode", "id", node)
 		}
 
-		if err := ga.LightTab.SetFallbackNodes(bootNodesTest); err != nil {
+		if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
 			return
 		}
-		tmpga = ga
+		if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
+			return
+		}
 	}
 
 	select {}
