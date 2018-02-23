@@ -222,6 +222,14 @@ type Gather struct {
 	PreCommSlice *Slice
 }
 
+type commInfo struct {
+	udpSt   transport     // for udp network communication
+	ourId  NodeID        // our node id
+	ourRole uint8         // our role
+	ourAddr *net.UDPAddr  // our udp addr
+	lvlDb   *nodeDB       // level db for network node connection
+}
+
 // ListenUDP returns a new table that listens for UDP packets on laddr.
 func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Interface, initNodes []*Node, orgNode *Node,
 	NodeDBPath string, netrestrict *netutil.Netlist) (*Gather, error) {
@@ -274,23 +282,31 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, i
 		return ga, nil, dbErr
 	}
 
-	light, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, LightRole, realaddr, db)
+	ci := commInfo{
+		udpSt : udp,
+		ourId : PubkeyID(&priv.PublicKey),
+		ourRole : ourRole,
+		ourAddr : realaddr,
+		lvlDb : db,
+	}
+
+	light, err := newTable(ci, LightRole)
 	ga.LightTab = light
 	if err != nil {
 		return ga, nil, err
 	}
-	access, err := newTable(udp, PubkeyID(&priv.PublicKey), ourRole, AccessRole, realaddr, db)
+	access, err := newTable(ci, AccessRole)
 	ga.AccessTab = access
 	if err != nil {
 		return ga, nil, err
 	}
 
-	comm, err := newSlice(udp, PubkeyID(&priv.PublicKey), ourRole, CommRole, realaddr, initNodes, orgNode, db)
+	comm, err := newSlice(ci, CommRole, initNodes, orgNode)
 	ga.CommSlice = comm
 	if err != nil {
 		return ga, nil, err
 	}
-	pre, err := newSlice(udp, PubkeyID(&priv.PublicKey), ourRole, PreCommRole, realaddr, initNodes, orgNode, db)
+	pre, err := newSlice(ci, PreCommRole, initNodes, orgNode)
 	ga.PreCommSlice = pre
 	if err != nil {
 		return ga, nil, err

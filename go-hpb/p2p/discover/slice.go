@@ -92,14 +92,14 @@ func (sl *Slice) Add(n *Node) {
 	sl.members = append(sl.members, n)
 }
 
-func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr *net.UDPAddr, initNodes []*Node, orgnode *Node, db *nodeDB) (*Slice, error) {
+func newSlice (ci commInfo, roleType uint8, initNodes []*Node, orgNode *Node) (*Slice, error) {
 	slice := &Slice{
-		net:        t,
+		net:        ci.udpSt,
 		bondSlots:  make(chan struct{}, maxConcurrencyPingPongs),
 		bonding:    make(map[NodeID]*bondproc),
-		db:         db,
+		db:         ci.lvlDb,
 		roleType:   roleType,
-		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		self:       NewNode(ci.ourId, ci.ourRole, ci.ourAddr.IP, uint16(ci.ourAddr.Port), uint16(ci.ourAddr.Port)),
 
 		refreshReq: make(chan chan struct{}),
 		closeReq:   make(chan struct{}),
@@ -112,8 +112,8 @@ func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr
 
 	if 0 == len(initNodes) {
 		// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
-		go slice.pullSlice(orgnode, roleType)
-		slice.loadFromDB(db, roleType)
+		go slice.pullSlice(orgNode, roleType)
+		slice.loadFromDB(ci.lvlDb, roleType)
 	}
 
 	for _, n := range initNodes {
