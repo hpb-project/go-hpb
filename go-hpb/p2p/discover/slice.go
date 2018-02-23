@@ -112,8 +112,8 @@ func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr
 
 	if 0 == len(initNodes) {
 		// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
-		go slice.pullSlice(orgnode)
-		slice.loadFromDB(db)
+		go slice.pullSlice(orgnode, roleType)
+		slice.loadFromDB(db, roleType)
 	}
 
 	for _, n := range initNodes {
@@ -284,10 +284,18 @@ func (sl *Slice) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
 	return nil
 }
 
-func (sl *Slice) loadFromDB(db *nodeDB) {
-
+func (sl *Slice) loadFromDB(db *nodeDB, forRole uint8) {
+	if db == nil {
+		log.Warn("Slice loadFromDB, db is nil", "forRole",forRole)
+		return
+	}
 }
 
-func (sl *Slice) pullSlice(node *Node) {
+func (sl *Slice) pullSlice(node *Node, forRole uint8) {
+	if node == nil {
+		log.Warn("Slice pullSlice, orgNode is nil", "forRole", forRole)
+		return
+	}
+
 
 }
