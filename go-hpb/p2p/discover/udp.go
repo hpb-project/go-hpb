@@ -639,9 +639,6 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 			go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
 		case AccessRole:
 			go t.accessTab.bond(true, fromID, fromRole, from, req.From.TCP)
-		case CommRole:
-		case PreCommRole:
-		case UnKnowRole:
 		default:
 		}
 	}
@@ -662,6 +659,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 
 func (req *pong) name() string { return "PONG/v4" }
 
+// don't care fromRole, because when you first set up the network, it might be the request sent by bootNode.
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, forRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -671,8 +669,6 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole u
 		err := req.sendNeibors(t, from, t.lightTab, fromID, forRole); if err != nil {return err}
 	case AccessRole:
 		err := req.sendNeibors(t, from, t.accessTab, fromID, forRole); if err != nil {return err}
-	case CommRole:
-	case PreCommRole:
 	default:
 	}
 	return nil

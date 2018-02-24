@@ -95,32 +95,32 @@ func main() {
 		}
 	}
 
-	if ga, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
+	if _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
 	} else {// else only for test
 
-		var nodesTestString = []string{
-			// HPB Foundation Go Bootnodes Test
-			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&4@192.168.31.119:30303",
-		}
-		var nodesTest []*discover.Node
-
-		for _, url := range nodesTestString {
-			node, err := discover.ParseNode(url)
-			if err != nil {
-				log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-				continue
-			}
-			nodesTest = append(nodesTest, node)
-			log.Info("fall back bootNode", "id", node)
-		}
-
-		if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
-			return
-		}
-		if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
-			return
-		}
+		//var nodesTestString = []string{
+		//	// HPB Foundation Go Bootnodes Test
+		//	"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&4@192.168.31.119:30303",
+		//}
+		//var nodesTest []*discover.Node
+//
+		//for _, url := range nodesTestString {
+		//	node, err := discover.ParseNode(url)
+		//	if err != nil {
+		//		log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+		//		continue
+		//	}
+		//	nodesTest = append(nodesTest, node)
+		//	log.Info("fall back bootNode", "id", node)
+		//}
+//
+		//if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
+		//	return
+		//}
+		//if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
+		//	return
+		//}
 	}
 
 	select {}
