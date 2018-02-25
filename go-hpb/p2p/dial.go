@@ -90,6 +90,8 @@ type discoverTable interface {
 	Resolve(target discover.NodeID) *discover.Node
 	Lookup(target discover.NodeID) []*discover.Node
 	ReadRandomNodes([]*discover.Node) int
+	Findout(target discover.NodeID) *discover.Node
+
 }
 
 type discoverSlice interface{
@@ -296,14 +298,14 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 
 func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
-		if !t.resolve(srv) {
+		if !t.resolve(srv.ntab_light) && !t.resolve(srv.ntab_access){
 			return
 		}
 	}
 	success := t.dial(srv, t.dest)
 	// Try resolving the ID of static nodes if dialing failed.
 	if !success && t.flags&staticDialedConn != 0 {
-		if t.resolve(srv) {
+		if t.resolve(srv.ntab_light) || t.resolve(srv.ntab_access){
 			t.dial(srv, t.dest)
 		}
 	}
@@ -315,8 +317,8 @@ func (t *dialTask) Do(srv *Server) {
 // Resolve operations are throttled with backoff to avoid flooding the
 // discovery network with useless queries for nodes that don't exist.
 // The backoff delay resets when the node is found.
-func (t *dialTask) resolve(srv *Server) bool {
-	if srv.ntab == nil {
+func (t *dialTask) resolve(ntab discoverTable) bool {
+	if ntab == nil {
 		log.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
 		return false
 	}
@@ -326,7 +328,7 @@ func (t *dialTask) resolve(srv *Server) bool {
 	if time.Since(t.lastResolved) < t.resolveDelay {
 		return false
 	}
-	resolved := srv.ntab.Resolve(t.dest.ID)
+	resolved := ntab.Resolve(t.dest.ID)
 	t.lastResolved = time.Now()
 	if resolved == nil {
 		t.resolveDelay *= 2
@@ -401,7 +403,7 @@ func (t *discoverTask) Do(srv *Server) {
 	srv.lastLookup = time.Now()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.ntab.Lookup(target)
+	t.results = srv.ntab_light.Lookup(target)
 }
 
 func (t *discoverTask) String() string {
