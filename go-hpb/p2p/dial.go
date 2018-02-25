@@ -92,6 +92,14 @@ type discoverTable interface {
 	ReadRandomNodes([]*discover.Node) int
 }
 
+type discoverSlice interface{
+	Self() *discover.Node
+	Close()
+	Fetch() []*discover.Node
+	Delete(n *discover.Node)
+	Add(n *discover.Node)
+}
+
 // the dial history remembers recent dials.
 type dialHistory []pastDial
 
@@ -214,6 +222,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	}
 	// Use random nodes from the table for half of the necessary
 	// dynamic dials.
+	// todo hpb: find node form different bucket
 	randomCandidates := needDynDials / 2
 	if randomCandidates > 0 {
 		n := s.ntab.ReadRandomNodes(s.randomNodes)
@@ -336,6 +345,14 @@ func (t *dialTask) resolve(srv *Server) bool {
 
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
+
+	//to check
+	remotetype := ToNodeType(dest.Role)
+	if t.isAllowDial(srv,remotetype) {
+		log.Debug("Do not allowed to dial","RemoteIP",dest.IP.String())
+		return false
+	}
+
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
 		log.Trace("Dial error", "task", t, "err", err)
@@ -343,6 +360,29 @@ func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	}
 	mfd := newMeteredConn(fd, false)
 	srv.SetupConn(mfd, t.flags, dest)
+	return true
+}
+
+func (t *dialTask) isAllowDial(srv *Server, remote NodeType) bool {
+
+	local  :=srv.local
+	if remote == NtUnknown {
+		log.Debug("Dial dest node type refresh from discover", "RemoteType",remote.String())
+		return false
+	}
+
+	// todo hpb: all type of peers number control
+
+	if local == NtLight && remote == NtCommitt {
+		log.Debug("Dial is not allowed", "LocalType",local.String(),"RemoteType",remote.String())
+		return false
+	}
+
+	if local == NtLight && remote == NtPrecomm {
+		log.Debug("Dial is not allowed", "LocalType",local.String(),"RemoteType",remote.String())
+		return false
+	}
+
 	return true
 }
 
