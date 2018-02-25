@@ -48,10 +48,12 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
+	ExtraHash  []byte              `json:"extraHash"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
+	CoinbaseHash   common.AddressHash      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
@@ -90,6 +92,7 @@ type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
+	ExtraHash  hexutil.Bytes
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Number     math.HexOrDecimal64
@@ -239,11 +242,13 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
+		ExtraHash:  g.ExtraHash,
 		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
 		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
 		Difficulty: g.Difficulty,
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
+		CoinbaseHash:   g.CoinbaseHash,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {

@@ -30,11 +30,13 @@ import (
 const (
 	HashLength    = 32
 	AddressLength = 20
+	AddressHashLength = 4
 )
 
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
+	addressHashT = reflect.TypeOf(AddressHash{})
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -243,3 +245,121 @@ func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
+
+
+
+/////////// AddressHash /////////////////////////////////////////////////////////
+
+// Address represents the 20 byte address of an Ethereum account.
+
+type AddressHash [AddressHashLength]byte
+
+func BytesToAddressHash (b []byte) AddressHash {
+	var ah AddressHash
+	ah.SetHashBytes(b)
+	return ah
+}
+
+func StringToAddressHash(s string) AddressHash { return BytesToAddressHash([]byte(s)) }
+func BigToAddressHash(b *big.Int) AddressHash  { return BytesToAddressHash(b.Bytes()) }
+func HexToAddressHash(s string) AddressHash    { return BytesToAddressHash(FromHex(s)) }
+
+// IsHexAddress verifies whether a string can represent a valid hex-encoded
+// Ethereum address or not.
+func IsHexAddressHash(s string) bool {
+	if len(s) == 2+2*AddressHashLength && IsHex(s) {
+		return true
+	}
+	if len(s) == 2*AddressHashLength && IsHex("0x"+s) {
+		return true
+	}
+	return false
+}
+
+// Get the string representation of the underlying address
+func (a AddressHash) Str() string   { return string(a[:]) }
+func (a AddressHash) Bytes() []byte { return a[:] }
+func (a AddressHash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
+func (a AddressHash) Hash() Hash    { return BytesToHash(a[:]) }
+
+// Hex returns an EIP55-compliant hex string representation of the address.
+func (a AddressHash) Hex() string {
+	unchecksummed := hex.EncodeToString(a[:])
+	sha := sha3.NewKeccak256()
+	sha.Write([]byte(unchecksummed))
+	hash := sha.Sum(nil)
+
+	result := []byte(unchecksummed)
+	for i := 0; i < len(result); i++ {
+		hashByte := hash[i/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if result[i] > '9' && hashByte > 7 {
+			result[i] -= 32
+		}
+	}
+	return "0x" + string(result)
+}
+
+// String implements the stringer interface and is used also by the logger.
+func (a AddressHash) String() string {
+	return a.Hex()
+}
+
+// Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
+// without going through the stringer interface used for logging.
+func (a AddressHash) Format(s fmt.State, c rune) {
+	fmt.Fprintf(s, "%"+string(c), a[:])
+}
+
+// Sets the address to the value of b. If b is larger than len(a) it will panic
+func (ah *AddressHash) SetHashBytes(b []byte) {
+	if len(b) > len(ah) {
+		b = b[len(b)-AddressHashLength:]
+	}
+	//fmt.Println("AddressLength %d",AddressHashLength)
+	//fmt.Println("len(b) %d",len(b))
+	copy(ah[AddressHashLength-len(b):], b)
+}
+
+// Set string `s` to a. If s is larger than len(a) it will panic
+func (a *AddressHash) SetString(s string) { a.SetHashBytes([]byte(s)) }
+
+// Sets a to other
+func (a *AddressHash) Set(other Address) {
+	for i, v := range other {
+		a[i] = v
+	}
+}
+
+// MarshalText returns the hex representation of a.
+func (a AddressHash) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(a[:]).MarshalText()
+}
+
+// UnmarshalText parses a hash in hex syntax.
+func (a *AddressHash) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("AddressHash", input, a[:])
+}
+
+// UnmarshalJSON parses a hash in hex syntax.
+func (a *AddressHash) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
+}
+
+// UnprefixedHash allows marshaling an Address without 0x prefix.
+type UnprefixedAddressHash AddressHash
+
+// UnmarshalText decodes the address from hex. The 0x prefix is optional.
+func (a *UnprefixedAddressHash) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedUnprefixedText("UnprefixedAddress", input, a[:])
+}
+
+// MarshalText encodes the address as hex.
+func (a UnprefixedAddressHash) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(a[:])), nil
+}
+
