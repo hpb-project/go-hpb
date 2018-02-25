@@ -693,16 +693,41 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
-			peer.SendNewBlock(block, td)
+			if peer.RemoteType() == p2p.NtCommitt || peer.RemoteType() == p2p.NtPrecomm {
+				peer.SendNewBlock(block, td)
+			}
 		}
+		for _, peer := range transfer {
+			if peer.RemoteType() == p2p.NtAccess {
+				peer.SendNewBlock(block, td)
+
+			}
+		}
+		//for _, peer := range transfer {
+		//	if peer.RemoteType() == p2p.NtLight {
+		//		peer.SendNewBlock(block, td)
+		//	}
+		//}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
 	if pm.blockchain.HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
-			peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+			if peer.LocalType() == p2p.NtCommitt || peer.LocalType() == p2p.NtPrecomm {
+				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+			}
 		}
+		for _, peer := range peers {
+			if peer.LocalType() == p2p.NtAccess {
+				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+			}
+		}
+		//for _, peer := range peers {
+		//	if peer.LocalType() == p2p.NtLight {
+		//		peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+		//	}
+		//}
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
@@ -714,8 +739,23 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	peers := pm.peers.PeersWithoutTx(hash)
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
-		peer.SendTransactions(types.Transactions{tx})
+		if peer.RemoteType() == p2p.NtCommitt || peer.RemoteType() == p2p.NtPrecomm {
+			peer.SendTransactions(types.Transactions{tx})
+		}
 	}
+
+	for _, peer := range peers {
+		if peer.RemoteType() == p2p.NtAccess {
+			peer.SendTransactions(types.Transactions{tx})
+		}
+	}
+
+	for _, peer := range peers {
+		if peer.RemoteType() == p2p.NtLight {
+			peer.SendTransactions(types.Transactions{tx})
+		}
+	}
+
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
