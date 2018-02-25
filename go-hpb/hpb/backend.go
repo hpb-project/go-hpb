@@ -29,7 +29,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/consensus/clique"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/consensus/hpbhash"
 	"github.com/hpb-project/go-hpb/core"
 	"github.com/hpb-project/go-hpb/core/bloombits"
@@ -209,8 +209,8 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (hpbdb.Data
 // CreateConsensusEngine creates the required type of consensus engine instance for an Hpbereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db hpbdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
+	if chainConfig.Prometheus != nil {
+		return prometheus.New(chainConfig.Prometheus, db)
 	}
 	// Otherwise assume proof-of-work
 	switch {
@@ -323,13 +323,13 @@ func (s *Hpbereum) StartMining(local bool) error {
 		log.Error("Cannot start mining without hpberbase", "err", err)
 		return fmt.Errorf("hpberbase missing: %v", err)
 	}
-	if clique, ok := s.engine.(*clique.Clique); ok {
+	if prometheus, ok := s.engine.(*prometheus.Prometheus); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
 			log.Error("Hpberbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
-		clique.Authorize(eb, wallet.SignHash)
+		prometheus.Authorize(eb, wallet.SignHash)
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection

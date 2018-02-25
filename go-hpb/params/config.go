@@ -71,9 +71,10 @@ var (
 		EIP158Block:    big.NewInt(3),
 		ByzantiumBlock: big.NewInt(1035301),
 
-		Clique: &CliqueConfig{
+		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
+			Random: "0",
 		},
 	}
 
@@ -114,7 +115,7 @@ type ChainConfig struct {
 
 	// Various consensus engines
 	Hpbhash *HpbhashConfig `json:"ethash,omitempty"`
-	Clique  *CliqueConfig  `json:"clique,omitempty"`
+	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
 }
 
 // HpbhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -125,15 +126,16 @@ func (c *HpbhashConfig) String() string {
 	return "hpbhash"
 }
 
-// CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
-type CliqueConfig struct {
+// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
+type PrometheusConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	Random string `json:"random"`  // 新增加的random字段
 }
 
 // String implements the stringer interface, returning the consensus engine details.
-func (c *CliqueConfig) String() string {
-	return "clique"
+func (c *PrometheusConfig) String() string {
+	return "prometheus"
 }
 
 // String implements the fmt.Stringer interface.
@@ -142,8 +144,8 @@ func (c *ChainConfig) String() string {
 	switch {
 	case c.Hpbhash != nil:
 		engine = c.Hpbhash
-	case c.Clique != nil:
-		engine = c.Clique
+	case c.Prometheus != nil:
+		engine = c.Prometheus
 	default:
 		engine = "unknown"
 	}

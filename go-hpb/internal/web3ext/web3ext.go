@@ -20,7 +20,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":      Admin_JS,
 	"chequebook": Chequebook_JS,
-	"clique":     Clique_JS,
+	"prometheus":     Prometheus_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
 	"miner":      Miner_JS,
@@ -63,47 +63,47 @@ web3._extend({
 });
 `
 
-const Clique_JS = `
+const Prometheus_JS = `
 web3._extend({
-	property: 'clique',
+	property: 'Prometheus',
 	methods: [
 		new web3._extend.Method({
 			name: 'getSnapshot',
-			call: 'clique_getSnapshot',
+			call: 'Prometheus_getSnapshot',
 			params: 1,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'getSnapshotAtHash',
-			call: 'clique_getSnapshotAtHash',
+			call: 'Prometheus_getSnapshotAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getSigners',
-			call: 'clique_getSigners',
+			call: 'Prometheus_getSigners',
 			params: 1,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'getSignersAtHash',
-			call: 'clique_getSignersAtHash',
+			call: 'Prometheus_getSignersAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'propose',
-			call: 'clique_propose',
+			call: 'Prometheus_propose',
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'discard',
-			call: 'clique_discard',
+			call: 'Prometheus_discard',
 			params: 1
 		}),
 	],
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
-			getter: 'clique_proposals'
+			getter: 'Prometheus_proposals'
 		}),
 	]
 });

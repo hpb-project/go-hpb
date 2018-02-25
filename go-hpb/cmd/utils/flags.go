@@ -32,7 +32,7 @@ import (
 	"github.com/hpb-project/go-hpb/accounts/keystore"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/consensus/clique"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/consensus/hpbhash"
 	"github.com/hpb-project/go-hpb/core"
 	"github.com/hpb-project/go-hpb/core/state"
@@ -1093,8 +1093,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Clique != nil {
-		engine = clique.New(config.Clique, chainDb)
+	if config.Prometheus != nil {
+		engine = prometheus.New(config.Prometheus, chainDb)
 	} else {
 		engine = hpbhash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
