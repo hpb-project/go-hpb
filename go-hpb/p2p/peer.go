@@ -109,6 +109,9 @@ type Peer struct {
 
 	// events receives message send / receive events if set
 	events *event.Feed
+
+	local  NodeType
+	remote NodeType
 }
 
 // NewPeer returns a peer for testing purposes.
@@ -144,6 +147,16 @@ func (p *Peer) RemoteAddr() net.Addr {
 // LocalAddr returns the local address of the network connection.
 func (p *Peer) LocalAddr() net.Addr {
 	return p.rw.fd.LocalAddr()
+}
+
+//  RemoteType returns the remote type of the node.
+func (p *Peer) RemoteType() NodeType {
+	return p.remote
+}
+
+// LocalType returns the local type of the node.
+func (p *Peer) LocalType() NodeType {
+	return p.local
 }
 
 // Disconnect terminates the peer connection with the given reason.
