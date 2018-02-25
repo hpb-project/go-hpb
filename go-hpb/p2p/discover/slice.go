@@ -24,6 +24,7 @@ import(
 	"sync"
 	"time"
 
+	"github.com/hpb-project/go-hpb/crypto"
 	"github.com/hpb-project/go-hpb/log"
 )
 
@@ -34,7 +35,8 @@ const (
 
 type Slice struct {
 	mutex     sync.Mutex    // Mutex for members
-	members   []*Node
+	members   []*Node       // Members of the consensus
+	actives   []*Node       // active member(keep live success)
 	roleType  uint8         // Slice's nodes type
 	bondSlots chan struct{} // limits total number of active bonding processes
 	bondmu    sync.Mutex
@@ -61,15 +63,16 @@ func (sl *Slice) Close() {
 	}
 }
 
+// Returns only the nodes available
 func (sl *Slice) Fetch() []*Node {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
-	var slice []*Node
-	for _, m := range sl.members {
-		slice = append(slice, m)
+	var activeSlice []*Node
+	for _, m := range sl.actives {
+		activeSlice = append(activeSlice, m)
 	}
 
-	return slice
+	return activeSlice
 }
 
 func (sl *Slice) Delete(n *Node) {
@@ -88,18 +91,41 @@ func (sl *Slice) Delete(n *Node) {
 // If the pingPong test is successful, it will be added to the DB.
 func (sl *Slice) Add(n *Node) {
 	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
 	sl.members = append(sl.members, n)
+	sl.mutex.Unlock()
+	// The new node starts ping-pong immediately.
+	sl.refresh()
 }
 
-func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr *net.UDPAddr, initNodes []*Node, orgnode *Node, db *nodeDB) (*Slice, error) {
+func (sl *Slice) SetFallbackNodes(nodes []*Node) error {
+	for _, n := range nodes {
+		if err := n.validateComplete(); err != nil {
+			return fmt.Errorf("bad bootstrap/fallback node %q (%v)", n, err)
+		}
+	}
+	sl.mutex.Lock()
+	var tmpNodes []*Node
+	for _, n := range nodes {
+		cpy := *n
+		// Recompute cpy.sha because the node might not have been
+		// created by NewNode or ParseNode.
+		cpy.sha = crypto.Keccak256Hash(n.ID[:])
+		tmpNodes = append(tmpNodes, &cpy)
+	}
+	sl.members = tmpNodes
+	sl.mutex.Unlock()
+	sl.refresh()
+	return nil
+}
+
+func newSlice (ci commInfo, roleType uint8) (*Slice, error) {
 	slice := &Slice{
-		net:        t,
+		net:        ci.udpSt,
 		bondSlots:  make(chan struct{}, maxConcurrencyPingPongs),
 		bonding:    make(map[NodeID]*bondproc),
-		db:         db,
+		db:         ci.lvlDb,
 		roleType:   roleType,
-		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		self:       NewNode(ci.ourId, ci.ourRole, ci.ourAddr.IP, uint16(ci.ourAddr.Port), uint16(ci.ourAddr.Port)),
 
 		refreshReq: make(chan chan struct{}),
 		closeReq:   make(chan struct{}),
@@ -110,18 +136,9 @@ func newSlice (t transport, ourID NodeID, ourRole uint8, roleType uint8, ourAddr
 		slice.bondSlots <- struct{}{}
 	}
 
-	if 0 == len(initNodes) {
-		// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
-		go slice.pullSlice(orgnode)
-		slice.loadFromDB(db)
-	}
-
-	for _, n := range initNodes {
-		if err := n.validateComplete(); err != nil {
-			return nil, fmt.Errorf("bad slice node %q (%v)", n, err)
-		}
-		slice.members = append(slice.members, n)
-	}
+	// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
+	go slice.pullSlice(roleType)
+	slice.loadFromDB(ci.lvlDb, roleType)
 
 	go slice.keepLiveLoop()
 
@@ -208,7 +225,10 @@ func (sl *Slice) keepLive(done chan struct{}) {
 		}
 	}
 
-	sl.members = sucMem
+	sl.actives = sucMem
+	for _, n := range sl.actives {
+		log.Info("keep-live", "active node", n)
+	}
 }
 
 func (sl *Slice) test(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
@@ -284,10 +304,13 @@ func (sl *Slice) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
 	return nil
 }
 
-func (sl *Slice) loadFromDB(db *nodeDB) {
-
+func (sl *Slice) loadFromDB(db *nodeDB, forRole uint8) {
+	if db == nil {
+		return
+	}
 }
 
-func (sl *Slice) pullSlice(node *Node) {
+func (sl *Slice) pullSlice(forRole uint8) {
+
 
 }

@@ -101,12 +101,12 @@ func newDB(ourID NodeID, nodeDBPath string) (*nodeDB, error) {
 	return db, nil
 }
 
-func newTable(t transport, ourID NodeID, ourRole uint8, tabRoleType uint8, ourAddr *net.UDPAddr, db *nodeDB) (*Table, error) {
+func newTable(ci commInfo, tabRoleType uint8) (*Table, error) {
 	tab := &Table{
-		net:        t,
-		db:         db,
+		net:        ci.udpSt,
+		db:         ci.lvlDb,
 		roleType:   tabRoleType,
-		self:       NewNode(ourID, ourRole, ourAddr.IP, uint16(ourAddr.Port), uint16(ourAddr.Port)),
+		self:       NewNode(ci.ourId, ci.ourRole, ci.ourAddr.IP, uint16(ci.ourAddr.Port), uint16(ci.ourAddr.Port)),
 		bonding:    make(map[NodeID]*bondproc),
 		bondslots:  make(chan struct{}, maxBondingPingPongs),
 		refreshReq: make(chan chan struct{}),
