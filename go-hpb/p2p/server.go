@@ -319,13 +319,13 @@ func (srv *Server) Self() *discover.Node {
 	if !srv.running {
 		return &discover.Node{IP: net.ParseIP("0.0.0.0")}
 	}
-	return srv.makeSelf(srv.listener, srv.ntabLight)
+	return srv.makeSelf(srv.listener)
 }
 
-func (srv *Server) makeSelf(listener net.Listener, ntab discoverTable) *discover.Node {
+func (srv *Server) makeSelf(listener net.Listener) *discover.Node {
 	// If the server's not running, return an empty node.
 	// If the node is running but discovery is off, manually assemble the node infos.
-	if ntab == nil {
+	if srv.ntabAccess == nil && srv.ntabLight == nil{
 		// Inbound connections disabled, use zero address.
 		if listener == nil {
 			return &discover.Node{IP: net.ParseIP("0.0.0.0"), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -339,7 +339,12 @@ func (srv *Server) makeSelf(listener net.Listener, ntab discoverTable) *discover
 		}
 	}
 	// Otherwise return the discovery node.
-	return ntab.Self()
+
+	//srv.ntabAccess.Self  be
+	if srv.ntabAccess.Self().ID != srv.ntabLight.Self().ID {
+		log.Error("Self ID is different","AccessID",srv.ntabAccess.Self().ID,"LightID",srv.ntabLight.Self().ID)
+	}
+	return srv.ntabAccess.Self()
 }
 
 // Stop terminates the server and all active peer connections.
@@ -437,8 +442,7 @@ func (srv *Server) Start() (err error) {
 		dynPeers = 0
 	}
 
-	dialer_light  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabLight,  dynPeers, srv.NetRestrict)
-	dialer_access := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabAccess, dynPeers, srv.NetRestrict)
+	dialerState  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabLight, srv.ntabAccess, dynPeers, srv.NetRestrict)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -456,7 +460,7 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.loopWG.Add(1)
-	go srv.run(dialer_light,dialer_access)
+	go srv.run(dialerState)
 
 	srv.running = true
 	return nil
@@ -491,7 +495,7 @@ type dialer interface {
 	removeStatic(*discover.Node)
 }
 
-func (srv *Server) run(ds_lignt dialer,ds_access dialer) {
+func (srv *Server) run(dialerState dialer) {
 	defer srv.loopWG.Done()
 	var (
 		peers        = make(map[discover.NodeID]*Peer)
@@ -532,11 +536,8 @@ func (srv *Server) run(ds_lignt dialer,ds_access dialer) {
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
-			nt_light := ds_lignt.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
-			queuedTasks = append(queuedTasks, startTasks(nt_light)...)
-
-			nt_access := ds_access.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
-			queuedTasks = append(queuedTasks, startTasks(nt_access)...)
+			nt := dialerState.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
 
@@ -553,13 +554,13 @@ running:
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			log.Debug("Adding static node", "node", n)
-			ds_lignt.addStatic(n)
+			dialerState.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected
 			log.Debug("Removing static node", "node", n)
-			ds_lignt.removeStatic(n)
+			dialerState.removeStatic(n)
 			if p, ok := peers[n.ID]; ok {
 				p.Disconnect(DiscRequested)
 			}
@@ -572,7 +573,7 @@ running:
 			// can update its state and remove it from the active
 			// tasks list.
 			log.Trace("Dial task done", "task", t)
-			ds_lignt.taskDone(t, time.Now())
+			dialerState.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
 			// A connection has passed the encryption handshake so
@@ -696,7 +697,7 @@ type tempError interface {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntabLight))
+	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener))
 
 	// This channel acts as a semaphore limiting
 	// active inbound connections that are lingering pre-handshake.

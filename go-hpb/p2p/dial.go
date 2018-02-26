@@ -70,7 +70,8 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 // of the main loop in Server.run.
 type dialstate struct {
 	maxDynDials int
-	ntab        discoverTable
+	ntbLight   discoverTable
+	ntbAccess  discoverTable
 	netrestrict *netutil.Netlist
 
 	lookupRunning bool
@@ -137,10 +138,11 @@ type waitExpireTask struct {
 	time.Duration
 }
 
-func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab discoverTable, maxdyn int, netrestrict *netutil.Netlist) *dialstate {
+func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntabLit discoverTable,ntabAcc discoverTable, maxdyn int, netrestrict *netutil.Netlist) *dialstate {
 	s := &dialstate{
 		maxDynDials: maxdyn,
-		ntab:        ntab,
+		ntbLight:    ntabLit,
+		ntbAccess:   ntabAcc,
 		netrestrict: netrestrict,
 		static:      make(map[discover.NodeID]*dialTask),
 		dialing:     make(map[discover.NodeID]connFlag),
@@ -227,8 +229,17 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	// todo hpb: find node form different bucket
 	randomCandidates := needDynDials / 2
 	if randomCandidates > 0 {
-		n := s.ntab.ReadRandomNodes(s.randomNodes)
+		//access node table first
+		n := s.ntbAccess.ReadRandomNodes(s.randomNodes)
 		for i := 0; i < randomCandidates && i < n; i++ {
+			if addDial(dynDialedConn, s.randomNodes[i]) {
+				needDynDials--
+			}
+		}
+
+		//then light node table
+		m := s.ntbLight.ReadRandomNodes(s.randomNodes)
+		for i := 0; i < randomCandidates && i < m; i++ {
 			if addDial(dynDialedConn, s.randomNodes[i]) {
 				needDynDials--
 			}
@@ -275,7 +286,9 @@ func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer)
 		return errAlreadyDialing
 	case peers[n.ID] != nil:
 		return errAlreadyConnected
-	case s.ntab != nil && n.ID == s.ntab.Self().ID:
+	case s.ntbLight != nil && n.ID == s.ntbLight.Self().ID:
+		return errSelf
+	case s.ntbAccess != nil && n.ID == s.ntbAccess.Self().ID:
 		return errSelf
 	case s.netrestrict != nil && !s.netrestrict.Contains(n.IP):
 		return errNotWhitelisted
@@ -297,15 +310,21 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 }
 
 func (t *dialTask) Do(srv *Server) {
+
+	ntab := srv.ntabAccess
+	if Uint8ToNodeType(t.dest.Role) == NtLight {
+		ntab = srv.ntabLight
+	}
+
 	if t.dest.Incomplete() {
-		if !t.resolve(srv.ntabLight) && !t.resolve(srv.ntabAccess){
+		if !t.resolve(ntab) {
 			return
 		}
 	}
 	success := t.dial(srv, t.dest)
 	// Try resolving the ID of static nodes if dialing failed.
 	if !success && t.flags&staticDialedConn != 0 {
-		if t.resolve(srv.ntabLight) || t.resolve(srv.ntabAccess){
+		if t.resolve(ntab) {
 			t.dial(srv, t.dest)
 		}
 	}
@@ -403,7 +422,9 @@ func (t *discoverTask) Do(srv *Server) {
 	srv.lastLookup = time.Now()
 	var target discover.NodeID
 	rand.Read(target[:])
+	//combine light table and access table results
 	t.results = srv.ntabLight.Lookup(target)
+	t.results = append(t.results,srv.ntabAccess.Lookup(target)...)
 }
 
 func (t *discoverTask) String() string {
