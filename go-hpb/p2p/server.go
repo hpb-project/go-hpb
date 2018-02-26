@@ -84,6 +84,7 @@ type Config struct {
 	// Use common.MakeName to create a name that follows existing conventions.
 	Name string `toml:"-"`
 
+	RoleType string
 	// BootstrapNodes are used to establish connectivity
 	// with the rest of the network.
 	BootstrapNodes []*discover.Node
@@ -386,11 +387,9 @@ func (srv *Server) Start() (err error) {
 	srv.peerOpDone = make(chan struct{})
 
 
-	log.Info("Get Node Type From Discover","LocalType",srv.local.String())
-
 	// hpb test: set local node type
-	srv.local = NtLight
-	//srv.local = NtAccess
+	srv.local = StrToNodeType(srv.RoleType)
+	log.Info("node flag of nodetype","NodeType",srv.local.String())
 
 	// node table
 	if !srv.NoDiscovery {

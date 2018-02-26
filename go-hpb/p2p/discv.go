@@ -43,11 +43,11 @@ func (pt NodeType)String() string {
 	case NtCommitt:
 		return "committee-node"
 	case NtPrecomm:
-		return "precommittee-node"
+		return "pre-committee-node"
 	case NtAccess:
 		return "access-node"
 	case NtLight:
-		return "Light-node"
+		return "light-node"
 	}
 	return "unknown-node"
 }
@@ -94,6 +94,23 @@ func ToNodeType(discNt uint8) NodeType {
 	return NtUnknown
 }
 
+// Convert uint8 to NodeType
+func StrToNodeType(role string) NodeType {
+	switch {
+	case role == "public":
+		return NtPublic
+	case role == "committee":
+		return NtCommitt
+	case role == "pre-committee":
+		return NtPrecomm
+	case role == "access":
+		return NtAccess
+	case role == "light":
+		return NtLight
+	}
+	//log.Debug("NodeType unknown ","role",role, "stack",debug.Stack())
+	return NtUnknown
+}
 
 
 

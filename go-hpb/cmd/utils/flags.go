@@ -433,6 +433,11 @@ var (
 		Name:  "nodekey",
 		Usage: "P2P node key file",
 	}
+	NodeTypeFlag = cli.StringFlag{
+		Name:  "nodetype",
+		Usage: "P2P node type(committee,pre-committee,access,light)",
+		Value: "light",
+	}
 	NodeKeyHexFlag = cli.StringFlag{
 		Name:  "nodekeyhex",
 		Usage: "P2P node key as hex (for testing)",
@@ -808,6 +813,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		//cfg.DiscoveryV5Addr = ":0"
 		cfg.NoDiscovery = true
 		//cfg.DiscoveryV5 = false
+	}
+
+	if nodetype := ctx.GlobalString(NodeTypeFlag.Name); nodetype != "" {
+		cfg.RoleType = nodetype
 	}
 }
 
