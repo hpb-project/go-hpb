@@ -298,14 +298,14 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 
 func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
-		if !t.resolve(srv.ntab_light) && !t.resolve(srv.ntab_access){
+		if !t.resolve(srv.ntabLight) && !t.resolve(srv.ntabAccess){
 			return
 		}
 	}
 	success := t.dial(srv, t.dest)
 	// Try resolving the ID of static nodes if dialing failed.
 	if !success && t.flags&staticDialedConn != 0 {
-		if t.resolve(srv.ntab_light) || t.resolve(srv.ntab_access){
+		if t.resolve(srv.ntabLight) || t.resolve(srv.ntabAccess){
 			t.dial(srv, t.dest)
 		}
 	}
@@ -403,7 +403,7 @@ func (t *discoverTask) Do(srv *Server) {
 	srv.lastLookup = time.Now()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.ntab_light.Lookup(target)
+	t.results = srv.ntabLight.Lookup(target)
 }
 
 func (t *discoverTask) String() string {

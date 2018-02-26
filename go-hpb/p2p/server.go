@@ -84,7 +84,10 @@ type Config struct {
 	// Use common.MakeName to create a name that follows existing conventions.
 	Name string `toml:"-"`
 
+	// RoleType sets the node type of this server.
+	// One of committee, pre-committee, access, light.
 	RoleType string
+
 	// BootstrapNodes are used to establish connectivity
 	// with the rest of the network.
 	BootstrapNodes []*discover.Node
@@ -154,10 +157,10 @@ type Server struct {
 	lock    sync.Mutex // protects running
 	running bool
 
-	ntab_light   discoverTable
-	ntab_access  discoverTable
-	nslc_commit  discoverSlice
-	nslc_precom  discoverSlice
+	ntabLight   discoverTable
+	ntabAccess  discoverTable
+	nslcCommit  discoverSlice
+	nslcPrecom  discoverSlice
 
 	listener     net.Listener
 	ourHandshake *protoHandshake
@@ -316,7 +319,7 @@ func (srv *Server) Self() *discover.Node {
 	if !srv.running {
 		return &discover.Node{IP: net.ParseIP("0.0.0.0")}
 	}
-	return srv.makeSelf(srv.listener, srv.ntab_light)
+	return srv.makeSelf(srv.listener, srv.ntabLight)
 }
 
 func (srv *Server) makeSelf(listener net.Listener, ntab discoverTable) *discover.Node {
@@ -422,10 +425,10 @@ func (srv *Server) Start() (err error) {
 			return err
 		}
 
-		srv.ntab_light  = hpb_nt.LightTab
-		srv.ntab_access = hpb_nt.AccessTab
-		srv.nslc_commit = hpb_nt.CommSlice
-		srv.nslc_precom = hpb_nt.PreCommSlice
+		srv.ntabLight  = hpb_nt.LightTab
+		srv.ntabAccess = hpb_nt.AccessTab
+		srv.nslcCommit = hpb_nt.CommSlice
+		srv.nslcPrecom = hpb_nt.PreCommSlice
 	}
 
 
@@ -434,8 +437,8 @@ func (srv *Server) Start() (err error) {
 		dynPeers = 0
 	}
 
-	dialer_light  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab_light,  dynPeers, srv.NetRestrict)
-	dialer_access := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab_access, dynPeers, srv.NetRestrict)
+	dialer_light  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabLight,  dynPeers, srv.NetRestrict)
+	dialer_access := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabAccess, dynPeers, srv.NetRestrict)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -602,7 +605,7 @@ running:
 				// mebay get this info earlier
 				p.local  = srv.local
 				p.remote = NtUnknown
-				nd := srv.ntab_light.Findout(c.id)
+				nd := srv.ntabLight.Findout(c.id)
 				if nd != nil {
 					p.remote = Uint8ToNodeType(nd.Role)
 					log.Debug("Get remote node type from discover","NodeID",c.id,"RemoteType",p.remote.String())
@@ -634,17 +637,17 @@ running:
 	log.Trace("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
-	if srv.ntab_light != nil {
-		srv.ntab_light.Close()
+	if srv.ntabLight != nil {
+		srv.ntabLight.Close()
 	}
-	if srv.ntab_access != nil {
-		srv.ntab_access.Close()
+	if srv.ntabAccess != nil {
+		srv.ntabAccess.Close()
 	}
-	if srv.nslc_commit != nil {
-		srv.nslc_commit.Close()
+	if srv.nslcCommit != nil {
+		srv.nslcCommit.Close()
 	}
-	if srv.nslc_precom != nil {
-		srv.nslc_precom.Close()
+	if srv.nslcPrecom != nil {
+		srv.nslcPrecom.Close()
 	}
 
 
@@ -693,7 +696,7 @@ type tempError interface {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntab_light))
+	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntabLight))
 
 	// This channel acts as a semaphore limiting
 	// active inbound connections that are lingering pre-handshake.
