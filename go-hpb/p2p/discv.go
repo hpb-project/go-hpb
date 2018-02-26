@@ -77,7 +77,7 @@ func (pt NodeType)ToDiscv() uint8 {
 }
 
 // Convert uint8 to NodeType
-func ToNodeType(discNt uint8) NodeType {
+func Uint8ToNodeType(discNt uint8) NodeType {
 	switch discNt {
 	case discover.BootRole:
 		return NtPublic

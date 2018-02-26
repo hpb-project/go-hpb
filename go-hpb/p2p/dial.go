@@ -349,7 +349,7 @@ func (t *dialTask) resolve(ntab discoverTable) bool {
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 
 	//to check
-	remotetype := ToNodeType(dest.Role)
+	remotetype := Uint8ToNodeType(dest.Role)
 	if t.isAllowDial(srv,remotetype) {
 		log.Debug("Do not allowed to dial","RemoteIP",dest.IP.String())
 		return false

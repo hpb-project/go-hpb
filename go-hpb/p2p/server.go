@@ -386,10 +386,12 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 
-
 	// hpb test: set local node type
 	srv.local = StrToNodeType(srv.RoleType)
-	log.Info("node flag of nodetype","NodeType",srv.local.String())
+	log.Info("flag of nodetype","NodeType",srv.local.String())
+	if srv.local == NtUnknown {
+		return fmt.Errorf("server local node type from flags is unkown")
+	}
 
 	// node table
 	if !srv.NoDiscovery {
@@ -602,7 +604,7 @@ running:
 				p.remote = NtUnknown
 				nd := srv.ntab_light.Findout(c.id)
 				if nd != nil {
-					p.remote = ToNodeType(nd.Role)
+					p.remote = Uint8ToNodeType(nd.Role)
 					log.Debug("Get remote node type from discover","NodeID",c.id,"RemoteType",p.remote.String())
 				}else {
 					log.Error("Node do not find in discover K buket","NodeID",c.id)
