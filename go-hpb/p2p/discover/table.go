@@ -318,6 +318,8 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 			if n != nil && !seen[n.ID] {
 				seen[n.ID] = true
 				result.push(n, bucketSize)
+				// TODO by xujl:for test, will del
+				log.Info("table find neighbor node","node", n)
 			}
 		}
 		pendingQueries--
