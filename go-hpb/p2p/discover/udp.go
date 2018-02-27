@@ -362,6 +362,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, forRole 
 		}
 		return nreceived >= bucketSize
 	})
+	log.Info("BootNode", "FindNode start", toid, forRole)
 	t.send(toaddr, forRole, findnodePacket, &findnode{
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
@@ -627,6 +628,10 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 	if expired(req.Expiration) {
 		return errExpired
 	}
+
+	// TODO by xujl:for test, will del
+	log.Info("udp receive ping packet","fromAddr", from, "fromID", fromID,"fromRole", fromRole, "forRole", forRle)
+
 	t.send(from, forRle, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP),
 		ReplyTok:   mac,
