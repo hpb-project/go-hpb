@@ -20,7 +20,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":      Admin_JS,
 	"chequebook": Chequebook_JS,
-	"prometheus":     Prometheus_JS,
+	"prometheus": Prometheus_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
 	"miner":      Miner_JS,
@@ -65,45 +65,45 @@ web3._extend({
 
 const Prometheus_JS = `
 web3._extend({
-	property: 'Prometheus',
+	property: 'prometheus',
 	methods: [
 		new web3._extend.Method({
-			name: 'getSnapshot',
-			call: 'Prometheus_getSnapshot',
+			name: 'getHistorysnap',
+			call: 'prometheus_getHistorysnap',
 			params: 1,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getSnapshotAtHash',
-			call: 'Prometheus_getSnapshotAtHash',
+			name: 'getHistorysnapAtHash',
+			call: 'prometheus_getHistorysnapAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getSigners',
-			call: 'Prometheus_getSigners',
+			call: 'prometheus_getSigners',
 			params: 1,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'getSignersAtHash',
-			call: 'Prometheus_getSignersAtHash',
+			call: 'prometheus_getSignersAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'propose',
-			call: 'Prometheus_propose',
+			call: 'prometheus_propose',
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'discard',
-			call: 'Prometheus_discard',
+			call: 'prometheus_discard',
 			params: 1
 		}),
 	],
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
-			getter: 'Prometheus_proposals'
+			getter: 'prometheus_proposals'
 		}),
 	]
 });
