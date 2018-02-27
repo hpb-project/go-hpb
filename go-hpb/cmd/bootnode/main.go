@@ -95,10 +95,10 @@ func main() {
 		}
 	}
 
-	if _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
+	if ga, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
 	} else {// else only for test
-/*
+
 		var nodesTestString = []string{
 			// HPB Foundation Go Bootnodes Test
 			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&1@127.0.0.1:30000",
@@ -119,7 +119,7 @@ func main() {
 		//if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
 		//	return
 		//}
-*/
+
 	}
 
 	select {}

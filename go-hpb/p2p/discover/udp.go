@@ -246,7 +246,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Int
 	}
 
 	// either light_Tab or access_Tab has the same self, lightTab.self is used here.
-	log.Info("discover -> UDP: listener up", "tables self", ga.LightTab.self, "role", ourRole)
+	log.Info("discover -> UDP", "listener up, self", ga.LightTab.self)
 	return ga, nil
 }
 
