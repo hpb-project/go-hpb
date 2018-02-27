@@ -101,7 +101,7 @@ func main() {
 /*
 		var nodesTestString = []string{
 			// HPB Foundation Go Bootnodes Test
-			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&4@192.168.31.91:30303",
+			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&1@127.0.0.1:30000",
 		}
 		var nodesTest []*discover.Node
 		for _, url := range nodesTestString {
@@ -113,12 +113,13 @@ func main() {
 			nodesTest = append(nodesTest, node)
 			log.Info("bootNode", "SetFallbackNodes ", node)
 		}
-		//if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
+		if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
+			return
+		}
+		//if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
 		//	return
 		//}
-		if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
-			return
-		}*/
+*/
 	}
 
 	select {}

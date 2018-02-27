@@ -274,12 +274,21 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 		result = tab.closest(target, bucketSize)
 		tab.mutex.Unlock()
 		if len(result.entries) > 0 || !refreshIfEmpty {
+			// TODO by xujl:
+			if len(result.entries) > 0 {
+				log.Info("tab lookup", "if result.entries > 0", true)
+			}
+			if !refreshIfEmpty {
+				log.Info("tab lookup", "if !refreshIfEmpty", true)
+			}
 			break
 		}
 		// The result set is empty, all nodes were dropped, refresh.
 		// We actually wait for the refresh to complete here. The very
 		// first query will hit this case and run the bootstrapping
 		// logic.
+		// TODO by xujl:
+		log.Info("tab lookup", "result set is empty <-tab.refresh()", "begin")
 		<-tab.refresh()
 		refreshIfEmpty = false
 	}
@@ -294,6 +303,8 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 				go func() {
 					// Find potential neighbors to bond with
 					r, err := tab.net.findnode(n.ID, n.addr(), targetID, tab.roleType)
+					// TODO by xujl:
+					log.Info("tab lookup->tab.net.findnode", "targetID", targetID, "toid", n.ID, "toaddr", n.addr())
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
 						fails := tab.db.findFails(n.ID, nodeDBDiscoverFindFails) + 1
@@ -396,8 +407,12 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// We perform a lookup with a random target instead.
 	var target NodeID
 	rand.Read(target[:])
+	// TODO by xujl: test will del
+	log.Info("doRefresh->tab.lookup", "rand target", target)
 	result := tab.lookup(target, false)
 	if len(result) > 0 {
+		// TODO by xujl: test will del
+		log.Info("doRefresh->tab.lookup", "find target success", "result num %d", len(result))
 		return
 	}
 
@@ -405,20 +420,39 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// them. This should yield a few previously seen nodes that are
 	// (hopefully) still alive.
 	seeds := tab.db.querySeeds(seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
+
+	// TODO by xujl: test will del
+	var seedsNodes []*Node
+	seedsNodes = append(seeds, tab.nursery...)
+	for _, sn := range seedsNodes {
+		log.Info("tab seedNode", "one node or one nursery", sn)
+	}
+
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
+	// TODO by xujl: test will del
+	for _, sn := range seeds {
+		log.Info("tab seedNode", "bond success node", sn)
+	}
+
 	if len(seeds) == 0 {
+		// TODO by xujl: test will del
+		log.Info("tab.doRefresh : No seed nodes found")
 		log.Debug("No discv4 seed nodes found")
 	}
 	for _, n := range seeds {
 		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID, nodeDBDiscoverPong)) }}
 		log.Trace("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
+		// TODO by xujl: test will del
+		log.Info("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
 	}
 	tab.mutex.Lock()
 	tab.stuff(seeds)
 	tab.mutex.Unlock()
 
 	// Finally, do a self lookup to fill up the buckets.
+	// TODO by xujl: test will del
+	log.Info("doRefresh->tab.lookup", "target self", tab.self.ID)
 	tab.lookup(tab.self.ID, false)
 }
 
@@ -466,6 +500,8 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	for i := range nodes {
 		go func(n *Node) {
 			// n.Role is already known
+			// TODO by xujl:
+			log.Info("tab.bondall", "try bond node", n)
 			nn, _ := tab.bond(false, n.ID, n.Role, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])
