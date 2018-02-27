@@ -111,7 +111,7 @@ func main() {
 				continue
 			}
 			nodesTest = append(nodesTest, node)
-			log.Info("bootNode", "SetFallbackNodes ", node)
+			log.Info("discover -> TABLE", "SetFallbackNodes", node)
 		}
 		if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
 			return
