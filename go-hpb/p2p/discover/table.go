@@ -231,6 +231,21 @@ func (tab *Table) Resolve(targetID NodeID) *Node {
 	return nil
 }
 
+// searches for a specific node with the given ID.
+// It returns nil if the node could not be found.
+func (tab *Table) Findout(targetID NodeID) *Node {
+	// If the node is present in the local table, no
+	// network interaction is required.
+	hash := crypto.Keccak256Hash(targetID[:])
+	tab.mutex.Lock()
+	cl := tab.closest(hash, 1)
+	tab.mutex.Unlock()
+	if len(cl.entries) > 0 && cl.entries[0].ID == targetID {
+		return cl.entries[0]
+	}
+	return nil
+}
+
 // Lookup performs a network search for nodes close
 // to the given target. It approaches the target by querying
 // nodes that are closer to it on each iteration.
