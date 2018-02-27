@@ -634,7 +634,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 	})
 	if !t.handleReply(fromID, fromRole, forRle, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		switch forRle {
+		switch fromRole {
 		case LightRole:
 			go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
 		case AccessRole:
