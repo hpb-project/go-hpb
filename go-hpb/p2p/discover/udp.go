@@ -335,6 +335,8 @@ func (t *udp) ping(toid NodeID, role uint8, forRole uint8, toaddr *net.UDPAddr) 
 		To:         makeEndpoint(toaddr, 0), // TODO: maybe use known TCP port from DB
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+	// TODO by xujl:
+	log.Info("udp send ping packet", "toaddr", toaddr, "toid", toid, "forRole", forRole)
 	return <-errc
 }
 
@@ -362,6 +364,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, forRole 
 		}
 		return nreceived >= bucketSize
 	})
+	log.Info("BootNode", "FindNode start", toid, forRole)
 	t.send(toaddr, forRole, findnodePacket, &findnode{
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
@@ -449,7 +452,7 @@ func (t *udp) loop() {
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				// send for role and req for role must be consistent
-				if p.from == r.from && p.ptype == r.ptype && (p.forRole == r.forRole || r.forRole == BootRole) {
+				if p.from == r.from && p.ptype == r.ptype/* && (p.forRole == r.forRole)*/ {
 					matched = true
 					// Remove the matcher if its callback indicatess
 					// that all replies have been received. This is
@@ -627,21 +630,34 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 	if expired(req.Expiration) {
 		return errExpired
 	}
+
 	t.send(from, forRle, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP),
 		ReplyTok:   mac,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+
+	// TODO by xujl:for test, will del
+	log.Info("udp send pong packet","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
+
 	if !t.handleReply(fromID, fromRole, forRle, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		switch forRle {
+		switch fromRole {
+		case BootRole:
+			switch forRle {
+			case LightRole:
+				// TODO by xujl:for test, will del
+				log.Info("t.lightTab.bond","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
+				go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
+			case AccessRole:
+				go t.accessTab.bond(true, fromID, fromRole, from, req.From.TCP)
+			}
 		case LightRole:
+			// TODO by xujl:for test, will del
+			log.Info("t.lightTab.bond","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
 			go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
 		case AccessRole:
 			go t.accessTab.bond(true, fromID, fromRole, from, req.From.TCP)
-		case CommRole:
-		case PreCommRole:
-		case UnKnowRole:
 		default:
 		}
 	}
@@ -652,8 +668,12 @@ func (req *ping) name() string { return "PING/v4" }
 
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, forRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
+		// TODO by xujl:for test, will del
+		log.Info("error: udp receive pong is expired","from", from, "fromID", fromID, "fromRole", fromRole, "forRole", forRole)
 		return errExpired
 	}
+	// TODO by xujl:for test, will del
+	log.Info("udp receive pong","from", from, "fromID", fromID, "fromRole", fromRole, "forRole", forRole)
 	if !t.handleReply(fromID, fromRole, forRole, pongPacket, req) {
 		return errUnsolicitedReply
 	}
@@ -662,6 +682,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8
 
 func (req *pong) name() string { return "PONG/v4" }
 
+// don't care fromRole, because when you first set up the network, it might be the request sent by bootNode.
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, forRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -671,8 +692,6 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole u
 		err := req.sendNeibors(t, from, t.lightTab, fromID, forRole); if err != nil {return err}
 	case AccessRole:
 		err := req.sendNeibors(t, from, t.accessTab, fromID, forRole); if err != nil {return err}
-	case CommRole:
-	case PreCommRole:
 	default:
 	}
 	return nil
