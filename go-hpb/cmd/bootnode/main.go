@@ -95,7 +95,7 @@ func main() {
 		}
 	}
 
-	if ga, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
+	if _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
 	} else {// else only for test
 /*
@@ -147,18 +147,18 @@ func main() {
 			log.Info("discover -> SLICE", "SetFallbackNodes ", node)
 		}
 
-		//if err := ga.LightTab.SetFallbackNodes(bootnodesTest); err != nil {
-		//	return
-		//}
-		//if err := ga.AccessTab.SetFallbackNodes(bootnodesTest); err != nil {
-		//	return
-		//}
+		if err := ga.LightTab.SetFallbackNodes(bootnodesTest); err != nil {
+			return
+		}
+		if err := ga.AccessTab.SetFallbackNodes(bootnodesTest); err != nil {
+			return
+		}
 		if err := ga.CommSlice.SetFallbackNodes(commnodesTest); err != nil {
 			return
 		}
-		//if err := ga.PreCommSlice.SetFallbackNodes(precommnodesTest); err != nil {
-		//	return
-		//}
+		if err := ga.PreCommSlice.SetFallbackNodes(precommnodesTest); err != nil {
+			return
+		}
 */
 	}
 

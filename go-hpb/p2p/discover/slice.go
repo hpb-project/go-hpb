@@ -38,9 +38,9 @@ type Slice struct {
 	members   []*Node       // Members of the consensus
 	actives   []*Node       // active member(keep live success)
 	roleType  uint8         // Slice's nodes type
-	bondSlots chan struct{} // limits total number of active bonding processes
-	bondmu    sync.Mutex
-	bonding   map[NodeID]*bondproc
+	keepSlots chan struct{} // limits total number of active bonding processes
+	keepmu    sync.Mutex
+	keeping   map[NodeID]*bondproc
 	db        *nodeDB
 	net       transport
 	self      *Node
@@ -121,8 +121,8 @@ func (sl *Slice) SetFallbackNodes(nodes []*Node) error {
 func newSlice (ci commInfo, roleType uint8) (*Slice, error) {
 	slice := &Slice{
 		net:        ci.udpSt,
-		bondSlots:  make(chan struct{}, maxConcurrencyPingPongs),
-		bonding:    make(map[NodeID]*bondproc),
+		keepSlots:  make(chan struct{}, maxConcurrencyPingPongs),
+		keeping:    make(map[NodeID]*bondproc),
 		db:         ci.lvlDb,
 		roleType:   roleType,
 		self:       NewNode(ci.ourId, ci.ourRole, ci.ourAddr.IP, uint16(ci.ourAddr.Port), uint16(ci.ourAddr.Port)),
@@ -132,8 +132,8 @@ func newSlice (ci commInfo, roleType uint8) (*Slice, error) {
 		closed:     make(chan struct{}),
 	}
 
-	for i := 0; i < cap(slice.bondSlots); i++ {
-		slice.bondSlots <- struct{}{}
+	for i := 0; i < cap(slice.keepSlots); i++ {
+		slice.keepSlots <- struct{}{}
 	}
 
 	// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
@@ -238,27 +238,27 @@ func (sl *Slice) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr,
 	}
 
 	var result error
-	log.Trace("Starting bonding ping/pong", "id", id)
+	log.Trace("Starting keeping ping/pong", "id", id)
 
-	sl.bondmu.Lock()
-	w := sl.bonding[id]
+	sl.keepmu.Lock()
+	w := sl.keeping[id]
 	if w != nil {
-		// Wait for an existing bonding process to complete.
-		sl.bondmu.Unlock()
+		// Wait for an existing keeping process to complete.
+		sl.keepmu.Unlock()
 		<-w.done
 	} else {
-		// Register a new bonding process.
+		// Register a new keeping process.
 		w = &bondproc{done: make(chan struct{})}
-		sl.bonding[id] = w
-		sl.bondmu.Unlock()
+		sl.keeping[id] = w
+		sl.keepmu.Unlock()
 		// Do the ping/pong. The result goes into w.
 		sl.pingPong(w, pinged, id, role, addr, tcpPort)
 		// Unregister the process after it's done.
-		sl.bondmu.Lock()
-		delete(sl.bonding, id)
-		sl.bondmu.Unlock()
+		sl.keepmu.Lock()
+		delete(sl.keeping, id)
+		sl.keepmu.Unlock()
 	}
-	// Retrieve the bonding results
+	// Retrieve the keeping results
 	result = w.err
 	if result != nil {
 		return nil, result
@@ -271,9 +271,9 @@ func (sl *Slice) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr,
 }
 
 func (sl *Slice) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) {
-	// bondSlots to limit network usage
-	<-sl.bondSlots
-	defer func() { sl.bondSlots <- struct{}{} }()
+	// keepSlots to limit network usage
+	<-sl.keepSlots
+	defer func() { sl.keepSlots <- struct{}{} }()
 
 	// Ping the remote side and wait for a pong
 	if w.err = sl.ping(id, role, addr); w.err != nil {
@@ -281,12 +281,9 @@ func (sl *Slice) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr 
 		return
 	}
 	if !pinged {
-		// Give the remote node a chance to ping us before we start
-		// sending findnode requests. If they still remember us,
-		// waitping will simply time out.
 		sl.net.waitping(id, role, sl.roleType)
 	}
-	// Bonding succeeded, update the node database.
+	// keeping succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
 	sl.db.updateNode(w.n, nodeDBCommitteeRoot)
 	close(w.done)
