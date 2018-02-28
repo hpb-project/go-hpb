@@ -423,6 +423,7 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 type PeerInfo struct {
 	ID      string   `json:"id"`   // Unique node identifier (also the encryption key)
 	Name    string   `json:"name"` // Name of the node, including client type, version, OS, custom data
+	Remote  string   `json:"remote"` //Remote node type
 	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
 	Network struct {
 		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
@@ -442,6 +443,7 @@ func (p *Peer) Info() *PeerInfo {
 	info := &PeerInfo{
 		ID:        p.ID().String(),
 		Name:      p.Name(),
+		Remote:    p.remote.String(),
 		Caps:      caps,
 		Protocols: make(map[string]interface{}),
 	}
