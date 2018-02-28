@@ -539,7 +539,7 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
 		// TODO by xujl:log will del
-		log.Info("discover -> TABLE", "bond success     ", node)
+		log.Info("discover -> TABLE", "bond success     ", node, "TABLE ROLE", tab.roleType)
 		tab.add(node)
 		tab.db.updateFindFails(id, nodeDBDiscoverFindFails,0)
 	}

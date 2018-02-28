@@ -675,9 +675,9 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole u
 	}
 	switch forRole {
 	case LightRole:
-		err := req.sendNeibors(t, from, t.lightTab, fromID, forRole); if err != nil {return err}
+		err := req.sendNeibors(t, from, t.lightTab, fromID, fromRole, forRole); if err != nil {return err}
 	case AccessRole:
-		err := req.sendNeibors(t, from, t.accessTab, fromID, forRole); if err != nil {return err}
+		err := req.sendNeibors(t, from, t.accessTab, fromID, fromRole, forRole); if err != nil {return err}
 	default:
 	}
 	return nil
@@ -701,16 +701,19 @@ func expired(ts uint64) bool {
 	return time.Unix(int64(ts), 0).Before(time.Now())
 }
 
-func (req *findnode)sendNeibors(trans *udp, from *net.UDPAddr, table *Table, fromID NodeID, forRole uint8) error {
-	if table.db.node(fromID, nodeDBDiscoverRoot) == nil {
-		// No bond exists, we don't process the packet. This prevents
-		// an attack vector where the discovery protocol could be used
-		// to amplify traffic in a DDOS attack. A malicious actor
-		// would send a findnode request with the IP address and UDP
-		// port of the target as the source address. The recipient of
-		// the findnode packet would then send a neighbors packet
-		// (which is a much bigger packet than findnode) to the victim.
-		return errUnknownNode
+func (req *findnode)sendNeibors(trans *udp, from *net.UDPAddr, table *Table, fromID NodeID, fromRole uint8, forRole uint8) error {
+	// TODO by xujl: because no CommRole and PreCommRole Table, so don't need confirm in tab.db
+	if fromRole != CommRole && fromRole != PreCommRole {
+		if table.db.node(fromID, nodeDBDiscoverRoot) == nil {
+			// No bond exists, we don't process the packet. This prevents
+			// an attack vector where the discovery protocol could be used
+			// to amplify traffic in a DDOS attack. A malicious actor
+			// would send a findnode request with the IP address and UDP
+			// port of the target as the source address. The recipient of
+			// the findnode packet would then send a neighbors packet
+			// (which is a much bigger packet than findnode) to the victim.
+			return errUnknownNode
+		}
 	}
 	target := crypto.Keccak256Hash(req.Target[:])
 	table.mutex.Lock()
