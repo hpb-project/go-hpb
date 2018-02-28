@@ -246,7 +246,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, ourRole uint8, laddr string, natm nat.Int
 	}
 
 	// either light_Tab or access_Tab has the same self, lightTab.self is used here.
-	log.Info("UDP listener up", "light_Tab and access_Tab's self", ga.LightTab.self, "role", ourRole)
+	log.Info("discover -> UDP", "listener up, self", ga.LightTab.self)
 	return ga, nil
 }
 
@@ -335,8 +335,6 @@ func (t *udp) ping(toid NodeID, role uint8, forRole uint8, toaddr *net.UDPAddr) 
 		To:         makeEndpoint(toaddr, 0), // TODO: maybe use known TCP port from DB
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	// TODO by xujl:
-	log.Info("udp send ping packet", "toaddr", toaddr, "toid", toid, "forRole", forRole)
 	return <-errc
 }
 
@@ -346,10 +344,10 @@ func (t *udp) waitping(from NodeID, fromRole uint8, forRole uint8) error {
 
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.
-func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, forRole uint8) ([]*Node, error) {
+func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, tabRole uint8) ([]*Node, error) {
 	nodes := make([]*Node, 0, bucketSize)
 	nreceived := 0
-	errc := t.pending(toid, forRole, neighborsPacket, func(r interface{}) bool {
+	errc := t.pending(toid, tabRole, neighborsPacket, func(r interface{}) bool {
 		reply := r.(*neighbors)
 		for _, rn := range reply.Nodes {
 			nreceived++
@@ -358,14 +356,13 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, forRole 
 				log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
 				continue
 			}
-			if forRole == n.Role {
+			if tabRole == n.Role {
 				nodes = append(nodes, n)
 			}
 		}
 		return nreceived >= bucketSize
 	})
-	log.Info("BootNode", "FindNode start", toid, forRole)
-	t.send(toaddr, forRole, findnodePacket, &findnode{
+	t.send(toaddr, tabRole, findnodePacket, &findnode{
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
@@ -626,35 +623,28 @@ func decodePacket(buf []byte) (packet, NodeID, uint8, uint8, []byte, error) {
 	return req, fromID, nodeRole, forRole, hash, err
 }
 
-func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, forRle uint8, mac []byte) error {
+func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, tabRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
 
-	t.send(from, forRle, pongPacket, &pong{
+	t.send(from, tabRole, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP),
 		ReplyTok:   mac,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
 
-	// TODO by xujl:for test, will del
-	log.Info("udp send pong packet","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
-
-	if !t.handleReply(fromID, fromRole, forRle, pingPacket, req) {
+	if !t.handleReply(fromID, fromRole, tabRole, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
 		switch fromRole {
 		case BootRole:
-			switch forRle {
+			switch tabRole {
 			case LightRole:
-				// TODO by xujl:for test, will del
-				log.Info("t.lightTab.bond","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
 				go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
 			case AccessRole:
 				go t.accessTab.bond(true, fromID, fromRole, from, req.From.TCP)
 			}
 		case LightRole:
-			// TODO by xujl:for test, will del
-			log.Info("t.lightTab.bond","toAddr", from, "toid", fromID,"toRole", fromRole, "forRole", forRle)
 			go t.lightTab.bond(true, fromID, fromRole, from, req.From.TCP)
 		case AccessRole:
 			go t.accessTab.bond(true, fromID, fromRole, from, req.From.TCP)
@@ -668,12 +658,8 @@ func (req *ping) name() string { return "PING/v4" }
 
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, fromRole uint8, forRole uint8, mac []byte) error {
 	if expired(req.Expiration) {
-		// TODO by xujl:for test, will del
-		log.Info("error: udp receive pong is expired","from", from, "fromID", fromID, "fromRole", fromRole, "forRole", forRole)
 		return errExpired
 	}
-	// TODO by xujl:for test, will del
-	log.Info("udp receive pong","from", from, "fromID", fromID, "fromRole", fromRole, "forRole", forRole)
 	if !t.handleReply(fromID, fromRole, forRole, pongPacket, req) {
 		return errUnsolicitedReply
 	}
