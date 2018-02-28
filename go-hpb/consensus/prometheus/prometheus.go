@@ -166,10 +166,10 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 	}
 	// Set the correct difficulty
 	// 根据 addressHash 来判断是否
-	header.Difficulty = diffNoTurn
-	if snap.inturn(header.Number.Uint64(), c.signerHash) {
-		header.Difficulty = diffInTurn
-	}
+	//header.Difficulty = diffNoTurn
+	//if snap.inturn(header.Number.Uint64(), c.signerHash) {
+		//header.Difficulty = diffInTurn
+	//}
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
@@ -549,7 +549,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
 	
-	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
+	//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
+	
+	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 	
 	/*
 	To be decided
@@ -568,6 +570,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if _, ok := snap.Signers[signerHash]; !ok {
 		return errUnauthorized
 	}
+	
+	
+	
 	for seen, recent := range snap.Recents {
 		if recent == signerHash {
 			// Signer is among recents, only fail if the current block doesn't shift it out
@@ -634,8 +639,8 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
 	
-	//header.Random = c.config.Random
 	
+	//header.Random = c.config.Random
 	/*
 	if(number > c.config.Epoch){
 		voteNum := uint64(math.Floor(float64(number/c.config.Epoch)))*(c.config.Epoch)
@@ -665,9 +670,27 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	if err != nil {
 		return nil, err
 	}
+	
+	var status bool
+	status = false
+	
 	if _, authorized := snap.Signers[signerHash]; !authorized {
+		for _, str := range c.config.Random{
+		    signerHash = common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + string(str))))
+		    if _, authorized := snap.Signers[signerHash]; authorized {
+		    	header.Random = string(str)
+		    	status = true
+		    	break
+		    }
+		}
+	}else{
+		status = true
+	}
+	
+	if(!status){
 		return nil, errUnauthorized
 	}
+	
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序
 	for seen, recent := range snap.Recents {
@@ -684,13 +707,21 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	// 比较难度值，确定是否为适合的时间
-	if header.Difficulty.Cmp(diffNoTurn) == 0 {
+	/*if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
 		delay += time.Duration(rand.Int63n(int64(wiggle)))
 
 		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+	}*/
+	
+	if !(snap.inturn(header.Number.Uint64(), signerHash)) {
+		// It's not our turn explicitly to sign, delay it a bit
+		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
+		delay += time.Duration(rand.Int63n(int64(wiggle)))
+		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 	}
+	
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 
 	select {

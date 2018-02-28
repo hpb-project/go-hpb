@@ -24,6 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/rpc"
 	//	"github.com/hpb-project/go-hpb/core"
 	//"math"
+	"math/rand"
 
 )
 
@@ -121,7 +122,12 @@ func (api *API) Propose(address common.Address, auth bool) {
     //[]byte
     //api.prometheus.proposalsHash[common.BytesToAddressHash(phash)] = auth
     
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + api.prometheus.config.Random)))
+    random := api.prometheus.config.Random
+    
+    confRand := string(random[rand.Intn(len(random))])
+    
+    //addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + api.prometheus.config.Random)))
+    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
 
     /*
 	number := api.chain.CurrentHeader().Number.Uint64()
