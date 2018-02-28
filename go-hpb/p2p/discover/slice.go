@@ -158,13 +158,13 @@ loop:
 		case <-timer.C:
 			if done == nil {
 				done = make(chan struct{})
-				go sl.keepLive(done)
+				go sl.keepAllLive(done)
 			}
 		case req := <-sl.refreshReq:
 			waiting = append(waiting, req)
 			if done == nil {
 				done = make(chan struct{})
-				go sl.keepLive(done)
+				go sl.keepAllLive(done)
 			}
 		case <-done:
 			for _, ch := range waiting {
@@ -200,18 +200,18 @@ func (sl *Slice) refresh() <-chan struct{} {
 	return done
 }
 
-func (sl *Slice) keepLive(done chan struct{}) {
+func (sl *Slice) keepAllLive(done chan struct{}) {
 	defer close(done)
 
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
 	rc := make(chan *Node, len(sl.members))
-	for _, n := range sl.members {
+	for i := range sl.members {
 		go func(node * Node) {
-			nn, _ := sl.test(false, n.ID, n.Role, n.addr(), uint16(n.TCP))
+			nn, _ := sl.keepLive(false, node.ID, node.Role, node.addr(), uint16(node.TCP))
 			rc <- nn
-		} (n)
+		} (sl.members[i])
 	}
 
 	var sucMem []*Node
@@ -231,7 +231,7 @@ func (sl *Slice) keepLive(done chan struct{}) {
 	}
 }
 
-func (sl *Slice) test(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
+func (sl *Slice) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
 	// This is unlikely to happen.
 	if id == sl.self.ID {
 		return nil, errors.New("is self")
