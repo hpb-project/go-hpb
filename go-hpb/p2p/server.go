@@ -606,11 +606,16 @@ running:
 				// mebay get this info earlier
 				p.local  = srv.local
 				p.remote = NtUnknown
-				nd := srv.ntabLight.Findout(c.id)
-				if nd != nil {
-					p.remote = Uint8ToNodeType(nd.Role)
-					log.Debug("Get remote node type from discover","NodeID",c.id,"RemoteType",p.remote.String())
-				}else {
+				ndLight  := srv.ntabLight.Findout(c.id)
+				ndAccess := srv.ntabAccess.Findout(c.id)
+				if ndLight != nil{
+					p.remote = Uint8ToNodeType(ndLight.Role)
+				}
+				if ndAccess != nil{
+					p.remote = Uint8ToNodeType(ndAccess.Role)
+				}
+
+				if ndLight == nil && ndAccess == nil{
 					log.Error("Node do not find in discover K buket","NodeID",c.id)
 				}
 
@@ -866,6 +871,7 @@ func (srv *Server) runPeer(p *Peer) {
 type NodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
+	Local string `json:"local"` // Local node type
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
 	IP    string `json:"ip"`    // IP address of the node
 	Ports struct {
@@ -883,6 +889,7 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	// Gather and assemble the generic node infos
 	info := &NodeInfo{
 		Name:       srv.Name,
+		Local:      srv.local.String(),
 		Enode:      node.String(),
 		ID:         node.ID.String(),
 		IP:         node.IP.String(),
