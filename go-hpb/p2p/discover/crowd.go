@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// slice.go implements the CommNode and PreCommNode keep-live Protocol.
+// implements nodes keep-live Protocol.
 package discover
 
 import(
@@ -30,16 +30,16 @@ import(
 
 const (
 	maxConcurrencyPingPongs = 16
-	pingInerval             = 10 * time.Second
+	pingInterval             = 10 * time.Second
 )
 
-type Slice struct {
+type Crowd struct {
 	mutex     sync.Mutex    // Mutex for members
 	members   []*Node       // Members of the consensus
 	actives   []*Node       // active member(keep live success)
-	roleType  uint8         // Slice's nodes type
+	roleType  uint8         // Crowd's nodes type
 	keepSlots chan struct{} // limits total number of active bonding processes
-	keepmu    sync.Mutex
+	keepMu    sync.Mutex
 	keeping   map[NodeID]*bondproc
 	db        *nodeDB
 	net       transport
@@ -50,60 +50,60 @@ type Slice struct {
 	closed     chan struct{}
 }
 
-func (sl *Slice) Self() *Node {
-	return sl.self
+func (cr *Crowd) Self() *Node {
+	return cr.self
 }
 
-func (sl *Slice) Close() {
+func (cr *Crowd) Close() {
 	select {
-	case <-sl.closed:
+	case <-cr.closed:
 		// already closed.
-	case sl.closeReq <- struct{}{}:
-		<-sl.closed // wait for keepLiveLoop to end.
+	case cr.closeReq <- struct{}{}:
+		<-cr.closed // wait for keepLiveLoop to end.
 	}
 }
 
 // Returns only the nodes available
-func (sl *Slice) Fetch() []*Node {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-	var activeSlice []*Node
-	for _, m := range sl.actives {
-		activeSlice = append(activeSlice, m)
+func (cr *Crowd) Fetch() []*Node {
+	cr.mutex.Lock()
+	defer cr.mutex.Unlock()
+	var activeCrowd []*Node
+	for _, m := range cr.actives {
+		activeCrowd = append(activeCrowd, m)
 	}
 
-	return activeSlice
+	return activeCrowd
 }
 
-func (sl *Slice) Delete(n *Node) {
-	sl.db.deleteNode(n.ID)
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
+func (cr *Crowd) Delete(n *Node) {
+	cr.db.deleteNode(n.ID)
+	cr.mutex.Lock()
+	defer cr.mutex.Unlock()
 	var index = 0
-	for _, m := range sl.members {
+	for _, m := range cr.members {
 		if m.ID == n.ID {
-			sl.members = append(sl.members[:index], sl.members[index+1:]...)
+			cr.members = append(cr.members[:index], cr.members[index+1:]...)
 		}
 		index++
 	}
 }
 
 // If the pingPong test is successful, it will be added to the DB.
-func (sl *Slice) Add(n *Node) {
-	sl.mutex.Lock()
-	sl.members = append(sl.members, n)
-	sl.mutex.Unlock()
+func (cr *Crowd) Add(n *Node) {
+	cr.mutex.Lock()
+	cr.members = append(cr.members, n)
+	cr.mutex.Unlock()
 	// The new node starts ping-pong immediately.
-	sl.refresh()
+	cr.refresh()
 }
 
-func (sl *Slice) SetFallbackNodes(nodes []*Node) error {
+func (cr *Crowd) SetFallbackNodes(nodes []*Node) error {
 	for _, n := range nodes {
 		if err := n.validateComplete(); err != nil {
 			return fmt.Errorf("bad bootstrap/fallback node %q (%v)", n, err)
 		}
 	}
-	sl.mutex.Lock()
+	cr.mutex.Lock()
 	var tmpNodes []*Node
 	for _, n := range nodes {
 		cpy := *n
@@ -112,14 +112,14 @@ func (sl *Slice) SetFallbackNodes(nodes []*Node) error {
 		cpy.sha = crypto.Keccak256Hash(n.ID[:])
 		tmpNodes = append(tmpNodes, &cpy)
 	}
-	sl.members = tmpNodes
-	sl.mutex.Unlock()
-	sl.refresh()
+	cr.members = tmpNodes
+	cr.mutex.Unlock()
+	cr.refresh()
 	return nil
 }
 
-func newSlice (ci commInfo, roleType uint8) (*Slice, error) {
-	slice := &Slice{
+func newCrowd (ci commInfo, roleType uint8) (*Crowd, error) {
+	Crowd := &Crowd{
 		net:        ci.udpSt,
 		keepSlots:  make(chan struct{}, maxConcurrencyPingPongs),
 		keeping:    make(map[NodeID]*bondproc),
@@ -132,23 +132,23 @@ func newSlice (ci commInfo, roleType uint8) (*Slice, error) {
 		closed:     make(chan struct{}),
 	}
 
-	for i := 0; i < cap(slice.keepSlots); i++ {
-		slice.keepSlots <- struct{}{}
+	for i := 0; i < cap(Crowd.keepSlots); i++ {
+		Crowd.keepSlots <- struct{}{}
 	}
 
-	// TODO by xujl: 传入slice为空，则从orgnode拉取，如果再失败则从本地db加载
-	go slice.pullSlice(roleType)
-	slice.loadFromDB(ci.lvlDb, roleType)
+	// TODO by xujl: 传入Crowd为空，则从orgnode拉取，如果再失败则从本地db加载
+	go Crowd.pullCrowd(roleType)
+	Crowd.loadFromDB(ci.lvlDb, roleType)
 
-	go slice.keepLiveLoop()
+	go Crowd.keepLiveLoop()
 
-	return slice, nil
+	return Crowd, nil
 }
 
 // Guaranteed keepLive function scheduling.
-func (sl *Slice) keepLiveLoop()  {
+func (cr *Crowd) keepLiveLoop()  {
 	var (
-		timer   = time.NewTicker(pingInerval)
+		timer   = time.NewTicker(pingInterval)
 		waiting []chan struct{} // accumulates waiting callers while keepLiveLoop runs
 		done    chan struct{}   // where keepLiveLoop reports completion
 	)
@@ -158,13 +158,13 @@ loop:
 		case <-timer.C:
 			if done == nil {
 				done = make(chan struct{})
-				go sl.keepAllLive(done)
+				go cr.keepAllLive(done)
 			}
-		case req := <-sl.refreshReq:
+		case req := <-cr.refreshReq:
 			waiting = append(waiting, req)
 			if done == nil {
 				done = make(chan struct{})
-				go sl.keepAllLive(done)
+				go cr.keepAllLive(done)
 			}
 		case <-done:
 			for _, ch := range waiting {
@@ -172,13 +172,13 @@ loop:
 			}
 			waiting = nil
 			done = nil
-		case <-sl.closeReq:
+		case <-cr.closeReq:
 			break loop
 		}
 	}
 
-	if sl.net != nil {
-		sl.net.close()
+	if cr.net != nil {
+		cr.net.close()
 	}
 	if done != nil {
 		<-done
@@ -186,37 +186,37 @@ loop:
 	for _, ch := range waiting {
 		close(ch)
 	}
-	sl.db.close()
-	close(sl.closed)
+	cr.db.close()
+	close(cr.closed)
 }
 
-func (sl *Slice) refresh() <-chan struct{} {
+func (cr *Crowd) refresh() <-chan struct{} {
 	done := make(chan struct{})
 	select {
-	case sl.refreshReq <- done:
-	case <-sl.closed:
+	case cr.refreshReq <- done:
+	case <-cr.closed:
 		close(done)
 	}
 	return done
 }
 
-func (sl *Slice) keepAllLive(done chan struct{}) {
+func (cr *Crowd) keepAllLive(done chan struct{}) {
 	defer close(done)
 
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
+	cr.mutex.Lock()
+	defer cr.mutex.Unlock()
 
-	rc := make(chan *Node, len(sl.members))
-	for i := range sl.members {
+	rc := make(chan *Node, len(cr.members))
+	for i := range cr.members {
 		go func(node * Node) {
-			nn, _ := sl.keepLive(false, node.ID, node.Role, node.addr(), uint16(node.TCP))
+			nn, _ := cr.keepLive(false, node.ID, node.Role, node.addr(), uint16(node.TCP))
 			rc <- nn
-		} (sl.members[i])
+		} (cr.members[i])
 	}
 
 	var sucMem []*Node
 
-	for range sl.members {
+	for range cr.members {
 		if node := <-rc; node != nil {
 			if node != nil {
 				//only pingPong success node be retained
@@ -225,38 +225,38 @@ func (sl *Slice) keepAllLive(done chan struct{}) {
 		}
 	}
 
-	sl.actives = sucMem
-	for _, n := range sl.actives {
+	cr.actives = sucMem
+	for _, n := range cr.actives {
 		log.Info("keep-live", "active node", n)
 	}
 }
 
-func (sl *Slice) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
+func (cr *Crowd) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
 	// This is unlikely to happen.
-	if id == sl.self.ID {
+	if id == cr.self.ID {
 		return nil, errors.New("is self")
 	}
 
 	var result error
 	log.Trace("Starting keeping ping/pong", "id", id)
 
-	sl.keepmu.Lock()
-	w := sl.keeping[id]
+	cr.keepMu.Lock()
+	w := cr.keeping[id]
 	if w != nil {
 		// Wait for an existing keeping process to complete.
-		sl.keepmu.Unlock()
+		cr.keepMu.Unlock()
 		<-w.done
 	} else {
 		// Register a new keeping process.
 		w = &bondproc{done: make(chan struct{})}
-		sl.keeping[id] = w
-		sl.keepmu.Unlock()
+		cr.keeping[id] = w
+		cr.keepMu.Unlock()
 		// Do the ping/pong. The result goes into w.
-		sl.pingPong(w, pinged, id, role, addr, tcpPort)
+		cr.pingPong(w, pinged, id, role, addr, tcpPort)
 		// Unregister the process after it's done.
-		sl.keepmu.Lock()
-		delete(sl.keeping, id)
-		sl.keepmu.Unlock()
+		cr.keepMu.Lock()
+		delete(cr.keeping, id)
+		cr.keepMu.Unlock()
 	}
 	// Retrieve the keeping results
 	result = w.err
@@ -265,49 +265,49 @@ func (sl *Slice) keepLive(pinged bool, id NodeID, role uint8, addr *net.UDPAddr,
 	}
 	node := w.n
 	if node != nil {
-		sl.db.updateLastPong(id, nodeDBCommitteePong, time.Now())
+		cr.db.updateLastPong(id, nodeDBCommitteePong, time.Now())
 	}
 	return node, result
 }
 
-func (sl *Slice) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) {
+func (cr *Crowd) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tcpPort uint16) {
 	// keepSlots to limit network usage
-	<-sl.keepSlots
-	defer func() { sl.keepSlots <- struct{}{} }()
+	<-cr.keepSlots
+	defer func() { cr.keepSlots <- struct{}{} }()
 
 	// Ping the remote side and wait for a pong
-	if w.err = sl.ping(id, role, addr); w.err != nil {
+	if w.err = cr.ping(id, role, addr); w.err != nil {
 		close(w.done)
 		return
 	}
 	if !pinged {
-		sl.net.waitping(id, role, sl.roleType)
+		cr.net.waitping(id, role, cr.roleType)
 	}
 	// keeping succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
-	sl.db.updateNode(w.n, nodeDBCommitteeRoot)
+	cr.db.updateNode(w.n, nodeDBCommitteeRoot)
 	close(w.done)
 }
 
-func (sl *Slice) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
-	sl.db.updateLastPing(id, nodeDBCommitteePing, time.Now())
-	if err := sl.net.ping(id, role, sl.roleType, addr); err != nil {
+func (cr *Crowd) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
+	cr.db.updateLastPing(id, nodeDBCommitteePing, time.Now())
+	if err := cr.net.ping(id, role, cr.roleType, addr); err != nil {
 		return err
 	}
-	sl.db.updateLastPong(id, nodeDBCommitteePong, time.Now())
+	cr.db.updateLastPong(id, nodeDBCommitteePong, time.Now())
 
 	// TODO by xujl: Whether to reuse KAD DB timeout Mechanism
-	sl.db.ensureExpirer(nodeDBCommitteeRoot, nodeDBCommitteePong)
+	cr.db.ensureExpirer(nodeDBCommitteeRoot, nodeDBCommitteePong)
 	return nil
 }
 
-func (sl *Slice) loadFromDB(db *nodeDB, forRole uint8) {
+func (cr *Crowd) loadFromDB(db *nodeDB, forRole uint8) {
 	if db == nil {
 		return
 	}
 }
 
-func (sl *Slice) pullSlice(forRole uint8) {
+func (cr *Crowd) pullCrowd(forRole uint8) {
 
 
 }

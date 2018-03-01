@@ -64,6 +64,12 @@ const (
 	neighborsPacket
 )
 
+// RPC packet purpose
+const (
+	discover = iota + 1
+	keepLive
+)
+
 // RPC request structures
 type (
 	ping struct {
@@ -218,8 +224,8 @@ type reply struct {
 type Gather struct {
 	LightTab     *Table
 	AccessTab    *Table
-	CommSlice    *Slice
-	PreCommSlice *Slice
+	CommSlice    *Crowd
+	PreCommSlice *Crowd
 }
 
 type commInfo struct {
@@ -299,12 +305,12 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, n
 		return ga, nil, err
 	}
 
-	comm, err := newSlice(ci, CommRole)
+	comm, err := newCrowd(ci, CommRole)
 	ga.CommSlice = comm
 	if err != nil {
 		return ga, nil, err
 	}
-	pre, err := newSlice(ci, PreCommRole)
+	pre, err := newCrowd(ci, PreCommRole)
 	ga.PreCommSlice = pre
 	if err != nil {
 		return ga, nil, err
