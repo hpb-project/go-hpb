@@ -164,12 +164,40 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 		}
 		c.lock.RUnlock()
 	}
+	
+	
+	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + c.config.Random)))
+
+	//var authorizedStatus bool
+	//authorizedStatus = false
+	
+	if _, authorized := snap.Signers[signerHash]; !authorized {
+		for _, str := range c.config.Random{
+		    signerHash = common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + string(str))))
+		    if _, authorized_index := snap.Signers[signerHash]; authorized_index {
+		    	header.Random = string(str)
+		    	///authorizedStatus = true
+		    	break
+		    }
+		}
+	}else{
+		header.Random = c.config.Random
+		//authorizedStatus = true
+	}
+	
+	//log.Trace("P",  authorizedStatus)
+	
+	//if(!authorizedStatus){
+		//return errUnauthorized
+	//}
+	
 	// Set the correct difficulty
 	// 根据 addressHash 来判断是否
-	//header.Difficulty = diffNoTurn
+	header.Difficulty = diffNoTurn
 	//if snap.inturn(header.Number.Uint64(), c.signerHash) {
-		//header.Difficulty = diffInTurn
-	//}
+	if snap.inturn(header.Number.Uint64(), signerHash) {
+		header.Difficulty = diffInTurn
+	}
 	// Ensure the extra data has all it's components
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
@@ -238,7 +266,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 			//}
 
 
-			fmt.Printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW%d", len(genesis.ExtraHash))
+			//fmt.Printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW%d", len(genesis.ExtraHash))
 
 			signers := make([]common.AddressHash, (len(genesis.ExtraHash)-extraVanity-extraSeal)/common.AddressHashLength)
 			
@@ -635,9 +663,9 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 	
-	log.Info("Proposed the random number in current round:" + c.config.Random)
 	
-	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
+	//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
+	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 	
 	
 	//header.Random = c.config.Random
@@ -671,26 +699,33 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		return nil, err
 	}
 	
-	var status bool
-	status = false
+	//var status bool
+	//status = false
 	
 	if _, authorized := snap.Signers[signerHash]; !authorized {
-		for _, str := range c.config.Random{
+		/*for _, str := range c.config.Random{
 		    signerHash = common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + string(str))))
 		    if _, authorized := snap.Signers[signerHash]; authorized {
 		    	header.Random = string(str)
 		    	status = true
 		    	break
 		    }
-		}
-	}else{
+		}*/
+		
+		return nil, errUnauthorized
+	}
+	
+	/*else{
+		header.Random = c.config.Random
 		status = true
 	}
 	
 	if(!status){
 		return nil, errUnauthorized
-	}
+	}*/
 	
+	log.Info("Proposed the random number in current round:" + header.Random)
+
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序
 	for seen, recent := range snap.Recents {

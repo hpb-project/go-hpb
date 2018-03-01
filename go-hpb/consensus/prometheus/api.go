@@ -17,17 +17,16 @@
 package prometheus
 
 import (
-	//"fmt"
+	"fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/core/types"
 	"github.com/hpb-project/go-hpb/rpc"
 	//	"github.com/hpb-project/go-hpb/core"
 	//"math"
-	"math/rand"
+	//"math/rand"
 
 )
-
 
 type API struct {
 	chain  consensus.ChainReader
@@ -99,7 +98,7 @@ func (api *API) Proposals() map[common.AddressHash]bool {
 	return proposals
 }
 
-func (api *API) Propose(address common.Address, auth bool) {
+func (api *API) Propose(address common.Address, confRand string,auth bool) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
    
@@ -122,12 +121,14 @@ func (api *API) Propose(address common.Address, auth bool) {
     //[]byte
     //api.prometheus.proposalsHash[common.BytesToAddressHash(phash)] = auth
     
-    random := api.prometheus.config.Random
+    //random := api.prometheus.config.Random
     
-    confRand := string(random[rand.Intn(len(random))])
+    //confRand := string(random[rand.Intn(len(random))])
     
     //addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + api.prometheus.config.Random)))
     addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
+
+	fmt.Printf("new config random is: %s",confRand)
 
     /*
 	number := api.chain.CurrentHeader().Number.Uint64()
