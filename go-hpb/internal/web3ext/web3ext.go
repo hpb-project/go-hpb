@@ -92,7 +92,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'propose',
 			call: 'prometheus_propose',
-			params: 2
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'discard',
