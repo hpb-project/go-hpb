@@ -71,8 +71,32 @@ func (cr *Crowd) Fetch() []*Node {
 	for _, m := range cr.actives {
 		activeCrowd = append(activeCrowd, m)
 	}
-
 	return activeCrowd
+}
+
+func (cr *Crowd) Set(nds []*Node) {
+	cr.mutex.Lock()
+	cr.members = nds
+	cr.mutex.Unlock()
+	// The new node starts ping-pong immediately.
+	cr.refresh()
+}
+
+func (cr *Crowd) Add(n *Node) {
+	cr.mutex.Lock()
+	cr.members = append(cr.members, n)
+	cr.mutex.Unlock()
+	// The new node starts ping-pong immediately.
+	cr.refresh()
+}
+
+func (cr *Crowd) Clear() {
+	for _, m := range cr.members {
+		cr.db.deleteNode(m.ID)
+	}
+	cr.mutex.Lock()
+	defer cr.mutex.Unlock()
+	cr.members = make([] *Node, 0)
 }
 
 func (cr *Crowd) Delete(n *Node) {
@@ -86,15 +110,6 @@ func (cr *Crowd) Delete(n *Node) {
 		}
 		index++
 	}
-}
-
-// If the pingPong test is successful, it will be added to the DB.
-func (cr *Crowd) Add(n *Node) {
-	cr.mutex.Lock()
-	cr.members = append(cr.members, n)
-	cr.mutex.Unlock()
-	// The new node starts ping-pong immediately.
-	cr.refresh()
 }
 
 func (cr *Crowd) SetFallbackNodes(nodes []*Node) error {
@@ -136,8 +151,6 @@ func newCrowd (ci commInfo, roleType uint8) (*Crowd, error) {
 		Crowd.keepSlots <- struct{}{}
 	}
 
-	// TODO by xujl: 传入Crowd为空，则从orgnode拉取，如果再失败则从本地db加载
-	go Crowd.pullCrowd(roleType)
 	Crowd.loadFromDB(ci.lvlDb, roleType)
 
 	go Crowd.keepLiveLoop()
@@ -305,9 +318,4 @@ func (cr *Crowd) loadFromDB(db *nodeDB, forRole uint8) {
 	if db == nil {
 		return
 	}
-}
-
-func (cr *Crowd) pullCrowd(forRole uint8) {
-
-
 }

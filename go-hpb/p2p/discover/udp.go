@@ -64,10 +64,10 @@ const (
 	neighborsPacket
 )
 
-// RPC packet purpose
+// work for
 const (
-	discover = iota + 1
-	keepLive
+	table uint8 = iota + 1
+	crowd
 )
 
 // RPC request structures

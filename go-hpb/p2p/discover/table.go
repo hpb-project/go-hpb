@@ -318,8 +318,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 			if n != nil && !seen[n.ID] {
 				seen[n.ID] = true
 				result.push(n, bucketSize)
-				// TODO by xujl:for test, will del
-				log.Info("discover -> TABLE","find a neighbor  ", n, "TABLE ROLE", tab.roleType)
+				log.Trace("discover -> TABLE","find a neighbor  ", n, "TABLE ROLE", tab.roleType)
 			}
 		}
 		pendingQueries--
@@ -538,8 +537,7 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		// Add the node to the table even if the bonding ping/pong
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
-		// TODO by xujl:log will del
-		log.Info("discover -> TABLE", "bond success     ", node, "TABLE ROLE", tab.roleType)
+		log.Trace("discover -> TABLE", "bond success     ", node, "TABLE ROLE", tab.roleType)
 		tab.add(node)
 		tab.db.updateFindFails(id, nodeDBDiscoverFindFails,0)
 	}
