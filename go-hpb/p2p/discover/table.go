@@ -305,7 +305,14 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 							tab.delete(n)
 						}
 					}
-					reply <- tab.bondall(r)
+					// Prevent the attacker from tampering with the code and sending it to an incorrect neighbor.
+					var rcr []*Node
+					for _, n := range r {
+						if n.Role == tab.roleType || n.Role == BootRole {
+							rcr = append(rcr, n)
+						}
+					}
+					reply <- tab.bondall(rcr)
 				}()
 			}
 		}
