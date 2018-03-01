@@ -294,7 +294,7 @@ func (cr *Crowd) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr 
 		return
 	}
 	if !pinged {
-		cr.net.waitping(id, role, cr.roleType)
+		cr.net.waitping(id, crowdService, role, cr.roleType)
 	}
 	// keeping succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
@@ -304,7 +304,7 @@ func (cr *Crowd) pingPong(w *bondproc, pinged bool, id NodeID, role uint8, addr 
 
 func (cr *Crowd) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
 	cr.db.updateLastPing(id, nodeDBCommitteePing, time.Now())
-	if err := cr.net.ping(id, role, cr.roleType, addr); err != nil {
+	if err := cr.net.ping(id, crowdService, role, cr.roleType, addr); err != nil {
 		return err
 	}
 	cr.db.updateLastPong(id, nodeDBCommitteePong, time.Now())
