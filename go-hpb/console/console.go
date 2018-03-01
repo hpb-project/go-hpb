@@ -132,7 +132,7 @@ func (c *Console) init(preload []string) error {
 		return fmt.Errorf("api modules: %v", err)
 	}
 
-	flatten := "var hpb = web3.eth; var personal = web3.personal; "
+	flatten := "var hpb = web3.hpb; var personal = web3.personal; "
 	for api := range apis {
 		if api == "web3" {
 			continue // manually mapped or ignore
@@ -143,19 +143,10 @@ func (c *Console) init(preload []string) error {
 			if err = c.jsre.Compile(fmt.Sprintf("%s.js", api), file); err != nil {
 				return fmt.Errorf("%s.js: %v", api, err)
 			}
-			if api == "eth" {
-				flatten += fmt.Sprintf("var %s = web3.%s; ", "hpb", api)
-			}else{
-				flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-			}
-
+			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
 		} else if obj, err := c.jsre.Run("web3." + api); err == nil && obj.IsObject() {
 			// Enable web3.js built-in extension if available.
-			if api == "eth" {
-				flatten += fmt.Sprintf("var %s = web3.%s; ", "hpb", api)
-			}else{
-				flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-			}
+			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
 		}
 	}
 
@@ -273,7 +264,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 // console's available modules.
 func (c *Console) Welcome() {
 	// Print some generic Geth metadata
-	fmt.Fprintf(c.printer, "Welcome to the Geth JavaScript console!\n\n")
+	fmt.Fprintf(c.printer, "Welcome to the GHPB JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
 		console.log("coinbase: " + hpb.coinbase);
@@ -285,12 +276,7 @@ timestamp) + ")");
 	if apis, err := c.client.SupportedModules(); err == nil {
 		modules := make([]string, 0, len(apis))
 		for api, version := range apis {
-			if api=="eth"{
-				modules = append(modules, fmt.Sprintf("%s:%s", "hpb", version))
-			}else{
-				modules = append(modules, fmt.Sprintf("%s:%s", api, version))
-			}
-
+			modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 		}
 		sort.Strings(modules)
 		fmt.Fprintln(c.printer, " modules:", strings.Join(modules, " "))
