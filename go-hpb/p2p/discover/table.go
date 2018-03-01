@@ -403,8 +403,8 @@ func (tab *Table) doRefresh(done chan struct{}) {
 
 	// The table is empty. Load nodes from the database and insert
 	// them. This should yield a few previously seen nodes that are
-	// (hopefully) still alive.
-	seeds := tab.db.querySeeds(seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
+	// (hopefully) still alive. Node role must table roleType
+	seeds := tab.db.querySeeds(tab.roleType, seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
