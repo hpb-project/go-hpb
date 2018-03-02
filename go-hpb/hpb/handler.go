@@ -703,11 +703,11 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 
 			}
 		}
-		//for _, peer := range transfer {
-		//	if peer.RemoteType() == p2p.NtLight {
-		//		peer.SendNewBlock(block, td)
-		//	}
-		//}
+		for _, peer := range transfer {
+			if peer.RemoteType() == p2p.NtLight {
+				peer.SendNewBlock(block, td)
+			}
+		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
@@ -723,11 +723,11 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 			}
 		}
-		//for _, peer := range peers {
-		//	if peer.LocalType() == p2p.NtLight {
-		//		peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
-		//	}
-		//}
+		for _, peer := range peers {
+			if peer.LocalType() == p2p.NtLight {
+				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+			}
+		}
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
