@@ -619,6 +619,11 @@ running:
 					log.Error("Node do not find in discover K buket","NodeID",c.id)
 				}
 
+				if p.local == NtLight && p.remote == NtLight{
+					log.Info("p.local == NtLight && p.remote == NtLight","remote",p.remote)
+					continue
+				}
+
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "localRole",p.local,"remoteRole",p.remote)
 				peers[c.id] = p

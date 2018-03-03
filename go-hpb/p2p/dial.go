@@ -423,6 +423,16 @@ func (t *discoverTask) Do(srv *Server) {
 	var target discover.NodeID
 	rand.Read(target[:])
 	//combine light table and access table results
+	if srv.local == NtLight {
+		t.results = srv.ntabAccess.Lookup(target)
+		return
+	}
+
+	if srv.local == NtCommitt || srv.local == NtPrecomm {
+		t.results = srv.ntabAccess.Lookup(target)
+		return
+	}
+
 	t.results = srv.ntabLight.Lookup(target)
 	t.results = append(t.results,srv.ntabAccess.Lookup(target)...)
 }
