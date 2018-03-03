@@ -304,7 +304,7 @@ func (db *nodeDB) updateFindFails(id NodeID, subKeyFail string, fails int) error
 
 // querySeeds retrieves random nodes to be used as potential seed nodes
 // for bootstrapping.
-func (db *nodeDB) querySeeds(n int, subKeyRoot string, subKeyPong string, maxAge time.Duration) []*Node {
+func (db *nodeDB) querySeeds(forRole uint8, n int, subKeyRoot string, subKeyPong string, maxAge time.Duration) []*Node {
 	var (
 		now   = time.Now()
 		nodes = make([]*Node, 0, n)
@@ -329,6 +329,9 @@ seek:
 			continue seek // iterator exhausted
 		}
 		if n.ID == db.self {
+			continue seek
+		}
+		if n.Role != forRole {
 			continue seek
 		}
 		if now.Sub(db.lastPong(n.ID, subKeyPong)) > maxAge {

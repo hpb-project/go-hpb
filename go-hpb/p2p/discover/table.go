@@ -82,9 +82,9 @@ type bondproc struct {
 // it is an interface so we can test without opening lots of UDP
 // sockets and without generating a private key.
 type transport interface {
-	ping(NodeID, uint8, uint8, *net.UDPAddr) error
-	waitping(NodeID, uint8, uint8) error
-	findnode(toid NodeID, addr *net.UDPAddr, target NodeID, tabRole uint8) ([]*Node, error)
+	ping(NodeID, uint8, uint8, uint8, *net.UDPAddr) error
+	waitping(NodeID, uint8, uint8, uint8) error
+	findnode(toid NodeID, workFor uint8, forRole uint8, addr *net.UDPAddr, target NodeID) ([]*Node, error)
 	close()
 }
 
@@ -293,7 +293,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 				pendingQueries++
 				go func() {
 					// Find potential neighbors to bond with
-					r, err := tab.net.findnode(n.ID, n.addr(), targetID, tab.roleType)
+					r, err := tab.net.findnode(n.ID, tableService, tab.roleType, n.addr(), targetID)
 					if err != nil {
 						// Bump the failure counter to detect and evacuate non-bonded entries
 						fails := tab.db.findFails(n.ID, nodeDBDiscoverFindFails) + 1
@@ -305,7 +305,14 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 							tab.delete(n)
 						}
 					}
-					reply <- tab.bondall(r)
+					// Prevent the attacker from tampering with the code and sending it to an incorrect neighbor.
+					var rcr []*Node
+					for _, n := range r {
+						if n.Role == tab.roleType || n.Role == BootRole {
+							rcr = append(rcr, n)
+						}
+					}
+					reply <- tab.bondall(rcr)
 				}()
 			}
 		}
@@ -318,8 +325,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 			if n != nil && !seen[n.ID] {
 				seen[n.ID] = true
 				result.push(n, bucketSize)
-				// TODO by xujl:for test, will del
-				log.Info("discover -> TABLE","find a neighbor  ", n, "TABLE ROLE", tab.roleType)
+				log.Debug("discover -> TABLE","find a neighbor  ", n, "TABLE ROLE", tab.roleType)
 			}
 		}
 		pendingQueries--
@@ -404,8 +410,8 @@ func (tab *Table) doRefresh(done chan struct{}) {
 
 	// The table is empty. Load nodes from the database and insert
 	// them. This should yield a few previously seen nodes that are
-	// (hopefully) still alive.
-	seeds := tab.db.querySeeds(seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
+	// (hopefully) still alive. Node role must table roleType
+	seeds := tab.db.querySeeds(tab.roleType, seedCount, nodeDBDiscoverRoot, nodeDBDiscoverPong, seedMaxAge)
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
@@ -538,8 +544,7 @@ func (tab *Table) bond(pinged bool, id NodeID, role uint8, addr *net.UDPAddr, tc
 		// Add the node to the table even if the bonding ping/pong
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
-		// TODO by xujl:log will del
-		log.Info("discover -> TABLE", "bond success     ", node)
+		log.Debug("discover -> TABLE", "bond success     ", node, "TABLE ROLE", tab.roleType)
 		tab.add(node)
 		tab.db.updateFindFails(id, nodeDBDiscoverFindFails,0)
 	}
@@ -560,7 +565,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 		// Give the remote node a chance to ping us before we start
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
-		tab.net.waitping(id, role, tab.roleType)
+		tab.net.waitping(id, tableService, role, tab.roleType)
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, role, addr.IP, uint16(addr.Port), tcpPort)
@@ -572,7 +577,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, role uint8, addr
 // database accordingly.
 func (tab *Table) ping(id NodeID, role uint8, addr *net.UDPAddr) error {
 	tab.db.updateLastPing(id, nodeDBDiscoverPing, time.Now())
-	if err := tab.net.ping(id, role, tab.roleType, addr); err != nil {
+	if err := tab.net.ping(id, tableService, role, tab.roleType, addr); err != nil {
 		return err
 	}
 	tab.db.updateLastPong(id, nodeDBDiscoverPong, time.Now())

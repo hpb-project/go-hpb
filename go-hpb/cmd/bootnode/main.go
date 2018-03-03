@@ -35,13 +35,13 @@ func main() {
 	var (
 		listenAddr  = flag.String("addr", ":30301", "listen address for find light nodes")
 		genKey      = flag.String("genkey", "", "generate a node key")
-		Role        = flag.Uint("role", uint(discover.LightRole), "role type of node")
-		writeAddr   = flag.Bool("writeaddress", false, "write out the node's pubkey hash and quit")
+		Role        = flag.Uint  ("role", uint(discover.BootRole), "role type of node")
+		writeAddr   = flag.Bool  ("writeaddress", false, "write out the node's pubkey hash and quit")
 		nodeKeyFile = flag.String("nodekey", "", "private key filename")
 		nodeKeyHex  = flag.String("nodekeyhex", "", "private key as hex (for testing)")
 		natdesc     = flag.String("nat", "none", "port mapping mechanism (any|none|upnp|pmp|extip:<IP>)")
 		netrestrict = flag.String("netrestrict", "", "restrict network communication to the given IP networks (CIDR masks)")
-		verbosity   = flag.Int("verbosity", int(log.LvlInfo), "log verbosity (0-9)")
+		verbosity   = flag.Int   ("verbosity", int(log.LvlInfo), "log verbosity (0-9)")
 		vmodule     = flag.String("vmodule", "", "log verbosity pattern")
 
 		nodeKey *ecdsa.PrivateKey
@@ -97,32 +97,6 @@ func main() {
 
 	if _, err := discover.ListenUDP(nodeKey, uint8(*Role), *listenAddr, natm, "", restrictList); err != nil {
 		utils.Fatalf("%v", err)
-	} else {// else only for test
-
-	/*
-		var nodesTestString = []string{
-			// HPB Foundation Go Bootnodes Test
-			"enode://6d30b0cae23373449382e76e5a92cba8a096d0c7259cf6160b747e5cf80aa595842da75e44e650465a227ae7179382d47fbba05446c19d28b7c923ca9b3d71bc&4@192.168.31.119:30303",
-		}
-		var nodesTest []*discover.Node
-
-		for _, url := range nodesTestString {
-			node, err := discover.ParseNode(url)
-			if err != nil {
-				log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-				continue
-			}
-			nodesTest = append(nodesTest, node)
-			log.Info("fall back bootNode", "id", node)
-		}
-
-		if err := ga.LightTab.SetFallbackNodes(nodesTest); err != nil {
-			return
-		}
-		if err := ga.CommSlice.SetFallbackNodes(nodesTest); err != nil {
-			return
-		}
-	*/
 	}
 
 	select {}
