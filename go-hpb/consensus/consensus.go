@@ -92,10 +92,7 @@ type Engine interface {
 	APIs(chain ChainReader) []rpc.API
 }
 
-// PoW is a consensus engine based on proof-of-work.
 type PoW interface {
 	Engine
-
-	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
 }

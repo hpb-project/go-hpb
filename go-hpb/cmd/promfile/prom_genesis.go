@@ -69,7 +69,7 @@ func (p *prometh) makeGenesis() {
 
 	// We also need the initial list of signers
 	fmt.Println()
-	fmt.Println("Which accounts are allowed to seal? (only one)")
+	fmt.Println("Which accounts are allowed to seal? (initialise miner addresses)")
 
 	var signers []common.Address
 	
