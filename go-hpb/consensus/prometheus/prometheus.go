@@ -22,8 +22,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-	"encoding/hex"
-	"hash/fnv"
+	
 	"fmt"
 	//"math"
 
@@ -73,34 +72,6 @@ var (
 )
 
 
-// Keccak512 calculates and returns the Keccak512 hash of the input data.
-func (c *Prometheus) Keccak512(data ...[]byte) string {
-    d := sha3.NewKeccak512()
-    for _, b := range data {
-        d.Write(b)
-    }
-    //return string(d.Sum(nil)[:])
-    return hex.EncodeToString(d.Sum(nil));
-    
-}
-
-// Fowler–Noll–Vo is a non-cryptographic hash function created by Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo.
-//The basis of the FNV hash algorithm was taken from an idea sent as reviewer comments to the 
-//IEEE POSIX P1003.2 committee by Glenn Fowler and Phong Vo in 1991. In a subsequent ballot round, 
-//Landon Curt Noll improved on their algorithm. In an email message to Landon, 
-//they named it the Fowler/Noll/Vo or FNV hash.
-// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-func (c *Prometheus) fnv_hash(data ...[]byte) []byte {
-    d := fnv.New32()
-    for _, b := range data {
-        d.Write(b)
-    }
-    
-    return d.Sum(nil)
-   // return hex.EncodeToString(d.Sum(nil))
-}
-
-
 // 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
@@ -139,6 +110,8 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 
 	number := header.Number.Uint64()
 
+	log.Info("Prepare the parameters for mining")
+
 	// Assemble the voting snapshot to check which votes make sense
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
@@ -166,31 +139,10 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 	}
 	
 	
-	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + c.config.Random)))
+	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + getUniqueRandom())))
 
-	//var authorizedStatus bool
-	//authorizedStatus = false
-	
-	if _, authorized := snap.Signers[signerHash]; !authorized {
-		for _, str := range c.config.Random{
-		    signerHash = common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + string(str))))
-		    if _, authorized_index := snap.Signers[signerHash]; authorized_index {
-		    	header.Random = string(str)
-		    	///authorizedStatus = true
-		    	break
-		    }
-		}
-	}else{
-		header.Random = c.config.Random
-		//authorizedStatus = true
-	}
-	
-	//log.Trace("P",  authorizedStatus)
-	
-	//if(!authorizedStatus){
-		//return errUnauthorized
-	//}
-	
+	header.Random = getUniqueRandom()
+		
 	// Set the correct difficulty
 	// 根据 addressHash 来判断是否
 	header.Difficulty = diffNoTurn
@@ -258,15 +210,6 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 			if err := c.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
-			//signers := make([]common.AddressHash, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
-			//signers := make([]common.AddressHash, (len(genesis.ExtraHash))/common.AddressHashLength)
-			
-			//for i := 0; i < len(signers); i++ {
-			//	copy(signers[i][:], genesis.Extra[i*common.AddressHashLength:])
-			//}
-
-
-			//fmt.Printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW%d", len(genesis.ExtraHash))
 
 			signers := make([]common.AddressHash, (len(genesis.ExtraHash)-extraVanity-extraSeal)/common.AddressHashLength)
 			
@@ -274,17 +217,8 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 			for i := 0; i < len(signers); i++ {
                 fmt.Printf("%s", string(genesis.ExtraHash[extraVanity + i*common.AddressLength:]))
 				copy(signers[i][:], genesis.ExtraHash[extraVanity + i*common.AddressHashLength : extraVanity + (i+1)*common.AddressHashLength])
-				//copy(signers[i][:], common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte("33f4f0bb"))))
-			    //signers = append(signers, common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte("33f4f0bb"))))
 			}
-			/*
-			signersHash := make([]common.AddressHash, (len(genesis.ExtraHash))/common.AddressHashLength)
-			
-			for i := 0; i < len(signersHash); i++ {
-				copy(signersHash[i][:], genesis.ExtraHash[i*common.AddressHashLength:])
-			}
-			*/
-			//Signers:  make(map[common.AddressHash]struct{}),
+
 			snap = newHistorysnap(c.config, c.signatures, 0, genesis.Hash(),signers)
 			
 			if err := snap.store(c.db); err != nil {
@@ -319,10 +253,12 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
+	
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
 	}
+	
 	// 存入到缓存中
 	c.recents.Add(snap.Hash, snap)
 
@@ -577,20 +513,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
 	
-	//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
-	
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
-	
-	/*
-	To be decided
-	if(number > c.config.Epoch){
-		voteNum := uint64(math.Floor(float64(number/c.config.Epoch)))*(c.config.Epoch)
-		stored := core.GetCanonicalHash(c.db, voteNum)
-		fmt.Printf("dddddddddd %s",voteNum)
-		fmt.Printf("wwwwwwwww %s",stored.Hex())
-		signerHash =  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + stored.Hex())))
-	}
-	*/
 	
 	if err != nil {
 		return err
@@ -598,8 +521,6 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if _, ok := snap.Signers[signerHash]; !ok {
 		return errUnauthorized
 	}
-	
-	
 	
 	for seen, recent := range snap.Recents {
 		if recent == signerHash {
@@ -648,7 +569,7 @@ func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
 func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
-    log.Info("HPB Prometheus is starting ")
+    log.Info("HPB Prometheus Seal is starting ")
 
 	// Sealing the genesis block is not supported
 	number := header.Number.Uint64()
@@ -664,32 +585,10 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	signer, signFn := c.signer, c.signFn
 	
 	
-	//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + c.config.Random)))
+	
+	log.Info("Current seal random is" + header.Random)
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
-	
-	
-	//header.Random = c.config.Random
-	/*
-	if(number > c.config.Epoch){
-		voteNum := uint64(math.Floor(float64(number/c.config.Epoch)))*(c.config.Epoch)
-		stored := core.GetCanonicalHash(c.db, voteNum)
-		header.Random = stored.Hex()
-	}	
-	fmt.Printf("wwwwwwwww %d + ############################### %s",number,header.Random)
-   */
-	
-	/*
-	To be decided
-	if(number > c.config.Epoch){
-		voteNum := uint64(math.Floor(float64(number/c.config.Epoch)))*(c.config.Epoch)
-		stored := core.GetCanonicalHash(c.db, voteNum)
-		fmt.Printf("dddddddddd %s",voteNum)
-		fmt.Printf("wwwwwwwww %s",stored.Hex())
-		signerHash =  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + stored.Hex())))
-	}
-	*/
-	
-	//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str())))
+
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
@@ -699,31 +598,10 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		return nil, err
 	}
 	
-	//var status bool
-	//status = false
 	
 	if _, authorized := snap.Signers[signerHash]; !authorized {
-		/*for _, str := range c.config.Random{
-		    signerHash = common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + string(str))))
-		    if _, authorized := snap.Signers[signerHash]; authorized {
-		    	header.Random = string(str)
-		    	status = true
-		    	break
-		    }
-		}*/
-		
 		return nil, errUnauthorized
 	}
-	
-	/*else{
-		header.Random = c.config.Random
-		status = true
-	}
-	
-	if(!status){
-		return nil, errUnauthorized
-	}*/
-	
 	log.Info("Proposed the random number in current round:" + header.Random)
 
 	// If we're amongst the recent signers, wait for the next block
@@ -742,18 +620,11 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	// 比较难度值，确定是否为适合的时间
-	/*if header.Difficulty.Cmp(diffNoTurn) == 0 {
+	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
 		delay += time.Duration(rand.Int63n(int64(wiggle)))
 
-		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-	}*/
-	
-	if !(snap.inturn(header.Number.Uint64(), signerHash)) {
-		// It's not our turn explicitly to sign, delay it a bit
-		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		delay += time.Duration(rand.Int63n(int64(wiggle)))
 		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 	}
 	

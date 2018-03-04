@@ -85,9 +85,9 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getSignersAtHash',
-			call: 'prometheus_getSignersAtHash',
-			params: 1
+			name: 'getPrivateRandmon',
+			call: 'prometheus_getPrivateRandmon',
+			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'propose',
