@@ -86,7 +86,7 @@ func (api *API) Proposals() map[common.AddressHash]bool {
 	return proposals
 }
 
-func (api *API) Propose(address common.Address, confRand string,auth bool) {
+func (api *API) Propose(address common.Address, confRand string, auth bool) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
    
@@ -98,10 +98,9 @@ func (api *API) Propose(address common.Address, confRand string,auth bool) {
 }
 
 // 改变作废的方式
-func (api *API) Discard(address common.Address) {
+func (api *API) Discard(address common.Address,  confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + api.prometheus.config.Random)))
+    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
 	delete(api.prometheus.proposals, addressHash)
 }

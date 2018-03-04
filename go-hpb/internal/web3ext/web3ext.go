@@ -97,7 +97,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'discard',
 			call: 'prometheus_discard',
-			params: 1
+			params: 2
 		}),
 	],
 	properties: [
