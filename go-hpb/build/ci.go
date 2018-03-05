@@ -64,7 +64,7 @@ var (
 	// Files that end up in the geth*.zip archive.
 	gethArchiveFiles = []string{
 		"COPYING",
-		executablePath("geth"),
+		executablePath("ghpb"),
 	}
 
 	// Files that end up in the geth-alltools*.zip archive.
@@ -73,7 +73,7 @@ var (
 		executablePath("abigen"),
 		executablePath("bootnode"),
 		executablePath("evm"),
-		executablePath("geth"),
+		executablePath("ghpb"),
 		executablePath("puppeth"),
 		executablePath("rlpdump"),
 		executablePath("swarm"),
@@ -95,8 +95,8 @@ var (
 			Description: "Developer utility version of the EVM (Ethereum Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode.",
 		},
 		{
-			Name:        "geth",
-			Description: "Ethereum CLI client.",
+			Name:        "ghpb",
+			Description: "Hpbereum CLI client.",
 		},
 		{
 			Name:        "puppeth",
@@ -108,11 +108,11 @@ var (
 		},
 		{
 			Name:        "swarm",
-			Description: "Ethereum Swarm daemon and tools",
+			Description: "Hpbereum Swarm daemon and tools",
 		},
 		{
 			Name:        "wnode",
-			Description: "Ethereum Whisper diagnostic tool",
+			Description: "Hpbereum Whisper diagnostic tool",
 		},
 	}
 
@@ -454,7 +454,7 @@ func maybeSkipArchive(env build.Environment) {
 func doDebianSource(cmdline []string) {
 	var (
 		signer  = flag.String("signer", "", `Signing key name, also used as package author`)
-		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:ethereum/ethereum")`)
+		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:hpbereum/hpbereum")`)
 		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
 		now     = time.Now()
 	)
@@ -516,7 +516,7 @@ func isUnstableBuild(env build.Environment) bool {
 type debMetadata struct {
 	Env build.Environment
 
-	// go-ethereum version being built. Note that this
+	// go-hpb version being built. Note that this
 	// is not the debian package version. The package version
 	// is constructed by VersionString.
 	Version string
@@ -533,7 +533,7 @@ type debExecutable struct {
 func newDebMetadata(distro, author string, env build.Environment, t time.Time) debMetadata {
 	if author == "" {
 		// No signing key, use default author.
-		author = "Ethereum Builds <fjl@ethereum.org>"
+		author = "Hpbereum Builds <fjl@hpbereum.org>"
 	}
 	return debMetadata{
 		Env:         env,
@@ -595,7 +595,7 @@ func (meta debMetadata) ExeConflicts(exe debExecutable) string {
 		// be preferred and the conflicting files should be handled via
 		// alternates. We might do this eventually but using a conflict is
 		// easier now.
-		return "ethereum, " + exe.Name
+		return "hpbereum, " + exe.Name
 	}
 	return ""
 }

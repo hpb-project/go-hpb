@@ -18,6 +18,14 @@ Building ghpb requires both a Go (version 1.7 or later)
 then
 
     go install -a -v ./cmd/ghpb
+or
+``` 
+    cd ./github.com/hpb-project/go-hpb
+    make ghpb
+```
+when you do this,there is a shell cmd generated at './bulid/bin',called ghpb
+
+note: if you want to make all,maybe have some problem
 
 ## Running ghpb
 ```
