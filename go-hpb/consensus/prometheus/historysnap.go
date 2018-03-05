@@ -22,7 +22,6 @@ import (
 	//"sort"
 	//"fmt"
 	"encoding/json"
-	"hash/fnv"
 	
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/core/types"
@@ -30,6 +29,8 @@ import (
 	"github.com/hpb-project/go-hpb/params"
 	"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/go-hpb/log"
+	
+	//"strconv"
 
 )
 
@@ -200,6 +201,8 @@ func (s *Historysnap) uncast(address common.AddressHash, authorize bool) bool {
 	return true
 }
 
+
+
 // 判断当前的次序
 func (s *Historysnap) inturn(number uint64, signerHash common.AddressHash) bool {
 	signers, offset := s.signers(), 0
@@ -228,52 +231,6 @@ func (s *Historysnap) signers() []common.AddressHash {
 	return signers
 }
 
-
-/*
-// 判断当前的次序
-func (s *Historysnap) inturnHash(number uint64, signerHash common.AddressHash) bool {
-	signersHash, offset := s.signersHash(), 0
-	for offset < len(signersHash) && signersHash[offset] != signerHash {
-		offset++
-	}
-	return (number % uint64(len(signersHash))) == uint64(offset)
-}
-
-
-// 按照降序获取当前已经授权的sigersHash
-func (s *Historysnap) signersHash() []common.AddressHash {
-	signersHash := make([]common.AddressHash, 0, len(s.SignersHash))
-	for signerhash := range s.SignersHash {
-		signersHash = append(signersHash, signerhash)
-	}
-	for i := 0; i < len(signersHash); i++ {
-		for j := i + 1; j < len(signersHash); j++ {
-			if bytes.Compare(signersHash[i][:], signersHash[j][:]) > 0 {
-				signersHash[i], signersHash[j] = signersHash[j], signersHash[i]
-			}
-		}
-	}
-	return signersHash
-}
-*/
-
-
-
-// Fowler–Noll–Vo is a non-cryptographic hash function created by Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo.
-//The basis of the FNV hash algorithm was taken from an idea sent as reviewer comments to the 
-//IEEE POSIX P1003.2 committee by Glenn Fowler and Phong Vo in 1991. In a subsequent ballot round, 
-//Landon Curt Noll improved on their algorithm. In an email message to Landon, 
-//they named it the Fowler/Noll/Vo or FNV hash.
-// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-func (s *Historysnap) fnv_hash(data ...[]byte) []byte {
-    d := fnv.New32()
-    for _, b := range data {
-        d.Write(b)
-    }
-    
-    return d.Sum(nil)
-   // return hex.EncodeToString(d.Sum(nil))
-}
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
@@ -317,10 +274,8 @@ func (s *Historysnap) apply(headers []*types.Header) (*Historysnap, error) {
 		}
 		// 获取当前header是由谁打包的，从签名中还原
 		signer, err := ecrecover(header, s.sigcache)
-		
-		//signerHash := make([]common.AddressHash, common.AddressHashLength)
 
-		signerHash :=  common.BytesToAddressHash(s.fnv_hash([]byte(signer.Str() + s.config.Random)))
+		signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + getUniqueRandom())))
 		
 		if err != nil {
 			return nil, err
