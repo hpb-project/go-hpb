@@ -271,7 +271,7 @@ func newUDP(priv *ecdsa.PrivateKey, ourRole uint8, c conn, natm nat.Interface, n
 	realaddr := c.LocalAddr().(*net.UDPAddr)
 	if natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
+			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "hpb discovery")
 		}
 		// TODO: react to external IP changes over time.
 		if ext, err := natm.ExternalIP(); err == nil {
