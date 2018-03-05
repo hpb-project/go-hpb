@@ -109,6 +109,9 @@ type Peer struct {
 
 	// events receives message send / receive events if set
 	events *event.Feed
+
+	local  NodeType
+	remote NodeType
 }
 
 // NewPeer returns a peer for testing purposes.
@@ -144,6 +147,16 @@ func (p *Peer) RemoteAddr() net.Addr {
 // LocalAddr returns the local address of the network connection.
 func (p *Peer) LocalAddr() net.Addr {
 	return p.rw.fd.LocalAddr()
+}
+
+//  RemoteType returns the remote type of the node.
+func (p *Peer) RemoteType() NodeType {
+	return p.remote
+}
+
+// LocalType returns the local type of the node.
+func (p *Peer) LocalType() NodeType {
+	return p.local
 }
 
 // Disconnect terminates the peer connection with the given reason.
@@ -410,6 +423,7 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 type PeerInfo struct {
 	ID      string   `json:"id"`   // Unique node identifier (also the encryption key)
 	Name    string   `json:"name"` // Name of the node, including client type, version, OS, custom data
+	Remote  string   `json:"remote"` //Remote node type
 	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
 	Network struct {
 		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
@@ -429,6 +443,7 @@ func (p *Peer) Info() *PeerInfo {
 	info := &PeerInfo{
 		ID:        p.ID().String(),
 		Name:      p.Name(),
+		Remote:    p.remote.String(),
 		Caps:      caps,
 		Protocols: make(map[string]interface{}),
 	}

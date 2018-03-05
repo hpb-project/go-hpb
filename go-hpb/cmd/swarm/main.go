@@ -316,6 +316,7 @@ DEPRECATED: use 'swarm db clean'.
 		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
+		utils.NodeTypeFlag,
 		utils.MaxPeersFlag,
 		utils.NATFlag,
 		utils.IPCDisabledFlag,

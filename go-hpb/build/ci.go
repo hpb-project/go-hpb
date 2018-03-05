@@ -647,7 +647,7 @@ func doWindowsInstaller(cmdline []string) {
 	var (
 		devTools []string
 		allTools []string
-		ghpbTool string
+		gethTool string
 	)
 	for _, file := range allToolsArchiveFiles {
 		if file == "COPYING" { // license, copied later
@@ -655,7 +655,7 @@ func doWindowsInstaller(cmdline []string) {
 		}
 		allTools = append(allTools, filepath.Base(file))
 		if filepath.Base(file) == "geth.exe" {
-			ghpbTool = file
+			gethTool = file
 		} else {
 			devTools = append(devTools, file)
 		}
@@ -665,7 +665,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the geth binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Geth":     ghpbTool,
+		"Geth":     gethTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.geth.nsi", filepath.Join(*workdir, "geth.nsi"), 0644, nil)

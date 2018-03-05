@@ -30,7 +30,6 @@ import (
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/p2p/discover"
-	"github.com/hpb-project/go-hpb/p2p/discv5"
 	"github.com/hpb-project/go-hpb/p2p/nat"
 	"github.com/hpb-project/go-hpb/p2p/netutil"
 )
@@ -76,14 +75,18 @@ type Config struct {
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
-	DiscoveryV5 bool `toml:",omitempty"`
+	//DiscoveryV5 bool `toml:",omitempty"`
 
 	// Listener address for the V5 discovery protocol UDP traffic.
-	DiscoveryV5Addr string `toml:",omitempty"`
+	//DiscoveryV5Addr string `toml:",omitempty"`
 
 	// Name sets the node name of this server.
 	// Use common.MakeName to create a name that follows existing conventions.
 	Name string `toml:"-"`
+
+	// RoleType sets the node type of this server.
+	// One of committee, pre-committee, access, light.
+	RoleType string
 
 	// BootstrapNodes are used to establish connectivity
 	// with the rest of the network.
@@ -92,7 +95,7 @@ type Config struct {
 	// BootstrapNodesV5 are used to establish connectivity
 	// with the rest of the network using the V5 discovery
 	// protocol.
-	BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
+	//BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
 
 	// Static nodes are used as pre-configured connections which are always
 	// maintained and re-connected on disconnects.
@@ -154,11 +157,15 @@ type Server struct {
 	lock    sync.Mutex // protects running
 	running bool
 
-	ntab         discoverTable
+	ntabLight   discoverTable
+	ntabAccess  discoverTable
+	nslcCommit  discoverSlice
+	nslcPrecom  discoverSlice
+
 	listener     net.Listener
 	ourHandshake *protoHandshake
 	lastLookup   time.Time
-	DiscV5       *discv5.Network
+	//DiscV5       *discv5.Network
 
 	// These are for Peers, PeerCount (and nothing else).
 	peerOp     chan peerOpFunc
@@ -172,6 +179,8 @@ type Server struct {
 	delpeer       chan peerDrop
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
+
+	local         NodeType
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -310,13 +319,13 @@ func (srv *Server) Self() *discover.Node {
 	if !srv.running {
 		return &discover.Node{IP: net.ParseIP("0.0.0.0")}
 	}
-	return srv.makeSelf(srv.listener, srv.ntab)
+	return srv.makeSelf(srv.listener)
 }
 
-func (srv *Server) makeSelf(listener net.Listener, ntab discoverTable) *discover.Node {
+func (srv *Server) makeSelf(listener net.Listener) *discover.Node {
 	// If the server's not running, return an empty node.
 	// If the node is running but discovery is off, manually assemble the node infos.
-	if ntab == nil {
+	if srv.ntabAccess == nil && srv.ntabLight == nil{
 		// Inbound connections disabled, use zero address.
 		if listener == nil {
 			return &discover.Node{IP: net.ParseIP("0.0.0.0"), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -330,7 +339,12 @@ func (srv *Server) makeSelf(listener net.Listener, ntab discoverTable) *discover
 		}
 	}
 	// Otherwise return the discovery node.
-	return ntab.Self()
+
+	//srv.ntabAccess.Self  be
+	if srv.ntabAccess.Self().ID != srv.ntabLight.Self().ID {
+		log.Error("Self ID is different","AccessID",srv.ntabAccess.Self().ID,"LightID",srv.ntabLight.Self().ID)
+	}
+	return srv.ntabAccess.Self()
 }
 
 // Stop terminates the server and all active peer connections.
@@ -369,7 +383,7 @@ func (srv *Server) Start() (err error) {
 		srv.newTransport = newRLPX
 	}
 	if srv.Dialer == nil {
-		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
+		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout,KeepAlive:staticPeerCheckInterval}}
 	}
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *conn)
@@ -380,34 +394,55 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 
-	// node table
-	if !srv.NoDiscovery {
-		ntab, err := discover.ListenUDP(srv.PrivateKey, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
-		if err != nil {
-			return err
-		}
-		if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
-			return err
-		}
-		srv.ntab = ntab
+	// hpb test: set local node type
+	srv.local = StrToNodeType(srv.RoleType)
+	log.Info("flag of nodetype","NodeType",srv.local.String())
+	if srv.local == NtUnknown {
+		return fmt.Errorf("server local node type from flags is unkown")
 	}
 
-	if srv.DiscoveryV5 {
-		ntab, err := discv5.ListenUDP(srv.PrivateKey, srv.DiscoveryV5Addr, srv.NAT, "", srv.NetRestrict) //srv.NodeDatabase)
-		if err != nil {
+	// node table
+	if !srv.NoDiscovery {
+		hpb_nt, err := discover.ListenUDP(srv.PrivateKey, srv.local.ToDiscv(), srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
+		if err != nil{
+			log.Error("P2P server Listen UDP error")
 			return err
 		}
-		if err := ntab.SetFallbackNodes(srv.BootstrapNodesV5); err != nil {
+
+		// todo hpb: check local nodetype to set fallback nodes
+		if err := hpb_nt.LightTab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+			log.Error("P2P server light table set fallback nodes error")
 			return err
 		}
-		srv.DiscV5 = ntab
+
+		if err := hpb_nt.AccessTab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+			log.Error("P2P server access table set fallback nodes error")
+			return err
+		}
+
+		if err := hpb_nt.CommSlice.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+			log.Error("P2P server committee slice set fallback nodes error")
+			return err
+		}
+
+		if err := hpb_nt.PreCommSlice.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+			log.Error("P2P server pre-committee slice  set fallback nodes error")
+			return err
+		}
+
+		srv.ntabLight  = hpb_nt.LightTab
+		srv.ntabAccess = hpb_nt.AccessTab
+		srv.nslcCommit = hpb_nt.CommSlice
+		srv.nslcPrecom = hpb_nt.PreCommSlice
 	}
+
 
 	dynPeers := (srv.MaxPeers + 1) / 2
 	if srv.NoDiscovery {
 		dynPeers = 0
 	}
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
+
+	dialerState  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabLight, srv.ntabAccess, dynPeers, srv.NetRestrict)
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
@@ -425,7 +460,8 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.loopWG.Add(1)
-	go srv.run(dialer)
+	go srv.run(dialerState)
+
 	srv.running = true
 	return nil
 }
@@ -459,7 +495,7 @@ type dialer interface {
 	removeStatic(*discover.Node)
 }
 
-func (srv *Server) run(dialstate dialer) {
+func (srv *Server) run(dialerState dialer) {
 	defer srv.loopWG.Done()
 	var (
 		peers        = make(map[discover.NodeID]*Peer)
@@ -500,7 +536,7 @@ func (srv *Server) run(dialstate dialer) {
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
-			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+			nt := dialerState.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
@@ -518,13 +554,13 @@ running:
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			log.Debug("Adding static node", "node", n)
-			dialstate.addStatic(n)
+			dialerState.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected
 			log.Debug("Removing static node", "node", n)
-			dialstate.removeStatic(n)
+			dialerState.removeStatic(n)
 			if p, ok := peers[n.ID]; ok {
 				p.Disconnect(DiscRequested)
 			}
@@ -537,7 +573,7 @@ running:
 			// can update its state and remove it from the active
 			// tasks list.
 			log.Trace("Dial task done", "task", t)
-			dialstate.taskDone(t, time.Now())
+			dialerState.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
 			// A connection has passed the encryption handshake so
@@ -564,8 +600,32 @@ running:
 				if srv.EnableMsgEvents {
 					p.events = &srv.peerFeed
 				}
+
+				// get remote node type from discover K buckets
+				// mebay get this info earlier
+				p.local  = srv.local
+				p.remote = NtUnknown
+				ndLight  := srv.ntabLight.Findout(c.id)
+				ndAccess := srv.ntabAccess.Findout(c.id)
+				if ndLight != nil{
+					p.remote = Uint8ToNodeType(ndLight.Role)
+				}
+				if ndAccess != nil{
+					p.remote = Uint8ToNodeType(ndAccess.Role)
+				}
+
+				if ndLight == nil && ndAccess == nil{
+					log.Error("Node do not find in discover K buket","NodeID",c.id)
+					continue
+				}
+
+				if !srv.addPeerChecks(p,c){
+					continue
+				}
+
 				name := truncateName(c.name)
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr())
+
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -588,12 +648,20 @@ running:
 	log.Trace("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
-	if srv.ntab != nil {
-		srv.ntab.Close()
+	if srv.ntabLight != nil {
+		srv.ntabLight.Close()
 	}
-	if srv.DiscV5 != nil {
-		srv.DiscV5.Close()
+	if srv.ntabAccess != nil {
+		srv.ntabAccess.Close()
 	}
+	if srv.nslcCommit != nil {
+		srv.nslcCommit.Close()
+	}
+	if srv.nslcPrecom != nil {
+		srv.nslcPrecom.Close()
+	}
+
+
 	// Disconnect all peers.
 	for _, p := range peers {
 		p.Disconnect(DiscQuitting)
@@ -607,6 +675,29 @@ running:
 		delete(peers, p.ID())
 	}
 }
+
+
+func (srv *Server) addPeerChecks(p *Peer, c *conn) bool {
+
+	if p.local == NtLight && (p.remote == NtLight ||p.remote == NtCommitt||p.remote == NtPrecomm){
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	if p.local == NtCommitt && p.remote == NtLight{
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	if p.local == NtPrecomm && p.remote == NtLight{
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	log.Info("Adding p2p peer", "id", c.id, "localRole",p.local,"remoteRole",p.remote)
+	return true
+}
+
 
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	// Drop connections with no matching protocols.
@@ -639,7 +730,7 @@ type tempError interface {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntab))
+	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener))
 
 	// This channel acts as a semaphore limiting
 	// active inbound connections that are lingering pre-handshake.
@@ -682,6 +773,9 @@ func (srv *Server) listenLoop() {
 				continue
 			}
 		}
+
+		//TODO HPB:check remoe type here
+
 
 		fd = newMeteredConn(fd, true)
 		log.Trace("Accepted connection", "addr", fd.RemoteAddr())
@@ -805,6 +899,7 @@ func (srv *Server) runPeer(p *Peer) {
 type NodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
+	Local string `json:"local"` // Local node type
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
 	IP    string `json:"ip"`    // IP address of the node
 	Ports struct {
@@ -822,6 +917,7 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	// Gather and assemble the generic node infos
 	info := &NodeInfo{
 		Name:       srv.Name,
+		Local:      srv.local.String(),
 		Enode:      node.String(),
 		ID:         node.ID.String(),
 		IP:         node.IP.String(),
