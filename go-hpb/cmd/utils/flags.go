@@ -565,7 +565,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			log.Error("Bootstrap URL invalid", "hnode", url, "err", err)
 			continue
 		}
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
@@ -594,7 +594,7 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 	for _, url := range urls {
 		node, err := discv5.ParseNode(url)
 		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			log.Error("Bootstrap URL invalid", "hnode", url, "err", err)
 			continue
 		}
 		cfg.BootstrapNodesV5 = append(cfg.BootstrapNodesV5, node)

@@ -240,7 +240,7 @@ func (cr *Crowd) keepAllLive(done chan struct{}) {
 
 	cr.actives = sucMem
 	for _, n := range cr.actives {
-		log.Info("keep-live", "active node", n)
+		log.Debug("keep-live", "active node", n)
 	}
 }
 

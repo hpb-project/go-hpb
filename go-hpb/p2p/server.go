@@ -600,7 +600,6 @@ running:
 				if srv.EnableMsgEvents {
 					p.events = &srv.peerFeed
 				}
-				name := truncateName(c.name)
 
 				// get remote node type from discover K buckets
 				// mebay get this info earlier
@@ -617,15 +616,16 @@ running:
 
 				if ndLight == nil && ndAccess == nil{
 					log.Error("Node do not find in discover K buket","NodeID",c.id)
-				}
-
-				if p.local == NtLight && p.remote == NtLight{
-					log.Info("p.local == NtLight && p.remote == NtLight","remote",p.remote)
 					continue
 				}
 
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "localRole",p.local,"remoteRole",p.remote)
+				if !srv.addPeerChecks(p,c){
+					continue
+				}
+
+				name := truncateName(c.name)
+				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr())
+
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -675,6 +675,29 @@ running:
 		delete(peers, p.ID())
 	}
 }
+
+
+func (srv *Server) addPeerChecks(p *Peer, c *conn) bool {
+
+	if p.local == NtLight && (p.remote == NtLight ||p.remote == NtCommitt||p.remote == NtPrecomm){
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	if p.local == NtCommitt && p.remote == NtLight{
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	if p.local == NtPrecomm && p.remote == NtLight{
+		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
+		return false
+	}
+
+	log.Info("Adding p2p peer", "id", c.id, "localRole",p.local,"remoteRole",p.remote)
+	return true
+}
+
 
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	// Drop connections with no matching protocols.
