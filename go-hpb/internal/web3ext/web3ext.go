@@ -85,8 +85,8 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
-			name: 'getPrivateRandmon',
-			call: 'prometheus_getPrivateRandmon',
+			name: 'getPrivateRandom',
+			call: 'prometheus_getPrivateRandom',
 			params: 0
 		}),
 		new web3._extend.Method({

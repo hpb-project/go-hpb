@@ -71,7 +71,7 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.AddressHash, error
 	return snap.signers(), nil
 }
 
-func (api *API) GetPrivateRandmon() (string) {	
+func (api *API) GetPrivateRandom() (string) {	
 	return getUniqueRandom()
 }
 
