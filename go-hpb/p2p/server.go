@@ -679,7 +679,7 @@ running:
 
 func (srv *Server) addPeerChecks(p *Peer, c *conn) bool {
 
-	if p.local == NtLight && (p.remote == NtLight ||p.remote == NtCommitt||p.remote == NtPrecomm){
+	if p.local == NtLight && (p.remote == NtCommitt||p.remote == NtPrecomm){
 		log.Info("Node Type check to add peer failed","local",p.local,"remote",p.remote)
 		return false
 	}
