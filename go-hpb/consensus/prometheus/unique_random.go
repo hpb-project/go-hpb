@@ -27,8 +27,9 @@ import (
 
 func getUniqueRandom() (string){
 	hardwareAddr := getHardwareAddr() 
-	monthTimeStamp := getMonthTimeStamp() 
-	uniqueRandom := getSha256(hardwareAddr + monthTimeStamp)
+	//monthTimeStamp := getMonthTimeStamp() 
+	//uniqueRandom := getSha256(hardwareAddr + monthTimeStamp)
+	uniqueRandom := getSha256(hardwareAddr)
 	return uniqueRandom
 }
 
