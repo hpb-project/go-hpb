@@ -714,18 +714,50 @@ func (srv *Server) getRemoteNodeType(rid discover.NodeID) NodeType {
 				remote = Uint8ToNodeType(n.Role)
 			}
 		}
+
+		ndAccess := srv.ntabAccess.Findout(rid)
+		if ndAccess != nil{
+			remote = Uint8ToNodeType(ndAccess.Role)
+		}
+
 		return remote
-
 	}
 
-	ndLight  := srv.ntabLight.Findout(rid)
-	ndAccess := srv.ntabAccess.Findout(rid)
-	if ndLight != nil{
-		remote = Uint8ToNodeType(ndLight.Role)
+	if local == NtAccess{
+		for _, n := range srv.StaticNodes {
+			if rid== n.ID{
+				remote = Uint8ToNodeType(n.Role)
+			}
+		}
+
+		ndAccess := srv.ntabAccess.Findout(rid)
+		if ndAccess != nil{
+			remote = Uint8ToNodeType(ndAccess.Role)
+		}
+
+		ndLight  := srv.ntabLight.Findout(rid)
+		if ndLight != nil{
+			remote = Uint8ToNodeType(ndLight.Role)
+		}
+
+		return remote
 	}
-	if ndAccess != nil{
-		remote = Uint8ToNodeType(ndAccess.Role)
+
+
+	if local == NtLight {
+
+		ndAccess := srv.ntabAccess.Findout(rid)
+		if ndAccess != nil{
+			remote = Uint8ToNodeType(ndAccess.Role)
+		}
+
+		ndLight  := srv.ntabLight.Findout(rid)
+		if ndLight != nil{
+			remote = Uint8ToNodeType(ndLight.Role)
+		}
+		return remote
 	}
+
 
 	return remote
 }
