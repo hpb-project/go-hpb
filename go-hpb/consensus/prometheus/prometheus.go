@@ -141,12 +141,7 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 	
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + getUniqueRandom())))
 	header.Random = getUniqueRandom()
-	
-	if(number == 0){
-		signerHash =  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + c.config.Random)))
-		header.Random = c.config.Random
-	}
-		
+			
 	// Set the correct difficulty
 	// 根据 addressHash 来判断是否
 	header.Difficulty = diffNoTurn
