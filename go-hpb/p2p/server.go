@@ -442,6 +442,19 @@ func (srv *Server) Start() (err error) {
 		dynPeers = 0
 	}
 
+	for _, n := range srv.StaticNodes {
+		switch n.Role {
+		case discover.CommRole:
+			srv.nslcCommit.Add(n)
+			log.Debug("Add one committee node to discover.","NodeID",n.ID,"IP",n.IP,"Port",n.TCP)
+		case discover.PreCommRole:
+			srv.nslcPrecom.Add(n)
+			log.Debug("Add one pre-committee node to discover.","NodeID",n.ID,"NodeIP",n.IP,"Port",n.TCP)
+		default:
+			log.Debug("Type is not accept to add in static node.","NodeID",n.ID,"NodeIP",n.IP,"Port",n.TCP)
+		}
+	}
+
 	dialerState  := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntabLight, srv.ntabAccess, dynPeers, srv.NetRestrict)
 
 	// handshake
@@ -601,21 +614,14 @@ running:
 					p.events = &srv.peerFeed
 				}
 
-				// get remote node type from discover K buckets
-				// mebay get this info earlier
-				p.local  = srv.local
-				p.remote = NtUnknown
-				ndLight  := srv.ntabLight.Findout(c.id)
-				ndAccess := srv.ntabAccess.Findout(c.id)
-				if ndLight != nil{
-					p.remote = Uint8ToNodeType(ndLight.Role)
-				}
-				if ndAccess != nil{
-					p.remote = Uint8ToNodeType(ndAccess.Role)
-				}
+				name := truncateName(c.name)
 
-				if ndLight == nil && ndAccess == nil{
-					log.Error("Node do not find in discover K buket","NodeID",c.id)
+				// get remote node t
+				p.local  = srv.local
+				p.remote = srv.getRemoteNodeType(c.id)
+
+				if p.remote == NtUnknown{
+					log.Error("Could not find remote node type","id",c.id, "name", name, "addr", c.fd.RemoteAddr())
 					continue
 				}
 
@@ -623,8 +629,7 @@ running:
 					continue
 				}
 
-				name := truncateName(c.name)
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr())
+				log.Info("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr())
 
 				peers[c.id] = p
 				go srv.runPeer(p)
@@ -698,6 +703,32 @@ func (srv *Server) addPeerChecks(p *Peer, c *conn) bool {
 	return true
 }
 
+func (srv *Server) getRemoteNodeType(rid discover.NodeID) NodeType {
+
+	local  := srv.local
+	remote := NtUnknown
+
+	if local == NtCommitt || local ==  NtPrecomm{
+		for _, n := range srv.StaticNodes {
+			if rid== n.ID{
+				remote = Uint8ToNodeType(n.Role)
+			}
+		}
+		return remote
+
+	}
+
+	ndLight  := srv.ntabLight.Findout(rid)
+	ndAccess := srv.ntabAccess.Findout(rid)
+	if ndLight != nil{
+		remote = Uint8ToNodeType(ndLight.Role)
+	}
+	if ndAccess != nil{
+		remote = Uint8ToNodeType(ndAccess.Role)
+	}
+
+	return remote
+}
 
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	// Drop connections with no matching protocols.
