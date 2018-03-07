@@ -140,9 +140,8 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 	
 	
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + getUniqueRandom())))
-
 	header.Random = getUniqueRandom()
-		
+			
 	// Set the correct difficulty
 	// 根据 addressHash 来判断是否
 	header.Difficulty = diffNoTurn
@@ -585,7 +584,6 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	signer, signFn := c.signer, c.signFn
 	
 	
-	
 	log.Info("Current seal random is" + header.Random)
 	signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 
@@ -598,10 +596,10 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		return nil, err
 	}
 	
-	
 	if _, authorized := snap.Signers[signerHash]; !authorized {
 		return nil, errUnauthorized
 	}
+	
 	log.Info("Proposed the random number in current round:" + header.Random)
 
 	// If we're amongst the recent signers, wait for the next block

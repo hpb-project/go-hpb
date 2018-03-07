@@ -109,20 +109,33 @@ func (p *prometh) makeGenesis() {
 	fmt.Println("please input random number")
 	//var signersHash []common.AddressHash
 	
-	randStr := p.read(); 
+	//randStr := p.read(); 
+	
+	var randStrs []string
+	
+	for {
+		if randStr := p.read(); randStr != "" {
+			randStrs = append(randStrs, randStr)
+			continue
+		}
+		if len(randStrs) > 0 {
+			break
+		}
+	}
+	
 	//bighash, _ := new(big.Int).SetString(inputHash, 16)
 	//hash := common.BigToAddressHash(bighash)
 	//signersHash = append(signersHash, hash)	
 	//address_rand := make([]byte, common.AddressLength + len(randStr))	
 	
-	genesis.Config.Prometheus.Random = randStr
+	genesis.Config.Prometheus.Random = randStrs[0]
 	
 	address_hashes := make([]common.AddressHash, (len(signers)/common.AddressLength)*common.AddressHashLength)
 
-	for _, signer := range signers {
-		fmt.Println("test %d", len(p.fnv_hash([]byte(signer.Str() + randStr))))
+	for i, signer := range signers {
+		fmt.Println("test %d", randStrs[i])
 		//address_hashes = append(address_hashes, common.BytesToAddressHash(p.fnv_hash([]byte(signer.Str() + randStr))))
-		address_hashes = append(address_hashes, common.BytesToAddressHash(p.fnv_hash([]byte(signer.Str() + randStr))))
+		address_hashes = append(address_hashes, common.BytesToAddressHash(p.fnv_hash([]byte(signer.Str() + randStrs[i]))))
 		//fmt.Println("test %d",address_hashes)
 	}
 	
