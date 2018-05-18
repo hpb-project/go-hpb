@@ -15,7 +15,7 @@
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
 // implements nodes keep-live Protocol.
-package discover
+package nodetable
 
 import(
 	"errors"
