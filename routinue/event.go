@@ -17,8 +17,9 @@
 package events
 
 import (
-	"errors"
-	"sync"
+    "container/list"
+    "errors"
+    "sync"
 )
 
 type EventType int16
@@ -27,86 +28,118 @@ type EventFunc func(v interface{})
 
 type Subscriber chan interface{}
 
+type EleType struct {
+    eFunc EventFunc 
+    eChan Subscriber
+}
+
+type Subscribers struct {
+    submap map[Subscriber]*list.Element
+    sublist *list.List
+}
+
 type Event struct {
-	m           sync.RWMutex
-	subscribers map[EventType]map[Subscriber]EventFunc
+    m   sync.RWMutex
+    eventTable map[int]Subscribers
 }
 
 func NewEvent() *Event {
-	return &Event{
-		subscribers: make(map[EventType]map[Subscriber]EventFunc),
-	}
+    return &Event{
+        eventTable : make(map[int]Subscribers),
+    }
 }
 
-//  adds a new subscriber to Event.
+// Subscribe specified event.
 func (e *Event) Subscribe(eventtype EventType, eventfunc EventFunc) Subscriber {
-	e.m.Lock()
-	defer e.m.Unlock()
 
-	sub := make(chan interface{})
-	_, ok := e.subscribers[eventtype]
-	if !ok {
-		e.subscribers[eventtype] = make(map[Subscriber]EventFunc)
-	}
-	e.subscribers[eventtype][sub] = eventfunc
+    e.m.Lock()
+    defer e.m.Unlock()
 
-	return sub
+    sub := make(chan interface{})
+    subs, ok := e.eventTable[eventtype]
+    if !ok {
+        subs = Subscribers{
+            submap: make(map[Subscriber]*list.Element),
+            sublist:list.New(),
+        }
+        e.eventTable[eventtype] = subs
+    }
+    subs.sublist.PushBack(EleType{eFunc:eventfunc,eChan:sub})
+    subs.submap[sub]=subs.sublist.Back()
+    return sub
 }
 
-// UnSubscribe removes the specified subscriber
+// UnSubscribe the event and remove the specified subscriber
 func (e *Event) UnSubscribe(eventtype EventType, subscriber Subscriber) (err error) {
-	e.m.Lock()
-	defer e.m.Unlock()
+    e.m.Lock()
+    defer e.m.Unlock()
 
-	subEvent, ok := e.subscribers[eventtype]
-	if !ok {
-		err = errors.New("No event type.")
-		return
-	}
-
-	delete(subEvent, subscriber)
-	close(subscriber)
-
-	return
+    subEvent, ok := e.eventTable[eventtype]
+    if !ok {
+        err = errors.New("No event type.")
+        return 
+    }
+    elem,ok := subEvent.submap[subscriber]
+    if !ok {
+        err = errors.New("Not subscribe this event.")
+        return 
+    }
+    subEvent.sublist.Remove(elem)
+    delete (subEvent.submap, subscriber)
+    close(subscriber)
+    return
 }
 
 //Notify subscribers that Subscribe specified event
 func (e *Event) Notify(eventtype EventType, value interface{}) (err error) {
-	e.m.RLock()
-	defer e.m.RUnlock()
+    e.m.Lock()
+    defer e.m.Unlock()
 
-	subs, ok := e.subscribers[eventtype]
-	if !ok {
-		err = errors.New("No event type.")
-		return
-	}
+    subs,ok := e.eventTable[eventtype]
+    if !ok {
+        err = errors.New("No event type.")
+        return
+    }
+    elem := subs.sublist.Front()
+    for nil != elem {
+        et, ok := elem.Value.(EleType)
+        if ok {
+            // Todo : luxq, discuss use eventfunc or channel.
+            //go e.NotifySubscriber(et.eFunc, value)
+            e.NotifyChannel(et.eChan, value)
+        }
 
-	for _, event := range subs {
-		go e.NotifySubscriber(event, value)
-	}
-	return
+        elem = elem.Next()
+    }
+    return 
+}
+// Notify with event func.
+func (e *Event) NotifySubscriber(eventfunc EventFunc, value interface{}) (err error) {
+    if eventfunc == nil {
+        return
+    }
+
+    //call event func
+    eventfunc(value)
+    return 
 }
 
-func (e *Event) NotifySubscriber(eventfunc EventFunc, value interface{}) {
-	if eventfunc == nil {
-		return
-	}
+// Notify with subscriber channel.
 
-	//invode subscriber event func
-	eventfunc(value)
-
+func (e *Event) NotifyChannel(subscriber Subscriber, value interface{}) (err error) {
+    if subscriber == nil {
+        return
+    }
+    subscriber<-value
+    return
 }
 
 //Notify all event subscribers
-func (e *Event) NotifyAll() (errs []error) {
-	e.m.RLock()
-	defer e.m.RUnlock()
-
-	for eventtype, _ := range e.subscribers {
-		if err := e.Notify(eventtype, nil); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	return errs
+func (e *Event) NotifyAll(v interface{}) (errs []error) {
+    for eventtype,_:=range e.eventTable {
+        if err := e.Notify(eventtype, v); err != nil {
+            errs = append(errs, err)
+        }
+    }
+    return errs
 }
