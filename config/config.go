@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package config
 
 import (
 	"crypto/ecdsa"
@@ -32,6 +32,8 @@ import (
 	"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/ghpb/network/p2p"
 	"github.com/hpb-project/ghpb/network/p2p/discover"
+	"math/big"
+	"time"
 )
 
 const (
@@ -41,13 +43,30 @@ const (
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
 	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
+var DefaultTxPoolConfig = TxPoolConfig{
+	Journal:   "transactions.rlp",
+	Rejournal: time.Hour,
 
+	PriceLimit: 1,
+	PriceBump:  10,
+
+	AccountSlots: 16,
+	GlobalSlots:  4096,
+	AccountQueue: 64,
+	GlobalQueue:  1024,
+
+	Lifetime: 3 * time.Hour,
+}
+
+const (
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
+)
 // Config represents a small collection of configuration values to fine tune the
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of geth is "geth". If no
+	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
@@ -66,7 +85,7 @@ type Config struct {
 	DataDir string
 
 	// Configuration of peer-to-peer networking.
-	P2P p2p.Config
+	network NetworkConfig
 
 	// KeyStoreDir is the file system folder that contains private keys. The directory can
 	// be specified as a relative path, in which case it is resolved relative to the
@@ -86,6 +105,41 @@ type Config struct {
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
 	// relative), then that specific path is enforced. An empty path disables IPC.
 	IPCPath string `toml:",omitempty"`
+
+
+}
+type TxPoolConfig struct {
+	NoLocals  bool          // Whether local transaction handling should be disabled
+	Journal   string        // Journal of local transactions to survive node restarts
+	Rejournal time.Duration // Time interval to regenerate the local transaction journal
+
+	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
+	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
+
+	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
+	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
+	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
+	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
+
+	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+}
+type ChainConfig struct {
+	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
+
+	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
+}
+
+// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
+type PrometheusConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	Random string `json:"random"` // 新增加的random字段
+}
+
+/ Config holds Server options.
+type NetworkConfig struct {
+	// This field must be set to a valid secp256k1 private key.
+	PrivateKey *ecdsa.PrivateKey `toml:"-"`
 
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
@@ -131,8 +185,89 @@ type Config struct {
 	// *WARNING* Only set this if the node is running in a trusted network, exposing
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
-}
+	// MaxPeers is the maximum number of peers that can be
+	// connected. It must be greater than zero.
+	MaxPeers int
 
+	// MaxPendingPeers is the maximum number of peers that can be pending in the
+	// handshake phase, counted separately for inbound and outbound connections.
+	// Zero defaults to preset values.
+	MaxPendingPeers int `toml:",omitempty"`
+
+	// NoDiscovery can be used to disable the peer discovery mechanism.
+	// Disabling is useful for protocol debugging (manual topology).
+	NoDiscovery bool
+
+	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
+	// protocol should be started or not.
+	//DiscoveryV5 bool `toml:",omitempty"`
+
+	// Listener address for the V5 discovery protocol UDP traffic.
+	//DiscoveryV5Addr string `toml:",omitempty"`
+
+	// Name sets the node name of this server.
+	// Use common.MakeName to create a name that follows existing conventions.
+	Name string `toml:"-"`
+
+	// RoleType sets the node type of this server.
+	// One of hpnode,prenode,access,light.
+	RoleType string
+
+	// BootstrapNodes are used to establish connectivity
+	// with the rest of the network.
+	BootstrapNodes []*discover.Node
+
+	// BootstrapNodesV5 are used to establish connectivity
+	// with the rest of the network using the V5 discovery
+	// protocol.
+	//BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
+
+	// Static nodes are used as pre-configured connections which are always
+	// maintained and re-connected on disconnects.
+	StaticNodes []*discover.Node
+
+	// Trusted nodes are used as pre-configured connections which are always
+	// allowed to connect, even above the peer limit.
+	TrustedNodes []*discover.Node
+
+	// Connectivity can be restricted to certain IP networks.
+	// If this option is set to a non-nil value, only hosts which match one of the
+	// IP networks contained in the list are considered.
+	NetRestrict *netutil.Netlist `toml:",omitempty"`
+
+	// NodeDatabase is the path to the database containing the previously seen
+	// live nodes in the network.
+	NodeDatabase string `toml:",omitempty"`
+
+	// Protocols should contain the protocols supported
+	// by the server. Matching protocols are launched for
+	// each peer.
+	Protocols []Protocol `toml:"-"`
+
+	// If ListenAddr is set to a non-nil address, the server
+	// will listen for incoming connections.
+	//
+	// If the port is zero, the operating system will pick a port. The
+	// ListenAddr field will be updated with the actual address when
+	// the server is started.
+	ListenAddr string
+
+	// If set to a non-nil value, the given NAT port mapper
+	// is used to make the listening port available to the
+	// Internet.
+	NAT nat.Interface `toml:",omitempty"`
+
+	// If Dialer is set to a non-nil value, the given Dialer
+	// is used to dial outbound peer connections.
+	Dialer NodeDialer `toml:"-"`
+
+	// If NoDial is true, the server will not dial any peers.
+	NoDial bool `toml:",omitempty"`
+
+	// If EnableMsgEvents is set then the server will emit PeerEvents
+	// whenever a message is sent to or received from a peer
+	EnableMsgEvents bool
+}
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
 // account the set data folders as well as the designated platform we're currently
 // running on.

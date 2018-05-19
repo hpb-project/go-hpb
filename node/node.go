@@ -41,14 +41,14 @@ import (
 
 // Node is a container on which services can be registered.
 type Node struct {
-	Hpbconfig       *config
-	Hpbpeermanager  *peermanager
-	Hpbsyncctr      *synccontroller
-	Hpbtxpool 		*txpool
-	Hpbbc           *blockchain
-	Hpbvm           *vm
-	Hpbworker       *worker
-	Hpbboe			*boe
+	Hpbconfig       *Config
+	Hpbpeermanager  *Peermanager
+	Hpbsyncctr      *Synccontroller
+	Hpbtxpool 		*Txpool
+	Hpbbc           *Blockchain
+	Hpbvm           *Vm
+	Hpbworker       *Worker
+	Hpbboe			*Boe
 	HpbDb			hpbdb.Database
 	HPbbase		    common.Address
 
