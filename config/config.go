@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
+/*
 	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/account/keystore"
 	"github.com/hpb-project/ghpb/common"
@@ -34,6 +34,10 @@ import (
 	"github.com/hpb-project/ghpb/network/p2p/discover"
 	"math/big"
 	"time"
+	*/
+	"time"
+	"math/big"
+	"os/user"
 )
 
 const (
@@ -43,28 +47,109 @@ const (
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
 	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
-var DefaultTxPoolConfig = TxPoolConfig{
-	Journal:   "transactions.rlp",
-	Rejournal: time.Hour,
 
-	PriceLimit: 1,
-	PriceBump:  10,
+const (
 
-	AccountSlots: 16,
-	GlobalSlots:  4096,
-	AccountQueue: 64,
-	GlobalQueue:  1024,
+	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
+	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
+	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
+	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
+	TxGas                 uint64 = 10 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
+	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
+	TxDataZeroGas         uint64 = 1     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. //for testnet
+	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
+	SstoreSetGas          uint64 = 20000 // Once per SLOAD operation.
+	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.
+	CallStipend           uint64 = 2300  // Free gas given at beginning of call.
 
-	Lifetime: 3 * time.Hour,
+	Sha3Gas          uint64 = 30    // Once per SHA3 operation.
+	Sha3WordGas      uint64 = 6     // Once per word of the SHA3 operation's data.
+	SstoreResetGas   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
+	SstoreClearGas   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
+	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
+	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
+	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
+	CreateDataGas    uint64 = 200   //
+	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
+	ExpGas           uint64 = 10    // Once per EXP instruction
+	LogGas           uint64 = 375   // Per LOG* operation.
+	CopyGas          uint64 = 3     //
+	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
+	TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
+	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
+	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
+	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
+	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
+	TxDataNonZeroGas uint64 = 1    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
+
+	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+
+	// Precompiled contract gas prices
+
+	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
+	Sha256BaseGas           uint64 = 60     // Base price for a SHA256 operation
+	Sha256PerWordGas        uint64 = 12     // Per-word price for a SHA256 operation
+	Ripemd160BaseGas        uint64 = 600    // Base price for a RIPEMD160 operation
+	Ripemd160PerWordGas     uint64 = 120    // Per-word price for a RIPEMD160 operation
+	IdentityBaseGas         uint64 = 15     // Base price for a data copy operation
+	IdentityPerWordGas      uint64 = 3      // Per-work price for a data copy operation
+	ModExpQuadCoeffDiv      uint64 = 20     // Divisor for the quadratic particle of the big int modular exponentiation
+	Bn256AddGas             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
+)
+const (
+	// These are the multipliers for ether denominations.
+	// Example: To get the wei value of an amount in 'douglas', use
+	//
+	//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
+	//
+	Wei      = 1
+	Ada      = 1e3
+	Babbage  = 1e6
+	Shannon  = 1e9
+	Szabo    = 1e12
+	Finney   = 1e15
+	Ether    = 1e18
+	Einstein = 1e21
+	Douglas  = 1e42
+)
+var DefaultConfig = HpbConfig{
+
+	DataDir:     DefaultDataDir(),
+
+	SyncMode:              downloader.FastSync,
+	NetworkId:             1,
+	LightPeers:            20,
+	DatabaseCache:         128,
+	GasPrice:              big.NewInt(18 * params.Shannon),
+
+	TxPool: DefaultTxPoolConfig,
+	Network: DefaultNetworkConfig,
+	GPO: gasprice.Config{
+		Blocks:     10,
+		Percentile: 50,
+	},
 }
-
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
+const (
+	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
+	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
+	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
+	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+)
+
+
+
 // Config represents a small collection of configuration values to fine tune the
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
-type Config struct {
+type HpbConfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
 	// value is specified, the basename of the current executable is used.
@@ -84,8 +169,40 @@ type Config struct {
 	// in memory.
 	DataDir string
 
+	// The genesis block, which is inserted if the database is empty.
+	// If nil, the Hpb main net block is used.
+	Genesis *core.Genesis `toml:",omitempty"`
+
+	// Protocol options
+	NetworkId uint64 // Network ID to use for selecting peers to connect to
+	SyncMode  downloader.SyncMode
+
+	// Light client options
+	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
+	LightPeers int `toml:",omitempty"` // Maximum number of LHS client peers
+
+	// Database options
+	SkipBcVersionCheck bool `toml:"-"`
+	DatabaseHandles    int  `toml:"-"`
+	DatabaseCache      int
+
+	// Mining-related options
+	Hpberbase    common.Address `toml:",omitempty"`
+	MinerThreads int            `toml:",omitempty"`
+	ExtraData    []byte         `toml:",omitempty"`
+	GasPrice     *big.Int
+
 	// Configuration of peer-to-peer networking.
-	network NetworkConfig
+	Network NetworkConfig
+
+	//configuration of txpool
+	TxPool TxPoolConfig
+
+	//configuration of blockchain
+	BlockChain ChainConfig
+
+	//configuration of consensus
+	Prometheus PrometheusConfig
 
 	// KeyStoreDir is the file system folder that contains private keys. The directory can
 	// be specified as a relative path, in which case it is resolved relative to the
@@ -107,27 +224,18 @@ type Config struct {
 	IPCPath string `toml:",omitempty"`
 
 
+	// Gas Price Oracle options
+	GPO gasprice.Config
+
+	// Enables tracking of SHA3 preimages in the VM
+	EnablePreimageRecording bool
+
+	// Miscellaneous options
+	DocRoot   string `toml:"-"`
+
+
 }
-type TxPoolConfig struct {
-	NoLocals  bool          // Whether local transaction handling should be disabled
-	Journal   string        // Journal of local transactions to survive node restarts
-	Rejournal time.Duration // Time interval to regenerate the local transaction journal
 
-	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
-	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
-
-	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
-	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
-	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
-	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
-
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
-}
-type ChainConfig struct {
-	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
-
-	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
-}
 
 // PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
 type PrometheusConfig struct {
@@ -135,138 +243,6 @@ type PrometheusConfig struct {
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	Random string `json:"random"` // 新增加的random字段
 }
-
-/ Config holds Server options.
-type NetworkConfig struct {
-	// This field must be set to a valid secp256k1 private key.
-	PrivateKey *ecdsa.PrivateKey `toml:"-"`
-
-	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
-	// field is empty, no HTTP API endpoint will be started.
-	HTTPHost string `toml:",omitempty"`
-
-	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful
-	// for ephemeral nodes).
-	HTTPPort int `toml:",omitempty"`
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	HTTPCors []string `toml:",omitempty"`
-
-	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	HTTPModules []string `toml:",omitempty"`
-
-	// WSHost is the host interface on which to start the websocket RPC server. If
-	// this field is empty, no websocket API endpoint will be started.
-	WSHost string `toml:",omitempty"`
-
-	// WSPort is the TCP port number on which to start the websocket RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful for
-	// ephemeral nodes).
-	WSPort int `toml:",omitempty"`
-
-	// WSOrigins is the list of domain to accept websocket requests from. Please be
-	// aware that the server can only act upon the HTTP request the client sends and
-	// cannot verify the validity of the request header.
-	WSOrigins []string `toml:",omitempty"`
-
-	// WSModules is a list of API modules to expose via the websocket RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	WSModules []string `toml:",omitempty"`
-
-	// WSExposeAll exposes all API modules via the WebSocket RPC interface rather
-	// than just the public ones.
-	//
-	// *WARNING* Only set this if the node is running in a trusted network, exposing
-	// private APIs to untrusted users is a major security risk.
-	WSExposeAll bool `toml:",omitempty"`
-	// MaxPeers is the maximum number of peers that can be
-	// connected. It must be greater than zero.
-	MaxPeers int
-
-	// MaxPendingPeers is the maximum number of peers that can be pending in the
-	// handshake phase, counted separately for inbound and outbound connections.
-	// Zero defaults to preset values.
-	MaxPendingPeers int `toml:",omitempty"`
-
-	// NoDiscovery can be used to disable the peer discovery mechanism.
-	// Disabling is useful for protocol debugging (manual topology).
-	NoDiscovery bool
-
-	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
-	// protocol should be started or not.
-	//DiscoveryV5 bool `toml:",omitempty"`
-
-	// Listener address for the V5 discovery protocol UDP traffic.
-	//DiscoveryV5Addr string `toml:",omitempty"`
-
-	// Name sets the node name of this server.
-	// Use common.MakeName to create a name that follows existing conventions.
-	Name string `toml:"-"`
-
-	// RoleType sets the node type of this server.
-	// One of hpnode,prenode,access,light.
-	RoleType string
-
-	// BootstrapNodes are used to establish connectivity
-	// with the rest of the network.
-	BootstrapNodes []*discover.Node
-
-	// BootstrapNodesV5 are used to establish connectivity
-	// with the rest of the network using the V5 discovery
-	// protocol.
-	//BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
-
-	// Static nodes are used as pre-configured connections which are always
-	// maintained and re-connected on disconnects.
-	StaticNodes []*discover.Node
-
-	// Trusted nodes are used as pre-configured connections which are always
-	// allowed to connect, even above the peer limit.
-	TrustedNodes []*discover.Node
-
-	// Connectivity can be restricted to certain IP networks.
-	// If this option is set to a non-nil value, only hosts which match one of the
-	// IP networks contained in the list are considered.
-	NetRestrict *netutil.Netlist `toml:",omitempty"`
-
-	// NodeDatabase is the path to the database containing the previously seen
-	// live nodes in the network.
-	NodeDatabase string `toml:",omitempty"`
-
-	// Protocols should contain the protocols supported
-	// by the server. Matching protocols are launched for
-	// each peer.
-	Protocols []Protocol `toml:"-"`
-
-	// If ListenAddr is set to a non-nil address, the server
-	// will listen for incoming connections.
-	//
-	// If the port is zero, the operating system will pick a port. The
-	// ListenAddr field will be updated with the actual address when
-	// the server is started.
-	ListenAddr string
-
-	// If set to a non-nil value, the given NAT port mapper
-	// is used to make the listening port available to the
-	// Internet.
-	NAT nat.Interface `toml:",omitempty"`
-
-	// If Dialer is set to a non-nil value, the given Dialer
-	// is used to dial outbound peer connections.
-	Dialer NodeDialer `toml:"-"`
-
-	// If NoDial is true, the server will not dial any peers.
-	NoDial bool `toml:",omitempty"`
-
-	// If EnableMsgEvents is set then the server will emit PeerEvents
-	// whenever a message is sent to or received from a peer
-	EnableMsgEvents bool
 }
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
 // account the set data folders as well as the designated platform we're currently
@@ -531,4 +507,50 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		keystore.NewKeyStore(keydir, scryptN, scryptP),
 	}
 	return accounts.NewManager(backends...), ephemeral, nil
+}
+
+// DefaultDataDir is the default data directory to use for the databases and other
+// persistence requirements.
+func DefaultDataDir() string {
+	// Try to place the data folder in the user's home dir
+	home := homeDir()
+	if home != "" {
+		if runtime.GOOS == "darwin" {
+			return filepath.Join(home, "Library", "Hpb")
+		} else if runtime.GOOS == "windows" {
+			return filepath.Join(home, "AppData", "Roaming", "Hpb")
+		} else {
+			return filepath.Join(home, ".hpb")
+		}
+	}
+	// As we cannot guess a stable location, return empty and handle later
+	return ""
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
+}
+
+// ConfigCompatError is raised if the locally-stored blockchain is initialised with a
+// ChainConfig that would alter the past.
+type ConfigCompatError struct {
+	What string
+	// block numbers of the stored and new configurations
+	StoredConfig, NewConfig *big.Int
+	// the block number to which the local chain must be rewound to correct the error
+	RewindTo uint64
+}
+
+func (err *ConfigCompatError) Error() string {
+	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
+}
+
+func (err *ConfigCompatError) Error() string {
+	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }

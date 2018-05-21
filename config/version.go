@@ -14,18 +14,41 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package params
+package config
 
 import (
 	"fmt"
 )
 
+
+// hpb protocol version control
+const (
+	ProtocolV111 uint    = 111 // match up protocol versions and messages versions
+	SubProtocolV111 uint = 111 // Light Hpb Sub-protocol versions
+)
 const (
 	VersionMajor = 0        // Major version component of the current release
 	VersionMinor = 0        // Minor version component of the current release
 	VersionPatch = 16        // Patch version component of the current release
 	VersionMeta  = "dev" // Version metadata to append to the version string
 )
+
+// Version holds the textual version string.
+var Version = func() string {
+	v := fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
+	if VersionMeta != "" {
+		v += "-" + VersionMeta
+	}
+	return v
+}()
+
+func VersionWithCommit(gitCommit string) string {
+	vsn := Version
+	if len(gitCommit) >= 8 {
+		vsn += "-" + gitCommit[:8]
+	}
+	return vsn
+}
 
 // Version holds the textual version string.
 var Version = func() string {

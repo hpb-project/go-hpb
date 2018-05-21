@@ -1,25 +1,5 @@
-// Copyright 2018 The go-hpb Authors
-// This file is part of the go-hpb.
-//
-// The go-hpb is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-hpb is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
-
-package params
-
-import "math/big"
-
+package config
 const (
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
@@ -71,13 +51,36 @@ const (
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 )
 
+
+
+type GasTable struct {
+	ExtcodeSize uint64
+	ExtcodeCopy uint64
+	Balance     uint64
+	SLoad       uint64
+	Calls       uint64
+	Suicide     uint64
+
+	ExpByte uint64
+
+	// CreateBySuicide occurs when the
+	// refunded account is one that does
+	// not exist. This logic is similar
+	// to call. May be left nil. Nil means
+	// not charged.
+	CreateBySuicide uint64
+}
+
 var (
-	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(100000000)               // Gas limit of the Genesis block. //for testnet
-	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
-	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	GasTableEIP158 = GasTable{
+		ExtcodeSize: 700,
+		ExtcodeCopy: 700,
+		Balance:     400,
+		SLoad:       200,
+		Calls:       700,
+		Suicide:     5000,
+		ExpByte:     50,
+
+		CreateBySuicide: 25000,
+	}
 )

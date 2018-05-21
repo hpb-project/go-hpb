@@ -14,21 +14,21 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package params
+
+package config
 
 const (
-	// These are the multipliers for ether denominations.
-	// Example: To get the wei value of an amount in 'douglas', use
-	//
-	//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
-	//
-	Wei      = 1
-	Ada      = 1e3
-	Babbage  = 1e6
-	Shannon  = 1e9
-	Szabo    = 1e12
-	Finney   = 1e15
-	Ether    = 1e18
-	Einstein = 1e21
-	Douglas  = 1e42
+	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 )
+
+type PrometheusConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	Random string `json:"random"` // 新增加的random字段
+}
+
+// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
+// String implements the stringer interface, returning the consensus engine details.
+func (c *PrometheusConfig) String() string {
+	return "prometheus"
+}

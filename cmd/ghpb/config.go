@@ -137,28 +137,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, hpbConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterHpbService(stack, &cfg.Hpb)
-	
 
-	// Add the HPB Stats daemon if requested.
-	if cfg.HpbStats.URL != "" {
-		utils.RegisterHpbStatsService(stack, cfg.HpbStats.URL)
-	}
 
-	// Add the release oracle service so it boots along with node.
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		config := release.Config{
-			Oracle: relOracle,
-			Major:  uint32(params.VersionMajor),
-			Minor:  uint32(params.VersionMinor),
-			Patch:  uint32(params.VersionPatch),
-		}
-		commit, _ := hex.DecodeString(gitCommit)
-		copy(config.Commit[:], commit)
-		return release.NewReleaseService(ctx, config)
-	}); err != nil {
-		utils.Fatalf("Failed to register the Ghpb release oracle service: %v", err)
-	}
+
 	return stack
 }
 

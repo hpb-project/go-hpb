@@ -14,18 +14,22 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package params
+
+package config
 
 import (
-	"fmt"
 	"math/big"
-
-	"github.com/hpb-project/ghpb/common"
+	"fmt"
 )
+
+
 
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
+)
+const (
+	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 )
 
 var (
@@ -63,50 +67,28 @@ var (
 	}
 )
 
-// ChainConfig is the core config which determines the blockchain settings.
-//
-// ChainConfig is stored 9in the database on a per block basis. This means
-// that any network, identified by its genesis block, can have its own
-// set of configuration options.
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 
 	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
 }
 
-// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
-type PrometheusConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	Random string `json:"random"` // 新增加的random字段
-}
+var DefaultBlockChainConfig = ChainConfig{
+	ChainId: params.MainnetChainConfig.ChainId,
+	Prometheus:
+		}
 
-// String implements the stringer interface, returning the consensus engine details.
-func (c *PrometheusConfig) String() string {
-	return "prometheus"
-}
+var (
+	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
+	GenesisGasLimit        = big.NewInt(100000000)               // Gas limit of the Genesis block. //for testnet
+	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
+	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
+	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
+	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
+	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+)
 
-// String implements the fmt.Stringer interface.
-func (c *ChainConfig) String() string {
-	var engine interface{}
-	switch {
-	case c.Prometheus != nil:
-		engine = c.Prometheus
-	default:
-		engine = "unknown"
-	}
-	return fmt.Sprintf("{ChainID: %v Engine: %v}",
-		c.ChainId,
-		engine,
-	)
-}
-
-// GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
-//
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableEIP158
-}
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
@@ -140,6 +122,24 @@ type ConfigCompatError struct {
 	RewindTo uint64
 }
 
-func (err *ConfigCompatError) Error() string {
-	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
+// GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
+//
+// The returned GasTable's fields shouldn't, under any circumstances, be changed.
+func (c *ChainConfig) GasTable(num *big.Int) GasTable {
+	return GasTableEIP158
+}
+
+// String implements the fmt.Stringer interface.
+func (c *ChainConfig) String() string {
+	var engine interface{}
+	switch {
+	case c.Prometheus != nil:
+		engine = c.Prometheus
+	default:
+		engine = "unknown"
+	}
+	return fmt.Sprintf("{ChainID: %v Engine: %v}",
+		c.ChainId,
+		engine,
+	)
 }
