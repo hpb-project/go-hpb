@@ -24,12 +24,9 @@ import (
 
 type EventType int16
 
-type EventFunc func(v interface{})
-
 type Subscriber chan interface{}
 
 type EleType struct {
-    eFunc EventFunc 
     eChan Subscriber
 }
 
@@ -40,17 +37,17 @@ type Subscribers struct {
 
 type Event struct {
     m   sync.RWMutex
-    eventTable map[int]Subscribers
+    eventTable map[EventType]Subscribers
 }
 
 func NewEvent() *Event {
     return &Event{
-        eventTable : make(map[int]Subscribers),
+        eventTable : make(map[EventType]Subscribers),
     }
 }
 
 // Subscribe specified event.
-func (e *Event) Subscribe(eventtype EventType, eventfunc EventFunc) Subscriber {
+func (e *Event) Subscribe(eventtype EventType) Subscriber {
 
     e.m.Lock()
     defer e.m.Unlock()
@@ -64,7 +61,7 @@ func (e *Event) Subscribe(eventtype EventType, eventfunc EventFunc) Subscriber {
         }
         e.eventTable[eventtype] = subs
     }
-    subs.sublist.PushBack(EleType{eFunc:eventfunc,eChan:sub})
+    subs.sublist.PushBack(EleType{eChan:sub})
     subs.submap[sub]=subs.sublist.Back()
     return sub
 }
@@ -104,8 +101,6 @@ func (e *Event) Notify(eventtype EventType, value interface{}) (err error) {
     for nil != elem {
         et, ok := elem.Value.(EleType)
         if ok {
-            // Todo : luxq, discuss use eventfunc or channel.
-            //go e.NotifySubscriber(et.eFunc, value)
             e.NotifyChannel(et.eChan, value)
         }
 
@@ -113,19 +108,8 @@ func (e *Event) Notify(eventtype EventType, value interface{}) (err error) {
     }
     return 
 }
-// Notify with event func.
-func (e *Event) NotifySubscriber(eventfunc EventFunc, value interface{}) (err error) {
-    if eventfunc == nil {
-        return
-    }
-
-    //call event func
-    eventfunc(value)
-    return 
-}
 
 // Notify with subscriber channel.
-
 func (e *Event) NotifyChannel(subscriber Subscriber, value interface{}) (err error) {
     if subscriber == nil {
         return

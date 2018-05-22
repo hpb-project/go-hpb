@@ -28,18 +28,11 @@ func routine_exit(v int) {
 
 func TestNewEvent(t *testing.T) {
     la_event := NewEvent()
-    var sub1 EventFunc = func (v interface{}){
-        fmt.Println("sub1 la, value = ",v.(int))
-    }
-
-    var sub2 EventFunc = func (v interface{}){
-        fmt.Println("sub2 la, value = ",v.(int))
-    }
     fmt.Println("Subscribe...")
-    s_1_1 := la_event.Subscribe(1,sub1)
-    s_1_2 := la_event.Subscribe(1,sub2)
-    s_2_1 := la_event.Subscribe(2,sub1)
-    s_2_2 := la_event.Subscribe(2,sub2)
+    s_1_1 := la_event.Subscribe(1)
+    s_1_2 := la_event.Subscribe(1)
+    s_2_1 := la_event.Subscribe(2)
+    s_2_2 := la_event.Subscribe(2)
     go func (){
         defer routine_exit(1)
         for {
