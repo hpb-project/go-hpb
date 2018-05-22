@@ -35,8 +35,9 @@ import (
 
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/naoina/toml"
+	"github.com/hpb-project/go-hpb/log"
 )
-
+var HpbconfigIns *HpbConfig
 const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
@@ -170,33 +171,6 @@ type HpbConfig struct {
 }
 
 
-func makeConfigNode(ctx *cli.Context) (*node.Node, HpbConfig) {
-	// Load defaults.
-	cfg := HpbConfig{
-		Hpb:DefaultConfig,
-	}
-
-	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
-		if err := loadConfig(file, &cfg); err != nil {
-			utils.Fatalf("%v", err)
-		}
-	}
-
-	// Apply flags.
-	utils.SetNodeConfig(ctx, &cfg.Node)
-	stack, err := node.New(&cfg.Node)
-	if err != nil {
-		utils.Fatalf("Failed to create the protocol stack: %v", err)
-	}
-	utils.SetHpbConfig(ctx, stack, &cfg.Hpb)
-	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
-		cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
-	}
-
-	return stack, cfg
-}
-
 var (
 	dumpConfigCommand = cli.Command{
 		Action:      utils.MigrateFlags(dumpConfig),
@@ -261,4 +235,40 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	return stack
 }
 
+
+func GetHpbConfigInstance() (*HpbConfig,  error) {
+
+	//check hpbconfigIns
+	if HpbconfigIns == nil {
+		HpbconfigIns := &HpbConfig{
+			Node: 		defaultNodeConfig() ,
+			// Configuration of peer-to-peer networking.
+			Network:	DefaultNetworkConfig(),
+
+			//configuration of txpool
+			TxPool:		DefaultTxPoolConfig,
+
+			//configuration of blockchain
+			BlockChain: DefaultBlockChainConfig,
+			//configuration of consensus
+			Prometheus: DefaultPrometheusConfig,
+
+			Gas:		DefaultGasConfig,
+
+			HpbStats:   DefaultHpbStatsConfig,
+		}
+		log.Info("Create New HpbConfig object")
+	}
+	return HpbconfigIns, nil
+}
+
+
+
+
+
+
+
+
+
+}
 

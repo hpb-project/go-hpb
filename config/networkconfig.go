@@ -268,3 +268,5 @@ func DefaultWSEndpoint() string {
 	config := &networkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
+
+
