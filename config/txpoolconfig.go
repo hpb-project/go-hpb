@@ -19,22 +19,8 @@ package config
 
 import "time"
 
-var DefaultTxPoolConfig = TxPoolConfiguration{
-	Journal:   "transactions.rlp",
-	Rejournal: time.Hour,
 
-	PriceLimit: 1,
-	PriceBump:  10,
-
-	AccountSlots: 16,
-	GlobalSlots:  4096,
-	AccountQueue: 64,
-	GlobalQueue:  1024,
-
-	Lifetime: 3 * time.Hour,
-}
-
-type TxPoolConfig struct {
+type txPoolConfiguration struct {
 	NoLocals  bool          // Whether local transaction handling should be disabled
 	Journal   string        // Journal of local transactions to survive node restarts
 	Rejournal time.Duration // Time interval to regenerate the local transaction journal
@@ -49,3 +35,18 @@ type TxPoolConfig struct {
 
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 }
+var DefaultTxPoolConfig = txPoolConfiguration{
+	Journal:   "transactions.rlp",
+	Rejournal: time.Hour,
+
+	PriceLimit: 1,
+	PriceBump:  10,
+
+	AccountSlots: 16,
+	GlobalSlots:  4096,
+	AccountQueue: 64,
+	GlobalQueue:  1024,
+
+	Lifetime: 3 * time.Hour,
+}
+

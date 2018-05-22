@@ -53,7 +53,7 @@ const (
 
 
 
-type GasTable struct {
+type gasTable struct {
 	ExtcodeSize uint64
 	ExtcodeCopy uint64
 	Balance     uint64

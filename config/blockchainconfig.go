@@ -67,13 +67,13 @@ var (
 	}
 )
 
-type ChainConfig struct {
+type chainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 
-	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
+	Prometheus *prometheusConfig `json:"prometheus,omitempty"`
 }
 
-var DefaultBlockChainConfig = ChainConfig{
+var DefaultBlockChainConfig = chainConfig{
 	ChainId: params.MainnetChainConfig.ChainId,
 	Prometheus:
 		}

@@ -24,20 +24,17 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-/*
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/account/keystore"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/network/p2p"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"math/big"
-	"time"
-	*/
-	"time"
 	"math/big"
 	"os/user"
+	"io"
+	"gopkg.in/urfave/cli.v1"
+
+	"reflect"
+	"unicode"
+	"bufio"
+
+	"github.com/hpb-project/go-hpb/node"
+	"github.com/naoina/toml"
 )
 
 const (
@@ -118,20 +115,21 @@ const (
 )
 var DefaultConfig = HpbConfig{
 
-	DataDir:     DefaultDataDir(),
+	Node: 		defaultNodeConfig() ,
+	// Configuration of peer-to-peer networking.
+	Network:	DefaultNetworkConfig(),
 
-	SyncMode:              downloader.FastSync,
-	NetworkId:             1,
-	LightPeers:            20,
-	DatabaseCache:         128,
-	GasPrice:              big.NewInt(18 * params.Shannon),
+	//configuration of txpool
+	TxPool:		DefaultTxPoolConfig,
 
-	TxPool: DefaultTxPoolConfig,
-	Network: DefaultNetworkConfig,
-	GPO: gasprice.Config{
-		Blocks:     10,
-		Percentile: 50,
-	},
+	//configuration of blockchain
+	BlockChain: DefaultBlockChainConfig,
+	//configuration of consensus
+	Prometheus: DefaultPrometheusConfig,
+
+	Gas:		DefaultGasConfig,
+
+	HpbStats:   DefaultHpbStatsConfig,
 }
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
@@ -144,413 +142,123 @@ const (
 	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
 
-
+type hpbStatsConfig struct {
+	URL string `toml:",omitempty"`
+}
 
 // Config represents a small collection of configuration values to fine tune the
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
 type HpbConfig struct {
-	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
-	// value is specified, the basename of the current executable is used.
-	Name string `toml:"-"`
 
-	// UserIdent, if set, is used as an additional component in the devp2p node identifier.
-	UserIdent string `toml:",omitempty"`
-
-	// Version should be set to the version number of the program. It is used
-	// in the devp2p node identifier.
-	Version string `toml:"-"`
-
-	// DataDir is the file system folder the node should use for any data storage
-	// requirements. The configured data directory will not be directly shared with
-	// registered services, instead those can use utility methods to create/access
-	// databases or flat files. This enables ephemeral nodes which can fully reside
-	// in memory.
-	DataDir string
-
-	// The genesis block, which is inserted if the database is empty.
-	// If nil, the Hpb main net block is used.
-	Genesis *core.Genesis `toml:",omitempty"`
-
-	// Protocol options
-	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
-
-	// Light client options
-	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
-	LightPeers int `toml:",omitempty"` // Maximum number of LHS client peers
-
-	// Database options
-	SkipBcVersionCheck bool `toml:"-"`
-	DatabaseHandles    int  `toml:"-"`
-	DatabaseCache      int
-
-	// Mining-related options
-	Hpberbase    common.Address `toml:",omitempty"`
-	MinerThreads int            `toml:",omitempty"`
-	ExtraData    []byte         `toml:",omitempty"`
-	GasPrice     *big.Int
-
+    Node nodeconfig
 	// Configuration of peer-to-peer networking.
-	Network NetworkConfig
+	Network networkConfig
 
 	//configuration of txpool
-	TxPool TxPoolConfig
+	TxPool txPoolConfiguration
 
 	//configuration of blockchain
-	BlockChain ChainConfig
+	BlockChain chainConfig
 
 	//configuration of consensus
-	Prometheus PrometheusConfig
+	Prometheus prometheusConfig
 
-	// KeyStoreDir is the file system folder that contains private keys. The directory can
-	// be specified as a relative path, in which case it is resolved relative to the
-	// current directory.
-	//
-	// If KeyStoreDir is empty, the default location is the "keystore" subdirectory of
-	// DataDir. If DataDir is unspecified and KeyStoreDir is empty, an ephemeral directory
-	// is created by New and destroyed when the node is stopped.
-	KeyStoreDir string `toml:",omitempty"`
+	Gas GasConfig
 
-	// UseLightweightKDF lowers the memory and CPU requirements of the key store
-	// scrypt KDF at the expense of security.
-	UseLightweightKDF bool `toml:",omitempty"`
-
-	// IPCPath is the requested location to place the IPC endpoint. If the path is
-	// a simple file name, it is placed inside the data directory (or on the root
-	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
-	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `toml:",omitempty"`
-
-
-	// Gas Price Oracle options
-	GPO gasprice.Config
-
-	// Enables tracking of SHA3 preimages in the VM
-	EnablePreimageRecording bool
-
-	// Miscellaneous options
-	DocRoot   string `toml:"-"`
-
-
+	HpbStats hpbStatsConfig
 }
 
 
-// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
-type PrometheusConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	Random string `json:"random"` // 新增加的random字段
-}
-}
-// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
-// account the set data folders as well as the designated platform we're currently
-// running on.
-func (c *Config) IPCEndpoint() string {
-	// Short circuit if IPC has not been enabled
-	if c.IPCPath == "" {
-		return ""
+func makeConfigNode(ctx *cli.Context) (*node.Node, HpbConfig) {
+	// Load defaults.
+	cfg := HpbConfig{
+		Hpb:DefaultConfig,
 	}
-	// On windows we can only use plain top-level pipes
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
-			return c.IPCPath
-		}
-		return `\\.\pipe\` + c.IPCPath
-	}
-	// Resolve names into the data directory full paths otherwise
-	if filepath.Base(c.IPCPath) == c.IPCPath {
-		if c.DataDir == "" {
-			return filepath.Join(os.TempDir(), c.IPCPath)
-		}
-		return filepath.Join(c.DataDir, c.IPCPath)
-	}
-	return c.IPCPath
-}
 
-// NodeDB returns the path to the discovery node database.
-func (c *Config) NodeDB() string {
-	if c.DataDir == "" {
-		return "" // ephemeral
-	}
-	return c.resolvePath(datadirNodeDatabase)
-}
-
-// DefaultIPCEndpoint returns the IPC path used by default.
-func DefaultIPCEndpoint(clientIdentifier string) string {
-	if clientIdentifier == "" {
-		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if clientIdentifier == "" {
-			panic("empty executable name")
+	// Load config file.
+	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
+		if err := loadConfig(file, &cfg); err != nil {
+			utils.Fatalf("%v", err)
 		}
 	}
-	config := &Config{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
-	return config.IPCEndpoint()
-}
 
-// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
-// and port parameters.
-func (c *Config) HTTPEndpoint() string {
-	if c.HTTPHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
-}
-
-// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
-func DefaultHTTPEndpoint() string {
-	config := &Config{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
-	return config.HTTPEndpoint()
-}
-
-// WSEndpoint resolves an websocket endpoint based on the configured host interface
-// and port parameters.
-func (c *Config) WSEndpoint() string {
-	if c.WSHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.WSHost, c.WSPort)
-}
-
-// DefaultWSEndpoint returns the websocket endpoint used by default.
-func DefaultWSEndpoint() string {
-	config := &Config{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
-	return config.WSEndpoint()
-}
-
-// NodeName returns the devp2p node identifier.
-func (c *Config) NodeName() string {
-	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Geth", keep that.
-	if name == "geth" || name == "geth-testnet" {
-		name = "Geth"
-	}
-	if c.UserIdent != "" {
-		name += "/" + c.UserIdent
-	}
-	if c.Version != "" {
-		name += "/v" + c.Version
-	}
-	name += "/" + runtime.GOOS + "-" + runtime.GOARCH
-	name += "/" + runtime.Version()
-	return name
-}
-
-func (c *Config) name() string {
-	if c.Name == "" {
-		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if progname == "" {
-			panic("empty executable name, set Config.Name")
-		}
-		return progname
-	}
-	return c.Name
-}
-
-// These resources are resolved differently for "geth" instances.
-var isOldGethResource = map[string]bool{
-	"chaindata":          true,
-	"nodes":              true,
-	"nodekey":            true,
-	"static-nodes.json":  true,
-	"trusted-nodes.json": true,
-}
-
-// resolvePath resolves path in the instance directory.
-func (c *Config) resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	if c.DataDir == "" {
-		return ""
-	}
-	// Backwards-compatibility: ensure that data directory files created
-	// by geth 1.4 are used if they exist.
-	if c.name() == "ghpb" && isOldGethResource[path] {
-		oldpath := ""
-		if c.Name == "ghpb" {
-			oldpath = filepath.Join(c.DataDir, path)
-		}
-		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
-			return oldpath
-		}
-	}
-	return filepath.Join(c.instanceDir(), path)
-}
-
-func (c *Config) instanceDir() string {
-	if c.DataDir == "" {
-		return ""
-	}
-	return filepath.Join(c.DataDir, c.name())
-}
-
-// NodeKey retrieves the currently configured private key of the node, checking
-// first any manually set key, falling back to the one found in the configured
-// data folder. If no key can be found, a new one is generated.
-func (c *Config) NodeKey() *ecdsa.PrivateKey {
-	// Use any specifically configured key.
-	if c.P2P.PrivateKey != nil {
-		return c.P2P.PrivateKey
-	}
-	// Generate ephemeral key if no datadir is being used.
-	if c.DataDir == "" {
-		key, err := crypto.GenerateKey()
-		if err != nil {
-			log.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
-		}
-		return key
-	}
-
-	keyfile := c.resolvePath(datadirPrivateKey)
-	if key, err := crypto.LoadECDSA(keyfile); err == nil {
-		return key
-	}
-	// No persistent key found, generate and store a new one.
-	key, err := crypto.GenerateKey()
+	// Apply flags.
+	utils.SetNodeConfig(ctx, &cfg.Node)
+	stack, err := node.New(&cfg.Node)
 	if err != nil {
-		log.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
+		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	instanceDir := filepath.Join(c.DataDir, c.name())
-	if err := os.MkdirAll(instanceDir, 0700); err != nil {
-		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+	utils.SetHpbConfig(ctx, stack, &cfg.Hpb)
+	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
+		cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
+	}
+
+	return stack, cfg
+}
+
+var (
+	dumpConfigCommand = cli.Command{
+		Action:      utils.MigrateFlags(dumpConfig),
+		Name:        "dumpconfig",
+		Usage:       "Show configuration values",
+		ArgsUsage:   "",
+		Flags:       append(append(nodeFlags, rpcFlags...)),
+		Category:    "MISCELLANEOUS COMMANDS",
+		Description: `The dumpconfig command shows configuration values.`,
+	}
+
+	configFileFlag = cli.StringFlag{
+		Name:  "config",
+		Usage: "TOML configuration file",
+	}
+)
+
+// These settings ensure that TOML keys use the same names as Go struct fields.
+var tomlSettings = toml.Config{
+	NormFieldName: func(rt reflect.Type, key string) string {
 		return key
-	}
-	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
-	if err := crypto.SaveECDSA(keyfile, key); err != nil {
-		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
-	}
-	return key
-}
-
-// StaticNodes returns a list of node hnode URLs configured as static nodes.
-func (c *Config) StaticNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirStaticNodes))
-}
-
-// TrustedNodes returns a list of node hnode URLs configured as trusted nodes.
-func (c *Config) TrustedNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirTrustedNodes))
-}
-
-// parsePersistentNodes parses a list of discovery node URLs loaded from a .json
-// file from within the data directory.
-func (c *Config) parsePersistentNodes(path string) []*discover.Node {
-	// Short circuit if no node config is present
-	if c.DataDir == "" {
-		return nil
-	}
-	if _, err := os.Stat(path); err != nil {
-		return nil
-	}
-	// Load the nodes from the config file.
-	var nodelist []string
-	if err := common.LoadJSON(path, &nodelist); err != nil {
-		log.Error(fmt.Sprintf("Can't load node file %s: %v", path, err))
-		return nil
-	}
-	// Interpret the list as a discovery node array
-	var nodes []*discover.Node
-	for _, url := range nodelist {
-		if url == "" {
-			continue
+	},
+	FieldToKey: func(rt reflect.Type, field string) string {
+		return field
+	},
+	MissingField: func(rt reflect.Type, field string) error {
+		link := ""
+		if unicode.IsUpper(rune(rt.Name()[0])) && rt.PkgPath() != "main" {
+			link = fmt.Sprintf(", see https://godoc.org/%s#%s for available fields", rt.PkgPath(), rt.Name())
 		}
-		node, err := discover.ParseNode(url)
-		if err != nil {
-			log.Error(fmt.Sprintf("Node URL %s: %v\n", url, err))
-			continue
-		}
-		nodes = append(nodes, node)
-	}
-	return nodes
+		return fmt.Errorf("field '%s' is not defined in %s%s", field, rt.String(), link)
+	},
 }
 
-func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
-	scryptN := keystore.StandardScryptN
-	scryptP := keystore.StandardScryptP
-	if conf.UseLightweightKDF {
-		scryptN = keystore.LightScryptN
-		scryptP = keystore.LightScryptP
-	}
+type hpbStatsConfig struct {
+	URL string `toml:",omitempty"`
+}
 
-	var (
-		keydir    string
-		ephemeral string
-		err       error
-	)
-	switch {
-	case filepath.IsAbs(conf.KeyStoreDir):
-		keydir = conf.KeyStoreDir
-	case conf.DataDir != "":
-		if conf.KeyStoreDir == "" {
-			keydir = filepath.Join(conf.DataDir, datadirDefaultKeyStore)
-		} else {
-			keydir, err = filepath.Abs(conf.KeyStoreDir)
-		}
-	case conf.KeyStoreDir != "":
-		keydir, err = filepath.Abs(conf.KeyStoreDir)
-	default:
-		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "ghpb-keystore")
-		ephemeral = keydir
-	}
+
+
+func loadConfig(file string, cfg *hpbConfig) error {
+	f, err := os.Open(file)
 	if err != nil {
-		return nil, "", err
+		return err
 	}
-	if err := os.MkdirAll(keydir, 0700); err != nil {
-		return nil, "", err
+	defer f.Close()
+
+	err = tomlSettings.NewDecoder(bufio.NewReader(f)).Decode(cfg)
+	// Add file name to errors that have a line number.
+	if _, ok := err.(*toml.LineError); ok {
+		err = errors.New(file + ", " + err.Error())
 	}
-	// Assemble the account manager and supported backends
-	backends := []accounts.Backend{
-		keystore.NewKeyStore(keydir, scryptN, scryptP),
-	}
-	return accounts.NewManager(backends...), ephemeral, nil
+	return err
 }
 
-// DefaultDataDir is the default data directory to use for the databases and other
-// persistence requirements.
-func DefaultDataDir() string {
-	// Try to place the data folder in the user's home dir
-	home := homeDir()
-	if home != "" {
-		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "Hpb")
-		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Hpb")
-		} else {
-			return filepath.Join(home, ".hpb")
-		}
-	}
-	// As we cannot guess a stable location, return empty and handle later
-	return ""
+func MakeFullNode(ctx *cli.Context) *node.Node {
+	stack, cfg := makeConfigNode(ctx)
+
+
+
+
+	return stack
 }
 
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
-}
 
-// ConfigCompatError is raised if the locally-stored blockchain is initialised with a
-// ChainConfig that would alter the past.
-type ConfigCompatError struct {
-	What string
-	// block numbers of the stored and new configurations
-	StoredConfig, NewConfig *big.Int
-	// the block number to which the local chain must be rewound to correct the error
-	RewindTo uint64
-}
-
-func (err *ConfigCompatError) Error() string {
-	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
-}
-
-func (err *ConfigCompatError) Error() string {
-	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
-}

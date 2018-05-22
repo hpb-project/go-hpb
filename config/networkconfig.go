@@ -32,6 +32,11 @@ import (
 		"time"
 		*/
 
+	"runtime"
+	"strings"
+	"path/filepath"
+	"os"
+	"fmt"
 )
 
 const (
@@ -46,7 +51,8 @@ const (
 	// contains.
 	BloomBitsBlocks uint64 = 4096
 )
-var DefaultNetworkConfig = NetworkConfig{
+var defaultNetworkConfig = networkConfig{
+
 	HTTPPort:    DefaultHTTPPort,
 	HTTPModules: []string{"net", "web3"},
 	WSPort:      DefaultWSPort,
@@ -54,6 +60,8 @@ var DefaultNetworkConfig = NetworkConfig{
 	ListenAddr:      ":30303",
 	MaxPeers:        50,
 	NAT:             nat.Any(),
+
+
 }
 
 var MainnetBootnodes = []string{
@@ -68,10 +76,7 @@ var MainnetBootnodes = []string{
 // Ropsten test network.
 var TestnetBootnodes = []string{
 }
-type NetworkConfig struct {
-	// This field must be set to a valid secp256k1 private key.
-	PrivateKey *ecdsa.PrivateKey `toml:"-"`
-
+type networkConfig struct {
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
 	HTTPHost string `toml:",omitempty"`
@@ -116,6 +121,9 @@ type NetworkConfig struct {
 	// *WARNING* Only set this if the node is running in a trusted network, exposing
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
+
+	// This field must be set to a valid secp256k1 private key.
+	PrivateKey *ecdsa.PrivateKey `toml:"-"`
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.
 	MaxPeers int
@@ -124,8 +132,6 @@ type NetworkConfig struct {
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
 	MaxPendingPeers int `toml:",omitempty"`
-
-
 
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
@@ -141,8 +147,6 @@ type NetworkConfig struct {
 	// RoleType sets the node type of this server.
 	// One of hpnode,prenode,access,light.
 	RoleType string
-
-
 
 	// Connectivity can be restricted to certain IP networks.
 	// If this option is set to a non-nil value, only hosts which match one of the
@@ -181,3 +185,86 @@ type NetworkConfig struct {
 	// If EnableMsgEvents is set then the server will emit PeerEvents
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
+
+	// IPCPath is the requested location to place the IPC endpoint. If the path is
+	// a simple file name, it is placed inside the data directory (or on the root
+	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
+	// relative), then that specific path is enforced. An empty path disables IPC.
+	IPCPath string `toml:",omitempty"`
+}
+
+
+// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
+// account the set data folders as well as the designated platform we're currently
+// running on.
+func (c *networkConfig) IPCEndpoint() string {
+	// Short circuit if IPC has not been enabled
+	if c.IPCPath == "" {
+		return ""
+	}
+	// On windows we can only use plain top-level pipes
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
+			return c.IPCPath
+		}
+		return `\\.\pipe\` + c.IPCPath
+	}
+	// Resolve names into the data directory full paths otherwise
+	if filepath.Base(c.IPCPath) == c.IPCPath {
+		if c.DataDir == "" {
+			return filepath.Join(os.TempDir(), c.IPCPath)
+		}
+		return filepath.Join(c.DataDir, c.IPCPath)
+	}
+	return c.IPCPath
+}
+
+func DefaultNetworkConfig() networkConfig{
+	cfg:= defaultNetworkConfig
+
+	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
+	cfg.WSModules = append(cfg.WSModules, "hpb")
+
+	return cfg
+}
+// DefaultIPCEndpoint returns the IPC path used by default.
+func DefaultIPCEndpoint(clientIdentifier string) string {
+	if clientIdentifier == "" {
+		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if clientIdentifier == "" {
+			panic("empty executable name")
+		}
+	}
+	config := &networkConfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
+	return config.IPCEndpoint()
+}
+
+// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
+// and port parameters.
+func (c *networkConfig) HTTPEndpoint() string {
+	if c.HTTPHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
+}
+
+// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
+func DefaultHTTPEndpoint() string {
+	config := &networkConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
+	return config.HTTPEndpoint()
+}
+
+// WSEndpoint resolves an websocket endpoint based on the configured host interface
+// and port parameters.
+func (c *Config) WSEndpoint() string {
+	if c.WSHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.WSHost, c.WSPort)
+}
+
+// DefaultWSEndpoint returns the websocket endpoint used by default.
+func DefaultWSEndpoint() string {
+	config := &networkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
+	return config.WSEndpoint()
+}
