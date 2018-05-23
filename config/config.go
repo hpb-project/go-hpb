@@ -36,6 +36,7 @@ import (
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/cmd/utils"
 )
 var HpbconfigIns *HpbConfig
 const (
@@ -152,15 +153,15 @@ type hpbStatsConfig struct {
 // all registered services.
 type HpbConfig struct {
 
-    Node nodeconfig
+    Node Nodeconfig
 	// Configuration of peer-to-peer networking.
-	Network networkConfig
+	Network NetworkConfig
 
 	//configuration of txpool
-	TxPool txPoolConfiguration
+	TxPool TxPoolConfiguration
 
 	//configuration of blockchain
-	BlockChain chainConfig
+	BlockChain ChainConfig
 
 	//configuration of consensus
 	Prometheus prometheusConfig
@@ -234,6 +235,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 
 	return stack
 }
+
 
 
 func GetHpbConfigInstance() (*HpbConfig,  error) {

@@ -76,7 +76,7 @@ var MainnetBootnodes = []string{
 // Ropsten test network.
 var TestnetBootnodes = []string{
 }
-type networkConfig struct {
+type NetworkConfig struct {
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
 	HTTPHost string `toml:",omitempty"`
@@ -136,7 +136,7 @@ type networkConfig struct {
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
 	//DiscoveryV5 bool `toml:",omitempty"`
-
+    NoDiscovery bool
 	// Listener address for the V5 discovery protocol UDP traffic.
 	//DiscoveryV5Addr string `toml:",omitempty"`
 

@@ -17,8 +17,8 @@
       <file leaf-file-name="networkconfig.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config/networkconfig.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-373">
-              <caret line="86" column="36" lean-forward="true" selection-start-line="86" selection-start-column="36" selection-end-line="86" selection-end-column="36" />
+            <state relative-caret-position="159">
+              <caret line="79" column="53" selection-start-line="79" selection-start-column="53" selection-end-line="79" selection-end-column="53" />
             </state>
           </provider>
         </entry>
@@ -26,29 +26,17 @@
       <file leaf-file-name="txpoolconfig.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config/txpoolconfig.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="276">
-              <caret line="43" lean-forward="true" selection-start-line="43" selection-end-line="43" />
+            <state relative-caret-position="169">
+              <caret line="22" column="6" selection-start-line="22" selection-start-column="6" selection-end-line="22" selection-end-column="6" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="config.go" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/config.go">
+      <file leaf-file-name="vmconfig.go" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config/vmconfig.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="64">
-              <caret line="163" lean-forward="true" selection-start-line="163" selection-end-line="163" />
-              <folding>
-                <element signature="e#752#1208#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="flags.go" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/cmd/utils/flags.go">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="264">
-              <caret line="777" column="30" lean-forward="true" selection-start-line="777" selection-start-column="30" selection-end-line="777" selection-end-column="30" />
+            <state relative-caret-position="76">
+              <caret line="55" column="6" selection-start-line="55" selection-start-column="6" selection-end-line="55" selection-end-column="6" />
             </state>
           </provider>
         </entry>
@@ -56,8 +44,8 @@
       <file leaf-file-name="blockchainconfig.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config/blockchainconfig.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="321">
-              <caret line="74" lean-forward="true" selection-start-line="74" selection-end-line="74" />
+            <state relative-caret-position="169">
+              <caret line="66" column="5" lean-forward="true" selection-start-line="66" selection-start-column="5" selection-end-line="66" selection-end-column="5" />
               <folding>
                 <element signature="e#753#782#0" expanded="true" />
               </folding>
@@ -65,11 +53,14 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="consensusconfig.go" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/consensusconfig.go">
+      <file leaf-file-name="config.go" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config/config.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="261">
-              <caret line="27" column="1" lean-forward="true" selection-start-line="27" selection-start-column="1" selection-end-line="27" selection-end-column="1" />
+            <state relative-caret-position="159">
+              <caret line="157" column="19" selection-start-line="157" selection-start-column="19" selection-end-line="157" selection-end-column="19" />
+              <folding>
+                <element signature="e#752#1208#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -77,10 +68,9 @@
       <file leaf-file-name="nodeconfig.go" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/config/nodeconfig.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="337">
-              <caret line="291" column="39" lean-forward="true" selection-start-line="291" selection-start-column="39" selection-end-line="291" selection-end-column="39" />
+            <state relative-caret-position="315">
+              <caret line="290" column="39" lean-forward="true" selection-start-line="290" selection-start-column="39" selection-end-line="290" selection-end-column="39" />
               <folding>
-                <element signature="e#16#45#0" expanded="true" />
                 <element signature="n#!!block;n#Error#1" />
                 <element signature="n#!!block;n#dumpConfig#0" />
                 <element signature="n#!!block;n#NodeDB#0" />
@@ -98,14 +88,35 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="gasconfig.go" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/gasconfig.go">
+      <file leaf-file-name="config.go" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/cmd/ghpb/config.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="8" column="8" selection-start-line="8" selection-start-column="8" selection-end-line="8" selection-end-column="8" />
+            <state relative-caret-position="242">
+              <caret line="35" column="21" selection-start-line="35" selection-start-column="21" selection-end-line="35" selection-end-column="21" />
               <folding>
-                <element signature="e#17#40#0" expanded="true" />
+                <element signature="e#14#575#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="flags.go" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/cmd/utils/flags.go">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="74">
+              <caret line="741" lean-forward="true" selection-start-line="741" selection-end-line="741" />
+              <folding>
+                <element signature="e#824#1974#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="flag_generated.go" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/vendor/gopkg.in/urfave/cli.v1/flag_generated.go">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="169">
+              <caret line="297" column="4" selection-start-line="297" selection-start-column="4" selection-end-line="297" selection-end-column="4" />
             </state>
           </provider>
         </entry>
@@ -113,8 +124,8 @@
       <file leaf-file-name="main.go" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cmd/ghpb/main.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="222">
-              <caret line="154" column="15" selection-start-line="154" selection-start-column="15" selection-end-line="154" selection-end-column="15" />
+            <state relative-caret-position="247">
+              <caret line="67" column="34" lean-forward="true" selection-start-line="67" selection-start-column="34" selection-end-line="67" selection-end-column="34" />
               <folding>
                 <element signature="e#803#1324#0" expanded="true" />
               </folding>
@@ -139,6 +150,7 @@
       <find>MaximumExtraDataSize</find>
       <find>syncmode</find>
       <find>DefaultBlockChainConfig</find>
+      <find>Static</find>
     </findStrings>
     <replaceStrings>
       <replace>DefaultBlockChainConfig</replace>
@@ -171,13 +183,14 @@
         <option value="$PROJECT_DIR$/config/constant/config.go" />
         <option value="$PROJECT_DIR$/config/consensusconfig.go" />
         <option value="$PROJECT_DIR$/config/vmconfig.go" />
-        <option value="$PROJECT_DIR$/cmd/ghpb/config.go" />
         <option value="$PROJECT_DIR$/cmd/ghpb/main.go" />
-        <option value="$PROJECT_DIR$/config/nodeconfig.go" />
         <option value="$PROJECT_DIR$/config/gasconfig.go" />
+        <option value="$PROJECT_DIR$/cmd/ghpb/config.go" />
+        <option value="$PROJECT_DIR$/config/nodeconfig.go" />
         <option value="$PROJECT_DIR$/config/txpoolconfig.go" />
         <option value="$PROJECT_DIR$/config/blockchainconfig.go" />
         <option value="$PROJECT_DIR$/config/config.go" />
+        <option value="$PROJECT_DIR$/cmd/utils/flags.go" />
         <option value="$PROJECT_DIR$/config/networkconfig.go" />
       </list>
     </option>
@@ -206,6 +219,23 @@
             <path>
               <item name="go-hpb" type="b2602c69:ProjectViewProjectNode" />
               <item name="go-hpb" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="go-hpb" type="b2602c69:ProjectViewProjectNode" />
+              <item name="go-hpb" type="462c0819:PsiDirectoryNode" />
+              <item name="cmd" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="go-hpb" type="b2602c69:ProjectViewProjectNode" />
+              <item name="go-hpb" type="462c0819:PsiDirectoryNode" />
+              <item name="cmd" type="462c0819:PsiDirectoryNode" />
+              <item name="ghpb" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="go-hpb" type="b2602c69:ProjectViewProjectNode" />
+              <item name="go-hpb" type="462c0819:PsiDirectoryNode" />
+              <item name="cmd" type="462c0819:PsiDirectoryNode" />
+              <item name="utils" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="go-hpb" type="b2602c69:ProjectViewProjectNode" />
@@ -286,7 +316,7 @@
     <frame x="-7" y="-7" width="1295" height="695" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="1" sideWeight="0.4982079" visible="true" weight="0.17623281" />
+      <window_info active="true" content_ui="combo" id="Project" order="1" sideWeight="0.4982079" visible="true" weight="0.17623281" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
       <window_info anchor="right" id="Database" order="0" />
@@ -294,7 +324,7 @@
       <window_info anchor="bottom" id="Database Changes" show_stripe_button="false" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Version Control" />
-      <window_info active="true" anchor="right" id="Structure" order="4" sideWeight="0.50179213" side_tool="true" visible="true" weight="0.24656427" />
+      <window_info anchor="right" id="Structure" order="4" sideWeight="0.50179213" side_tool="true" visible="true" weight="0.24656427" />
       <window_info anchor="bottom" id="Terminal" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info id="Favorites" order="0" side_tool="true" />
@@ -372,13 +402,6 @@
         <state relative-caret-position="-1026" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config/vmconfig.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="148">
-          <caret line="60" column="22" lean-forward="true" selection-start-line="60" selection-start-column="22" selection-end-line="60" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/cmd/bootnode/main.go">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -403,23 +426,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cmd/ghpb/config.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="19">
-          <caret line="1" lean-forward="true" selection-start-line="1" selection-end-line="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/cmd/ghpb/main.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="222">
-          <caret line="154" column="15" selection-start-line="154" selection-start-column="15" selection-end-line="154" selection-end-column="15" />
-          <folding>
-            <element signature="e#803#1324#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/node/node.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="203">
@@ -437,16 +443,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config/blockchainconfig.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="321">
-          <caret line="74" lean-forward="true" selection-start-line="74" selection-end-line="74" />
-          <folding>
-            <element signature="e#753#782#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/config/consensusconfig.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="261">
@@ -454,46 +450,92 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cmd/utils/flags.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="777" column="30" lean-forward="true" selection-start-line="777" selection-start-column="30" selection-end-line="777" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/log/handler.go">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://$PROJECT_DIR$/cmd/ghpb/main.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="247">
+          <caret line="67" column="34" lean-forward="true" selection-start-line="67" selection-start-column="34" selection-end-line="67" selection-end-column="34" />
+          <folding>
+            <element signature="e#803#1324#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cmd/ghpb/config.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="35" column="21" selection-start-line="35" selection-start-column="21" selection-end-line="35" selection-end-column="21" />
+          <folding>
+            <element signature="e#14#575#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/gopkg.in/urfave/cli.v1/flag_generated.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="169">
+          <caret line="297" column="4" selection-start-line="297" selection-start-column="4" selection-end-line="297" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/txpoolconfig.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="169">
+          <caret line="22" column="6" selection-start-line="22" selection-start-column="6" selection-end-line="22" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/vmconfig.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="76">
+          <caret line="55" column="6" selection-start-line="55" selection-start-column="6" selection-end-line="55" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/blockchainconfig.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="169">
+          <caret line="66" column="5" lean-forward="true" selection-start-line="66" selection-start-column="5" selection-end-line="66" selection-end-column="5" />
+          <folding>
+            <element signature="e#753#782#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/config/config.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="64">
-          <caret line="163" lean-forward="true" selection-start-line="163" selection-end-line="163" />
+        <state relative-caret-position="159">
+          <caret line="157" column="19" selection-start-line="157" selection-start-column="19" selection-end-line="157" selection-end-column="19" />
           <folding>
             <element signature="e#752#1208#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config/txpoolconfig.go">
+    <entry file="file://$PROJECT_DIR$/cmd/utils/flags.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="276">
-          <caret line="43" lean-forward="true" selection-start-line="43" selection-end-line="43" />
+        <state relative-caret-position="74">
+          <caret line="741" lean-forward="true" selection-start-line="741" selection-end-line="741" />
+          <folding>
+            <element signature="e#824#1974#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/config/networkconfig.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-373">
-          <caret line="86" column="36" lean-forward="true" selection-start-line="86" selection-start-column="36" selection-end-line="86" selection-end-column="36" />
+        <state relative-caret-position="159">
+          <caret line="79" column="53" selection-start-line="79" selection-start-column="53" selection-end-line="79" selection-end-column="53" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/config/nodeconfig.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="337">
-          <caret line="291" column="39" lean-forward="true" selection-start-line="291" selection-start-column="39" selection-end-line="291" selection-end-column="39" />
+        <state relative-caret-position="315">
+          <caret line="290" column="39" lean-forward="true" selection-start-line="290" selection-start-column="39" selection-end-line="290" selection-end-column="39" />
           <folding>
-            <element signature="e#16#45#0" expanded="true" />
             <element signature="n#!!block;n#Error#1" />
             <element signature="n#!!block;n#dumpConfig#0" />
             <element signature="n#!!block;n#NodeDB#0" />

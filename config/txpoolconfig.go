@@ -20,7 +20,7 @@ package config
 import "time"
 
 
-type txPoolConfiguration struct {
+type TxPoolConfiguration struct {
 	NoLocals  bool          // Whether local transaction handling should be disabled
 	Journal   string        // Journal of local transactions to survive node restarts
 	Rejournal time.Duration // Time interval to regenerate the local transaction journal

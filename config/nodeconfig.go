@@ -31,7 +31,7 @@ var DefaultConfig = nodeconfig{
 		Percentile: 50,
 	},
 }
-type nodeconfig struct {
+type Nodeconfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
 	// value is specified, the basename of the current executable is used.

@@ -36,7 +36,7 @@ import (
 	"github.com/hpb-project/ghpb/core"
 	"github.com/hpb-project/ghpb/core/state"
 	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/ghpb/protocol"
 	"github.com/hpb-project/ghpb/protocol/downloader"
 	"github.com/hpb-project/ghpb/protocol/gasprice"
@@ -51,6 +51,7 @@ import (
 	"github.com/hpb-project/ghpb/network/p2p/nat"
 	"github.com/hpb-project/ghpb/network/p2p/netutil"
 	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -467,7 +468,7 @@ func MakeDataDir(ctx *cli.Context) string {
 // setNodeKey creates a node key from set command line flags, either loading it
 // from a file or as a specified hex value. If neither flags were provided, this
 // method returns nil and an emphemeral key is to be generated.
-func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
+func setNodeKey(ctx *cli.Context, cfg *config.NetworkConfig) {
 	var (
 		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
 		file = ctx.GlobalString(NodeKeyFileFlag.Name)
@@ -499,8 +500,8 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
-func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.MainnetBootnodes
+func setBootstrapNodes(ctx *cli.Context, cfg *config.NetworkConfig) {
+	urls := cfg.MainnetBootnodes
 	switch {
 	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV4Flag.Name):
 		if ctx.GlobalIsSet(BootnodesV4Flag.Name) {
@@ -509,7 +510,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
-		urls = params.TestnetBootnodes
+		urls = cfg.TestnetBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -553,7 +554,7 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 
 // setListenAddress creates a TCP listening address string from set command
 // line flags.
-func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
+func setListenAddress(ctx *cli.Context, cfg *config.NetworkConfig) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
 	}
@@ -569,7 +570,7 @@ func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
 }
 */
 // setNAT creates a port mapper from command line flags.
-func setNAT(ctx *cli.Context, cfg *p2p.Config) {
+func setNAT(ctx *cli.Context, cfg *config.NetworkConfig) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
 		natif, err := nat.Parse(ctx.GlobalString(NATFlag.Name))
 		if err != nil {
@@ -717,22 +718,26 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
-func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
-	setNodeKey(ctx, cfg)
-	setNAT(ctx, cfg)
-	setListenAddress(ctx, cfg)
+func SetNetworkConfig(ctx *cli.Context, cfg *config.HpbConfig){
+	setNodeKey(ctx, cfg.Network)
+
+}
+func SetP2PConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+	setNodeKey(ctx, cfg.Network)
+	setNAT(ctx, cfg.Network)
+	setListenAddress(ctx, cfg.Network)
 	//setDiscoveryV5Address(ctx, cfg)
-	setBootstrapNodes(ctx, cfg)
+	setBootstrapNodes(ctx, cfg.Network)
 	//setBootstrapNodesV5(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
-		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+		cfg.Network.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
 	}
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
-		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
+		cfg.Network.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
 	}
 	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || ctx.GlobalBool(LightModeFlag.Name) {
-		cfg.NoDiscovery = true
+		cfg.Network.NoDiscovery = true
 	}
 
 	// if we're running a light client or server, force enable the v5 peer discovery
@@ -770,11 +775,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
-func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
-	SetP2PConfig(ctx, &cfg.P2P)
-	setIPC(ctx, cfg)
-	setHTTP(ctx, cfg)
-	setWS(ctx, cfg)
+func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+	SetNetworkConfig(ctx, cfg)
+
 	setNodeUserIdent(ctx, cfg)
 
 	switch {
