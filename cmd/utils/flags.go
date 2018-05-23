@@ -492,7 +492,7 @@ func setNodeKey(ctx *cli.Context, cfg *config.NetworkConfig) {
 }
 
 // setNodeUserIdent creates the user identifier from CLI flags.
-func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
+func setNodeUserIdent(ctx *cli.Context, cfg *config.Nodeconfig) {
 	if identity := ctx.GlobalString(IdentityFlag.Name); len(identity) > 0 {
 		cfg.UserIdent = identity
 	}
@@ -634,7 +634,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
-func setIPC(ctx *cli.Context, cfg *node.Config) {
+func setIPC(ctx *cli.Context, cfg *config.NetworkConfig) {
 	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
@@ -718,11 +718,8 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
-func SetNetworkConfig(ctx *cli.Context, cfg *config.HpbConfig){
-	setNodeKey(ctx, cfg.Network)
 
-}
-func SetP2PConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	setNodeKey(ctx, cfg.Network)
 	setNAT(ctx, cfg.Network)
 	setListenAddress(ctx, cfg.Network)
@@ -740,60 +737,91 @@ func SetP2PConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Network.NoDiscovery = true
 	}
 
-	// if we're running a light client or server, force enable the v5 peer discovery
-	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
-	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
-	/*
-		forceV5Discovery := (ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalInt(LightServFlag.Name) > 0) && !ctx.GlobalBool(NoDiscoverFlag.Name)
-		if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
-			cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
-		} else if forceV5Discovery {
-			cfg.DiscoveryV5 = true
-		}
-	*/
-
 	if netrestrict := ctx.GlobalString(NetrestrictFlag.Name); netrestrict != "" {
 		list, err := netutil.ParseNetlist(netrestrict)
 		if err != nil {
 			Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
 		}
-		cfg.NetRestrict = list
+		cfg.Network.NetRestrict = list
 	}
 
 	if ctx.GlobalBool(DevModeFlag.Name) {
 		// --dev mode can't use p2p networking.
-		cfg.MaxPeers = 0
-		cfg.ListenAddr = ":0"
+		cfg.Network.MaxPeers = 0
+		cfg.Network.ListenAddr = ":0"
 		//cfg.DiscoveryV5Addr = ":0"
-		cfg.NoDiscovery = true
+		cfg.Network.NoDiscovery = true
 		//cfg.DiscoveryV5 = false
 	}
 
 	if nodetype := ctx.GlobalString(NodeTypeFlag.Name); nodetype != "" {
-		cfg.RoleType = nodetype
+		cfg.Network.RoleType = nodetype
 	}
+	//config IPCPath
+	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
+	switch {
+	case ctx.GlobalBool(IPCDisabledFlag.Name):
+		cfg.Network.IPCPath = ""
+	case ctx.GlobalIsSet(IPCPathFlag.Name):
+		cfg.Network.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
+	}
+	//config HTTPHost
+	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
+		cfg.Network.HTTPHost = "127.0.0.1"
+		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
+			cfg.Network.HTTPHost = ctx.GlobalString(RPCListenAddrFlag.Name)
+		}
+	}
+
+	//config HTTP
+	if ctx.GlobalIsSet(RPCPortFlag.Name) {
+		cfg.Network.HTTPPort = ctx.GlobalInt(RPCPortFlag.Name)
+	}
+	if ctx.GlobalIsSet(RPCCORSDomainFlag.Name) {
+		cfg.Network.HTTPCors = splitAndTrim(ctx.GlobalString(RPCCORSDomainFlag.Name))
+	}
+	if ctx.GlobalIsSet(RPCApiFlag.Name) {
+		cfg.Network.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
+	}
+
+	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.WSHost == "" {
+		cfg.WSHost = "127.0.0.1"
+		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {
+			cfg.WSHost = ctx.GlobalString(WSListenAddrFlag.Name)
+		}
+	}
+	//config WSPort
+	if ctx.GlobalIsSet(WSPortFlag.Name) {
+		cfg.Network.WSPort = ctx.GlobalInt(WSPortFlag.Name)
+	}
+	if ctx.GlobalIsSet(WSAllowedOriginsFlag.Name) {
+		cfg.Network.WSOrigins = splitAndTrim(ctx.GlobalString(WSAllowedOriginsFlag.Name))
+	}
+	if ctx.GlobalIsSet(WSApiFlag.Name) {
+		cfg.Network.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
+	}
+
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	SetNetworkConfig(ctx, cfg)
-
+	SetNetWorkConfig(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
+		cfg.Node.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "hpb_dev_mode")
+		cfg.Node.DataDir = filepath.Join(os.TempDir(), "hpb_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+		cfg.Node.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
-		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
+		cfg.Node.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
 	}
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
-		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
+		cfg.Node.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
 	}
 }
 
