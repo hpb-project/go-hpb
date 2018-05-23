@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 10:35:47
+// Last Update:2018-05-23 14:21:15
 /**
  * @file tsu_connector.h
  * @brief 
@@ -10,24 +10,7 @@
 #ifndef TSU_CONNECTOR_H
 #define TSU_CONNECTOR_H
 
-#include "common.h"
-
-#define MAJOR_V(package) ((package).version >> 4)
-#define MINER_V(package) ((package).version & 0x04)
-
-typedef struct T_PACKAGE{
-    uint32_t    sequence;           // package sequence id.
-    uint8_t     version;            // protocol version.
-    uint8_t     is_response;        // the package is request(0) or responsed(1).
-    uint8_t     fragment_flag;      // 0: no fragment; 1: first fragment; 
-                                    // 2: middle fragment; 3:last fragment.
-    uint8_t     function_id;        // task type.
-    uint16_t    reserved;           // reserved.
-    uint16_t    length;             // payload data length.
-    uint32_t    checksum;           // payload data checksum.
-    uint8_t     payload[];          // payload data pointor.
-}T_Package;
-
+#include <stdint.h>
 
 uint8_t get_hw_version(void);
 uint8_t get_fw_version(void);
