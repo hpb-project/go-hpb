@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 14:16:26
+// Last Update:2018-05-23 20:38:30
 /**
  * @file common.h
  * @brief 
@@ -21,6 +21,11 @@ typedef struct sign_result_t {
     u256 s;
     uint8_t v;
 }sign_result_t;
+
+typedef struct sign_check_result_t {
+    u256 x;
+    u256 y;
+}sign_check_result_t;
 
 uint8_t get_version_major(uint8_t version);
 uint8_t get_version_min(uint8_t version);

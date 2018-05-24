@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 16:48:40
+// Last Update:2018-05-23 20:41:47
 /**
  * @file tsu_connector.c
  * @brief 
@@ -72,18 +72,20 @@ int set_boeid(uint32_t boeid)
     return 0;
 }
 
-int validate_sign(u256 r, u256 s, uint8_t v, u256 x, u256 y)
+int validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *result)
 {
     T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + sizeof(u256) + sizeof(u256) + 1);
     if(pack == NULL)
         return -2;
     init_package(pack);
     pack->function_id = FUNCTION_ECSDA_CHECK;
-    memcpy(pack->payload, r.data, sizeof(u256));
+    memcpy(pack->payload, hash.data, sizeof(u256));
     pack->length = sizeof(u256);
-    memcpy(pack->payload+sizeof(u256), s.data, sizeof(u256));
+    memcpy(pack->payload + sizeof(u256), r.data, sizeof(u256));
     pack->length += sizeof(u256);
-    memcpy(pack->payload+2*sizeof(u256), &v, 1);
+    memcpy(pack->payload+2*sizeof(u256), s.data, sizeof(u256));
+    pack->length += sizeof(u256);
+    memcpy(pack->payload+3*sizeof(u256), &v, 1);
     pack->length += 1;
     pack->checksum = checksum(pack->payload, pack->length);
 
@@ -103,17 +105,12 @@ int validate_sign(u256 r, u256 s, uint8_t v, u256 x, u256 y)
         free(res);
         return -4;
     }
-    memcpy(res_x.data, res->payload, sizeof(u256));
-    memcpy(res_y.data, res->payload+sizeof(u256), sizeof(u256));
+    memcpy(result->x.data, res->payload, sizeof(u256));
+    memcpy(result->y.data, res->payload+sizeof(u256), sizeof(u256));
 
     free(res);
 
-    if(memcmp(res_x.data, x.data, sizeof(u256))==0 &&
-            memcmp(res_y.data, y.data, sizeof(u256)==0 ))
-    {
-        return 0; // success.
-    }
-    return 1; // validate_sign failed.
+    return 0;
 }
 
 int get_randnum()
