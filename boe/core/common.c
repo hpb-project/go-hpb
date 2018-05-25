@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 15:57:25
+// Last Update:2018-05-24 11:38:06
 /**
  * @file common.c
  * @brief 
@@ -10,13 +10,16 @@
 #include "common.h"
 #include <stdio.h>
 
-uint8_t get_version_major(uint8_t version)
+#define get_major(version) (version>>0x4)
+#define get_minor(version) (version&0x0f)
+
+TVersion get_version_major(TVersion version)
 {
-    return version>>0x4;
+    return get_major(version);
 }
-uint8_t get_version_min(uint8_t version)
+TVersion get_version_min(TVersion version)
 {
-    return (version & 0x0f);
+    return get_minor(version);
 }
 
 uint32_t checksum(uint8_t *data, uint32_t len)

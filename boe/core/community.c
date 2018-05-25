@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 09:34:14
+// Last Update:2018-05-24 15:38:40
 /**
  * @file community.c
  * @brief 
@@ -19,5 +19,24 @@ int pcie_read(uint8_t *p_buf, uint32_t len)
 }
 int pcie_write(uint8_t *p_data, uint32_t len)
 {
+    return 0;
+}
+int pcie_reg_read(uint32_t reg_offset)
+{
+    return 0;
+}
+int pcie_reg_write(uint32_t reg_offset, RegWidth width, RegVal val)
+{
+    switch(width){
+        case REG_WIDTH_8:
+            val.b_val;
+            break;
+        case REG_WIDTH_16:
+            val.h_val;
+            break;
+        case REG_WIDTH_32:
+            val.w_val;
+            break;
+    }
     return 0;
 }

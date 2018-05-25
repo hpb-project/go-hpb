@@ -1,4 +1,4 @@
-// Last Update:2018-05-22 16:25:39
+// Last Update:2018-05-24 15:22:29
 /**
  * @file boe.h
  * @brief 
@@ -10,6 +10,8 @@
 #ifndef BOE_H
 #define BOE_H
 
+#include "common.h"
+
 typedef enum BOE_ERR_ENUM{
     BOE_OK = 0,
 }BOE_ERR_CODE;
@@ -17,15 +19,15 @@ typedef enum BOE_ERR_ENUM{
 int BOEInit(void);
 int BOERelease(void);
 int BOEBind(void);
-int GetBOEHWVersion(void);
-int GetBOEFWVersion(void);
+TVersion GetBOEHWVersion(void);
+TVersion GetBOEFWVersion(void);
 int BOEFWUpdate(void);
 int BOEFWUpdateAbort(void);
 int GetBOEID(void);
-int SetBOEID(void);
-int BOEValidateSign(void);
+int SetBOEID(uint32_t id);
+int BOEValidateSign();
 int GetRand(void);
-int BOEHWSign(void);
+int BOEHWSign(uint8_t *p_data, int datalen, sign_result_t *result);
 int BOESubscribeEvent(void);// go api.
 
 

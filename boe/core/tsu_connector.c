@@ -1,4 +1,4 @@
-// Last Update:2018-05-23 20:41:47
+// Last Update:2018-05-25 09:25:29
 /**
  * @file tsu_connector.c
  * @brief 
@@ -33,13 +33,14 @@ typedef struct T_PACKAGE{
 #define FUNCTION_SHA3_512 0x4 
 #define FUNCTION_AES256 0x5 
 #define FUNCTION_RLP 0x6
+
 static uint32_t  g_sequence = 0;
-static const uint8_t g_tsu_version = 0x10;
+static const TVersion g_tsu_version = 0x10;
 
 #define fetch_package_sequence() atomic_fetch_and_add(&g_sequence,1)
 #define TSU_PAYLOAD_MAX_SIZE (65535)
 
-void init_package(T_Package *pack)
+static void init_package(T_Package *pack)
 {
     pack->sequence = fetch_package_sequence();
     pack->version = g_tsu_version;
@@ -48,31 +49,37 @@ void init_package(T_Package *pack)
 }
 
 
-uint8_t get_hw_version(void)
+TVersion tsu_get_hw_version(void)
 {
-    // Todo: read from register.
-    return 0x10;
-
-}
-uint8_t get_fw_version(void)
-{
-    // Todo: read from arm.
-    return 0x10;
+    uint32_t reg_offset = 0x0;
+    TVersion val = pcie_reg_read(reg_offset);
+    return val;
 }
 
-uint32_t get_boeid(void)
+TVersion tsu_get_fw_version(void)
 {
-    //Todo: read register.
+    uint32_t reg_offset = 0x1;
+    TVersion val = pcie_reg_read(reg_offset);
+    return val;
+}
+
+uint32_t tsu_get_boeid(void)
+{
+    uint32_t reg_offset = 0x1;
+    uint32_t val = pcie_reg_read(reg_offset);
+    return val;
+}
+
+int tsu_set_boeid(uint32_t boeid)
+{
+    RegVal rval;
+    uint32_t reg_offset = 0x2;
+    rval.w_val = boeid;
+    pcie_reg_write(reg_offset, REG_WIDTH_32, rval);
     return 0;
 }
 
-int set_boeid(uint32_t boeid)
-{
-    // Todo: write register.
-    return 0;
-}
-
-int validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *result)
+int tsu_validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *result)
 {
     T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + sizeof(u256) + sizeof(u256) + 1);
     if(pack == NULL)
@@ -109,17 +116,10 @@ int validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *res
     memcpy(result->y.data, res->payload+sizeof(u256), sizeof(u256));
 
     free(res);
-
     return 0;
 }
 
-int get_randnum()
-{
-    //Todo: get random.
-    return 0;
-}
-
-int hw_sign(uint8_t *info, int info_len, sign_result_t *result)
+int tsu_hw_sign(uint8_t *info, int info_len, sign_result_t *result)
 {
     if(info_len > TSU_PAYLOAD_MAX_SIZE)
         return -1;
