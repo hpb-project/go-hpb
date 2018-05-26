@@ -1,4 +1,4 @@
-// Last Update:2018-05-24 15:22:29
+// Last Update:2018-05-26 10:41:16
 /**
  * @file boe.h
  * @brief 
@@ -25,11 +25,10 @@ int BOEFWUpdate(void);
 int BOEFWUpdateAbort(void);
 int GetBOEID(void);
 int SetBOEID(uint32_t id);
-int BOEValidateSign();
+int BOEValidSign(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, PublicKey_t *result);
 int GetRand(void);
-int BOEHWSign(uint8_t *p_data, int datalen, sign_result_t *result);
+int BOEHWSign(uint8_t *p_data, int datalen, SignResult_t *result);
 int BOESubscribeEvent(void);// go api.
-
 
 
 #endif  /*BOE_H*/

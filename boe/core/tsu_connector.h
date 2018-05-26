@@ -1,4 +1,4 @@
-// Last Update:2018-05-25 09:26:09
+// Last Update:2018-05-25 21:48:13
 /**
  * @file tsu_connector.h
  * @brief 
@@ -12,11 +12,7 @@
 
 #include "common.h"
 
-TVersion tsu_get_hw_version(void);
-TVersion tsu_get_fw_version(void);
-uint32_t tsu_get_boeid(void);
-int tsu_set_boeid(uint32_t boeid);
-int tsu_validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *result);
-int tsu_hw_sign(uint8_t *info, int info_len, sign_result_t *result);
+int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKey_t*result);
+int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result);
 
 #endif  /*TSU_CONNECTOR_H*/

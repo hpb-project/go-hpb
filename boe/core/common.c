@@ -1,4 +1,4 @@
-// Last Update:2018-05-24 11:38:06
+// Last Update:2018-05-26 10:26:46
 /**
  * @file common.c
  * @brief 
@@ -9,9 +9,31 @@
 
 #include "common.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define get_major(version) (version>>0x4)
 #define get_minor(version) (version&0x0f)
+
+PublicKey_t* new_pubkey(void)
+{
+    PublicKey_t *pub = (PublicKey_t*)malloc(sizeof(PublicKey_t));
+    return pub;
+}
+void delete_pubkey(PublicKey_t *pub)
+{
+    if(pub)
+        free(pub);
+}
+SignResult_t* new_signresult(void)
+{
+    SignResult_t *result = (SignResult_t*)malloc(sizeof(SignResult_t));
+    return result;
+}
+void delete_signresult(SignResult_t *result)
+{
+    if(result)
+        free(result);
+}
 
 TVersion get_version_major(TVersion version)
 {

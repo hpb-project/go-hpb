@@ -1,4 +1,4 @@
-// Last Update:2018-05-25 11:56:27
+// Last Update:2018-05-25 21:16:17
 /**
  * @file axu_connector.c
  * @brief 
@@ -38,23 +38,34 @@ typedef enum A_CMD {
     ACMD_PB_UPGRADE_ABORT       = 0x06,
     ACMD_PB_RESET               = 0x07,
     ACMD_PB_RANDOM              = 0x08,
+    ACMD_PB_GET_BOEID           = 0x09,
+    ACMD_PB_GET_HW_VER          = 0x0A,
+    ACMD_PB_GET_FW_VER          = 0x0B,
+    ACMD_PB_GET_AXU_VER         = 0x0C,
+
     ACMD_BP_RES_ACK             = 0x51,
     ACMD_BP_RES_VERSION         = 0x52,
     ACMD_BP_RES_UPGRADE_PROGRESS= 0x53,
     ACMD_BP_RES_ERR             = 0x54,
     ACMD_BP_RES_RANDOM          = 0x55,
+    ACMD_BP_RES_BOEID           = 0x56,
+    ACMD_BP_RES_HW_VER          = 0x57,
+    ACMD_BP_RES_FW_VER          = 0x58,
+    ACMD_BP_RES_AXU_VER         = 0x59,
+
 
     ACMD_END                    = 0xff,
 }ACmd;
 
 static uint32_t  g_sequence_id = 0;
 #define MAX_PACKAGE_LENGTH (2048+sizeof(A_Package))
-#define fetch_package_sequence() atomic_fetch_and_add(&g_sequence_id,1)
 
-static void init_package(A_Package *pack)
+#define fetch_axu_package_sequence() atomic_fetch_and_add(&g_sequence_id,1)
+
+static void axu_init_package(A_Package *pack)
 {
     pack->header.magic_aacc = 0xaacc;
-    pack->header.package_id = fetch_package_sequence();
+    pack->header.package_id = fetch_axu_package_sequence();
     pack->header.body_length = 0;
     pack->header.magic_ccaa = 0xccaa;
     pack->header.acmd = ACMD_END;
@@ -108,11 +119,13 @@ static int package_receive(A_Package *package)
     return -3;
 }
 
+
+
 uint32_t axu_get_random()
 {
     uint32_t random = 0;
     A_Package package;
-    init_package(&package);
+    axu_init_package(&package);
     package.header.acmd = ACMD_PB_RANDOM;
     package_send(&package);
     A_Package *r_pack = (A_Package *)malloc(MAX_PACKAGE_LENGTH);
@@ -127,4 +140,24 @@ uint32_t axu_get_random()
         random = rand();
     }
     return random;
+}
+
+TVersion axu_get_hw_version(void)
+{
+    return 0xa8;
+}
+
+TVersion axu_get_fw_version(void)
+{
+    return 0;
+}
+
+uint32_t axu_get_boeid(void)
+{
+    return 0;
+}
+
+int axu_set_boeid(uint32_t boeid)
+{
+    return 0;
 }

@@ -1,4 +1,4 @@
-// Last Update:2018-05-24 15:38:40
+// Last Update:2018-05-26 11:57:16
 /**
  * @file community.c
  * @brief 
@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "community.h"
 /*
  * Just a empty function
@@ -15,6 +16,7 @@
 
 int pcie_read(uint8_t *p_buf, uint32_t len)
 {
+    memset(p_buf, 0xa1, len); 
     return 0;
 }
 int pcie_write(uint8_t *p_data, uint32_t len)

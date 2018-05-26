@@ -1,4 +1,4 @@
-// Last Update:2018-05-25 09:25:29
+// Last Update:2018-05-26 16:44:52
 /**
  * @file tsu_connector.c
  * @brief 
@@ -13,6 +13,7 @@
 #include "community.h"
 #include "common.h"
 #include "atomic.h"
+#define TRACE() printf("func:%s,line:%d\n", __FUNCTION__, __LINE__)
 
 typedef struct T_PACKAGE{
     uint32_t    sequence;           // package sequence id.
@@ -37,62 +38,37 @@ typedef struct T_PACKAGE{
 static uint32_t  g_sequence = 0;
 static const TVersion g_tsu_version = 0x10;
 
-#define fetch_package_sequence() atomic_fetch_and_add(&g_sequence,1)
+#define fetch_tsu_package_sequence() atomic_fetch_and_add(&g_sequence,1)
+
 #define TSU_PAYLOAD_MAX_SIZE (65535)
 
-static void init_package(T_Package *pack)
+static void tsu_init_package(T_Package *pack)
 {
-    pack->sequence = fetch_package_sequence();
+    pack->sequence = fetch_tsu_package_sequence();
     pack->version = g_tsu_version;
     pack->is_response = 0;
     pack->fragment_flag = 0;
 }
 
-
-TVersion tsu_get_hw_version(void)
+int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKey_t *result)
 {
-    uint32_t reg_offset = 0x0;
-    TVersion val = pcie_reg_read(reg_offset);
-    return val;
-}
-
-TVersion tsu_get_fw_version(void)
-{
-    uint32_t reg_offset = 0x1;
-    TVersion val = pcie_reg_read(reg_offset);
-    return val;
-}
-
-uint32_t tsu_get_boeid(void)
-{
-    uint32_t reg_offset = 0x1;
-    uint32_t val = pcie_reg_read(reg_offset);
-    return val;
-}
-
-int tsu_set_boeid(uint32_t boeid)
-{
-    RegVal rval;
-    uint32_t reg_offset = 0x2;
-    rval.w_val = boeid;
-    pcie_reg_write(reg_offset, REG_WIDTH_32, rval);
-    return 0;
-}
-
-int tsu_validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t *result)
-{
-    T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + sizeof(u256) + sizeof(u256) + 1);
+    T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + 32*3+ 1);
     if(pack == NULL)
         return -2;
-    init_package(pack);
+
+    tsu_init_package(pack);
     pack->function_id = FUNCTION_ECSDA_CHECK;
-    memcpy(pack->payload, hash.data, sizeof(u256));
-    pack->length = sizeof(u256);
-    memcpy(pack->payload + sizeof(u256), r.data, sizeof(u256));
-    pack->length += sizeof(u256);
-    memcpy(pack->payload+2*sizeof(u256), s.data, sizeof(u256));
-    pack->length += sizeof(u256);
-    memcpy(pack->payload+3*sizeof(u256), &v, 1);
+
+    memcpy(pack->payload, hash, 32);
+    pack->length = 32;
+
+    memcpy(pack->payload + 32, r, 32);
+    pack->length += 32;
+
+    memcpy(pack->payload+64, s, 32);
+    pack->length += 32;
+
+    memcpy(pack->payload+3*32, &v, 1);
     pack->length += 1;
     pack->checksum = checksum(pack->payload, pack->length);
 
@@ -104,29 +80,28 @@ int tsu_validate_sign(u256 hash, u256 r, u256 s, uint8_t v, sign_check_result_t 
     }
 
 
-    T_Package *res = (T_Package*)malloc(sizeof(T_Package) + 2*sizeof(u256));
-    u256 res_x, res_y;
+    T_Package *res = (T_Package*)malloc(sizeof(T_Package) + 2*32);
     // Todo: get response.
-    if(pcie_read((uint8_t*)res, sizeof(T_Package) + 2*sizeof(u256)) < 0)
+    if(pcie_read((uint8_t*)res, sizeof(T_Package) + 2*32) < 0)
     {
         free(res);
         return -4;
     }
-    memcpy(result->x.data, res->payload, sizeof(u256));
-    memcpy(result->y.data, res->payload+sizeof(u256), sizeof(u256));
+    memcpy(result->x, res->payload, 32);
+    memcpy(result->y, res->payload+32, 32);
 
     free(res);
     return 0;
 }
 
-int tsu_hw_sign(uint8_t *info, int info_len, sign_result_t *result)
+int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result)
 {
     if(info_len > TSU_PAYLOAD_MAX_SIZE)
         return -1;
     T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + info_len);
     if(pack == NULL)
         return -2;
-    init_package(pack);
+    tsu_init_package(pack);
     pack->function_id = FUNCTION_ECSDA_SIGN;
     memcpy(pack->payload, info, info_len);
     pack->length = info_len;
@@ -140,15 +115,15 @@ int tsu_hw_sign(uint8_t *info, int info_len, sign_result_t *result)
     }
 
     // Todo: get response.
-    T_Package *res = (T_Package*)malloc(sizeof(T_Package) + sizeof(sign_result_t));
-    if(pcie_read((uint8_t*)res, sizeof(T_Package) + sizeof(sign_result_t)) < 0)
+    T_Package *res = (T_Package*)malloc(sizeof(T_Package) + 2*32+1);
+    if(pcie_read((uint8_t*)res, sizeof(T_Package) + 2*32+1) < 0)
     {
         free(res);
         return -4;
     }
-    memcpy(result->r.data, res->payload, sizeof(u256));
-    memcpy(result->s.data, res->payload+sizeof(u256), sizeof(u256));
-    memcpy(&(result->v), res->payload+2*sizeof(u256), 1);
+    memcpy(result->r, res->payload, 32);
+    memcpy(result->s, res->payload+32, 32);
+    memcpy(&(result->v), res->payload+2*32, 1);
 
     free(res);
     return 0;
