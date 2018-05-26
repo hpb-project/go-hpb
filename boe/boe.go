@@ -31,9 +31,16 @@ import (
     "errors"
 )
 
+type SignResult struct {
+    r   []byte 
+    s   []byte 
+    v   byte
+}
+
 var (
     ErrInvalidParams         = errors.New("invalid params")
     ErrSignCheckFailed       = errors.New("sign check failed")
+    ErrHWSignFailed       = errors.New("hw sign failed")
 )
 
 func BOEGetHWVersion() int {
@@ -65,4 +72,20 @@ func BOEValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, []byte, e
         return nil,nil,ErrSignCheckFailed
     }
     return x, y, nil
+}
+
+func BOEHWSign(data []byte) (*SignResult, error) {
+    var result = &SignResult{r: make([]byte, 32), s:make([]byte,32)}
+    var c_sign_result *C.SignResult_t 
+    c_sign_result = C.new_signresult()
+    defer C.delete_signresult(c_sign_result)
+    c_sign_result.r = (*C.uchar)(unsafe.Pointer(&result.r[0]))
+    c_sign_result.s = (*C.uchar)(unsafe.Pointer(&result.s[0]))
+    c_sign_result.v = (*C.uchar)(&result.v)
+    var ret = C.BOEHWSign((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)), c_sign_result)
+    if ret != 0 {
+        return nil, ErrHWSignFailed
+    } 
+
+    return result, nil
 }

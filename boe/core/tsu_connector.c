@@ -1,4 +1,4 @@
-// Last Update:2018-05-26 16:44:52
+// Last Update:2018-05-26 17:35:36
 /**
  * @file tsu_connector.c
  * @brief 
@@ -123,7 +123,7 @@ int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result)
     }
     memcpy(result->r, res->payload, 32);
     memcpy(result->s, res->payload+32, 32);
-    memcpy(&(result->v), res->payload+2*32, 1);
+    memcpy(result->v, res->payload+2*32, 1);
 
     free(res);
     return 0;
