@@ -14,21 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
+// +build go1.6
 
-package config
+package debug
 
-const (
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
-)
+import "runtime/debug"
 
-type PrometheusConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	Random string `json:"random"` // 新增加的random字段
-}
-
-// PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
-// String implements the stringer interface, returning the consensus engine details.
-func (c *PrometheusConfig) String() string {
-	return "prometheus"
+// LoudPanic panics in a way that gets all goroutine stacks printed on stderr.
+func LoudPanic(x interface{}) {
+	debug.SetTraceback("all")
+	panic(x)
 }

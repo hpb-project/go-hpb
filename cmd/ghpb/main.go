@@ -28,13 +28,13 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/command/utils"
+	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/console"
+	"github.com/hpb-project/go-hpb/common/console"
 	"github.com/hpb-project/go-hpb/protocol"
 	"github.com/hpb-project/go-hpb/internal/debug"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/metrics"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -42,7 +42,22 @@ import (
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
+var (
+	dumpConfigCommand = cli.Command{
+		Action:      utils.MigrateFlags(dumpConfig),
+		Name:        "dumpconfig",
+		Usage:       "Show configuration values",
+		ArgsUsage:   "",
+		Flags:       append(append(nodeFlags, rpcFlags...)),
+		Category:    "MISCELLANEOUS COMMANDS",
+		Description: `The dumpconfig command shows configuration values.`,
+	}
 
+	configFileFlag = cli.StringFlag{
+		Name:  "config",
+		Usage: "TOML configuration file",
+	}
+)
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	GitCommit = ""
@@ -192,7 +207,7 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	node := config.MakeFullNode(ctx)
+	node, cfg := MakeConfigNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
 	return nil

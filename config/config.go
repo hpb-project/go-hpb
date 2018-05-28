@@ -17,16 +17,6 @@
 package config
 
 import (
-	"crypto/ecdsa"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"math/big"
-	"os/user"
-	"io"
 	"gopkg.in/urfave/cli.v1"
 
 	"reflect"
@@ -37,6 +27,8 @@ import (
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/cmd/utils"
+	"fmt"
+	"os"
 )
 var HpbconfigIns *HpbConfig
 const (
@@ -226,16 +218,6 @@ func loadConfig(file string, cfg *hpbConfig) error {
 	}
 	return err
 }
-
-func MakeFullNode(ctx *cli.Context) *node.Node {
-	stack, cfg := makeConfigNode(ctx)
-
-
-
-
-	return stack
-}
-
 
 
 func GetHpbConfigInstance() (*HpbConfig,  error) {

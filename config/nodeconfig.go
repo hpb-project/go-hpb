@@ -19,17 +19,20 @@ import (
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
-var DefaultConfig = nodeconfig{
+var DefaultConfig = Nodeconfig{
 	DataDir:     DefaultDataDir(),
-	DefaultBlockChainConfig:              downloader.FastSync,
+	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:             1,
 	LightPeers:            20,
 	DatabaseCache:         128,
 	GasPrice:              big.NewInt(18 * params.Shannon),
+	/* HPB don't need dymatic gasprice
 	GPO: gasprice.Config{
 		Blocks:     10,
 		Percentile: 50,
 	},
+	*/
+	MaxTrieCacheGen : uint16(120),
 }
 type Nodeconfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
@@ -76,8 +79,8 @@ type Nodeconfig struct {
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
 
-	// Gas Price Oracle options
-	GPO gasprice.Config
+	// Gas Price Oracle options,HPB don't need dynamic gas price
+	//GPO gasprice.Config
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
@@ -97,6 +100,8 @@ type Nodeconfig struct {
 	// UseLightweightKDF lowers the memory and CPU requirements of the key store
 	// scrypt KDF at the expense of security.
 	UseLightweightKDF bool `toml:",omitempty"`
+
+	MaxTrieCacheGen  uint16
 
 
 }

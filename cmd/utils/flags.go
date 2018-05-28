@@ -823,6 +823,65 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.Node.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
 	}
+
+	switch {
+	case ctx.GlobalIsSet(SyncModeFlag.Name):
+		cfg.Node.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+	case ctx.GlobalBool(FastSyncFlag.Name):
+		cfg.Node.SyncMode = downloader.FastSync
+	case ctx.GlobalBool(LightModeFlag.Name):
+		cfg.Node.SyncMode = downloader.LightSync
+	}
+	if ctx.GlobalIsSet(LightServFlag.Name) {
+		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
+	}
+	if ctx.GlobalIsSet(LightPeersFlag.Name) {
+		cfg.Node.LightPeers = ctx.GlobalInt(LightPeersFlag.Name)
+	}
+	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
+		cfg.Node.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+	}
+
+	if ctx.GlobalIsSet(CacheFlag.Name) {
+		cfg.Node.DatabaseCache = ctx.GlobalInt(CacheFlag.Name)
+	}
+	cfg.Node.DatabaseHandles = makeDatabaseHandles()
+
+	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
+		cfg.Node.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
+	}
+	if ctx.GlobalIsSet(DocRootFlag.Name) {
+		cfg.Node.DocRoot = ctx.GlobalString(DocRootFlag.Name)
+	}
+	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
+		cfg.Node.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
+	}
+	if ctx.GlobalIsSet(GasPriceFlag.Name) {
+		cfg.Node.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
+	}
+	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
+		// TODO(fjl): force-enable this in --dev mode
+		cfg.Node.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
+	}
+
+	// Override any default configs for hard coded networks.
+	switch {
+	case ctx.GlobalBool(TestnetFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.Node.NetworkId = 3
+		}
+		cfg.Node.Genesis = core.DefaultTestnetGenesisBlock()
+	case ctx.GlobalBool(DevModeFlag.Name):
+		cfg.Node.Genesis = core.DevGenesisBlock()
+		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
+			cfg.Node.GasPrice = new(big.Int)
+		}
+	}
+
+	// TODO(fjl): move trie cache generations into config
+	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
+		cfg.Node.MaxTrieCacheGen = uint16(gen)
+	}
 }
 
 func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
@@ -834,7 +893,7 @@ func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
 	}
 }
 
-func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
+func SetTxPool(ctx *cli.Context, cfg *config.TxPoolConfiguration ) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
 	}
@@ -885,10 +944,13 @@ func SetHpbConfig(ctx *cli.Context, stack *node.Node, cfg *hpb.Config) {
 	checkExclusive(ctx, DevModeFlag, TestnetFlag, RinkebyFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
+	/* is account manager needed
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setHpberbase(ctx, ks, cfg)
-	setGPO(ctx, &cfg.GPO)
-	setTxPool(ctx, &cfg.TxPool)
+	*/
+	// HPB don't need dynamic gas price
+	//setGPO(ctx, &cfg.GPO)
+	SetTxPool(ctx, )
 
 	switch {
 	case ctx.GlobalIsSet(SyncModeFlag.Name):
