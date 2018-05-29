@@ -1,4 +1,4 @@
-// Last Update:2018-05-26 16:36:34
+// Last Update:2018-05-29 11:27:54
 /**
  * @file boe.c
  * @brief 
@@ -30,6 +30,7 @@ int BOERelease(void)
     // release resource.
     return BOE_OK;
 }
+
 int BOEBind(void)
 {
     // 绑定过程：
@@ -42,14 +43,22 @@ int BOEBind(void)
     // 通过上述方法再次获得id与板卡内的id进行比较。
     return BOE_OK;
 }
+
 TVersion GetBOEHWVersion(void)
 {
     return axu_get_hw_version();
 }
+
 TVersion GetBOEFWVersion(void)
 {
     return axu_get_fw_version();
 }
+
+TVersion GetBOEAXUVersion(void)
+{
+    return axu_get_axu_version();
+}
+
 int BOEFWUpdate(void)
 {
     // todo.
@@ -60,14 +69,18 @@ int BOEFWUpdateAbort(void)
     // todo.
     return BOE_OK;
 }
+
 int GetBOEID(void)
 {
-    return axu_get_boeid();
+    uint32_t id = 0;
+    return axu_get_boeid(&id);
 }
+
 int SetBOEID(uint32_t id)
 {
     return axu_set_boeid(id);
 }
+
 int BOEValidSign(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, PublicKey_t *result)
 {
     //printf("hash = 0x%p, r = 0x%p, s = 0x%p\n", hash, r, s);
@@ -85,7 +98,7 @@ int BOEValidSign(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, PublicKey_t *
 }
 int GetRand(void)
 {
-    return BOE_OK;
+    return axu_get_random();
 }
 
 int BOEHWSign(uint8_t *p_data, int datalen, SignResult_t *result)

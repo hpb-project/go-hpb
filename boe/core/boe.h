@@ -1,4 +1,4 @@
-// Last Update:2018-05-26 10:41:16
+// Last Update:2018-05-29 09:45:16
 /**
  * @file boe.h
  * @brief 
@@ -21,6 +21,7 @@ int BOERelease(void);
 int BOEBind(void);
 TVersion GetBOEHWVersion(void);
 TVersion GetBOEFWVersion(void);
+TVersion GetBOEAXUVersion(void);
 int BOEFWUpdate(void);
 int BOEFWUpdateAbort(void);
 int GetBOEID(void);

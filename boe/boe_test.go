@@ -3,6 +3,9 @@ import (
     "fmt"
     "testing"
 )
+var (
+    boe = BoeGetInstance()
+)
 
 func TestValidateSign(t *testing.T) {
     var (
@@ -12,7 +15,7 @@ func TestValidateSign(t *testing.T) {
     )
     var v byte
 
-    x,y,err := BOEValidateSign(hash, r, s, v)
+    x,y,err := boe.ValidateSign(hash, r, s, v)
     if err == nil {
         //fmt.Printf("len(x)=%d\n", len(x))
         for i:=0; i < len(x); i++ {
@@ -32,7 +35,7 @@ func TestHWSign(t *testing.T) {
         hash[i] = byte(i)
     }
 
-    result,err := BOEHWSign(hash)
+    result,err := boe.HWSign(hash)
     if err == nil {
         //fmt.Printf("len(x)=%d\n", len(x))
         for i:=0; i < len(result.r); i++ {
@@ -46,6 +49,6 @@ func TestHWSign(t *testing.T) {
 }
 
 func TestNewEvent(t *testing.T) {
-    var ver = BOEGetHWVersion()
+    var ver = boe.GetHWVersion()
     fmt.Printf("hwversion = %02x\n", ver)
 }

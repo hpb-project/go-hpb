@@ -1,4 +1,4 @@
-// Last Update:2018-05-25 21:16:17
+// Last Update:2018-05-29 09:29:22
 /**
  * @file axu_connector.c
  * @brief 
@@ -37,11 +37,12 @@ typedef enum A_CMD {
     ACMD_PB_UPGRADE_START       = 0x05,
     ACMD_PB_UPGRADE_ABORT       = 0x06,
     ACMD_PB_RESET               = 0x07,
-    ACMD_PB_RANDOM              = 0x08,
+    ACMD_PB_GET_RANDOM          = 0x08,
     ACMD_PB_GET_BOEID           = 0x09,
     ACMD_PB_GET_HW_VER          = 0x0A,
     ACMD_PB_GET_FW_VER          = 0x0B,
     ACMD_PB_GET_AXU_VER         = 0x0C,
+    ACMD_PB_SET_BOEID           = 0x0D,
 
     ACMD_BP_RES_ACK             = 0x51,
     ACMD_BP_RES_VERSION         = 0x52,
@@ -79,6 +80,7 @@ static void finish_package(A_Package *pack)
         pack->checksum = checksum(pack->data, pack->header.body_length);
     }
 }
+
 
 static int package_send(A_Package *package)
 {
@@ -119,23 +121,38 @@ static int package_receive(A_Package *package)
     return -3;
 }
 
+static A_Package *axu_get_response(ACmd cmd)
+{
+    A_Package package;
+    axu_init_package(&package);
+    package.header.acmd = cmd;
+    finish_package(&package);
 
+    package_send(&package);
+
+    A_Package *r_pack = (A_Package *)malloc(MAX_PACKAGE_LENGTH);
+    memset(r_pack, 0x0, MAX_PACKAGE_LENGTH);
+    if(package_receive(r_pack))
+        return r_pack;
+    else
+    {
+        if(r_pack) 
+            free(r_pack);
+        return NULL;
+    }
+}
 
 uint32_t axu_get_random()
 {
     uint32_t random = 0;
-    A_Package package;
-    axu_init_package(&package);
-    package.header.acmd = ACMD_PB_RANDOM;
-    package_send(&package);
-    A_Package *r_pack = (A_Package *)malloc(MAX_PACKAGE_LENGTH);
-    memset(r_pack, 0x0, MAX_PACKAGE_LENGTH);
-    if(package_receive(r_pack)
+    A_Package *r_pack = axu_get_response(ACMD_PB_GET_RANDOM);
+    if(r_pack != NULL 
             && (r_pack->header.acmd == ACMD_BP_RES_RANDOM))
     {
         random = *(uint32_t*)(r_pack->data);
+        free(r_pack);
     }
-    else 
+    else
     {
         random = rand();
     }
@@ -144,20 +161,110 @@ uint32_t axu_get_random()
 
 TVersion axu_get_hw_version(void)
 {
-    return 0xa8;
+    TVersion ver = 0;
+    A_Package *r_pack = axu_get_response(ACMD_PB_GET_HW_VER);
+    if(r_pack != NULL 
+            && (r_pack->header.acmd == ACMD_BP_RES_HW_VER))
+    {
+        ver = *(TVersion*)(r_pack->data);
+        free(r_pack);
+    }
+    return ver;
 }
 
 TVersion axu_get_fw_version(void)
 {
-    return 0;
+    TVersion ver = 0;
+    A_Package *r_pack = axu_get_response(ACMD_PB_GET_FW_VER);
+    if(r_pack != NULL 
+            && (r_pack->header.acmd == ACMD_BP_RES_FW_VER))
+    {
+        ver = *(TVersion*)(r_pack->data);
+        free(r_pack);
+    }
+    return ver;
 }
 
-uint32_t axu_get_boeid(void)
+TVersion axu_get_axu_version(void)
 {
-    return 0;
+    TVersion ver = 0;
+    A_Package *r_pack = axu_get_response(ACMD_PB_GET_AXU_VER);
+    if(r_pack != NULL 
+            && (r_pack->header.acmd == ACMD_BP_RES_AXU_VER))
+    {
+        ver = *(TVersion*)(r_pack->data);
+        free(r_pack);
+    }
+    return ver;
+}
+
+int axu_get_boeid(uint32_t *p_id)
+{
+    int ret = -1;
+    A_Package *r_pack = axu_get_response(ACMD_PB_GET_RANDOM);
+    if(r_pack != NULL 
+            && (r_pack->header.acmd == ACMD_BP_RES_RANDOM))
+    {
+        *p_id = *(uint32_t*)(r_pack->data);
+        free(r_pack);
+        ret = 0;
+    }
+    return ret;
 }
 
 int axu_set_boeid(uint32_t boeid)
 {
+    int ret = -1;
+    A_Package *package = (A_Package*)malloc(sizeof(A_Package) + 4);
+    axu_init_package(package);
+    package->header.acmd = ACMD_PB_SET_BOEID;
+    finish_package(package);
+    package_send(package);
+    A_Package *r_pack = (A_Package*)malloc(sizeof(A_Package) + 100);
+    if(r_pack)
+    {
+        memset(r_pack, 0x0, sizeof(A_Package) + 100);
+        if(package_receive(r_pack) 
+                && r_pack->header.acmd == ACMD_BP_RES_ACK)
+        {
+            ret = 0;
+        }
+        free(r_pack);
+    }
+    return ret;
+}
+
+
+int axu_update(void)
+{
+    // 1. 获取对方的版本号信息
+    // 2. 查找可用的升级文件
+    // 3. 下载升级文件
+    // 4. 传输升级文件
+    // 5. 下发开始升级指令
+    // 6. 等待升级进度和结果
     return 0;
+}
+
+int axu_update_abort(void)
+{
+    int ret = -1;
+    A_Package *package = (A_Package*)malloc(sizeof(A_Package));
+    axu_init_package(package);
+    package->header.acmd = ACMD_PB_UPGRADE_ABORT;
+    finish_package(package);
+    package_send(package);
+    A_Package *r_pack = (A_Package*)malloc(sizeof(A_Package) + 200);
+    //Todo: error check.
+    if(r_pack)
+    {
+        memset(r_pack, 0x0, sizeof(A_Package) + 100);
+        if(package_receive(r_pack) 
+                && r_pack->header.acmd == ACMD_BP_RES_ACK)
+        {
+            ret = 0;
+        }
+        free(r_pack);
+    }
+    return ret;
 }
