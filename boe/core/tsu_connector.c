@@ -1,4 +1,4 @@
-// Last Update:2018-05-26 17:35:36
+// Last Update:2018-05-31 14:54:18
 /**
  * @file tsu_connector.c
  * @brief 
@@ -94,7 +94,7 @@ int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKe
     return 0;
 }
 
-int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result)
+int tsu_hw_sign(uint8_t *info, int info_len, uint8_t *result)
 {
     if(info_len > TSU_PAYLOAD_MAX_SIZE)
         return -1;
@@ -121,9 +121,7 @@ int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result)
         free(res);
         return -4;
     }
-    memcpy(result->r, res->payload, 32);
-    memcpy(result->s, res->payload+32, 32);
-    memcpy(result->v, res->payload+2*32, 1);
+    memcpy(result, res->payload, 32);
 
     free(res);
     return 0;
