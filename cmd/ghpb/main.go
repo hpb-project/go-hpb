@@ -39,9 +39,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-const (
-	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
+
 var (
 	dumpConfigCommand = cli.Command{
 		Action:      utils.MigrateFlags(dumpConfig),

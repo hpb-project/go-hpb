@@ -26,7 +26,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/txpool/txpool/"
+	"github.com/hpb-project/go-hpb/txpool/"
+	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/blockchain/blockchain
 	"github.com/hpb-project/go-hpb/peermanager/
 	"github.com/hpb-project/go-hpb/synccontroller/synccontroller"
@@ -37,6 +38,9 @@ import (
 	core2 "github.com/hpb-project/go-hpb/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/go-hpb/vm"
 	"github.com/hpb-project/go-hpb/go-hpb/common"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
+	"github.com/hpb-project/go-hpb/internal/debug"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 // Node is a container on which services can be registered.
@@ -54,22 +58,46 @@ type Node struct {
 
 	networkId		uint64
 	netRPCService   *hpbapi.PublicNetAPI
+
+	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
+	accman   *accounts.Manager
+
+	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
+	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
+
+	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
+	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
+
+	lock sync.RWMutex
 }
 
 // New creates a hpb node, create all object and start
-func New(config *Config) (*Node, error) (*Node, error){
+func New(conf *config.Nodeconfig) (*Node, error){
+
+	confCopy := *conf
+	conf = &confCopy
+	if conf.DataDir != "" {
+		absdatadir, err := filepath.Abs(conf.DataDir)
+		if err != nil {
+			return nil, err
+		}
+		conf.DataDir = absdatadir
+	}
 	//create all object
 	hpbpeermanager, err := New
 	node := &Node{
-		peermanager: peermanager
-		syncctr:     syncctr
-		txpool:         txpool
-		bc:             bc
-		worker:         worker
-		boe:         boe
+
+		/*Peermanager: peermanager,
+		syncctr:     syncctr,
+		txpool:         txpool,
+		bc:             bc,
+		worker:         worker,
+		boe:         boe,*/
+		accman:		am,
+
 	}
 
-	syncctr.New()
+
 	return node, nil
 }
 

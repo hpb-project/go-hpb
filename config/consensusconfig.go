@@ -17,9 +17,7 @@
 
 package config
 
-const (
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
-)
+
 
 type PrometheusConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce

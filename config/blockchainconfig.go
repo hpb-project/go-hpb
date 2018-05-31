@@ -20,6 +20,7 @@ package config
 import (
 	"math/big"
 	"fmt"
+	"time"
 )
 
 
@@ -27,9 +28,6 @@ import (
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
-)
-const (
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 )
 
 var (
@@ -67,6 +65,78 @@ var (
 	}
 )
 
+
+//同步控制逻辑参数
+const (
+	forceSyncCycle      = 10 * time.Second //区块同步周期时间
+	txChanSize          = 20000            //接收交易事件缓冲，等待广播
+	// This is the target size for the packs of transactions sent by txsyncLoop.
+	// A pack can get larger than this if a single transactions exceeds this size.
+	txsyncPackSize = 100 * 1024            // 一般情况下状态包的大小，为了减小发送次数
+)
+
+//同步peer的记忆配置
+const (
+	//记忆peer的最大交易数量
+	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //记忆peer的最大区块数量
+	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
+)
+
+//同步对peer的配置
+const (
+	//同步的peer最大允许缺少hash项
+	maxLackingHashes  = 4096 // Maximum number of entries allowed on the list or lacking items
+	//计算吞吐量的一个参数
+	measurementImpact = 0.1  // The impact a single measurement has on a peer's final throughput value.
+)
+
+//同步任务队列最大缓冲区块数
+var blockCacheLimit = 8192 // Maximum number of blocks to cache before throttling the download
+
+//拉取的一些参数配置
+const (
+	//拉取区块超时时间
+	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
+	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
+	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
+	maxUncleDist  = 7                      // Maximum allowed backward distance from the chain head
+	maxQueueDist  = 32                     // Maximum allowed distance from the chain head to queue
+	hashLimit     = 256                    // Maximum number of unique blocks a peer may have announced
+	blockLimit    = 64                     // Maximum number of unique blocks a peer may have delivered
+)
+
+//同步器配置参数
+var (
+	MaxHashFetch    = 512 // Amount of hashes to be fetched per retrieval request
+	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch  = 192 // Amount of block headers to be fetched per retrieval request
+	MaxSkeletonSize = 128 // Number of header fetches to need for a skeleton assembly
+	MaxBodyFetch    = 128 // Amount of block bodies to be fetched per retrieval request
+	MaxReceiptFetch = 256 // Amount of transaction receipts to allow fetching per request
+	MaxStateFetch   = 384 // Amount of node state values to allow fetching per request
+
+	MaxForkAncestry  = 3 * EpochDuration // Maximum chain reorganisation
+	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for sync requests
+	rttMaxEstimate   = 20 * time.Second         // Maximum rount-trip time to target for sync requests
+	rttMinConfidence = 0.1                      // Worse confidence factor in our estimated RTT value
+	ttlScaling       = 3                        // Constant scaling factor for RTT -> TTL conversion
+	ttlLimit         = time.Minute              // Maximum TTL allowance to prevent reaching crazy timeouts
+
+	qosTuningPeers   = 5    // Number of peers to tune based on (best peers)
+	qosConfidenceCap = 10   // Number of peers above which not to modify RTT confidence
+	qosTuningImpact  = 0.25 // Impact that a new tuning target has on the previous value
+
+	maxQueuedHeaders  = 32 * 1024 // Maximum number of headers to queue for import (DOS protection)
+	maxHeadersProcess = 2048      // Number of header sync results to import at once into the chain
+	maxResultsProcess = 2048      // Number of content sync results to import at once into the chain
+
+	fsHeaderCheckFrequency = 100        // Verification frequency of the sync headers during fast sync
+	fsHeaderSafetyNet      = 2048       // Number of headers to discard in case a chain violation is detected
+	fsHeaderForceVerify    = 24         // Number of headers to verify before and after the pivot to accept it
+	fsPivotInterval        = 256        // Number of headers out of which to randomize the pivot point
+	fsMinFullBlocks        = 64         // Number of blocks to retrieve fully even in fast sync
+	fsCriticalTrials       = uint32(32) // Number of times to retry in the cricical section before bailing
+)
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 

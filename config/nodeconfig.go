@@ -14,11 +14,15 @@ import (
 	"os/user"
 
 	"github.com/hpb-project/go-hpb/cmd/ghpb"
+	"github.com/hpb-project/go-hpb/synccontroller/downloader"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/account/keystore"
 )
 
-const (
-	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
+
 var DefaultConfig = Nodeconfig{
 	DataDir:     DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,

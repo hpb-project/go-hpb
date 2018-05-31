@@ -37,6 +37,7 @@ import (
 	"path/filepath"
 	"os"
 	"fmt"
+	"time"
 )
 
 const (
@@ -51,6 +52,125 @@ const (
 	// contains.
 	BloomBitsBlocks uint64 = 4096
 )
+
+const (
+	// This is the amount of time spent waiting in between
+	// redialing a certain node.
+	dialHistoryExpiration = 30 * time.Second
+
+	// Discovery lookups are throttled and can only run
+	// once every few seconds.
+	lookupInterval = 4 * time.Second
+
+	// If no peers are found for this amount of time, the initial bootnodes are
+	// attempted to be connected.
+	fallbackInterval = 20 * time.Second
+
+	// Endpoint resolution is throttled with bounded backoff.
+	initialResolveDelay = 60 * time.Second
+	maxResolveDelay     = time.Hour
+)
+
+const (
+	defaultDialTimeout      = 15 * time.Second
+	refreshPeersInterval    = 30 * time.Second
+	staticPeerCheckInterval = 15 * time.Second
+
+
+	// Maximum number of concurrently dialing outbound connections.
+	maxActiveDialTasks = 16
+
+	// Maximum time allowed for reading a complete message.
+	// This is effectively the amount of time a connection can be idle.
+	frameReadTimeout = 30 * time.Second
+
+	// Maximum amount of time allowed for writing a complete message.
+	frameWriteTimeout = 20 * time.Second
+)
+const (
+	maxUint24 = ^uint32(0) >> 8
+
+	sskLen = 16 // ecies.MaxSharedKeyLength(pubKey) / 2
+	sigLen = 65 // elliptic S256
+	pubLen = 64 // 512 bit pubkey in uncompressed representation without format byte
+	shaLen = 32 // hash length (for nonce etc)
+
+	authMsgLen  = sigLen + shaLen + pubLen + shaLen + 1
+	authRespLen = pubLen + shaLen + 1
+
+	eciesOverhead = 65 /* pubkey */ + 16 /* IV */ + 32 /* MAC */
+
+	encAuthMsgLen  = authMsgLen + eciesOverhead  // size of encrypted pre-EIP-8 initiator handshake
+	encAuthRespLen = authRespLen + eciesOverhead // size of encrypted pre-EIP-8 handshake reply
+
+	// total timeout for encryption handshake and protocol
+	// handshake in both directions.
+	handshakeTimeout = 5 * time.Second
+
+	// This is the timeout for sending the disconnect reason.
+	// This is shorter than the usual timeout because we don't want
+	// to wait if the connection is known to be bad anyway.
+	discWriteTimeout = 1 * time.Second
+)
+
+//Protocal
+const (
+	baseProtocolVersion    = 1
+	baseProtocolLength     = uint64(16)
+	baseProtocolMaxMsgSize = 2 * 1024
+
+	pingInterval = 15 * time.Second
+)
+
+const (
+	// devp2p message codes
+	handshakeMsg = 0x00
+	discMsg      = 0x01
+	pingMsg      = 0x02
+	pongMsg      = 0x03
+	getPeersMsg  = 0x04
+	peersMsg     = 0x05
+)
+
+
+// UDP  超时相关
+const (
+	respTimeout = 500 * time.Millisecond
+	sendTimeout = 500 * time.Millisecond
+	expiration  = 20 * time.Second
+
+	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
+	ntpWarningCooldown  = 10 * time.Minute // Minimum amount of time to pass before repeating NTP warning
+	driftThreshold      = 10 * time.Second // Allowed clock drift before warning user
+)
+
+
+
+const NodeIDBits   = 512
+const RandNoceSize = 32
+
+type NodeType  uint8
+// 节点类型
+const(
+	LightNode  NodeType = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型 UnknownNode
+
+	AuthNode   NodeType = 0x30  //经过认证的节点
+	PreNode    NodeType = 0x31  //候选节点
+	HpNode     NodeType = 0x60  //高性能节点
+
+	BootNode   NodeType = 0xA0  //启动节点
+)
+
+//节点数据库相关
+
+var (
+	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
+	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
+	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
+
+	nodeDBNodeExpirationOneHour = time.Hour // Time after which an unseen node should be dropped.
+)
+
 var defaultNetworkConfig = networkConfig{
 
 	HTTPPort:    DefaultHTTPPort,
