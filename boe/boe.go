@@ -41,9 +41,7 @@ type BoeHandle struct {
 }
 
 type SignResult struct {
-    r   []byte 
-    s   []byte 
-    v   byte
+    val   []byte 
 }
 
 type TVersion struct {
@@ -197,15 +195,8 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
 }
 
 func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
-    // Todo: check result is stack or heap memory.
-    var result = &SignResult{r: make([]byte, 32), s:make([]byte,32)}
-    var c_sign_result *C.SignResult_t 
-    c_sign_result = C.new_signresult()
-    defer C.delete_signresult(c_sign_result)
-    c_sign_result.r = (*C.uchar)(unsafe.Pointer(&result.r[0]))
-    c_sign_result.s = (*C.uchar)(unsafe.Pointer(&result.s[0]))
-    c_sign_result.v = (*C.uchar)(&result.v)
-    var ret = C.BOEHWSign((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)), c_sign_result)
+    var result = &SignResult{val: make([]byte, 32)}
+    var ret = C.BOEHWSign((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)), (*C.uchar)(unsafe.Pointer(&result.val[0])))
     if ret != 0 {
         return nil, ErrHWSignFailed
     } 

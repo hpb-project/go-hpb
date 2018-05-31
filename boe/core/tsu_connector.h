@@ -13,6 +13,6 @@
 #include "common.h"
 
 int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKey_t*result);
-int tsu_hw_sign(uint8_t *info, int info_len, SignResult_t *result);
+int tsu_hw_sign(uint8_t *info, int info_len, uint8_t *result);
 
 #endif  /*TSU_CONNECTOR_H*/

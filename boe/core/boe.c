@@ -101,7 +101,7 @@ int GetRand(void)
     return axu_get_random();
 }
 
-int BOEHWSign(uint8_t *p_data, int datalen, SignResult_t *result)
+int BOEHWSign(uint8_t *p_data, int datalen, uint8_t *result)
 {
     return tsu_hw_sign(p_data, datalen, result);
 }

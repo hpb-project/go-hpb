@@ -38,13 +38,9 @@ func TestHWSign(t *testing.T) {
     result,err := boe.HWSign(hash)
     if err == nil {
         //fmt.Printf("len(x)=%d\n", len(x))
-        for i:=0; i < len(result.r); i++ {
-            fmt.Printf("r[%d]=%02x\n", i, result.r[i])
+        for i:=0; i < 32; i++ {
+            fmt.Printf("signval[%d]=%02x\n",i,result.val[i])
         }
-        for i:=0; i < len(result.s); i++ {
-            fmt.Printf("s[%d]=%02x\n", i, result.s[i])
-        }
-        fmt.Printf("v=%02x\n",result.v)
     }
 }
 

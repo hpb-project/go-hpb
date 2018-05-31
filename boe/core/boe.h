@@ -28,7 +28,7 @@ int GetBOEID(void);
 int SetBOEID(uint32_t id);
 int BOEValidSign(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, PublicKey_t *result);
 int GetRand(void);
-int BOEHWSign(uint8_t *p_data, int datalen, SignResult_t *result);
+int BOEHWSign(uint8_t *p_data, int datalen, uint8_t *result);
 int BOESubscribeEvent(void);// go api.
 
 
