@@ -28,7 +28,6 @@ import (
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"fmt"
 	"os"
-	"math/big"
 )
 var HpbconfigIns *HpbConfig
 const (
@@ -109,35 +108,6 @@ const (
 	Douglas  = 1e42
 )
 
-
-var (
-	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(100000000)               // Gas limit of the Genesis block. //for testnet
-	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
-	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
-)
-var DefaultConfig = HpbConfig{
-
-	Node: 		defaultNodeConfig() ,
-	// Configuration of peer-to-peer networking.
-	Network:	DefaultNetworkConfig(),
-
-	//configuration of txpool
-	TxPool:		DefaultTxPoolConfig,
-
-	//configuration of blockchain
-	BlockChain: DefaultBlockChainConfig,
-	//configuration of consensus
-	Prometheus: DefaultPrometheusConfig,
-
-	Gas:		DefaultGasConfig,
-
-	HpbStats:   DefaultHpbStatsConfig,
-}
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
@@ -204,9 +174,7 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type hpbStatsConfig struct {
-	URL string `toml:",omitempty"`
-}
+
 
 
 
