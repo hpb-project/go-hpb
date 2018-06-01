@@ -37,7 +37,10 @@ func TestValidateSign(t *testing.T) {
         for i:=0; i < len(result); i++ {
             fmt.Printf("result[%d]=%02x\n", i, result[i])
         }
+    }else {
+        fmt.Printf("check failed\n")
     }
+
 }
 
 func TestHWSign(t *testing.T) {

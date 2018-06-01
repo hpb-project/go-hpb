@@ -30,8 +30,11 @@ import (
     "unsafe"
     "errors"
     "sync"
+    "sync/atomic"
+    "time"
 
     "github.com/hpb-project/go-hpb/routinue"
+    "github.com/hpb-project/go-hpb/common/crypto"
 )
 
 type BoeHandle struct {
@@ -65,6 +68,8 @@ var (
     ErrUpdateFailed          = errors.New("update failed")
     ErrUpdateAbortFailed     = errors.New("update abort failed")
 
+    boeRecoverPubTps         = int32(0)
+    bcontinue                = false
     boeHandle                = &BoeHandle{boeEvent:routinue.NewEvent(), boeInit:false}
 )
 
@@ -76,6 +81,18 @@ func BoeGetInstance() (*BoeHandle) {
 func localInfoId() uint32 {
     // scan local local info and calc the id.
     return 0xfffffff
+}
+
+func innerResetCounter() {
+    timestamp1 := time.Now().UTC().UnixNano()
+    var zero int32 = 0
+    for ;bcontinue==true; {
+        timestamp2 := time.Now().UTC().UnixNano()
+        if(500 <= (timestamp2 - timestamp1)/1000/1000) {
+            boeRecoverPubTps = atomic.LoadInt32(&zero)
+            timestamp1 = timestamp2
+        }
+    }
 }
 
 func (boe *BoeHandle) Init()(error) {
@@ -95,6 +112,8 @@ func (boe *BoeHandle) Init()(error) {
             return ErrIDNotMatch
         }
         boe.boeInit = true
+        bcontinue = true
+        go innerResetCounter()
         return nil
     }
     return ErrInitFailed
@@ -105,6 +124,7 @@ func (boe *BoeHandle) Release() (error) {
     boe.m.Lock()
     defer boe.m.Unlock()
 
+    bcontinue = false
     ret := C.BOERelease()
     if ret == C.BOE_OK {
         return nil
@@ -172,19 +192,38 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     if len(hash) != 32 || len(r) != 32 || len(s) != 32 {
         return nil,ErrInvalidParams
     }
+    atomic.AddInt32(&boeRecoverPubTps, 1)
+    var result = make([]byte, 64)
 
-    var (
-        result = make([]byte, 64)
-        c_hash = (*C.uchar)(unsafe.Pointer(&hash[0]))
-        c_r = (*C.uchar)(unsafe.Pointer(&r[0]))
-        c_s = (*C.uchar)(unsafe.Pointer(&s[0]))
-        c_v = C.uchar(v)
-    )
-    
-    c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
-    if c_ret != 0 {
-        return nil,ErrSignCheckFailed
+    if(boeRecoverPubTps > 100) {
+        // use hardware
+        var (
+            c_hash = (*C.uchar)(unsafe.Pointer(&hash[0]))
+            c_r = (*C.uchar)(unsafe.Pointer(&r[0]))
+            c_s = (*C.uchar)(unsafe.Pointer(&s[0]))
+            c_v = C.uchar(v)
+        )
+
+        c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
+        if c_ret != 0 {
+            return nil,ErrSignCheckFailed
+        }
+    }else {
+        // use software
+        var (
+            sig = make([]byte, 65)
+        )
+        copy(sig[32-len(r):32], r)
+        copy(sig[64-len(s):64], s)
+        sig[64] = v
+        pub, err := crypto.Ecrecover(hash[:], sig)
+        if(err != nil) {
+            return nil, ErrSignCheckFailed
+        }
+        copy(result[:], pub[1:])
     }
+
+
     return result, nil
 }
 
