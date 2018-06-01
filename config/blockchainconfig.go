@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"fmt"
 	"time"
+
+	"github.com/hpb-project/go-hpb/common"
 )
 
 
@@ -145,8 +147,8 @@ type ChainConfig struct {
 
 var DefaultBlockChainConfig = ChainConfig{
 	ChainId: MainnetChainConfig.ChainId,
-	Prometheus:
-		}
+	Prometheus: DefaultPrometheusConfig,
+}
 
 var (
 	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.

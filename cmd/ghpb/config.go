@@ -1,19 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"runtime"
-	"sort"
-	"strings"
-	"time"
 
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/account/keystore"
+	"os"
+
 	"github.com/hpb-project/go-hpb/cmd/utils"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/console"
-	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/node"
@@ -28,7 +19,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 		os.Exit(1)
 	}
 	// Apply flags.
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	utils.SetNodeConfig(ctx, cfg)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 	utils.Fatalf("Failed to create the protocol stack: %v", err)

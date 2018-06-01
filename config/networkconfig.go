@@ -38,6 +38,8 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 const (
@@ -171,7 +173,7 @@ var (
 	nodeDBNodeExpirationOneHour = time.Hour // Time after which an unseen node should be dropped.
 )
 
-var defaultNetworkConfig = networkConfig{
+var defaultNetworkConfig = NetworkConfig{
 
 	HTTPPort:    DefaultHTTPPort,
 	HTTPModules: []string{"net", "web3"},

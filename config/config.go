@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"unicode"
 	"bufio"
+	"errors"
 
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
@@ -132,7 +133,7 @@ type HpbConfig struct {
 	BlockChain ChainConfig
 
 	//configuration of consensus
-	Prometheus prometheusConfig
+	Prometheus PrometheusConfig
 
 	Gas GasConfig
 
@@ -178,7 +179,7 @@ var tomlSettings = toml.Config{
 
 
 
-func loadConfig(file string, cfg *hpbConfig) error {
+func loadConfig(file string, cfg *HpbConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -212,8 +213,6 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 			Prometheus: DefaultPrometheusConfig,
 
 			Gas:		DefaultGasConfig,
-
-			HpbStats:   DefaultHpbStatsConfig,
 		}
 		log.Info("Create New HpbConfig object")
 	}
@@ -228,5 +227,5 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 
 
 
-}
+
 

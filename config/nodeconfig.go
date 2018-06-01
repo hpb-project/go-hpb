@@ -13,7 +13,7 @@ import (
 	"io/ioutil"
 	"os/user"
 
-	"github.com/hpb-project/go-hpb/cmd/ghpb"
+
 	"github.com/hpb-project/go-hpb/synccontroller/downloader"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -29,7 +29,7 @@ var DefaultConfig = Nodeconfig{
 	NetworkId:             1,
 	LightPeers:            20,
 	DatabaseCache:         128,
-	GasPrice:              big.NewInt(18 * params.Shannon),
+	GasPrice:              big.NewInt(18 * Shannon),
 	/* HPB don't need dymatic gasprice
 	GPO: gasprice.Config{
 		Blocks:     10,

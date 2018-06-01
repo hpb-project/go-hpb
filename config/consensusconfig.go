@@ -17,7 +17,11 @@
 
 package config
 
-
+var DefaultPrometheusConfig = &PrometheusConfig {
+	Period:    15,
+	Epoch:	   30000,
+	Random:     "0",
+}
 
 type PrometheusConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce

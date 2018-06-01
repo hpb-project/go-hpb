@@ -1,5 +1,5 @@
 package config
-type gasTable struct {
+type GasTable struct {
 	ExtcodeSize uint64
 	ExtcodeCopy uint64
 	Balance     uint64
