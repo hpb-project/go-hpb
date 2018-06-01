@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"unicode"
 	"bufio"
+	"errors"
 
-	"github.com/hpb-project/go-hpb/node"
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/cmd/utils"
@@ -41,6 +41,7 @@ const (
 
 const (
 
+	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
@@ -53,28 +54,28 @@ const (
 	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.
 
-	Sha3Gas          uint64 = 30    // Once per SHA3 operation.
-	Sha3WordGas      uint64 = 6     // Once per word of the SHA3 operation's data.
-	SstoreResetGas   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
-	SstoreClearGas   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
-	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
-	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
-	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
-	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
-	CreateDataGas    uint64 = 200   //
-	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
-	ExpGas           uint64 = 10    // Once per EXP instruction
-	LogGas           uint64 = 375   // Per LOG* operation.
-	CopyGas          uint64 = 3     //
-	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
-	TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
-	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
-	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
-	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
-	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
-	TxDataNonZeroGas uint64 = 1    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
+	Sha3Gas               uint64 = 30    // Once per SHA3 operation.
+	Sha3WordGas     	  uint64 = 6     // Once per word of the SHA3 operation's data.
+	SstoreResetGas   	  uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
+	SstoreClearGas   	  uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
+	SstoreRefundGas 	  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
+	JumpdestGas      	  uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	EpochDuration    	  uint64 = 30000 // Duration between proof-of-work epochs.
+	CallGas         	  uint64 = 40    // Once per CALL operation & message call transaction.
+	CreateDataGas    	  uint64 = 200   //
+	CallCreateDepth  	  uint64 = 1024  // Maximum depth of call/create stack.
+	ExpGas          	  uint64 = 10    // Once per EXP instruction
+	LogGas           	  uint64 = 375   // Per LOG* operation.
+	CopyGas          	  uint64 = 3     //
+	StackLimit       	  uint64 = 1024  // Maximum size of VM stack allowed.
+	TierStepGas      	  uint64 = 0     // Once per operation, for a selection of them.
+	LogTopicGas      	  uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
+	CreateGas       	  uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
+	SuicideRefundGas 	  uint64 = 24000 // Refunded following a suicide operation.
+	MemoryGas        	  uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
+	TxDataNonZeroGas 	  uint64 = 1    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
 
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+	MaxCodeSize 				 = 24576 // Maximum bytecode to permit for a contract
 
 	// Precompiled contract gas prices
 
@@ -107,33 +108,9 @@ const (
 	Einstein = 1e21
 	Douglas  = 1e42
 )
-var DefaultConfig = HpbConfig{
 
-	Node: 		defaultNodeConfig() ,
-	// Configuration of peer-to-peer networking.
-	Network:	DefaultNetworkConfig(),
-
-	//configuration of txpool
-	TxPool:		DefaultTxPoolConfig,
-
-	//configuration of blockchain
-	BlockChain: DefaultBlockChainConfig,
-	//configuration of consensus
-	Prometheus: DefaultPrometheusConfig,
-
-	Gas:		DefaultGasConfig,
-
-	HpbStats:   DefaultHpbStatsConfig,
-}
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
-const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
-	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
-	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
-	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
 
 type hpbStatsConfig struct {
@@ -156,7 +133,7 @@ type HpbConfig struct {
 	BlockChain ChainConfig
 
 	//configuration of consensus
-	Prometheus prometheusConfig
+	Prometheus PrometheusConfig
 
 	Gas GasConfig
 
@@ -198,13 +175,11 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type hpbStatsConfig struct {
-	URL string `toml:",omitempty"`
-}
 
 
 
-func loadConfig(file string, cfg *hpbConfig) error {
+
+func loadConfig(file string, cfg *HpbConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -238,8 +213,6 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 			Prometheus: DefaultPrometheusConfig,
 
 			Gas:		DefaultGasConfig,
-
-			HpbStats:   DefaultHpbStatsConfig,
 		}
 		log.Info("Create New HpbConfig object")
 	}
@@ -254,5 +227,5 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 
 
 
-}
+
 

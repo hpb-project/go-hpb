@@ -13,19 +13,23 @@ import (
 	"io/ioutil"
 	"os/user"
 
-	"github.com/hpb-project/go-hpb/cmd/ghpb"
+
+	"github.com/hpb-project/go-hpb/synccontroller/downloader"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/account/keystore"
 )
 
-const (
-	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
+
 var DefaultConfig = Nodeconfig{
 	DataDir:     DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:             1,
 	LightPeers:            20,
 	DatabaseCache:         128,
-	GasPrice:              big.NewInt(18 * params.Shannon),
+	GasPrice:              big.NewInt(18 * Shannon),
 	/* HPB don't need dymatic gasprice
 	GPO: gasprice.Config{
 		Blocks:     10,
@@ -364,13 +368,7 @@ func homeDir() string {
 
 // ConfigCompatError is raised if the locally-stored blockchain is initialised with a
 // ChainConfig that would alter the past.
-type ConfigCompatError struct {
-	What string
-	// block numbers of the stored and new configurations
-	StoredConfig, NewConfig *big.Int
-	// the block number to which the local chain must be rewound to correct the error
-	RewindTo uint64
-}
+
 func defaultNodeConfig() nodeconfig {
 	cfg := DefaultConfig
 	cfg.Name = clientIdentifier

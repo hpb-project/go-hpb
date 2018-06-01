@@ -6,6 +6,10 @@ import (
 
 )
 
+var DefaultGasConfig = GasConfig{
+	Blocks:     10,
+	Percentile: 50,
+}
 type GasConfig struct {
 	Blocks     int
 	Percentile int
