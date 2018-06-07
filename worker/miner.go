@@ -45,14 +45,11 @@ type Backend interface {
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux         *event.TypeMux
-
 	worker      *worker
-
 	coinbase    common.Address
 	mining      int32
 	hpb         Backend
 	engine      consensus.Engine
-
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
