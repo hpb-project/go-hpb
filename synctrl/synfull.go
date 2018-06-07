@@ -21,7 +21,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/rcrowley/go-metrics"
 	"math"
@@ -190,7 +190,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 			this.syncer.mux.Post(DoneEvent{})
 		}
 	}()
-	if p.version < params.ProtocolV111  {
+	if p.version < config.ProtocolV111  {
 		return errProVLowerBase
 	}
 

@@ -20,11 +20,11 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/blockchain/vm"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/blockchain/vm"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/log"
 )
 
 var (
@@ -82,9 +82,9 @@ type Message interface {
 func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	igas := new(big.Int)
 	if contractCreation{
-		igas.SetUint64(params.TxGasContractCreation)
+		igas.SetUint64(config.TxGasContractCreation)
 	} else {
-		igas.SetUint64(params.TxGas)
+		igas.SetUint64(config.TxGas)
 	}
 	if len(data) > 0 {
 		var nz int64
@@ -94,10 +94,10 @@ func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 			}
 		}
 		m := big.NewInt(nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
+		m.Mul(m, new(big.Int).SetUint64(config.TxDataNonZeroGas))
 		igas.Add(igas, m)
 		m.SetInt64(int64(len(data)) - nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
+		m.Mul(m, new(big.Int).SetUint64(config.TxDataZeroGas))
 		igas.Add(igas, m)
 	}
 	return igas

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/rcrowley/go-metrics"
 	"math/big"
@@ -188,7 +188,7 @@ func (this *lightSync) syncWithPeer(id string, p *peerConnection, hash common.Ha
 			this.syncer.mux.Post(DoneEvent{})
 		}
 	}()
-	if p.version < params.ProtocolV111  {
+	if p.version < config.ProtocolV111  {
 		return errProVLowerBase
 	}
 

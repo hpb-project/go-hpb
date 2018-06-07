@@ -22,15 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
-
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/metrics"
-	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/log"
+	"math/big"
 )
 
 // DatabaseReader wraps the Get method of a backing data store.
@@ -597,7 +596,7 @@ func WriteBlockChainVersion(db hpbdb.Putter, vsn int) {
 }
 
 // WriteChainConfig writes the chain config settings to the database.
-func WriteChainConfig(db hpbdb.Putter, hash common.Hash, cfg *params.ChainConfig) error {
+func WriteChainConfig(db hpbdb.Putter, hash common.Hash, cfg *config.ChainConfig) error {
 	// short circuit and ignore if nil config. GetChainConfig
 	// will return a default.
 	if cfg == nil {
@@ -613,13 +612,13 @@ func WriteChainConfig(db hpbdb.Putter, hash common.Hash, cfg *params.ChainConfig
 }
 
 // GetChainConfig will fetch the network settings based on the given hash.
-func GetChainConfig(db DatabaseReader, hash common.Hash) (*params.ChainConfig, error) {
+func GetChainConfig(db DatabaseReader, hash common.Hash) (*config.ChainConfig, error) {
 	jsonChainConfig, _ := db.Get(append(configPrefix, hash[:]...))
 	if len(jsonChainConfig) == 0 {
 		return nil, ErrChainConfigNotFound
 	}
 
-	var config params.ChainConfig
+	var config config.ChainConfig
 	if err := json.Unmarshal(jsonChainConfig, &config); err != nil {
 		return nil, err
 	}

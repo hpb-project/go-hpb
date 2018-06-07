@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 
 	"github.com/hpb-project/go-hpb/consensus"
 )
@@ -110,7 +110,7 @@ type SynCtrl struct {
 
 	txpool      txPool //todo xinqyu's
 	chaindb     hpbdb.Database
-	chainconfig *params.ChainConfig
+	chainconfig *config.ChainConfig
 	maxPeers    int
 
 	syner       *Syncer
@@ -136,7 +136,7 @@ type SynCtrl struct {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *params.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool,/*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    mux,

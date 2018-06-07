@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/log"
 	"math"
 	"math/big"
@@ -146,8 +146,8 @@ func (p *peerConnection) Reset() {
 // FetchHeaders sends a header retrieval request to the remote peer.
 func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 	// Sanity check the protocol version
-	if p.version < params.ProtocolV111 {
-		panic(fmt.Sprintf("header fetch [protocol version/%d+] requested on [protocol version/%d]", params.ProtocolV111, p.version))
+	if p.version < config.ProtocolV111 {
+		panic(fmt.Sprintf("header fetch [protocol version/%d+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.headerIdle, 0, 1) {
@@ -164,8 +164,8 @@ func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 // FetchBodies sends a block body retrieval request to the remote peer.
 func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 	// Sanity check the protocol version
-	if p.version < params.ProtocolV111 {
-		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", params.ProtocolV111, p.version))
+	if p.version < config.ProtocolV111 {
+		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.blockIdle, 0, 1) {
@@ -186,8 +186,8 @@ func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 // FetchReceipts sends a receipt retrieval request to the remote peer.
 func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 	// Sanity check the protocol version
-	if p.version < params.ProtocolV111 {
-		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", params.ProtocolV111, p.version))
+	if p.version < config.ProtocolV111 {
+		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.receiptIdle, 0, 1) {
@@ -208,8 +208,8 @@ func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 // FetchNodeData sends a node state data retrieval request to the remote peer.
 func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 	// Sanity check the protocol version
-	if p.version < params.ProtocolV111 {
-		panic(fmt.Sprintf("node data fetch [protocol version/d%+] requested on [protocol version/%d]", params.ProtocolV111, p.version))
+	if p.version < config.ProtocolV111 {
+		panic(fmt.Sprintf("node data fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.stateIdle, 0, 1) {
@@ -477,7 +477,7 @@ func (ps *peerSet) HeaderIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.headerThroughput
 	}
-	return ps.idlePeers(params.ProtocolV111, params.ProtocolV111, idle, throughput)
+	return ps.idlePeers(config.ProtocolV111, config.ProtocolV111, idle, throughput)
 }
 
 // BodyIdlePeers retrieves a flat list of all the currently body-idle peers within
@@ -491,7 +491,7 @@ func (ps *peerSet) BodyIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.blockThroughput
 	}
-	return ps.idlePeers(params.ProtocolV111, params.ProtocolV111, idle, throughput)
+	return ps.idlePeers(config.ProtocolV111, config.ProtocolV111, idle, throughput)
 }
 
 // ReceiptIdlePeers retrieves a flat list of all the currently receipt-idle peers
@@ -505,7 +505,7 @@ func (ps *peerSet) ReceiptIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.receiptThroughput
 	}
-	return ps.idlePeers(params.ProtocolV111, params.ProtocolV111, idle, throughput)
+	return ps.idlePeers(config.ProtocolV111, config.ProtocolV111, idle, throughput)
 }
 
 // NodeDataIdlePeers retrieves a flat list of all the currently node-data-idle
@@ -519,7 +519,7 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.stateThroughput
 	}
-	return ps.idlePeers(params.ProtocolV111, params.ProtocolV111, idle, throughput)
+	return ps.idlePeers(config.ProtocolV111, config.ProtocolV111, idle, throughput)
 }
 
 // idlePeers retrieves a flat list of all currently idle peers satisfying the
