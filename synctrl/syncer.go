@@ -24,7 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 	hpbinter "github.com/hpb-project/go-hpb/interface"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"math/big"
@@ -191,7 +191,7 @@ type Syncer struct {
 func NewSyncer(mode SyncMode, stateDb hpbdb.Database, mux *event.TypeMux, lightchain LightChain,
 	dropPeer peerDropFn) *Syncer {
 	if lightchain == nil {
-		lightchain = core.InstanceBlockChain()
+		lightchain = bc.InstanceBlockChain()
 	}
 	syn := &Syncer{
 		mode:           mode,
@@ -237,7 +237,7 @@ func (this *Syncer) Progress() hpbinter.SyncProgress {
 	this.syncStatsLock.RLock()
 	defer this.syncStatsLock.RUnlock()
 
-	current := core.InstanceBlockChain().CurrentBlock().NumberU64()
+	current := bc.InstanceBlockChain().CurrentBlock().NumberU64()
 	return hpbinter.SyncProgress{
 		StartingBlock: this.syncStatsChainOrigin,
 		CurrentBlock:  current,

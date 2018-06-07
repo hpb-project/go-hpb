@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package bc
 
 import (
 	"encoding/binary"
@@ -27,7 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/event"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in

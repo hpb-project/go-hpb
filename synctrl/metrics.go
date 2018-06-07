@@ -19,7 +19,7 @@
 package synctrl
 
 import (
-	"github.com/hpb-project/go-hpb/metrics"
+	"github.com/hpb-project/go-hpb/common/metrics"
 )
 
 var (

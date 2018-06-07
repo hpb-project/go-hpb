@@ -19,11 +19,11 @@ package synctrl
 import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/trie"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/log"
 	"hash"
 	"sync"
 	"sync/atomic"

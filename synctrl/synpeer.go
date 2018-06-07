@@ -25,7 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 	"math"
 	"math/big"
 	"sort"

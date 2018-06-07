@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/event"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
 
 	"math"
@@ -31,9 +33,8 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/common/log"
+
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
 )
 
 const (
@@ -119,7 +120,7 @@ type SynCtrl struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux      *event.TypeMux
-	txCh          chan core.TxPreEvent
+	txCh          chan bc.TxPreEvent
 	txSub         event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 
@@ -149,7 +150,7 @@ func NewSynCtrl(config *params.ChainConfig, mode SyncMode, networkId uint64, mux
 		quitSync:    make(chan struct{}),
 	}
 
-	if mode == FastSync && core.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
+	if mode == FastSync && bc.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
 		log.Warn("Blockchain not empty, fast sync disabled")
 		mode = FullSync
 	}
@@ -160,10 +161,10 @@ func NewSynCtrl(config *params.ChainConfig, mode SyncMode, networkId uint64, mux
 	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer)//todo removePeer
 
 	validator := func(header *types.Header) error {
-		return engine.VerifyHeader(core.InstanceBlockChain(), header, true)
+		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
 	}
 	heighter := func() uint64 {
-		return core.InstanceBlockChain().CurrentBlock().NumberU64()
+		return bc.InstanceBlockChain().CurrentBlock().NumberU64()
 	}
 	inserter := func(blocks types.Blocks) (int, error) {
 		// If fast sync is running, deny importing weird blocks
@@ -172,21 +173,21 @@ func NewSynCtrl(config *params.ChainConfig, mode SyncMode, networkId uint64, mux
 			return 0, nil
 		}
 		atomic.StoreUint32(&synctrl.acceptTxs, 1) // Mark initial sync done on any fetcher import
-		return core.InstanceBlockChain().InsertChain(blocks)
+		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(core.InstanceBlockChain().GetBlockByHash, validator, synctrl.broadcastBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.broadcastBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
 
 	return synctrl, nil
 }
 
 func (this *SynCtrl) Start() {
 	// broadcast transactions
-	this.txCh = make(chan core.TxPreEvent, txChanSize)
+	this.txCh = make(chan bc.TxPreEvent, txChanSize)
 	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
 	go this.txBroadcastLoop()
 
 	// broadcast mined blocks
-	this.minedBlockSub = this.eventMux.Subscribe(core.NewMinedBlockEvent{})
+	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})
 	go this.minedBroadcastLoop()
 
 	// start sync handlers
@@ -225,7 +226,7 @@ func (this *SynCtrl) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case core.NewMinedBlockEvent:
+		case bc.NewMinedBlockEvent:
 			this.broadcastBlock(ev.Block, true)  // First propagate block to peers
 			this.broadcastBlock(ev.Block, false) // Only then announce to the rest
 		}
@@ -270,8 +271,8 @@ func (this *SynCtrl) synchronise(peer *peer) {
 		return
 	}
 	// Make sure the peer's TD is higher than our own
-	currentBlock := core.InstanceBlockChain().CurrentBlock()
-	td := core.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())
+	currentBlock := bc.InstanceBlockChain().CurrentBlock()
+	td := bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 
 	pHead, pTd := peer.Head()
 
@@ -283,7 +284,7 @@ func (this *SynCtrl) synchronise(peer *peer) {
 	if atomic.LoadUint32(&this.fastSync) == 1 {
 		// Fast sync was explicitly requested, and explicitly granted
 		mode = FastSync
-	} else if currentBlock.NumberU64() == 0 && core.InstanceBlockChain().CurrentFastBlock().NumberU64() > 0 {
+	} else if currentBlock.NumberU64() == 0 && bc.InstanceBlockChain().CurrentFastBlock().NumberU64() > 0 {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.
 		// The only scenario where this can happen is if the user manually (or via a
@@ -297,7 +298,7 @@ func (this *SynCtrl) synchronise(peer *peer) {
 
 	if atomic.LoadUint32(&this.fastSync) == 1 {
 		// Disable fast sync if we indeed have something in our chain
-		if core.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
+		if bc.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
 			atomic.StoreUint32(&this.fastSync, 0)
 		}
 	}
@@ -305,7 +306,7 @@ func (this *SynCtrl) synchronise(peer *peer) {
 		return
 	}
 	atomic.StoreUint32(&this.acceptTxs, 1) // Mark initial sync done
-	if head := core.InstanceBlockChain().CurrentBlock(); head.NumberU64() > 0 {
+	if head := bc.InstanceBlockChain().CurrentBlock(); head.NumberU64() > 0 {
 		// We've completed a sync cycle, notify all peers of new state. This path is
 		// essential in star-topology networks where a gateway node needs to notify
 		// all its out-of-date peers of the availability of a new block. This failure
@@ -351,8 +352,8 @@ func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 	if propagate {
 		// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 		var td *big.Int
-		if parent := core.InstanceBlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
-			td = new(big.Int).Add(block.Difficulty(), core.InstanceBlockChain().GetTd(block.ParentHash(), block.NumberU64()-1))
+		if parent := bc.InstanceBlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
+			td = new(big.Int).Add(block.Difficulty(), bc.InstanceBlockChain().GetTd(block.ParentHash(), block.NumberU64()-1))
 		} else {
 			log.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
 			return
@@ -379,7 +380,7 @@ func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
-	if core.InstanceBlockChain().HasBlock(hash, block.NumberU64()) {
+	if bc.InstanceBlockChain().HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
 			if peer.LocalType() == p2p.NtHpnode || peer.LocalType() == p2p.NtPrenode {//todo qinghua's
 				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})//todo qinghua's

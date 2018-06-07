@@ -148,7 +148,7 @@ type Block struct {
 	hash atomic.Value
 	size atomic.Value
 
-	// Td is used by package core to store the total difficulty
+	// Td is used by package bc to store the total difficulty
 	// of the chain up to and including the block.
 	td *big.Int
 

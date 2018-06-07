@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/log"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )

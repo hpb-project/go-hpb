@@ -22,7 +22,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 	"github.com/rcrowley/go-metrics"
 	"math"
 	"math/big"
@@ -317,7 +317,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 	floor, ceil := int64(-1), this.syncer.lightchain.CurrentHeader().Number.Uint64()
 
 	p.log.Debug("Looking for common ancestor", "local", ceil, "remote", height)
-	ceil = core.InstanceBlockChain().CurrentBlock().NumberU64()
+	ceil = bc.InstanceBlockChain().CurrentBlock().NumberU64()
 	if ceil >= MaxForkAncestry {
 		floor = int64(ceil - MaxForkAncestry)
 	}
@@ -376,7 +376,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 					continue
 				}
 				// Otherwise check if we already know the header or not
-				if core.InstanceBlockChain().HasBlockAndState(headers[i].Hash()) {
+				if bc.InstanceBlockChain().HasBlockAndState(headers[i].Hash()) {
 					number, hash = headers[i].Number.Uint64(), headers[i].Hash()
 
 					// If every header is known, even future ones, the peer straight out lied about its head
@@ -441,7 +441,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 				arrived = true
 
 				// Modify the search interval based on the response
-				if !core.InstanceBlockChain().HasBlockAndState(headers[0].Hash()) {
+				if !bc.InstanceBlockChain().HasBlockAndState(headers[0].Hash()) {
 					end = check
 					break
 				}
@@ -864,12 +864,12 @@ func (this *fullSync) processHeaders(origin uint64, td *big.Int) error {
 				hashes[i] = header.Hash()
 			}
 			lastHeader, lastFastBlock, lastBlock := this.syncer.lightchain.CurrentHeader().Number, common.Big0, common.Big0
-			lastFastBlock = core.InstanceBlockChain().CurrentFastBlock().Number()
-			lastBlock = core.InstanceBlockChain().CurrentBlock().Number()
+			lastFastBlock = bc.InstanceBlockChain().CurrentFastBlock().Number()
+			lastBlock = bc.InstanceBlockChain().CurrentBlock().Number()
 			this.syncer.lightchain.Rollback(hashes)
 			curFastBlock, curBlock := common.Big0, common.Big0
-			curFastBlock = core.InstanceBlockChain().CurrentFastBlock().Number()
-			curBlock = core.InstanceBlockChain().CurrentBlock().Number()
+			curFastBlock = bc.InstanceBlockChain().CurrentFastBlock().Number()
+			curBlock = bc.InstanceBlockChain().CurrentBlock().Number()
 			log.Warn("Rolled back headers", "count", len(hashes),
 				"header", fmt.Sprintf("%d->%d", lastHeader, this.syncer.lightchain.CurrentHeader().Number),
 				"fast", fmt.Sprintf("%d->%d", lastFastBlock, curFastBlock),
@@ -907,7 +907,7 @@ func (this *fullSync) processHeaders(origin uint64, td *big.Int) error {
 				// L: Sync begins, and finds common ancestor at 11
 				// L: Request new headers up from 11 (R's TD was higher, it must have something)
 				// R: Nothing to give
-				if !gotHeaders && td.Cmp(core.InstanceBlockChain().GetTdByHash(core.InstanceBlockChain().CurrentBlock().Hash())) > 0 {
+				if !gotHeaders && td.Cmp(bc.InstanceBlockChain().GetTdByHash(bc.InstanceBlockChain().CurrentBlock().Hash())) > 0 {
 					return errStallingPeer
 				}
 				// Disable any rollback and return
@@ -994,7 +994,7 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		}
-		if index, err := core.InstanceBlockChain().InsertChain(blocks); err != nil {
+		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
