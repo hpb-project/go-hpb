@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package BOE
+package boe
 
 /*
 #cgo CFLAGS: -I./core
@@ -165,33 +165,27 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     return ErrUpdateFailed
 }
 
-func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, []byte, error) {
+func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
     boe.m.Lock()
     defer boe.m.Unlock()
 
     if len(hash) != 32 || len(r) != 32 || len(s) != 32 {
-        return nil,nil,ErrInvalidParams
+        return nil,ErrInvalidParams
     }
 
     var (
-        x = make([]byte, 32)
-        y = make([]byte, 32)
+        result = make([]byte, 64)
         c_hash = (*C.uchar)(unsafe.Pointer(&hash[0]))
         c_r = (*C.uchar)(unsafe.Pointer(&r[0]))
         c_s = (*C.uchar)(unsafe.Pointer(&s[0]))
         c_v = C.uchar(v)
     )
-    var c_result *C.PublicKey_t
-    c_result = C.new_pubkey()
-    defer C.delete_pubkey(c_result)
-    c_result.x = (*C.uchar)(unsafe.Pointer(&x[0]))
-    c_result.y = (*C.uchar)(unsafe.Pointer(&y[0]))
     
-    c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, c_result)
+    c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
     if c_ret != 0 {
-        return nil,nil,ErrSignCheckFailed
+        return nil,ErrSignCheckFailed
     }
-    return x, y, nil
+    return result, nil
 }
 
 func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {

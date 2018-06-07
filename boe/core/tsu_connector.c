@@ -1,11 +1,19 @@
-// Last Update:2018-05-31 14:54:18
-/**
- * @file tsu_connector.c
- * @brief 
- * @author luxueqian
- * @version 0.1.00
- * @date 2018-05-23
- */
+// Copyright 2018 The go-hpb Authors
+// This file is part of the go-hpb.
+//
+// The go-hpb is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-hpb is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -50,7 +58,7 @@ static void tsu_init_package(T_Package *pack)
     pack->fragment_flag = 0;
 }
 
-int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKey_t *result)
+int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, uint8_t *result)
 {
     T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + 32*3+ 1);
     if(pack == NULL)
@@ -87,8 +95,7 @@ int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, PublicKe
         free(res);
         return -4;
     }
-    memcpy(result->x, res->payload, 32);
-    memcpy(result->y, res->payload+32, 32);
+    memcpy(result, res->payload, 64);
 
     free(res);
     return 0;
