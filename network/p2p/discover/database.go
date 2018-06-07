@@ -17,7 +17,7 @@
 // Contains the node database, storing previously seen nodes and any collected
 // metadata about them for QoS purposes.
 
-package nodetable
+package discover
 
 import (
 	"bytes"
@@ -42,6 +42,8 @@ var (
 	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
+
+	nodeDBNodeExpirationOneHour = time.Hour // Time after which an unseen node should be dropped.
 )
 
 // nodeDB stores all nodes we know about.
@@ -50,7 +52,7 @@ type nodeDB struct {
 	self   NodeID        // Own node id to prevent adding it into the database
 	runner sync.Once     // Ensures we can start at most one expirer
 	quit   chan struct{} // Channel to signal the expiring thread to stop
-	quited bool          // flag quit status
+	//quited bool          // flag quit status
 }
 
 // Schema layout for the node database
@@ -59,13 +61,10 @@ var (
 	nodeDBItemPrefix = []byte("n:")      // Identifier to prefix node entries with
 
 	nodeDBDiscoverRoot      = ":discover"
+	nodeDBDiscoverReg       = nodeDBDiscoverRoot + ":lastreg"
 	nodeDBDiscoverPing      = nodeDBDiscoverRoot + ":lastping"
 	nodeDBDiscoverPong      = nodeDBDiscoverRoot + ":lastpong"
 	nodeDBDiscoverFindFails = nodeDBDiscoverRoot + ":findfail"
-
-	nodeDBCommitteeRoot     = ":committee"
-	nodeDBCommitteePing      = nodeDBCommitteeRoot + ":lastping"
-	nodeDBCommitteePong      = nodeDBCommitteeRoot + ":lastpong"
 )
 
 // newNodeDB creates a new node database for storing and retrieving infos about
@@ -181,8 +180,8 @@ func (db *nodeDB) storeInt64(key []byte, n int64) error {
 }
 
 // node retrieves a node with a given id from the database.
-func (db *nodeDB) node(id NodeID, subKey string) *Node {
-	blob, err := db.lvl.Get(makeKey(id, subKey), nil)
+func (db *nodeDB) node(id NodeID) *Node {
+	blob, err := db.lvl.Get(makeKey(id, nodeDBDiscoverRoot), nil)
 	if err != nil {
 		return nil
 	}
@@ -196,12 +195,12 @@ func (db *nodeDB) node(id NodeID, subKey string) *Node {
 }
 
 // updateNode inserts - potentially overwriting - a node into the peer database.
-func (db *nodeDB) updateNode(node *Node, subKey string) error {
+func (db *nodeDB) updateNode(node *Node) error {
 	blob, err := rlp.EncodeToBytes(node)
 	if err != nil {
 		return err
 	}
-	return db.lvl.Put(makeKey(node.ID, subKey), blob, nil)
+	return db.lvl.Put(makeKey(node.ID, nodeDBDiscoverRoot), blob, nil)
 }
 
 // deleteNode deletes all information/keys associated with a node.
@@ -224,18 +223,18 @@ func (db *nodeDB) deleteNode(id NodeID) error {
 // it would require significant overhead to exactly trace the first successful
 // convergence, it's simpler to "ensure" the correct state when an appropriate
 // condition occurs (i.e. a successful bonding), and discard further events.
-func (db *nodeDB) ensureExpirer(subKeyRoot string, subKeyPong string) {
-	db.runner.Do(func() { go db.expirer(subKeyRoot, subKeyPong) })
+func (db *nodeDB) ensureExpirer() {
+	db.runner.Do(func() { go db.expirer() })
 }
 
 // expirer should be started in a go routine, and is responsible for looping ad
 // infinitum and dropping stale data from the database.
-func (db *nodeDB) expirer(subKeyRoot string, subKeyPong string) {
+func (db *nodeDB) expirer() {
 	tick := time.Tick(nodeDBCleanupCycle)
 	for {
 		select {
 		case <-tick:
-			if err := db.expireNodes(subKeyRoot, subKeyPong); err != nil {
+			if err := db.expireNodes(); err != nil {
 				log.Error("Failed to expire nodedb items", "err", err)
 			}
 
@@ -247,7 +246,7 @@ func (db *nodeDB) expirer(subKeyRoot string, subKeyPong string) {
 
 // expireNodes iterates over the database and deletes all nodes that have not
 // been seen (i.e. received a pong from) for some allotted time.
-func (db *nodeDB) expireNodes(subKeyRoot string, subKeyPong string) error {
+func (db *nodeDB) expireNodes() error {
 	threshold := time.Now().Add(-nodeDBNodeExpiration)
 
 	// Find discovered nodes that are older than the allowance
@@ -255,14 +254,14 @@ func (db *nodeDB) expireNodes(subKeyRoot string, subKeyPong string) error {
 	defer it.Release()
 
 	for it.Next() {
-		// Skip the item by root type
+		// Skip the item if not a discovery node
 		id, field := splitKey(it.Key())
-		if field != subKeyRoot {
+		if field != nodeDBDiscoverRoot {
 			continue
 		}
 		// Skip the node if not expired yet (and not self)
 		if !bytes.Equal(id[:], db.self[:]) {
-			if seen := db.lastPong(id, subKeyPong); seen.After(threshold) {
+			if seen := db.lastPong(id); seen.After(threshold) {
 				continue
 			}
 		}
@@ -274,38 +273,49 @@ func (db *nodeDB) expireNodes(subKeyRoot string, subKeyPong string) error {
 
 // lastPing retrieves the time of the last ping packet send to a remote node,
 // requesting binding.
-func (db *nodeDB) lastPing(id NodeID, subKeyPing string) time.Time {
-	return time.Unix(db.fetchInt64(makeKey(id, subKeyPing)), 0)
+func (db *nodeDB) lastRegister(id NodeID) time.Time {
+	return time.Unix(db.fetchInt64(makeKey(id, nodeDBDiscoverReg)), 0)
 }
 
 // updateLastPing updates the last time we tried contacting a remote node.
-func (db *nodeDB) updateLastPing(id NodeID, subKeyPing string, instance time.Time) error {
-	return db.storeInt64(makeKey(id, subKeyPing), instance.Unix())
+func (db *nodeDB) updateLastRegister(id NodeID, instance time.Time) error {
+	return db.storeInt64(makeKey(id, nodeDBDiscoverReg), instance.Unix())
+}
+
+// lastPing retrieves the time of the last ping packet send to a remote node,
+// requesting binding.
+func (db *nodeDB) lastPing(id NodeID) time.Time {
+	return time.Unix(db.fetchInt64(makeKey(id, nodeDBDiscoverPing)), 0)
+}
+
+// updateLastPing updates the last time we tried contacting a remote node.
+func (db *nodeDB) updateLastPing(id NodeID, instance time.Time) error {
+	return db.storeInt64(makeKey(id, nodeDBDiscoverPing), instance.Unix())
 }
 
 // lastPong retrieves the time of the last successful contact from remote node.
-func (db *nodeDB) lastPong(id NodeID, subKeyPong string) time.Time {
-	return time.Unix(db.fetchInt64(makeKey(id, subKeyPong)), 0)
+func (db *nodeDB) lastPong(id NodeID) time.Time {
+	return time.Unix(db.fetchInt64(makeKey(id, nodeDBDiscoverPong)), 0)
 }
 
 // updateLastPong updates the last time a remote node successfully contacted.
-func (db *nodeDB) updateLastPong(id NodeID, subKeyPong string, instance time.Time) error {
-	return db.storeInt64(makeKey(id, subKeyPong), instance.Unix())
+func (db *nodeDB) updateLastPong(id NodeID, instance time.Time) error {
+	return db.storeInt64(makeKey(id, nodeDBDiscoverPong), instance.Unix())
 }
 
 // findFails retrieves the number of findnode failures since bonding.
-func (db *nodeDB) findFails(id NodeID, subKeyFail string) int {
-	return int(db.fetchInt64(makeKey(id, subKeyFail)))
+func (db *nodeDB) findFails(id NodeID) int {
+	return int(db.fetchInt64(makeKey(id, nodeDBDiscoverFindFails)))
 }
 
 // updateFindFails updates the number of findnode failures since bonding.
-func (db *nodeDB) updateFindFails(id NodeID, subKeyFail string, fails int) error {
-	return db.storeInt64(makeKey(id, subKeyFail), int64(fails))
+func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
+	return db.storeInt64(makeKey(id, nodeDBDiscoverFindFails), int64(fails))
 }
 
 // querySeeds retrieves random nodes to be used as potential seed nodes
 // for bootstrapping.
-func (db *nodeDB) querySeeds(forRole uint8, n int, subKeyRoot string, subKeyPong string, maxAge time.Duration) []*Node {
+func (db *nodeDB) querySeeds(n int, maxAge time.Duration) []*Node {
 	var (
 		now   = time.Now()
 		nodes = make([]*Node, 0, n)
@@ -322,9 +332,9 @@ seek:
 		ctr := id[0]
 		rand.Read(id[:])
 		id[0] = ctr + id[0]%16
-		it.Seek(makeKey(id, subKeyRoot))
+		it.Seek(makeKey(id, nodeDBDiscoverRoot))
 
-		n := nextNode(it, subKeyRoot)
+		n := nextNode(it)
 		if n == nil {
 			id[0] = 0
 			continue seek // iterator exhausted
@@ -332,10 +342,7 @@ seek:
 		if n.ID == db.self {
 			continue seek
 		}
-		if n.Role != forRole {
-			continue seek
-		}
-		if now.Sub(db.lastPong(n.ID, subKeyPong)) > maxAge {
+		if now.Sub(db.lastPong(n.ID)) > maxAge {
 			continue seek
 		}
 		for i := range nodes {
@@ -350,10 +357,10 @@ seek:
 
 // reads the next node record from the iterator, skipping over other
 // database entries.
-func nextNode(it iterator.Iterator, subkeyRoot string) *Node {
+func nextNode(it iterator.Iterator) *Node {
 	for end := false; !end; end = !it.Next() {
 		id, field := splitKey(it.Key())
-		if field != subkeyRoot {
+		if field != nodeDBDiscoverRoot {
 			continue
 		}
 		var n Node
@@ -368,10 +375,6 @@ func nextNode(it iterator.Iterator, subkeyRoot string) *Node {
 
 // close flushes and closes the database files.
 func (db *nodeDB) close() {
-	if db.quited {
-		return
-	}
 	close(db.quit)
-	db.quited = true
 	db.lvl.Close()
 }
