@@ -26,55 +26,93 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/txpool/txpool/"
-	"github.com/hpb-project/go-hpb/blockchain/blockchain
-	"github.com/hpb-project/go-hpb/peermanager/
-	"github.com/hpb-project/go-hpb/synccontroller/synccontroller"
-	"github.com/hpb-project/go-hpb/log"
-	"github.com/hpb-project/go-hpb/config/p2p"
+	"github.com/hpb-project/ghpb/account"
+	"github.com/hpb-project/ghpb/storage"
+	"github.com/hpb-project/ghpb/core/event"
+	"github.com/hpb-project/ghpb/internal/debug"
+	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/network/p2p"
+	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/prometheus/prometheus/util/flock"
-	"github.com/hpb-project/go-hpb/go-hpb/txpool"
-	core2 "github.com/hpb-project/go-hpb/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/go-hpb/vm"
-	"github.com/hpb-project/go-hpb/go-hpb/common"
 )
 
 // Node is a container on which services can be registered.
 type Node struct {
-	Hpbconfig       *Config
-	Hpbpeermanager  *Peermanager
-	Hpbsyncctr      *Synccontroller
-	Hpbtxpool 		*Txpool
-	Hpbbc           *Blockchain
-	Hpbvm           *Vm
-	Hpbworker       *Worker
-	Hpbboe			*Boe
-	HpbDb			hpbdb.Database
-	HPbbase		    common.Address
+	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
+	config   *Config
+	accman   *accounts.Manager
 
-	networkId		uint64
-	netRPCService   *hpbapi.PublicNetAPI
+	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
+	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
+
+	serverConfig p2p.Config
+	server       *p2p.Server // Currently running P2P networking layer
+
+	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
+	services     map[reflect.Type]Service // Currently running services
+
+	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
+	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
+
+	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	ipcListener net.Listener // IPC RPC listener socket to serve API requests
+	ipcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
+
+	httpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	httpWhitelist []string     // HTTP RPC modules to allow through this endpoint
+	httpListener  net.Listener // HTTP RPC listener socket to server API requests
+	httpHandler   *rpc.Server  // HTTP RPC request handler to process the API requests
+
+	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	wsListener net.Listener // Websocket RPC listener socket to server API requests
+	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
+
+	stop chan struct{} // Channel to wait for termination notifications
+	lock sync.RWMutex
 }
 
-// New creates a hpb node, create all object and start
-func New(config *Config) (*Node, error) (*Node, error){
-	//create all object
-	hpbpeermanager, err := New
-	node := &Node{
-		peermanager: peermanager
-		syncctr:     syncctr
-		txpool:         txpool
-		bc:             bc
-		worker:         worker
-		boe:         boe
+// New creates a new P2P node, ready for protocol registration.
+func New(conf *Config) (*Node, error) {
+	// Copy config and resolve the datadir so future changes to the current
+	// working directory don't affect the node.
+	confCopy := *conf
+	conf = &confCopy
+	if conf.DataDir != "" {
+		absdatadir, err := filepath.Abs(conf.DataDir)
+		if err != nil {
+			return nil, err
+		}
+		conf.DataDir = absdatadir
 	}
-
-	syncctr.New()
-	return node, nil
-}
-
-
-
+	// Ensure that the instance name doesn't cause weird conflicts with
+	// other files in the data directory.
+	if strings.ContainsAny(conf.Name, `/\`) {
+		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
+	}
+	if conf.Name == datadirDefaultKeyStore {
+		return nil, errors.New(`Config.Name cannot be "` + datadirDefaultKeyStore + `"`)
+	}
+	if strings.HasSuffix(conf.Name, ".ipc") {
+		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
+	}
+	// Ensure that the AccountManager method works before the node has started.
+	// We rely on this in cmd/geth.
+	am, ephemeralKeystore, err := makeAccountManager(conf)
+	if err != nil {
+		return nil, err
+	}
+	// Note: any interaction with Config that would create/touch files
+	// in the data directory or instance directory is delayed until Start.
+	return &Node{
+		accman:            am,
+		ephemeralKeystore: ephemeralKeystore,
+		config:            conf,
+		serviceFuncs:      []ServiceConstructor{},
+		ipcEndpoint:       conf.IPCEndpoint(),
+		httpEndpoint:      conf.HTTPEndpoint(),
+		wsEndpoint:        conf.WSEndpoint(),
+		eventmux:          new(event.TypeMux),
+	}, nil
 }
 
 // Register injects a new service into the node's stack. The service created by
