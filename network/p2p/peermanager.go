@@ -21,7 +21,7 @@ import (
 	"errors"
 	"math/big"
 	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 )
 
 

@@ -23,7 +23,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 	"github.com/hpb-project/ghpb/network/p2p/discover"
 	"github.com/hpb-project/ghpb/network/p2p/netutil"
 )

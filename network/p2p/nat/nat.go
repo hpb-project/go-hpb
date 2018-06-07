@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 	"github.com/jackpal/go-nat-pmp"
 )
 

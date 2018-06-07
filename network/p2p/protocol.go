@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/ghpb/network/p2p/discover"
 	"math/big"
 	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 )
 
 // Protocol represents a P2P subprotocol implementation.

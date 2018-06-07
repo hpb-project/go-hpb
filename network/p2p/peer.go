@@ -25,7 +25,7 @@ import (
 
 	"github.com/hpb-project/ghpb/common/mclock"
 	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 	"github.com/hpb-project/ghpb/network/p2p/discover"
 	"github.com/hpb-project/ghpb/common/rlp"
 	"gopkg.in/fatih/set.v0"
