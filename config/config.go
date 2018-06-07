@@ -29,11 +29,11 @@ import (
 )
 var HpbconfigIns *HpbConfig
 const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
-	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
-	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
-	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	DatadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
+	DatadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
+	DatadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
+	DatadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
 
 const (
