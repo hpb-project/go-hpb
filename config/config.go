@@ -17,8 +17,6 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
-
 	"reflect"
 	"unicode"
 	"bufio"
@@ -26,7 +24,6 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
-	"github.com/hpb-project/go-hpb/cmd/utils"
 	"fmt"
 	"os"
 )
@@ -141,22 +138,7 @@ type HpbConfig struct {
 }
 
 
-var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
-		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...)),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
-	}
 
-	configFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
-)
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
 var tomlSettings = toml.Config{

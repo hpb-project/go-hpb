@@ -27,11 +27,11 @@ import (
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
-	"github.com/hpb-project/go-hpb/protocol"
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/common/metrics"
@@ -58,7 +58,8 @@ var (
 )
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
-	GitCommit = ""
+	GitCommit = gitCommit
+	gitCommit = ""
 	// Hpb address of the Geth release oracle.
 	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
@@ -206,7 +207,7 @@ func main() {
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
 	node, cfg := MakeConfigNode(ctx)
-	startNode(ctx, node)
+	//startNode(ctx, node)
 	node.Wait()
 	return nil
 }
