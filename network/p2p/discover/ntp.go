@@ -17,7 +17,7 @@
 // Contains the NTP time drift detection via the SNTP protocol:
 //   https://tools.ietf.org/html/rfc4330
 
-package nodetable
+package discover
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/ghpb/log"
 )
 
 const (

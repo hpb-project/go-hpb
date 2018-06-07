@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package nodetable
+package discover
 
 import (
 	"crypto/ecdsa"
@@ -35,24 +35,47 @@ import (
 	"github.com/hpb-project/ghpb/common/crypto/secp256k1"
 )
 
-const NodeIDBits = 512
+const NodeIDBits   = 512
+const RandNonceSize = 32
 
-//node roles
+// 节点类型
+type NodeType  uint8
 const(
-	UnKnowRole uint8 = 0
-	BootRole         = 1
-	LightRole        = 2
-	AccessRole       = 3
-	HpRole           = 4
-	PreRole          = 5
+	LightNode  NodeType = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型
+
+	AuthNode   NodeType = 0x30  //普通节点 经过认证的节点
+	PreNode    NodeType = 0x31  //候选节点
+	HpNode     NodeType = 0x60  //高性能节点
+
+	BootNode   NodeType = 0xA0  //启动节点
 )
+
+func (nt NodeType)ToString() string {
+	switch nt {
+	case LightNode:
+		return "LightNode"
+	case AuthNode:
+		return "AuthNode"
+	case PreNode:
+		return "PreNode"
+	case HpNode:
+		return "HpNode"
+	case BootNode:
+		return "BootNode"
+	}
+	return "UnknownNode"
+}
+
+
 // Node represents a host on the network.
 // The fields of Node may not be modified.
 type Node struct {
-	IP       net.IP // len 4 for IPv4 or 16 for IPv6
-	UDP, TCP uint16 // port numbers
-	ID       NodeID // the node's public key
-	Role     uint8   // role of node(UnKnowRole, LightRole, AccessRole, HpRole or PreRole)
+	IP       net.IP    // len 4 for IPv4 or 16 for IPv6
+	UDP, TCP uint16    // port numbers
+	ID       NodeID    // the node's public key
+
+	TYPE     NodeType  // 默认为轻节点，通过硬件认证的为认证节点.节点类型需要全网确认.
+	Ext      ExtData
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
 	// possible to write tests that need a node at a certain distance.
@@ -65,19 +88,25 @@ type Node struct {
 	contested bool
 }
 
+type ExtData struct {
+	RandNonce  []byte  // 节点的随机数,用于硬件验证
+	Loacation  uint8   // 节点地理位置信息
+}
+
 // NewNode creates a new node. It is mostly meant to be used for
 // testing purposes.
-func NewNode(id NodeID, role uint8, ip net.IP, udpPort, tcpPort uint16) *Node {
+func NewNode(id NodeID, nodeType NodeType, ip net.IP, udpPort, tcpPort uint16) *Node {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
 	return &Node{
-		IP:  ip,
-		Role:role,
-		UDP: udpPort,
-		TCP: tcpPort,
-		ID:  id,
-		sha: crypto.Keccak256Hash(id[:]),
+		IP:   ip,
+		UDP:  udpPort,
+		TCP:  tcpPort,
+		ID:   id,
+		sha:  crypto.Keccak256Hash(id[:]),
+		TYPE: nodeType,
+		Ext:  ExtData{make([]byte,RandNonceSize),0xFF},
 	}
 }
 
@@ -116,7 +145,7 @@ func (n *Node) String() string {
 		u.Host = fmt.Sprintf("%x", n.ID[:])
 	} else {
 		addr := net.TCPAddr{IP: n.IP, Port: int(n.TCP)}
-		u.User = url.User(fmt.Sprintf("%x&%d", n.ID[:], n.Role))
+		u.User = url.User(fmt.Sprintf("%x&%x&%x", n.ID[:],n.TYPE,n.Ext.Loacation))
 		u.Host = addr.String()
 		if n.UDP != n.TCP {
 			u.RawQuery = "discport=" + strconv.Itoa(int(n.UDP))
@@ -127,8 +156,6 @@ func (n *Node) String() string {
 
 var incompleteNodeURL = regexp.MustCompile("(?i)^(?:hnode://)?([0-9a-f]+)$")
 
-var nodeWitRoleRegexp = fmt.Sprintf("(?i)^(?:hnode://)?([0-9a-f]{%d})&([0-9a-f]+)$", NodeIDBits / 4)
-var incompleteNodeURLWithRole = regexp.MustCompile(nodeWitRoleRegexp)
 // ParseNode parses a node designator.
 //
 // There are two basic forms of node designators
@@ -158,29 +185,14 @@ func ParseNode(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, UnKnowRole, nil, 0, 0), nil
+		return NewNode(id, LightNode,nil, 0, 0), nil
 	}
-
-	if m := incompleteNodeURLWithRole.FindStringSubmatch(rawurl); m != nil {
-		id, err := HexID(m[1])
-		if err != nil {
-			return nil, fmt.Errorf("invalid node ID (%v)", err)
-		}
-		if valInt, err := strconv.Atoi(m[2]); err == nil {
-			return NewNode(id, uint8(valInt),nil, 0, 0), nil
-		} else {
-			return nil, fmt.Errorf("invalid node Role (%v)", err)
-		}
-		return NewNode(id, UnKnowRole, nil, 0, 0), nil
-	}
-	// not end with hex string
 	return parseComplete(rawurl)
 }
 
 func parseComplete(rawurl string) (*Node, error) {
 	var (
 		id               NodeID
-		role             uint8
 		ip               net.IP
 		tcpPort, udpPort uint64
 	)
@@ -195,22 +207,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	if u.User == nil {
 		return nil, errors.New("does not contain node ID")
 	}
-	var tmpStr = strings.Split(u.User.String(), "&")
-	switch len(tmpStr) {
-	case 2:
-		if id, err = HexID(tmpStr[0]); err != nil {
-			return nil, fmt.Errorf("invalid node ID (%v)", err)
-		}
-		if roleInt, err := strconv.ParseInt(tmpStr[1], 10, 8); err != nil {
-			fmt.Errorf("conver node role error (%v)", err)
-		} else {
-			role = uint8(roleInt)
-		}
-	case 1:
-		if id, err = HexID(tmpStr[0]); err != nil {
-			return nil, fmt.Errorf("invalid node ID (%v)", err)
-		}
-	case 0:
+	if id, err = HexID(u.User.String()); err != nil {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
 	// Parse the IP address.
@@ -237,7 +234,7 @@ func parseComplete(rawurl string) (*Node, error) {
 			return nil, errors.New("invalid discport in query")
 		}
 	}
-	return NewNode(id, role, ip, uint16(udpPort), uint16(tcpPort)), nil
+	return NewNode(id, LightNode,ip, uint16(udpPort), uint16(tcpPort)), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.
@@ -471,36 +468,4 @@ func hashAtDistance(a common.Hash, n int) (b common.Hash) {
 		b[i] = byte(rand.Intn(255))
 	}
 	return b
-}
-
-// remove duplicate nodes by id.
-func nodesDuplicate(nodes []*Node) []*Node {
-	var x []*Node
-	for _, i := range nodes {
-		if len(x) == 0 {
-			x = append(x, i)
-		} else {
-			for k, v := range x {
-				if i.ID == v.ID {
-					break
-				}
-				if k == len(x) - 1 {
-					x = append(x, i)
-				}
-			}
-		}
-	}
-	return x
-}
-
-// filter out bootNodes
-func filterBootNodes(nodes []*Node) []*Node {
-	var x []*Node
-	for _, i := range nodes {
-		if i.Role == BootRole {
-			continue
-		}
-		x = append(x, i)
-	}
-	return x
 }
