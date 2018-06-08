@@ -419,19 +419,20 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-	if err := self.engine.Prepare(self.chain, header); err != nil {
+	//准备区块的头部
+	if err := self.engine.PrepareBlockHeader(self.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
-	// Could potentially happen if starting to mine in an odd state.
+	// 获取当前挖矿的work
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
-	// Create the current work task and check any fork transitions needed
 	work := self.current
 	
+	//获取最新的Pending
 	pending, err := self.hpb.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)

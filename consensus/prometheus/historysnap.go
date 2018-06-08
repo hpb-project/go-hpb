@@ -90,6 +90,7 @@ func newHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, num
 	return snap
 }
 
+//加载快照，直接去数据库中读取
 func loadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*Historysnap, error) {
 	blob, err := db.Get(append([]byte("prometheus-"), hash[:]...))
 	if err != nil {

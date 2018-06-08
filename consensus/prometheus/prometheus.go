@@ -96,11 +96,13 @@ func sigHash(header *types.Header) (hash common.Hash) {
 }
 
 // 实现引擎的Prepare函数
-func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
 
+	//获取Coinbase
 	header.CoinbaseHash = common.AddressHash{}
+	//获取Nonce
 	header.Nonce = types.BlockNonce{}
-
+	//获得块号
 	number := header.Number.Uint64()
 
 	log.Info("Prepare the parameters for mining")
@@ -109,14 +111,17 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
     signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
 	header.Random = uniquerand
 
-	// Assemble the voting snapshot to check which votes make sense
+	// 获取快照
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
+	
+	//
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
 		// Gather all the proposals that make sense voting on
+		// 改造点， 开始从网络中获取
 		addresses := make([]common.AddressHash, 0, len(c.proposals))
 		for address, authorize := range c.proposals {
 			if snap.validVote(address, authorize) {
@@ -135,38 +140,38 @@ func (c *Prometheus) Prepare(chain consensus.ChainReader, header *types.Header) 
 		c.lock.RUnlock()
 	}
 
-	// Set the correct difficulty
-	// 根据 addressHash 来判断是否
+	//确定当前轮次的难度值，如果当前轮次
+	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	//if snap.inturn(header.Number.Uint64(), c.signerHash) {
-	if snap.inturn(header.Number.Uint64(), signerHash) {
+、	if snap.inturn(header.Number.Uint64(), signerHash) {
 		header.Difficulty = diffInTurn
 	}
 	
 	// Ensure the extra data has all it's components
+	// 检查头部的组成情况
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
 	}
 
 	header.Extra = header.Extra[:extraVanity]
 
+    //在投票周期的时候，放入全部的AddressHash
 	if number%c.config.Epoch == 0 {
-		//在投票周期的时候，放入全部的AddressHash
 		for _, signerHash := range snap.signers() {
 			header.Extra = append(header.Extra, signerHash[:]...)
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-
-	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
 
-	// Ensure the timestamp has the correct delay
+	// 获取父亲的节点
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
+	
+	//设置时间点，如果函数太小则，设置为当前的时间
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
