@@ -107,7 +107,8 @@ func New(conf  *config.Nodeconfig) (*Node, error){
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	Hpbpeermanager := p2p.PeerMgrInst()
-	Hpbsyncctr     := synctrl.NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool,/*todo txpool*/
+	Hpbtxpool      :=
+	Hpbsyncctr     := synctrl.NewSynCtrl(config *config.ChainConfig, conf.SyncMode, conf.NetworkId, mux *event.TypeMux, txpool txPool,/*todo txpool*/
 		engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error)
 	//Hpbtxpool 		*Txpool
 	Hpbbc           *bc.BlockChain

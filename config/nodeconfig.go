@@ -65,7 +65,7 @@ type Nodeconfig struct {
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
+	SyncMode  int
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
@@ -129,7 +129,6 @@ func (c *Nodeconfig) NodeDB() string {
 	}
 	return c.resolvePath(datadirNodeDatabase)
 }
-
 // NodeName returns the devp2p node identifier.
 func (c *Nodeconfig) NodeName() string {
 	name := c.name()
