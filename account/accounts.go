@@ -19,9 +19,9 @@ package accounts
 
 import (
 	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/core/event"
 	"math/big"
+	"github.com/hpb-project/go-hpb/types"
 )
 
 // Account represents an Hpb account located at a specific location defined
