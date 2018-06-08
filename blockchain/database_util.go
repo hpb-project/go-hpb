@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -43,6 +44,8 @@ type DatabaseDeleter interface {
 }
 
 var (
+	voteResultKey   = []byte("vote-result-key")
+
 	headHeaderKey = []byte("LastHeader")
 	headBlockKey  = []byte("LastBlock")
 	headFastKey   = []byte("LastFast")
@@ -118,6 +121,36 @@ func WriteRandom(db hpbdb.Putter, rand string) error {
 }
 
 
+func GetVoteResult(db DatabaseReader) *types.VoteResult {
+	data, _ := db.Get(voteResultKey)
+	if len(data) == 0 {
+		return nil
+	}
+
+	rst := new(types.VoteResult)
+	err := json.Unmarshal(data, rst)
+	if err != nil {
+		return nil
+	}
+
+	return rst
+}
+
+func WriteVoteResult(db hpbdb.Putter, voteRst *types.VoteResult) error {
+	rst , err := json.Marshal(voteRst)
+	if err != nil {
+		fmt. Println ( "error:" , err )
+	}
+
+	if err := db.Put(voteResultKey, rst); err != nil {
+		log.Crit("Failed to store vote result", "err", err)
+	}
+	return nil
+}
+
+func DeleteVoteResult(db DatabaseDeleter)  {
+	db.Delete(voteResultKey)
+}
 
 // missingNumber is returned by GetBlockNumber if no header with the
 // given block hash has been stored in the database
