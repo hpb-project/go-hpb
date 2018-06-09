@@ -41,6 +41,8 @@ import (
 	"github.com/hpb-project/ghpb/protocol/gasprice"
 	"github.com/hpb-project/ghpb/protocol/light"
 	"github.com/hpb-project/ghpb/storage"
+	"github.com/hpb-project/ghpb/consensus/prometheus"
+
 )
 
 type LightHpb struct {
@@ -93,7 +95,7 @@ func New(ctx *node.ServiceContext, config *hpb.Config) (*LightHpb, error) {
 		peers:          peers,
 		reqDist:        newRequestDistributor(peers, quitSync),
 		accountManager: ctx.AccountManager,
-		engine:         hpb.CreateConsensusEngine(ctx, config, chainConfig, chainDb),
+		engine:         prometheus.New(chainConfig.Prometheus, chainDb),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 	}

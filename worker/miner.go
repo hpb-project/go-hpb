@@ -54,6 +54,7 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
+//构造函数
 func New(hpb Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		hpb:      hpb,
@@ -119,12 +120,16 @@ func (self *Miner) Start(coinbase common.Address) {
  
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
+	self.worker.startNewMinerRound()
 }
 
+//停止挖矿的方法
 func (self *Miner) Stop() {
+	//当前的worker通知
 	self.worker.stop()
+	//设置表示位
 	atomic.StoreInt32(&self.mining, 0)
+	//设置表示位
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
 
