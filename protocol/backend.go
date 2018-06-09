@@ -123,7 +123,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Hpb, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
+		engine:         prometheus.New(chainConfig.Prometheus, chainDb),
 		shutdownChan:   make(chan bool),
 		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
@@ -204,15 +204,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (hpbdb.Data
 		db.Meter("hpb/db/chaindata/")
 	}
 	return db, nil
-}
-
-// CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db hpbdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Prometheus == nil {
-		chainConfig.Prometheus = params.MainnetChainConfig.Prometheus
-	}
-	return prometheus.New(chainConfig.Prometheus, db)
 }
 
 // APIs returns the collection of RPC services the hpb package offers.

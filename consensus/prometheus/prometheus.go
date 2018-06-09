@@ -143,7 +143,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-、	if snap.inturn(header.Number.Uint64(), signerHash) {
+	if snap.inturn(header.Number.Uint64(), signerHash) {
 		header.Difficulty = diffInTurn
 	}
 	
@@ -314,7 +314,7 @@ type Prometheus struct {
 	lock       sync.RWMutex       // Protects the signerHash fields
 }
 
-// 新创建
+// 新创建,在backend中调用
 func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 	conf := *config

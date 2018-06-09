@@ -87,6 +87,7 @@ out:
 			self.quitCurrentOp = make(chan struct{})
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
+			
 		case <-self.stop:
 			self.mu.Lock()
 			if self.quitCurrentOp != nil {

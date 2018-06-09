@@ -144,17 +144,20 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	}
 	// Subscribe TxPreEvent for tx pool
 	worker.txSub = hpb.TxPool().SubscribeTxPreEvent(worker.txCh)
-	// Subscribe events for blockchain
 	worker.chainHeadSub = hpb.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = hpb.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-	go worker.update()
-
-	go worker.wait()
-	worker.commitNewWork()
+	
+	//对以上事件的监听
+	go worker.eventListener()
+	
+	go worker.handlerSelfMinedBlock()
+	
+	worker.startNewMinerRound()
 
 	return worker
 }
 
+//允许矿工设置coinbase
 func (self *worker) setHpberbase(addr common.Address) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -211,7 +214,6 @@ func (self *worker) start() {
 
 func (self *worker) stop() {
 	self.wg.Wait()
-
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	if atomic.LoadInt32(&self.mining) == 1 {
@@ -237,18 +239,19 @@ func (self *worker) unregister(agent Agent) {
 	agent.Stop()
 }
 
-func (self *worker) update() {
+// 开始对三个事件进行监听，并开始进行
+func (self *worker) eventListener() {
 	defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
 	for {
-		// A real event arrived, process interesting content
+		// 接收事件
 		select {
-		// Handle ChainHeadEvent
+		// 当区块的头部发生变化的时候开始下一轮的挖矿
 		case <-self.chainHeadCh:
 		    log.Info("@@@@@@@@@@@@work->chainHeadCh")
-			self.commitNewWork()
+			self.startNewMinerRound()
 
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -269,7 +272,7 @@ func (self *worker) update() {
 				self.currentMu.Unlock()
 			}
 
-		// System stopped
+		// 检测异常
 		case <-self.txSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
@@ -280,15 +283,20 @@ func (self *worker) update() {
 	}
 }
 
-func (self *worker) wait() {
+//处理自己身生成的区块
+func (self *worker) handlerSelfMinedBlock() {
 	for {
 		mustCommitNewWork := true
+		
 		for result := range self.recv {
+			
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
 				continue
 			}
+			
+			//当前的区块
 			block := result.Block
 			work := result.Work
 
@@ -304,12 +312,15 @@ func (self *worker) wait() {
 			}
 			
 			log.Info("###### Write Block and State From Inside", "number", block.Number(), "hash", block.Hash(),"difficulty",block.Difficulty())
+			
+			// 写入区块和状态
 			stat, err := self.chain.WriteBlockAndState(block, work.receipts, work.state)
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
 			}
 			// check if canon block and write transactions
+			// 检查状态，是否为主链
 			if stat == core.CanonStatTy {
 				// implicit by posting ChainHeadEvent
 				mustCommitNewWork = false
@@ -333,7 +344,7 @@ func (self *worker) wait() {
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
-				self.commitNewWork()
+				self.startNewMinerRound()
 			}
 		}
 	}
@@ -384,7 +395,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() {
+//开始新一轮的组装区块
+func (self *worker) startNewMinerRound() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -393,6 +405,7 @@ func (self *worker) commitNewWork() {
 	defer self.currentMu.Unlock()
 
 	tstart := time.Now()
+	//获取当前的区块
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
@@ -438,10 +451,12 @@ func (self *worker) commitNewWork() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+	//进行排序
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+	//对区块的判断进行处理
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
-	// compute uncles for the new block.
+	//对叔叔区块的处理
 	var (
 		uncles    []*types.Header
 		badUncles []common.Hash
@@ -492,26 +507,26 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
+	
 	gp := new(core.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
 
 	for {
-		// Retrieve the next transaction and abort if all done
+		// 获取一个交易
 		tx := txs.Peek()
 		if tx == nil {
 			break
 		}
-		// Error may be ignored here. The error has already been checked
-		// during transaction acceptance is the transaction pool.
-		//
-		// We use the eip155 signer regardless of the current hf.
+
+		//获取交易的发送者
 		from, _ := types.Sender(env.signer, tx)
 		
-		// Start executing the transaction
+		// 虚拟机开始执行交易
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
 		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
+		
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
