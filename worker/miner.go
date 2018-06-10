@@ -34,7 +34,7 @@ import (
 	"github.com/hpb-project/ghpb/common/constant"
 )
 
-// Backend wraps all methods required for mining.
+// Backend 接口
 type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
@@ -42,7 +42,7 @@ type Backend interface {
 	ChainDb() hpbdb.Database
 }
 
-// Miner creates blocks and searches for proof-of-work values.
+// Miner 结构体
 type Miner struct {
 	mux         *event.TypeMux
 	worker      *worker
@@ -61,48 +61,49 @@ func New(hpb Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		mux:      mux,
 		engine:   engine,
 		worker:   newWorker(config, engine, common.Address{}, hpb, mux),
-		canStart: 1,
+		canStart: 1, //
 	}
+	
 	miner.Register(NewCpuAgent(hpb.BlockChain(), engine))
-	go miner.update()
+	
+	go miner.downloaderEventHandle()
 
 	return miner
 }
 
-// update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
-// It's entered once and as soon as `Done` or `Failed` has been broadcasted the events are unregistered and
-// the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
-// and halt your mining operation for as long as the DOS continues.
-func (self *Miner) update() {
+
+//下载事件的处理，遇到Done和Failed取消订阅，防止DDOS攻击
+
+func (self *Miner) downloaderEventHandle() {
 	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
 out:
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
-		case downloader.StartEvent:
-			
-			log.Info("@@@@@@@@@@@@miner->update->downloader.StartEvent")
-
-			atomic.StoreInt32(&self.canStart, 0)
-			if self.Mining() {
-				self.Stop()
-				atomic.StoreInt32(&self.shouldStart, 1)
-				log.Info("Mining aborted due to sync")
+			//下载事件开始，当前的挖矿停止
+			case downloader.StartEvent:
+				
+				log.Info("@@@@@@@@@@@@miner->update->downloader.StartEvent")
+	
+				atomic.StoreInt32(&self.canStart, 0)
+				if self.Mining() {
+					self.Stop()
+					atomic.StoreInt32(&self.shouldStart, 1)
+					log.Info("Mining aborted due to sync")
+				}
+			//下载事件结束，允许挖矿	
+			case downloader.DoneEvent, downloader.FailedEvent:
+				shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
+				
+				log.Info("@@@@@@@@@@@@miner->update--downloader.DoneEvent")
+	
+				atomic.StoreInt32(&self.canStart, 1) //是否能开始挖矿
+				atomic.StoreInt32(&self.shouldStart, 0) //是否可以开始，调整
+				if shouldStart {
+					self.Start(self.coinbase)
+				}
+				events.Unsubscribe()
+				break out
 			}
-		case downloader.DoneEvent, downloader.FailedEvent:
-			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
-			
-			log.Info("@@@@@@@@@@@@miner->update--downloader.DoneEvent")
-
-			atomic.StoreInt32(&self.canStart, 1)
-			atomic.StoreInt32(&self.shouldStart, 0)
-			if shouldStart {
-				self.Start(self.coinbase)
-			}
-			// unsubscribe. we're only interested in this event once
-			events.Unsubscribe()
-			// stop immediately and ignore all further pending events
-			break out
-		}
 	}
 }
 
@@ -111,15 +112,21 @@ func (self *Miner) Start(coinbase common.Address) {
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.worker.setHpberbase(coinbase)
 	self.coinbase = coinbase
-
+	
+	// 说明再次被阻断，说明开始的时候被打断
 	if atomic.LoadInt32(&self.canStart) == 0 {
 		log.Info("Network syncing, will start miner afterwards")
 		return
 	}
+	//设置正在挖矿的标识位
 	atomic.StoreInt32(&self.mining, 1)
  
 	log.Info("Starting mining operation")
-	self.worker.start()
+	
+	//开始打包的循环
+	self.worker.start() 
+	
+	//开始进行，生成块头
 	self.worker.startNewMinerRound()
 }
 
@@ -156,16 +163,14 @@ func (self *Miner) SetExtra(extra []byte) error {
 	return nil
 }
 
-// Pending returns the currently pending block and associated state.
+
+// 获取当前的Pending
 func (self *Miner) Pending() (*types.Block, *state.StateDB) {
 	return self.worker.pending()
 }
 
-// PendingBlock returns the currently pending block.
-//
-// Note, to access both the pending block and the pending state
-// simultaneously, please use Pending(), as the pending state can
-// change between multiple method calls
+
+// 返回当前的PendingBlock
 func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
