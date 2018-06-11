@@ -28,10 +28,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/common/log"
 	"gopkg.in/fatih/set.v0"
+	"github.com/hpb-project/go-hpb/account"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

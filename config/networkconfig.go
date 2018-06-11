@@ -184,6 +184,9 @@ var defaultNetworkConfig = NetworkConfig{
 	NAT:             nat.Any(),
 
 
+	IPCPath:   "ghpb.ipc",
+
+
 }
 
 var MainnetBootnodes = []string{

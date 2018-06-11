@@ -26,12 +26,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/internal/debug"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/node"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/internal/debug"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/node"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
 const (

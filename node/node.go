@@ -28,32 +28,33 @@ import (
 
 	"github.com/hpb-project/go-hpb/txpool/"
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/blockchain/blockchain
-	"github.com/hpb-project/go-hpb/peermanager/
-	"github.com/hpb-project/go-hpb/synccontroller/synccontroller"
+	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/blockchain/
+	"github.com/hpb-project/go-hpb/network/p2p
+	"github.com/hpb-project/go-hpb/network/rpc
+	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/log"
-	"github.com/hpb-project/go-hpb/config/p2p"
 	"github.com/prometheus/prometheus/util/flock"
-	"github.com/hpb-project/go-hpb/go-hpb/txpool"
-	core2 "github.com/hpb-project/go-hpb/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/go-hpb/vm"
-	"github.com/hpb-project/go-hpb/go-hpb/common"
+	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
+	"io/ioutil"
 )
 
 // Node is a container on which services can be registered.
 type Node struct {
-	Hpbconfig       *Config
-	Hpbpeermanager  *Peermanager
-	Hpbsyncctr      *Synccontroller
-	Hpbtxpool 		*Txpool
-	Hpbbc           *Blockchain
-	Hpbvm           *Vm
-	Hpbworker       *Worker
-	Hpbboe			*Boe
-	HpbDb			hpbdb.Database
+	Hpbconfig       *config.HpbConfig
+	Hpbpeermanager  *p2p.PeerManager
+	Hpbsyncctr      *synctrl
+	//Hpbtxpool 		*Txpool
+	Hpbbc           *bc.BlockChain
+	//Hpbworker       *Worker
+	Hpbboe			*boe.BoeHandle
+	//HpbDb
 	HPbbase		    common.Address
 
 	networkId		uint64
@@ -72,7 +73,7 @@ type Node struct {
 }
 
 // New creates a hpb node, create all object and start
-func New(conf *config.Nodeconfig) (*Node, error){
+func New(conf  *config.Nodeconfig) (*Node, error){
 
 	confCopy := *conf
 	conf = &confCopy
@@ -83,17 +84,48 @@ func New(conf *config.Nodeconfig) (*Node, error){
 		}
 		conf.DataDir = absdatadir
 	}
-	//create all object
-	hpbpeermanager, err := New
-	node := &Node{
 
-		/*Peermanager: peermanager,
-		syncctr:     syncctr,
-		txpool:         txpool,
-		bc:             bc,
-		worker:         worker,
-		boe:         boe,*/
-		accman:		am,
+	// Ensure that the instance name doesn't cause weird conflicts with
+	// other files in the data directory.
+	if strings.ContainsAny(conf.Name, `/\`) {
+		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
+	}
+	if conf.Name == config.DatadirDefaultKeyStore{
+		return nil, errors.New(`Config.Name cannot be "` + config.DatadirDefaultKeyStore + `"`)
+	}
+	if strings.HasSuffix(conf.Name, ".ipc") {
+		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
+	}
+
+	// Ensure that the AccountManager method works before the node has started.
+	// We rely on this in cmd/geth.
+	am, ephemeralKeystore, err := makeAccountManager(conf)
+	if err != nil {
+		return nil, err
+	}
+	// Note: any interaction with Config that would create/touch files
+	// in the data directory or instance directory is delayed until Start.
+	//create all object
+	Hpbpeermanager := p2p.PeerMgrInst()
+	Hpbtxpool      :=
+	Hpbsyncctr     := synctrl.NewSynCtrl(config *config.ChainConfig, conf.SyncMode, conf.NetworkId, mux *event.TypeMux, txpool txPool,/*todo txpool*/
+		engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error)
+	//Hpbtxpool 		*Txpool
+	Hpbbc           *bc.BlockChain
+	//Hpbworker       *Worker
+	Hpbboe			*boe.BoeHandle
+
+
+	retrun &Node{
+
+		accman:            am,
+		ephemeralKeystore: ephemeralKeystore,
+		config:            conf,
+		serviceFuncs:      []ServiceConstructor{},
+		ipcEndpoint:       conf.IPCEndpoint(),
+		httpEndpoint:      conf.HTTPEndpoint(),
+		wsEndpoint:        conf.WSEndpoint(),
+		eventmux:          new(event.TypeMux),
 
 	}
 
@@ -103,20 +135,50 @@ func New(conf *config.Nodeconfig) (*Node, error){
 
 
 
-}
-
-// Register injects a new service into the node's stack. The service created by
-// the passed constructor must be unique in its type with regard to sibling ones.
-func (n *Node) Register(constructor ServiceConstructor) error {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	if n.server != nil {
-		return ErrNodeRunning
+func makeAccountManager(conf  *config.Nodeconfig) (*accounts.Manager, string, error) {
+	scryptN := keystore.StandardScryptN
+	scryptP := keystore.StandardScryptP
+	if conf.UseLightweightKDF {
+		scryptN = keystore.LightScryptN
+		scryptP = keystore.LightScryptP
 	}
-	n.serviceFuncs = append(n.serviceFuncs, constructor)
-	return nil
+
+	var (
+		keydir    string
+		ephemeral string
+		err       error
+	)
+	switch {
+	case filepath.IsAbs(conf.KeyStoreDir):
+		keydir = conf.KeyStoreDir
+	case conf.DataDir != "":
+		if conf.KeyStoreDir == "" {
+			keydir = filepath.Join(conf.DataDir, config.DatadirDefaultKeyStore)
+		} else {
+			keydir, err = filepath.Abs(conf.KeyStoreDir)
+		}
+	case conf.KeyStoreDir != "":
+		keydir, err = filepath.Abs(conf.KeyStoreDir)
+	default:
+		// There is no datadir.
+		keydir, err = ioutil.TempDir("", "ghpb-keystore")
+		ephemeral = keydir
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	if err := os.MkdirAll(keydir, 0700); err != nil {
+		return nil, "", err
+	}
+	// Assemble the account manager and supported backends
+	backends := []accounts.Backend{
+		keystore.NewKeyStore(keydir, scryptN, scryptP),
+	}
+	return accounts.NewManager(backends...), ephemeral, nil
 }
+
+
+
 
 // Start create a live P2P node and starts running it.
 func (n *Node) Start() error {

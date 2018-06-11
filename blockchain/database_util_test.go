@@ -32,6 +32,7 @@ func TestVoteResultStorage(t *testing.T) {
 	}
 
 	vr.Winners = append(vr.Winners, common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"))
+	vr.Winners = append(vr.Winners, common.HexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"))
 
 	// Write and verify the body in the database
 	if err := WriteVoteResult(db, vr); err != nil {

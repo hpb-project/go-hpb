@@ -3,8 +3,6 @@ package config
 import (
 	"math/big"
 	"fmt"
-	"gopkg.in/urfave/cli.v1"
-	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -14,12 +12,13 @@ import (
 	"os/user"
 
 
-	"github.com/hpb-project/go-hpb/synccontroller/downloader"
+	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/cmd/ghpb"
 )
 
 
@@ -66,7 +65,7 @@ type Nodeconfig struct {
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
+	SyncMode  int
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
@@ -101,6 +100,8 @@ type Nodeconfig struct {
 	// is created by New and destroyed when the node is stopped.
 	KeyStoreDir string `toml:",omitempty"`
 
+
+
 	// UseLightweightKDF lowers the memory and CPU requirements of the key store
 	// scrypt KDF at the expense of security.
 	UseLightweightKDF bool `toml:",omitempty"`
@@ -115,41 +116,21 @@ func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
 
-func (err *ConfigCompatError) Error() string {
-	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
-}
 
-// dumpConfig is the dumpconfig command.
-func dumpConfig(ctx *cli.Context) error {
-	_, cfg := makeConfigNode(ctx)
-	comment := ""
 
-	if cfg.Hpb.Genesis != nil {
-		cfg.Hpb.Genesis = nil
-		comment += "# Note: this config doesn't contain the genesis block.\n\n"
-	}
 
-	out, err := tomlSettings.Marshal(&cfg)
-	if err != nil {
-		return err
-	}
-	io.WriteString(os.Stdout, comment)
-	os.Stdout.Write(out)
-	return nil
-}
 
 
 
 // NodeDB returns the path to the discovery node database.
-func (c *Config) NodeDB() string {
+func (c *Nodeconfig) NodeDB() string {
 	if c.DataDir == "" {
 		return "" // ephemeral
 	}
 	return c.resolvePath(datadirNodeDatabase)
 }
-
 // NodeName returns the devp2p node identifier.
-func (c *Config) NodeName() string {
+func (c *Nodeconfig) NodeName() string {
 	name := c.name()
 	// Backwards compatibility: previous versions used title-cased "Geth", keep that.
 	if name == "geth" || name == "geth-testnet" {
@@ -166,7 +147,7 @@ func (c *Config) NodeName() string {
 	return name
 }
 
-func (c *Config) name() string {
+func (c *Nodeconfig) name() string {
 	if c.Name == "" {
 		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
 		if progname == "" {
@@ -187,7 +168,7 @@ var isOldGethResource = map[string]bool{
 }
 
 // resolvePath resolves path in the instance directory.
-func (c *Config) resolvePath(path string) string {
+func (c *Nodeconfig) resolvePath(path string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}
@@ -209,7 +190,7 @@ func (c *Config) resolvePath(path string) string {
 	return filepath.Join(c.instanceDir(), path)
 }
 
-func (c *Config) instanceDir() string {
+func (c *Nodeconfig) instanceDir() string {
 	if c.DataDir == "" {
 		return ""
 	}
@@ -219,7 +200,7 @@ func (c *Config) instanceDir() string {
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
-func (c *Config) NodeKey() *ecdsa.PrivateKey {
+func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 	// Use any specifically configured key.
 	if c.P2P.PrivateKey != nil {
 		return c.P2P.PrivateKey
@@ -255,18 +236,18 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 }
 
 // StaticNodes returns a list of node hnode URLs configured as static nodes.
-func (c *Config) StaticNodes() []*discover.Node {
+func (c *Nodeconfig) StaticNodes() []*discover.Node {
 	return c.parsePersistentNodes(c.resolvePath(datadirStaticNodes))
 }
 
 // TrustedNodes returns a list of node hnode URLs configured as trusted nodes.
-func (c *Config) TrustedNodes() []*discover.Node {
+func (c *Nodeconfig) TrustedNodes() []*discover.Node {
 	return c.parsePersistentNodes(c.resolvePath(datadirTrustedNodes))
 }
 
 // parsePersistentNodes parses a list of discovery node URLs loaded from a .json
 // file from within the data directory.
-func (c *Config) parsePersistentNodes(path string) []*discover.Node {
+func (c *Nodeconfig) parsePersistentNodes(path string) []*discover.Node {
 	// Short circuit if no node config is present
 	if c.DataDir == "" {
 		return nil
@@ -296,47 +277,6 @@ func (c *Config) parsePersistentNodes(path string) []*discover.Node {
 	return nodes
 }
 
-func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
-	scryptN := keystore.StandardScryptN
-	scryptP := keystore.StandardScryptP
-	if conf.UseLightweightKDF {
-		scryptN = keystore.LightScryptN
-		scryptP = keystore.LightScryptP
-	}
-
-	var (
-		keydir    string
-		ephemeral string
-		err       error
-	)
-	switch {
-	case filepath.IsAbs(conf.KeyStoreDir):
-		keydir = conf.KeyStoreDir
-	case conf.DataDir != "":
-		if conf.KeyStoreDir == "" {
-			keydir = filepath.Join(conf.DataDir, datadirDefaultKeyStore)
-		} else {
-			keydir, err = filepath.Abs(conf.KeyStoreDir)
-		}
-	case conf.KeyStoreDir != "":
-		keydir, err = filepath.Abs(conf.KeyStoreDir)
-	default:
-		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "ghpb-keystore")
-		ephemeral = keydir
-	}
-	if err != nil {
-		return nil, "", err
-	}
-	if err := os.MkdirAll(keydir, 0700); err != nil {
-		return nil, "", err
-	}
-	// Assemble the account manager and supported backends
-	backends := []accounts.Backend{
-		keystore.NewKeyStore(keydir, scryptN, scryptP),
-	}
-	return accounts.NewManager(backends...), ephemeral, nil
-}
 
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
@@ -369,10 +309,11 @@ func homeDir() string {
 // ConfigCompatError is raised if the locally-stored blockchain is initialised with a
 // ChainConfig that would alter the past.
 
-func defaultNodeConfig() nodeconfig {
+func defaultNodeConfig() Nodeconfig {
 	cfg := DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = VersionWithCommit(main.GitCommit)
-	cfg.IPCPath = "ghpb.ipc"
 	return cfg
 }
+
+

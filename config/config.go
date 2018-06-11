@@ -17,8 +17,6 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
-
 	"reflect"
 	"unicode"
 	"bufio"
@@ -26,17 +24,16 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/hpb-project/go-hpb/log"
-	"github.com/hpb-project/go-hpb/cmd/utils"
 	"fmt"
 	"os"
 )
 var HpbconfigIns *HpbConfig
 const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
-	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
-	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
-	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	DatadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
+	DatadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
+	DatadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
+	DatadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
 
 const (
@@ -141,22 +138,7 @@ type HpbConfig struct {
 }
 
 
-var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
-		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...)),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
-	}
 
-	configFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
-)
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
 var tomlSettings = toml.Config{

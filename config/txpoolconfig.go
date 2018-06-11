@@ -38,7 +38,7 @@ type TxPoolConfiguration struct {
 }
 
 
-var DefaultTxPoolConfig = txPoolConfiguration{
+var DefaultTxPoolConfig = TxPoolConfiguration{
 	Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
