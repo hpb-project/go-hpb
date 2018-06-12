@@ -27,8 +27,8 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 func TestTable_pingReplace(t *testing.T) {

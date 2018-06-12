@@ -23,9 +23,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 const (

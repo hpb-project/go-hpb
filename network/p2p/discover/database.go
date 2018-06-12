@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

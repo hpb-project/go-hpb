@@ -23,9 +23,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/hpb-project/ghpb/event"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
 
