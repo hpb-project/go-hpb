@@ -52,7 +52,7 @@ func (api *API) GetHistorysnapAtHash(hash common.Hash) (*Historysnap, error) {
 	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
+func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
@@ -60,7 +60,7 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
-	// Ensure we have an actually valid block and return the signers from its snapshot
+	
 	if header == nil {
 		return nil, errUnknownBlock
 	}

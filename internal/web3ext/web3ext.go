@@ -79,8 +79,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getSigners',
-			call: 'prometheus_getSigners',
+			name: 'getHpbNodes',
+			call: 'prometheus_getHpbNodes',
 			params: 1,
 			inputFormatter: [null]
 		}),
