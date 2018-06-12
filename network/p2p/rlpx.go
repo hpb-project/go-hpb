@@ -35,12 +35,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/crypto/ecies"
-	"github.com/hpb-project/ghpb/common/crypto/secp256k1"
-	"github.com/hpb-project/ghpb/common/crypto/sha3"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/ecies"
+	"github.com/hpb-project/go-hpb/common/crypto/secp256k1"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/golang/snappy"
 )
 

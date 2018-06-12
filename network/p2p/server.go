@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/mclock"
-	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/network/p2p/nat"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/mclock"
+	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 const (

@@ -26,11 +26,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/nat"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
 const Version = 0x01

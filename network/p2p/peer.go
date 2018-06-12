@@ -23,13 +23,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/mclock"
-	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common/mclock"
+	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/rlp"
 	"gopkg.in/fatih/set.v0"
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 	"math/big"
 )
 
