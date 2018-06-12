@@ -111,6 +111,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
     signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
 	header.Random = uniquerand
 
+	//设置社区投票检查点
+	
+	//获取候选节点的投票检查点
+
 	// 获取快照
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {

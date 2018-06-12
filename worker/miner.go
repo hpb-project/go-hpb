@@ -107,6 +107,7 @@ out:
 	}
 }
 
+//挖矿开始
 func (self *Miner) Start(coinbase common.Address) {
 	log.Info("miner start : ")
 	atomic.StoreInt32(&self.shouldStart, 1)
@@ -140,15 +141,15 @@ func (self *Miner) Stop() {
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
 
-func (self *Miner) Register(agent Agent) {
+func (self *Miner) Register(producer Producer) {
 	if self.Mining() {
-		agent.Start()
+		producer.Start()
 	}
-	self.worker.register(agent)
+	self.worker.register(producer)
 }
 
-func (self *Miner) Unregister(agent Agent) {
-	self.worker.unregister(agent)
+func (self *Miner) Unregister(producer Producer) {
+	self.worker.unregister(producer)
 }
 
 func (self *Miner) Mining() bool {
