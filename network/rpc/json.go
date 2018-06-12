@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 )
 
 const (

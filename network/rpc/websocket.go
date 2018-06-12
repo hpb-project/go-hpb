@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/log"
 	"golang.org/x/net/websocket"
 	"gopkg.in/fatih/set.v0"
 )
