@@ -56,7 +56,7 @@ func (p *prometh) makeGenesis() {
 	genesis.Config.Prometheus = &params.PrometheusConfig{
 		Period: 15,
 		Epoch:  30000,
-		Random: "0",
+		//Random: "0",
 	}
 	fmt.Println()
 	fmt.Println("How many seconds should blocks take? (default = 15)")
@@ -104,12 +104,14 @@ func (p *prometh) makeGenesis() {
 		copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 	}
 
+    /*
 	fmt.Println()
 	fmt.Println("please input random number")
 	//var signersHash []common.AddressHash
 
 	//randStr := p.read();
 
+  
 	var randStrs []string
 
 	for {
@@ -124,6 +126,8 @@ func (p *prometh) makeGenesis() {
 
 	genesis.Config.Prometheus.Random = randStrs[0]
 
+    
+   
 	address_hashes := make([]common.AddressHash, (len(signers)/common.AddressLength)*common.AddressHashLength)
 
 	for i, signer := range signers {
@@ -133,9 +137,12 @@ func (p *prometh) makeGenesis() {
 
 	genesis.ExtraHash = make([]byte, 32 + len(address_hashes) * common.AddressHashLength + 65)
 
+    
 	for i, address_hash := range address_hashes {
 		copy(genesis.ExtraHash[32+ i*common.AddressHashLength:], address_hash[:])
 	}
+	
+	*/
 	fmt.Println()
 	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
 	for {
