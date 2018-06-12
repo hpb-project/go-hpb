@@ -49,8 +49,7 @@ const (
 	chainSideChanSize = 10
 )
 
-// Agent can register themself with the worker
-type Agent interface {
+type Producer interface {
 	Work() chan<- *Work
 	SetReturnCh(chan<- *Result)
 	Stop()
@@ -100,7 +99,7 @@ type worker struct {
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}
+	producers map[Producer]struct{}
 	recv   chan *Result
 
 	hpb     Backend
@@ -139,7 +138,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		proc:           hpb.BlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
-		agents:         make(map[Agent]struct{}),
+		producers:         make(map[Producer]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(hpb.BlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
@@ -207,8 +206,8 @@ func (self *worker) start() {
 	atomic.StoreInt32(&self.mining, 1)
 
 	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
+	for producer := range self.producers {
+		producer.Start()
 	}
 }
 
@@ -217,26 +216,26 @@ func (self *worker) stop() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
+		for producer := range self.producers {
+			producer.Stop()
 		}
 	}
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.atWork, 0)
 }
 
-func (self *worker) register(agent Agent) {
+func (self *worker) register(producer Producer) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
+	self.producers[producer] = struct{}{}
+	producer.SetReturnCh(self.recv)
 }
 
-func (self *worker) unregister(agent Agent) {
+func (self *worker) unregister(producer Producer) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	delete(self.agents, agent)
-	agent.Stop()
+	delete(self.producers, producer)
+	producer.Stop()
 }
 
 // 开始对三个事件进行监听，并开始进行
@@ -355,9 +354,9 @@ func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
-	for agent := range self.agents {
+	for producer := range self.producers {
 		atomic.AddInt32(&self.atWork, 1)
-		if ch := agent.Work(); ch != nil {
+		if ch := producer.Work(); ch != nil {
 			ch <- work
 		}
 	}

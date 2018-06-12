@@ -71,7 +71,7 @@ type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	CoinbaseHash common.AddressHash `json:"minerHash"   gencodec:"required"`
+	//CoinbaseHash common.AddressHash `json:"minerHash"   gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -84,8 +84,8 @@ type Header struct {
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
-	ExtraHash   []byte         `json:"extraHash"        gencodec:"required"`
-	Random      string         `json:"random"           gencodec:""`
+	//ExtraHash   []byte         `json:"extraHash"        gencodec:"required"`
+	//Random      string         `json:"random"           gencodec:""`
 }
 
 // field type overrides for gencodec
@@ -96,7 +96,7 @@ type headerMarshaling struct {
 	GasUsed    *hexutil.Big
 	Time       *hexutil.Big
 	Extra      hexutil.Bytes
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	//Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its

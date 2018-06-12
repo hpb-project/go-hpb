@@ -164,7 +164,7 @@ func (pm *ProtocolManager) syncer() {
 func (pm *ProtocolManager) synchronise(peer *peer) {
 	// Short circuit if no peers are available
 	
-	log.Info("@@@@@@@@@@@@sysnc->synchronise")
+	//log.Info("@@@@@@@@@@@@sysnc->synchronise")
 
 	if peer == nil {
 		return

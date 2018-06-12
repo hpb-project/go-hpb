@@ -77,7 +77,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
-		header.CoinbaseHash,
+		//header.CoinbaseHash,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,
@@ -99,7 +99,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
 
 	//获取Coinbase
-	header.CoinbaseHash = common.AddressHash{}
+	header.Coinbase = common.Address{}
 	//获取Nonce
 	header.Nonce = types.BlockNonce{}
 	//获得块号
@@ -107,9 +107,13 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	log.Info("Prepare the parameters for mining")
 	
-	uniquerand := getUniqueRandom(chain)
-    signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
-	header.Random = uniquerand
+	//uniquerand := getUniqueRandom(chain)
+    //signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
+	//header.Random = uniquerand
+
+	//设置社区投票检查点
+	
+	//获取候选节点的投票检查点
 
 	// 获取快照
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
@@ -122,7 +126,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		c.lock.RLock()
 		// Gather all the proposals that make sense voting on
 		// 改造点， 开始从网络中获取
-		addresses := make([]common.AddressHash, 0, len(c.proposals))
+		addresses := make([]common.Address, 0, len(c.proposals))
 		for address, authorize := range c.proposals {
 			if snap.validVote(address, authorize) {
 				addresses = append(addresses, address)
@@ -130,8 +134,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		}
 		// If there's pending proposals, cast a vote on them
 		if len(addresses) > 0 {
-			header.CoinbaseHash = addresses[rand.Intn(len(addresses))]
-			if c.proposals[header.CoinbaseHash] {
+			header.Coinbase = addresses[rand.Intn(len(addresses))]
+			if c.proposals[header.Coinbase] {
 				copy(header.Nonce[:], nonceAuthVote)
 			} else {
 				copy(header.Nonce[:], nonceDropVote)
@@ -143,7 +147,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if snap.inturn(header.Number.Uint64(), signerHash) {
+	if snap.inturn(header.Number.Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
 	
@@ -210,11 +214,11 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 				return nil, err
 			}
 
-			signers := make([]common.AddressHash, (len(genesis.ExtraHash)-extraVanity-extraSeal)/common.AddressHashLength)
+			signers := make([]common.Address, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
 
 			for i := 0; i < len(signers); i++ {
 				log.Info("miner initialization", "i:",i)
-				copy(signers[i][:], genesis.ExtraHash[extraVanity+i*common.AddressHashLength:extraVanity+(i+1)*common.AddressHashLength])
+				copy(signers[i][:], genesis.Extra[extraVanity+i*common.AddressLength:extraVanity+(i+1)*common.AddressLength])
 			}
 
 			snap = newHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
@@ -304,11 +308,11 @@ type Prometheus struct {
 	recents    *lru.ARCCache // 最近的签名
 	signatures *lru.ARCCache // 签名后的缓存
 
-	proposals map[common.AddressHash]bool // 当前的proposals
+	proposals map[common.Address]bool // 当前的proposals
 	//proposalsHash map[common.AddressHash]bool // 当前 proposals hash
 
 	signer     common.Address     // 签名的 Key
-	signerHash common.AddressHash // 地址的hash
+	//signerHash common.AddressHash // 地址的hash
 	randomStr  string             // 产生的随机数
 	signFn     SignerFn           // 回调函数
 	lock       sync.RWMutex       // Protects the signerHash fields
@@ -332,7 +336,7 @@ func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
 		db:         db,
 		recents:    recents,
 		signatures: signatures,
-		proposals:  make(map[common.AddressHash]bool),
+		proposals:  make(map[common.Address]bool),
 	}
 }
 
@@ -383,7 +387,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
 	checkpoint := (number % c.config.Epoch) == 0
-	if checkpoint && header.CoinbaseHash != (common.AddressHash{}) {
+	if checkpoint && header.Coinbase != (common.Address{}) {
 		return errInvalidCheckpointBeneficiary
 	}
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
@@ -405,7 +409,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
 	}
-	if checkpoint && signersBytes%common.AddressHashLength != 0 {
+	if checkpoint && signersBytes%common.AddressLength != 0 {
 		log.Info("at checkpoint", "checkpoint",checkpoint)
 		return errInvalidCheckpointSigners
 	}
@@ -460,9 +464,9 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	if number%c.config.Epoch == 0 {
 		//获取出当前快照的内容, snap.Signers 实际为hash
 		log.Info("the block is at epoch checkpoint", "block number",number)
-		signers := make([]byte, len(snap.Signers)*common.AddressHashLength)
+		signers := make([]byte, len(snap.Signers)*common.AddressLength)
 		for i, signerHash := range snap.signers() {
-			copy(signers[i*common.AddressHashLength:], signerHash[:])
+			copy(signers[i*common.AddressLength:], signerHash[:])
 		}
 		extraSuffix := len(header.Extra) - extraSeal
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
@@ -506,14 +510,14 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
 
-	signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
+	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 	
-	log.Info("current block head from remote nodes", "Number",number,"Random",header.Random,"Difficulty",header.Difficulty)
+	//log.Info("current block head from remote nodes", "Number",number,"Random",header.Random,"Difficulty",header.Difficulty)
 
 	if err != nil {
 		return err
 	}
-	if _, ok := snap.Signers[signerHash]; !ok {
+	if _, ok := snap.Signers[signer]; !ok {
 		return errUnauthorized
 	}
 
@@ -528,7 +532,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 	*/
 	// Ensure that the difficulty corresponds to the turn-ness of the signerHash
-	inturn := snap.inturn(header.Number.Uint64(), signerHash)
+	inturn := snap.inturn(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 		return errInvalidDifficulty
 	}
@@ -579,8 +583,8 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("Current seal random is" + header.Random)
-	signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
+	//log.Info("Current seal random is" + header.Random)
+	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 
 	log.Info("signer's address","signer", signer.Hex())
 
@@ -593,11 +597,11 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		return nil, err
 	}
 
-	if _, authorized := snap.Signers[signerHash]; !authorized {
+	if _, authorized := snap.Signers[signer]; !authorized {
 		return nil, errUnauthorized
 	}
 
-	log.Info("Proposed the random number in current round:" + header.Random)
+	//log.Info("Proposed the random number in current round:" + header.Random)
 
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序
@@ -624,7 +628,7 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 		
 		currentIndex := number % uint64(len(snap.Signers))	
-		offset := snap.getOffset(header.Number.Uint64(), signerHash)
+		offset := snap.getOffset(header.Number.Uint64(), signer)
 
        //在一定范围内延迟8分,当前的currentIndex往前的没有超过
        if(currentIndex <= uint64(len(snap.Signers)/2)){

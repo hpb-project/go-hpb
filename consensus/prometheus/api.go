@@ -17,7 +17,7 @@
 package prometheus
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/types"
@@ -52,7 +52,7 @@ func (api *API) GetHistorysnapAtHash(hash common.Hash) (*Historysnap, error) {
 	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.AddressHash, error) {
+func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
@@ -80,13 +80,13 @@ func (api *API) GetPrivateRandom() (string) {
 	return  getUniqueRandom(api.chain)
 }
 
-func (api *API) Proposals() map[common.AddressHash]bool {
+func (api *API) Proposals() map[common.Address]bool {
 	api.prometheus.lock.RLock()
 	defer api.prometheus.lock.RUnlock()
 
-	proposals := make(map[common.AddressHash]bool)
-	for addressHash, auth := range api.prometheus.proposals {
-		proposals[addressHash] = auth
+	proposals := make(map[common.Address]bool)
+	for address, auth := range api.prometheus.proposals {
+		proposals[address] = auth
 	}
 	return proposals
 }
@@ -94,18 +94,15 @@ func (api *API) Proposals() map[common.AddressHash]bool {
 func (api *API) Propose(address common.Address, confRand string, auth bool) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-   
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
-	
-	fmt.Printf("addressHash%s",addressHash.String())
-
-	api.prometheus.proposals[addressHash] = auth
+    //address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
+	//fmt.Printf("address%s",address.String())
+	api.prometheus.proposals[address] = auth
 }
 
 // 改变作废的方式
 func (api *API) Discard(address common.Address,  confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
-	delete(api.prometheus.proposals, addressHash)
+    //address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
+	delete(api.prometheus.proposals, address)
 }
