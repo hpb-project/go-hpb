@@ -71,6 +71,16 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
+func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]common.Address, error) {
+	//获取候选节点
+	return nil, nil
+}
+
+func (api *API) GetCommunityNodes(number *rpc.BlockNumber) ([]common.Address, error) {
+	//获取社区选举结果
+	return nil, nil
+}
+
 func (api *API) GetPrivateRandom() (string) {	
 	//rand := api.chain.GetRandom()
 	//if(rand ==""){
