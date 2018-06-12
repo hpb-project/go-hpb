@@ -17,6 +17,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/ghpb"
 )
@@ -61,7 +62,7 @@ type Nodeconfig struct {
 
 	// The genesis block, which is inserted if the database is empty.
 	// If nil, the Hpb main net block is used.
-	Genesis *core.Genesis `toml:",omitempty"`
+	Genesis *bc.Genesis `toml:",omitempty"`
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
@@ -168,7 +169,7 @@ var isOldGethResource = map[string]bool{
 }
 
 // resolvePath resolves path in the instance directory.
-func (c *Nodeconfig) resolvePath(path string) string {
+func (c *Nodeconfig) ResolvePath(path string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}

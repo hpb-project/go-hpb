@@ -207,7 +207,7 @@ func main() {
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
 	node, cfg := MakeConfigNode(ctx)
-	//startNode(ctx, node)
+	startNode(ctx, node)
 	node.Wait()
 	return nil
 }

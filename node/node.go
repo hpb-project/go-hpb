@@ -26,23 +26,29 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/txpool/"
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/blockchain/
+	"github.com/hpb-project/go-hpb/blockchain/storage
 	"github.com/hpb-project/go-hpb/network/p2p
 	"github.com/hpb-project/go-hpb/network/rpc
+	"github.com/hpb-project/go-hpb/consensus/prometheus
 	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/prometheus/prometheus/util/flock"
 	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"io/ioutil"
+	"math/big"
+	"github.com/go-hpb-backkup/node"
 )
 
 // Node is a container on which services can be registered.
@@ -50,18 +56,29 @@ type Node struct {
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
 	Hpbsyncctr      *synctrl
-	//Hpbtxpool 		*Txpool
+	Hpbtxpool 		*txpool.TxPool
 	Hpbbc           *bc.BlockChain
 	//Hpbworker       *Worker
 	Hpbboe			*boe.BoeHandle
 	//HpbDb
-	HPbbase		    common.Address
+	chainDb  	    hpbdb.Database
 
 	networkId		uint64
 	netRPCService   *hpbapi.PublicNetAPI
 
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
-	accman   *accounts.Manager
+	accman   		*accounts.Manager
+	eventMux        *event.TypeMux
+	hpbengine          consensus.Engine
+	accountManager  *accounts.Manager
+	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
+
+	//ApiBackend      *HpbApiBackend
+
+	//worker     *miner.Miner
+	gasPrice        *big.Int
+	hpberbase       common.Address
 
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
@@ -72,61 +89,86 @@ type Node struct {
 	lock sync.RWMutex
 }
 
+
+// CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
+func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
+	// If proof-of-authority is requested, set it up
+	if chainConfig.Prometheus == nil {
+		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
+	}
+	return prometheus.New(chainConfig.Prometheus, db)
+}
 // New creates a hpb node, create all object and start
-func New(conf  *config.Nodeconfig) (*Node, error){
+func New(conf  *config.HpbConfig) (*Node, error){
 
 	confCopy := *conf
 	conf = &confCopy
-	if conf.DataDir != "" {
-		absdatadir, err := filepath.Abs(conf.DataDir)
+	if conf.Node.DataDir != "" {
+		absdatadir, err := filepath.Abs(conf.Node.DataDir)
 		if err != nil {
 			return nil, err
 		}
-		conf.DataDir = absdatadir
+		conf.Node.DataDir = absdatadir
 	}
 
 	// Ensure that the instance name doesn't cause weird conflicts with
 	// other files in the data directory.
-	if strings.ContainsAny(conf.Name, `/\`) {
+	if strings.ContainsAny(conf.Node.Name, `/\`) {
 		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
 	}
 	if conf.Name == config.DatadirDefaultKeyStore{
 		return nil, errors.New(`Config.Name cannot be "` + config.DatadirDefaultKeyStore + `"`)
 	}
-	if strings.HasSuffix(conf.Name, ".ipc") {
+	if strings.HasSuffix(conf.Node.Name, ".ipc") {
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
 	}
 
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
-	am, ephemeralKeystore, err := makeAccountManager(conf)
+	am, ephemeralKeystore, err := makeAccountManager(&conf.Node)
 	if err != nil {
 		return nil, err
 	}
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
-	Hpbpeermanager := p2p.PeerMgrInst()
-	Hpbtxpool      :=
-	Hpbsyncctr     := synctrl.NewSynCtrl(config *config.ChainConfig, conf.SyncMode, conf.NetworkId, mux *event.TypeMux, txpool txPool,/*todo txpool*/
-		engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error)
+	peermanager := p2p.PeerMgrInst()
+	txpool      := txpool.GetTxPool()
+	db,err      := CreateDB(&conf.Node, "chaindata")
+	eventmux    := new(event.TypeMux)
+	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, conf.Node.Genesis)
+	engine      := CreateConsensusEngine(conf, chainConfig, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, conf.Node.SyncMode, conf.Node.NetworkId, eventmux, txpool,/*todo txpool*/
+		engine, db)
+
+	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	//Hpbtxpool 		*Txpool
-	Hpbbc           *bc.BlockChain
+	bc			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
-	Hpbboe			*boe.BoeHandle
+	//Hpbboe			*boe.BoeHandle
 
 
-	retrun &Node{
+	hpbnode := &Node{
+		Hpbconfig:         conf,
+		Hpbpeermanager:    peermanager,
+		Hpbsyncctr:		   syncctr,
+		Hpbtxpool:		   txpool,
+		Hpbbc:			   bc,
+		//boe
 
-		accman:            am,
-		ephemeralKeystore: ephemeralKeystore,
-		config:            conf,
-		serviceFuncs:      []ServiceConstructor{},
-		ipcEndpoint:       conf.IPCEndpoint(),
-		httpEndpoint:      conf.HTTPEndpoint(),
-		wsEndpoint:        conf.WSEndpoint(),
-		eventmux:          new(event.TypeMux),
+		chainDb:		   db,
+		networkId:		   conf.Node.NetworkId,
 
+
+		eventMux:          eventmux,
+		accountManager:	   am,
+		hpbengine:		   engine,
+
+		stopDbUpgrade:  stopDbUpgrade,
+		gasPrice:       conf.Node.GasPrice,
+		hpberbase:      conf.Node.Hpberbase,
+		bloomRequests:  make(chan chan *bloombits.Retrieval),
+		bloomIndexer:   NewBloomIndexer(db, config.BloomBitsBlocks),
 	}
 
 
@@ -684,14 +726,31 @@ func (n *Node) EventMux() *event.TypeMux {
 	return n.eventmux
 }
 
-// OpenDatabase opens an existing database with the given name (or creates one if no
-// previous can be found) from within the node's instance directory. If the node is
-// ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (hpbdb.Database, error) {
-	if n.config.DataDir == "" {
+
+// OpenDatabase opens an existing database with the given name (or creates one
+// if no previous can be found) from within the node's data directory. If the
+// node is an ephemeral one, a memory database is returned.
+func  OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
+	if n.Hpbconfig.Node.DataDir == ""{
 		return hpbdb.NewMemDatabase()
 	}
-	return hpbdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	db, err := hpbdb.NewLDBDatabase(n.Hpbconfig.Node.ResolvePath(name), cache, handles)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// CreateDB creates the chain database.
+func CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
+	db, err := OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
+	if err != nil {
+		return nil, err
+	}
+	if db, ok := db.(*hpbdb.LDBDatabase); ok {
+		db.Meter("hpb/db/chaindata/")
+	}
+	return db, nil
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.
