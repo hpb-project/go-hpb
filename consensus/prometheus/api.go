@@ -22,6 +22,7 @@ import (
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/ghpb/consensus/snapshots"
 )
 
 type API struct {
@@ -30,19 +31,19 @@ type API struct {
 }
 
 // 获取最新的的快照
-func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*Historysnap, error) {
+func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetHistorysnapAtHash(hash common.Hash) (*Historysnap, error) {
+func (api *API) GetHistorysnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
@@ -54,13 +55,13 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	snap, err := api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
-	return snap.signers(), nil
+	return snap.GetSigners(), nil
 }
 
 //跟根据区块号，获取最新的区块头

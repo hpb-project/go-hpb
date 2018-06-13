@@ -26,19 +26,22 @@ import (
 
 	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/hexutil"
+	//"github.com/hpb-project/ghpb/common/hexutil"
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/state"
 	"github.com/hpb-project/ghpb/core/types"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/crypto/sha3"
+	//"github.com/hpb-project/ghpb/common/crypto"
+	//"github.com/hpb-project/ghpb/common/crypto/sha3"
 	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/rlp"
+	//"github.com/hpb-project/ghpb/common/rlp"
 	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/ghpb/storage"
+	
+	"github.com/hpb-project/ghpb/consensus/snapshots"
+	
 	
 )
 
@@ -55,11 +58,11 @@ var (
 	epochLength = uint64(30000) // 充值投票的时的间隔，默认 30000个
 	blockPeriod = uint64(15)    // 两个区块之间的默认时间 15 秒
 
-	extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signerHash vanity
-	extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
+	//extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signerHash vanity
+	//extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
 
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signerHash
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signerHash.
+	//nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signerHash
+	//nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signerHash.
 
 	uncleHash = types.CalcUncleHash(nil) //
 
@@ -70,30 +73,7 @@ var (
 // 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
-// 对区块头部进行签名，最小65Byte
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
 
-	rlp.Encode(hasher, []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		//header.CoinbaseHash,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		header.Extra[:len(header.Extra)-65],
-		header.MixDigest,
-		header.Nonce,
-	})
-	hasher.Sum(hash[:0])
-	return hash
-}
 
 // 实现引擎的Prepare函数
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
@@ -105,7 +85,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
-	log.Info("Prepare the parameters for mining")
+	//log.Info("Prepare the parameters for mining")
 	
 	//uniquerand := getUniqueRandom(chain)
     //signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
@@ -128,7 +108,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		// 改造点， 开始从网络中获取
 		addresses := make([]common.Address, 0, len(c.proposals))
 		for address, authorize := range c.proposals {
-			if snap.validVote(address, authorize) {
+			if snap.ValidVote(address, authorize) {
 				addresses = append(addresses, address)
 			}
 		}
@@ -136,9 +116,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		if len(addresses) > 0 {
 			header.Coinbase = addresses[rand.Intn(len(addresses))]
 			if c.proposals[header.Coinbase] {
-				copy(header.Nonce[:], nonceAuthVote)
+				copy(header.Nonce[:], consensus.NonceAuthVote)
 			} else {
-				copy(header.Nonce[:], nonceDropVote)
+				copy(header.Nonce[:], consensus.NonceDropVote)
 			}
 		}
 		c.lock.RUnlock()
@@ -147,25 +127,25 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if snap.inturn(header.Number.Uint64(), c.signer) {
+	if snap.Inturn(header.Number.Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
 	
 	// Ensure the extra data has all it's components
 	// 检查头部的组成情况
-	if len(header.Extra) < extraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
+	if len(header.Extra) < consensus.ExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
 	}
 
-	header.Extra = header.Extra[:extraVanity]
+	header.Extra = header.Extra[:consensus.ExtraVanity]
 
     //在投票周期的时候，放入全部的AddressHash
 	if number%c.config.Epoch == 0 {
-		for _, signerHash := range snap.signers() {
+		for _, signerHash := range snap.GetSigners() {
 			header.Extra = append(header.Extra, signerHash[:]...)
 		}
 	}
-	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
 	// 获取父亲的节点
@@ -183,24 +163,24 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 }
 
 // 获取快照
-func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Historysnap, error) {
+func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	var (
 		headers []*types.Header
-		snap    *Historysnap
+		snap    *snapshots.HpbNodeSnap
 	)
 	//CoinbaseHash
 	for snap == nil {
 
 		// 直接使用内存中的，recents存部分
 		if s, ok := c.recents.Get(hash); ok {
-			snap = s.(*Historysnap)
+			snap = s.(*snapshots.HpbNodeSnap)
 			break
 		}
 
 		// 如果是检查点的时候，保存周期和投票周日不一致
 		if number%checkpointInterval == 0 {
-			if s, err := loadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
+			if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
 				log.Trace("Prometheus： Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
@@ -214,16 +194,16 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 				return nil, err
 			}
 
-			signers := make([]common.Address, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
+			signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
 
 			for i := 0; i < len(signers); i++ {
 				log.Info("miner initialization", "i:",i)
-				copy(signers[i][:], genesis.Extra[extraVanity+i*common.AddressLength:extraVanity+(i+1)*common.AddressLength])
+				copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
 			}
 
-			snap = newHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
+			snap = snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
 
-			if err := snap.store(c.db); err != nil {
+			if err := snap.Store(c.db); err != nil {
 				return nil, err
 			}
 			log.Trace("Stored genesis voting snapshot to disk")
@@ -256,7 +236,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
 
-	snap, err := snap.apply(headers,chain)
+	snap, err := snap.Apply(headers,chain)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +246,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 
 	// 检查点的时候，保存硬盘
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.store(c.db); err != nil {
+		if err = snap.Store(c.db); err != nil {
 			return nil, err
 		}
 		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
@@ -274,31 +254,6 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 	return snap, err
 }
 
-// 获取当前的签名者
-func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
-
-	// 从缓存中获取
-	hash := header.Hash()
-	if address, known := sigcache.Get(hash); known {
-		return address.(common.Address), nil
-	}
-	// 从头文件中获取extra-data
-	if len(header.Extra) < extraSeal {
-		return common.Address{}, errMissingSignature
-	}
-	signature := header.Extra[len(header.Extra)-extraSeal:]
-
-	// 还原公钥
-	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
-	if err != nil {
-		return common.Address{}, err
-	}
-	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
-
-	sigcache.Add(hash, signer)
-	return signer, nil
-}
 
 // Prometheus 的主体结构
 type Prometheus struct {
@@ -342,7 +297,7 @@ func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 // 从当前的签名中，返回追溯到签名者
 func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header, c.signatures)
+	return consensus.Ecrecover(header, c.signatures)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
@@ -377,7 +332,7 @@ func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types
 // a batch of new headers.
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
-		return errUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 	number := header.Number.Uint64()
 
@@ -388,43 +343,43 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	// Checkpoint blocks need to enforce zero beneficiary
 	checkpoint := (number % c.config.Epoch) == 0
 	if checkpoint && header.Coinbase != (common.Address{}) {
-		return errInvalidCheckpointBeneficiary
+		return consensus.ErrInvalidCheckpointBeneficiary
 	}
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
-	if !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidVote
+	if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
+		return consensus.ErrInvalidVote
 	}
-	if checkpoint && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidCheckpointVote
+	if checkpoint && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
+		return consensus.ErrInvalidCheckpointVote
 	}
 	// Check that the extra-data contains both the vanity and signature
-	if len(header.Extra) < extraVanity {
-		return errMissingVanity
+	if len(header.Extra) < consensus.ExtraVanity {
+		return consensus.ErrMissingVanity
 	}
-	if len(header.Extra) < extraVanity+extraSeal {
-		return errMissingSignature
+	if len(header.Extra) < consensus.ExtraVanity+ consensus.ExtraSeal {
+		return consensus.ErrMissingSignature
 	}
 	// Ensure that the extra-data contains a signerHash list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - extraVanity - extraSeal
+	signersBytes := len(header.Extra) - consensus.ExtraVanity - consensus.ExtraSeal
 	if !checkpoint && signersBytes != 0 {
-		return errExtraSigners
+		return consensus.ErrExtraSigners
 	}
 	if checkpoint && signersBytes%common.AddressLength != 0 {
 		log.Info("at checkpoint", "checkpoint",checkpoint)
-		return errInvalidCheckpointSigners
+		return consensus.ErrInvalidCheckpointSigners
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != (common.Hash{}) {
-		return errInvalidMixDigest
+		return consensus.ErrInvalidMixDigest
 	}
 	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
 	if header.UncleHash != uncleHash {
-		return errInvalidUncleHash
+		return consensus.ErrInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
 	if number > 0 {
 		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
-			return errInvalidDifficulty
+			return consensus.ErrInvalidDifficulty
 		}
 	}
 
@@ -453,7 +408,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrUnknownAncestor
 	}
 	if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
-		return ErrInvalidTimestamp
+		return consensus.ErrInvalidTimestamp
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
@@ -465,12 +420,12 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		//获取出当前快照的内容, snap.Signers 实际为hash
 		log.Info("the block is at epoch checkpoint", "block number",number)
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
-		for i, signerHash := range snap.signers() {
+		for i, signerHash := range snap.GetSigners() {
 			copy(signers[i*common.AddressLength:], signerHash[:])
 		}
-		extraSuffix := len(header.Extra) - extraSeal
-		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
-			return errInvalidCheckpointSigners
+		extraSuffix := len(header.Extra) - consensus.ExtraSeal
+		if !bytes.Equal(header.Extra[consensus.ExtraVanity:extraSuffix], signers) {
+			return consensus.ErrInvalidCheckpointSigners
 		}
 	}
 	// All basic checks passed, verify the seal and return
@@ -498,7 +453,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 	number := header.Number.Uint64()
 	if number == 0 {
-		return errUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
@@ -508,7 +463,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures)
+	signer, err := consensus.Ecrecover(header, c.signatures)
 
 	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 	
@@ -518,7 +473,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
-		return errUnauthorized
+		return consensus.ErrUnauthorized
 	}
 
 	/*
@@ -532,12 +487,12 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 	*/
 	// Ensure that the difficulty corresponds to the turn-ness of the signerHash
-	inturn := snap.inturn(header.Number.Uint64(), signer)
+	inturn := snap.Inturn(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-		return errInvalidDifficulty
+		return consensus.ErrInvalidDifficulty
 	}
 	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-		return errInvalidDifficulty
+		return consensus.ErrInvalidDifficulty
 	}
 	return nil
 }
@@ -573,11 +528,11 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	// Sealing the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
 	if c.config.Period == 0 && len(block.Transactions()) == 0 {
-		return nil, errWaitTransactions
+		return nil, consensus.ErrWaitTransactions
 	}
 	// Don't hold the signerHash fields for the entire sealing procedure
 	c.lock.RLock()
@@ -598,7 +553,7 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	}
 
 	if _, authorized := snap.Signers[signer]; !authorized {
-		return nil, errUnauthorized
+		return nil, consensus.ErrUnauthorized
 	}
 
 	//log.Info("Proposed the random number in current round:" + header.Random)
@@ -628,7 +583,7 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 		log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 		
 		currentIndex := number % uint64(len(snap.Signers))	
-		offset := snap.getOffset(header.Number.Uint64(), signer)
+		offset := snap.GetOffset(header.Number.Uint64(), signer)
 
        //在一定范围内延迟8分,当前的currentIndex往前的没有超过
        if(currentIndex <= uint64(len(snap.Signers)/2)){
@@ -660,13 +615,13 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	case <-time.After(delay):
 	}
 	// 签名交易，signFn为回掉函数
-	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
+	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
 
 	//将签名后的结果返给到Extra中
-	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
 
 	return block.WithSeal(header), nil
 }

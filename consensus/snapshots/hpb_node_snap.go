@@ -15,7 +15,7 @@
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
 
-package prometheus
+package snapshots
 
 import (
 	"bytes"
@@ -29,17 +29,14 @@ import (
 	"github.com/hpb-project/ghpb/common/constant"
 	"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/ghpb/common/log"
-	 
 	"github.com/hpb-project/ghpb/consensus"
 
 	//"strconv"
+	//"errors"
 
 )
 
-//type *params.PrometheusConfig struct {
-//	Period uint64 `json:"period"` // 打包区块间隔期
-//	Epoch  uint64 `json:"epoch"`  // 充值投票点时间
-//}
+
 
 type Vote struct {
 	Signer    common.Address `json:"signerHash"`    // 可以投票的Signer
@@ -53,7 +50,7 @@ type Tally struct {
 	Votes     int  `json:"votes"`     // 通过投票的个数
 }
 
-type Historysnap struct {
+type HpbNodeSnap struct {
 	config   *params.PrometheusConfig 
 	sigcache *lru.ARCCache       
 	
@@ -67,8 +64,8 @@ type Historysnap struct {
 }
 
 // 为创世块使用
-func newHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signersHash []common.Address) *Historysnap {
-	snap := &Historysnap{
+func NewHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signersHash []common.Address) *HpbNodeSnap {
+	snap := &HpbNodeSnap{
 		config:   config,
 		sigcache: sigcache,
 		Number:   number,
@@ -91,12 +88,12 @@ func newHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, num
 }
 
 //加载快照，直接去数据库中读取
-func loadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*Historysnap, error) {
+func LoadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*HpbNodeSnap, error) {
 	blob, err := db.Get(append([]byte("prometheus-"), hash[:]...))
 	if err != nil {
 		return nil, err
 	}
-	snap := new(Historysnap)
+	snap := new(HpbNodeSnap)
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
 	}
@@ -107,7 +104,7 @@ func loadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db
 }
 
 // store inserts the snapshot into the database.
-func (s *Historysnap) store(db hpbdb.Database) error {
+func (s *HpbNodeSnap) Store(db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
 	
 	//log.Error("cuo wu le a", "err", err)
@@ -120,8 +117,8 @@ func (s *Historysnap) store(db hpbdb.Database) error {
 }
 
 // 深度拷贝
-func (s *Historysnap) copy() *Historysnap {
-	cpy := &Historysnap{
+func (s *HpbNodeSnap) copy() *HpbNodeSnap {
+	cpy := &HpbNodeSnap{
 		config:   s.config,
 		sigcache: s.sigcache,
 		
@@ -153,7 +150,7 @@ func (s *Historysnap) copy() *Historysnap {
 }
 
 // 判断投票的有效性
-func (s *Historysnap) validVote(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) ValidVote(address common.Address, authorize bool) bool {
 	_, signer := s.Signers[address]
 	//如果已经在，应该删除，如果不在申请添加才合法
 	return (signer && !authorize) || (!signer && authorize)
@@ -161,16 +158,16 @@ func (s *Historysnap) validVote(address common.Address, authorize bool) bool {
 
 /*
 // 判断投票的有效性
-func (s *Historysnap) validVoteHash(addressHash common.AddressHash, authorizeHash bool) bool {
+func (s *HpbNodeSnap) validVoteHash(addressHash common.AddressHash, authorizeHash bool) bool {
 	_, signerHash := s.SignersHash[addressHash]
 	//如果已经在，应该删除，如果不在申请添加才合法
 	return (signerHash && !authorizeHash) || (!signerHash && authorizeHash)
 }
 */
 // 投票池中添加
-func (s *Historysnap) cast(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) cast(address common.Address, authorize bool) bool {
 
-	if !s.validVote(address, authorize) {
+	if !s.ValidVote(address, authorize) {
 		return false
 	}
 	
@@ -184,7 +181,7 @@ func (s *Historysnap) cast(address common.Address, authorize bool) bool {
 }
 
 // 从投票池中删除
-func (s *Historysnap) uncast(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) uncast(address common.Address, authorize bool) bool {
 
 	tally, ok := s.Tally[address]
 	if !ok {
@@ -207,8 +204,8 @@ func (s *Historysnap) uncast(address common.Address, authorize bool) bool {
 
 
 // 判断当前的次序
-func (s *Historysnap) inturn(number uint64, signer common.Address) bool {
-	signers, offset := s.signers(), 0
+func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
+	signers, offset := s.GetSigners(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
@@ -217,8 +214,8 @@ func (s *Historysnap) inturn(number uint64, signer common.Address) bool {
 
 
 // 判断当前的次序
-func (s *Historysnap) getOffset(number uint64, signer common.Address) uint64 {
-	signers, offset := s.signers(), 0
+func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
+	signers, offset := s.GetSigners(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
@@ -226,7 +223,7 @@ func (s *Historysnap) getOffset(number uint64, signer common.Address) uint64 {
 }
 
 // 已经授权的signers, 无需进行排序
-func (s *Historysnap) signers() []common.Address {
+func (s *HpbNodeSnap) GetSigners() []common.Address {
 	signers := make([]common.Address, 0, len(s.Signers))
 	for signer := range s.Signers {
 		signers = append(signers, signer)
@@ -246,7 +243,7 @@ func (s *Historysnap) signers() []common.Address {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Historysnap) apply(headers []*types.Header,chain consensus.ChainReader) (*Historysnap, error) {
+func (s *HpbNodeSnap) Apply(headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 	
 	// 如果头部为空，直接返回
@@ -257,12 +254,12 @@ func (s *Historysnap) apply(headers []*types.Header,chain consensus.ChainReader)
 	// 检查所有的头部，检查连续性
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
-			return nil, errInvalidVotingChain
+			return nil, consensus.ErrInvalidVotingChain
 		}
 	}
 	// 回溯到上一个阶段，在下一轮的第一个进行投票
 	if headers[0].Number.Uint64() != s.Number+1 {
-		return nil, errInvalidVotingChain
+		return nil, consensus.ErrInvalidVotingChain
 	}
 	
 	// 创建一个新的快照
@@ -285,7 +282,7 @@ func (s *Historysnap) apply(headers []*types.Header,chain consensus.ChainReader)
 			delete(snap.Recents, number-limit)
 		}
 		// 获取当前header是由谁打包的，从签名中还原
-		signer, err := ecrecover(header, s.sigcache)
+		signer, err := consensus.Ecrecover(header, s.sigcache)
 
 		//log.Info("current head", "Random",header.Random,"number",number)
 
@@ -297,7 +294,7 @@ func (s *Historysnap) apply(headers []*types.Header,chain consensus.ChainReader)
 		
 		// signerHash 是否在Signers中，如果不在则返回错误
 		if _, ok := snap.Signers[signer]; !ok {
-			return nil, errUnauthorized
+			return nil, consensus.ErrUnauthorized
 		}
 		
 		// signerHash 是否在 recent中，说明已经签过名
@@ -331,12 +328,12 @@ func (s *Historysnap) apply(headers []*types.Header,chain consensus.ChainReader)
 		// 开始新的投票
 		var authorize bool
 		switch {
-		case bytes.Equal(header.Nonce[:], nonceAuthVote):
+		case bytes.Equal(header.Nonce[:], consensus.NonceAuthVote):
 			authorize = true
-		case bytes.Equal(header.Nonce[:], nonceDropVote):
+		case bytes.Equal(header.Nonce[:], consensus.NonceDropVote):
 			authorize = false
 		default:
-			return nil, errInvalidVote
+			return nil, consensus.ErrInvalidVote
 		}
 		
 		//将投票结果进行放入到计票池子中
