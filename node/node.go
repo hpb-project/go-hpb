@@ -25,20 +25,22 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"io/ioutil"
+	"math/big"
+
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/blockchain/
-	"github.com/hpb-project/go-hpb/blockchain/storage
-	"github.com/hpb-project/go-hpb/network/p2p
-	"github.com/hpb-project/go-hpb/network/rpc
-	"github.com/hpb-project/go-hpb/consensus/prometheus
-	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/prometheus/prometheus/util/flock"
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/common"
@@ -46,16 +48,14 @@ import (
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"io/ioutil"
-	"math/big"
-	"github.com/go-hpb-backkup/node"
+	"github.com/go-hpb-backkup/vm"
 )
 
 // Node is a container on which services can be registered.
 type Node struct {
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
-	Hpbsyncctr      *synctrl
+	Hpbsyncctr      *synctrl.SynCtrl
 	Hpbtxpool 		*txpool.TxPool
 	Hpbbc           *bc.BlockChain
 	//Hpbworker       *Worker
@@ -73,6 +73,10 @@ type Node struct {
 	accountManager  *accounts.Manager
 	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
+
+	// Channel for shutting down the service
+	shutdownChan  chan bool    // Channel for shutting down the hpb
+	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	//ApiBackend      *HpbApiBackend
 
@@ -116,7 +120,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if strings.ContainsAny(conf.Node.Name, `/\`) {
 		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
 	}
-	if conf.Name == config.DatadirDefaultKeyStore{
+	if conf.Node.Name == config.DatadirDefaultKeyStore{
 		return nil, errors.New(`Config.Name cannot be "` + config.DatadirDefaultKeyStore + `"`)
 	}
 	if strings.HasSuffix(conf.Node.Name, ".ipc") {
@@ -133,17 +137,16 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
-	txpool      := txpool.GetTxPool()
-	db,err      := CreateDB(&conf.Node, "chaindata")
+	hpbtxpool      := txpool.GetTxPool()
+	db, err      := CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(event.TypeMux)
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, conf.Node.Genesis)
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, conf.Node.SyncMode, conf.Node.NetworkId, eventmux, txpool,/*todo txpool*/
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, conf.Node.SyncMode, conf.Node.NetworkId, eventmux, hpbtxpool,/*todo txpool*/
 		engine, db)
 
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)
-	//Hpbtxpool 		*Txpool
-	bc			:= bc.InstanceBlockChain()
+	stopDbUpgrade := upgradeDeduplicateData(db)	//Hpbtxpool 		*Txpool
+	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 
@@ -152,13 +155,12 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
 		Hpbsyncctr:		   syncctr,
-		Hpbtxpool:		   txpool,
-		Hpbbc:			   bc,
+		Hpbtxpool:		   txpool.TxPool,
+		Hpbbc:			   block,
 		//boe
 
 		chainDb:		   db,
 		networkId:		   conf.Node.NetworkId,
-
 
 		eventMux:          eventmux,
 		accountManager:	   am,
@@ -170,9 +172,57 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(db, config.BloomBitsBlocks),
 	}
+	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
+
+	if !conf.Node.SkipBcVersionCheck {
+		bcVersion := bc.GetBlockChainVersion(db)
+		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, core.BlockChainVersion)
+		}
+		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
+	}
+	vmConfig := vm.Config{EnablePreimageRecording: conf.Node.EnablePreimageRecording}
+	hpbnode.Hpbbc, err = bc.NewBlockChain(db, hpbnode.Hpbconfig.BlockChain, hpbnode.hpbengine, vmConfig)
+	if err != nil {
+		return nil, err
+	}
+	// Rewind the chain in case of an incompatible config upgrade.
+	if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
+		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		hpbnode.Hpbbc.SetHead(compat.RewindTo)
+		bc.WriteChainConfig(db, genesisHash, chainConfig)
+	}
+	hpb.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+
+	if conf.TxPool.Journal != "" {
+		conf.TxPool.Journal = conf.Node.ResolvePath(conf.TxPool.Journal)
+	}
+	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, conf.BlockChain, hpbnode.Hpbbc)
 
 
-	return node, nil
+	//hpbnode.miner = miner.New(hpb, hpb.chainConfig, hpb.EventMux(), hpb.engine)
+	//hpb.miner.SetExtra(makeExtraData(config.ExtraData))
+/*
+	hpb.ApiBackend = &HpbApiBackend{hpb, nil}
+	gpoParams := config.GPO
+	if gpoParams.Default == nil {
+		gpoParams.Default = config.GasPrice
+	}
+	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpb.ApiBackend, gpoParams)*/
+
+	return hpbnode, nil
+}
+
+func (hpnode *Node)Start(conf  *config.HpbConfig) (error){
+
+	retval := hpnode.Hpbpeermanager.Start()
+	if retval != nil{
+		log.Error("Start hpbpeermanager error")
+		return errors.New(`start peermanager error ".ipc"`)
+	}
+	hpnode.Hpbsyncctr.Start()
+	return nil
+
 }
 
 
@@ -221,98 +271,6 @@ func makeAccountManager(conf  *config.Nodeconfig) (*accounts.Manager, string, er
 
 
 
-
-// Start create a live P2P node and starts running it.
-func (n *Node) Start() error {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	// Short circuit if the node's already running
-	if n.server != nil {
-		return ErrNodeRunning
-	}
-	if err := n.openDataDir(); err != nil {
-		return err
-	}
-
-	// Initialize the p2p server. This creates the node key and
-	// discovery databases.
-	n.serverConfig = n.config.P2P
-	n.serverConfig.PrivateKey = n.config.NodeKey()
-	n.serverConfig.Name = n.config.NodeName()
-	if n.serverConfig.StaticNodes == nil {
-		n.serverConfig.StaticNodes = n.config.StaticNodes()
-	}
-	if n.serverConfig.TrustedNodes == nil {
-		n.serverConfig.TrustedNodes = n.config.TrustedNodes()
-	}
-	if n.serverConfig.NodeDatabase == "" {
-		n.serverConfig.NodeDatabase = n.config.NodeDB()
-	}
-	running := &p2p.Server{Config: n.serverConfig}
-	log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
-
-	// Otherwise copy and specialize the P2P configuration
-	services := make(map[reflect.Type]Service)
-	for _, constructor := range n.serviceFuncs {
-		// Create a new context for the particular service
-		ctx := &ServiceContext{
-			config:         n.config,
-			services:       make(map[reflect.Type]Service),
-			EventMux:       n.eventmux,
-			AccountManager: n.accman,
-		}
-		for kind, s := range services { // copy needed for threaded access
-			ctx.services[kind] = s
-		}
-		// Construct and save the service
-		service, err := constructor(ctx)
-		if err != nil {
-			return err
-		}
-		kind := reflect.TypeOf(service)
-		if _, exists := services[kind]; exists {
-			return &DuplicateServiceError{Kind: kind}
-		}
-		services[kind] = service
-	}
-	// Gather the protocols and start the freshly assembled P2P server
-	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
-	}
-	if err := running.Start(); err != nil {
-		return convertFileLockError(err)
-	}
-	// Start each of the services
-	started := []reflect.Type{}
-	for kind, service := range services {
-		// Start the next service, stopping all previous upon failure
-		if err := service.Start(running); err != nil {
-			for _, kind := range started {
-				services[kind].Stop()
-			}
-			running.Stop()
-
-			return err
-		}
-		// Mark the service started for potential cleanup
-		started = append(started, kind)
-	}
-	// Lastly start the configured RPC interfaces
-	if err := n.startRPC(services); err != nil {
-		for _, service := range services {
-			service.Stop()
-		}
-		running.Stop()
-		return err
-	}
-	// Finish initializing the startup
-	n.services = services
-	n.server = running
-	n.stop = make(chan struct{})
-
-	return nil
-}
 
 func (n *Node) openDataDir() error {
 	if n.config.DataDir == "" {

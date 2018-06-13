@@ -20,8 +20,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hpb-project/ghpb/core/event"
+	"github.com/hpb-project/go-hpb/event"
 	"sync/atomic"
+	"reflect"
 )
 
 var INSTANCE = atomic.Value{}
@@ -113,6 +114,11 @@ func (am *Manager) KeyStore() Backend {
 	return am.store
 }
 
+
+// Backends retrieves the backend(s) with the given type from the account manager.
+func (am *Manager) Backends(kind reflect.Type) Backend {
+	return am.store
+}
 // Wallets returns all signer accounts registered under this account manager.
 func (am *Manager) Wallets() []Wallet {
 	am.lock.RLock()
