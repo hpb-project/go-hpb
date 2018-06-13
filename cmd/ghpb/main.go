@@ -206,9 +206,9 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	node, cfg := MakeConfigNode(ctx)
-	startNode(ctx, node)
-	node.Wait()
+	hpbnode, cfg := MakeConfigNode(ctx)
+	startNode(ctx, hpbnode)
+	hpbnode.Wait()
 	return nil
 }
 
@@ -220,7 +220,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	utils.StartNode(stack)
 
 	// Unlock any account specifically requested
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType).(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")

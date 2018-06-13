@@ -78,14 +78,15 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	}
 	// Apply flags.
 	utils.SetNodeConfig(ctx, cfg)
-	stack, err := node.New(&cfg.Node)
-	if err != nil {
-	utils.Fatalf("Failed to create the protocol stack: %v", err)
-	}
-
 	utils.SetTxPool(ctx, &cfg.TxPool)
+
 	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
 	cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
+	}
+	//create node object
+	stack, err := node.New(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
 
 	return stack, cfg

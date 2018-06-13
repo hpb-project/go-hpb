@@ -15,17 +15,17 @@
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
 // Package eth implements the Hpb protocol.
-package hpb
+package node
 
 import (
 	"bytes"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/storage"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
 var deduplicateData = []byte("dbUpgrade_20170714deduplicateData")
@@ -81,7 +81,7 @@ func upgradeDeduplicateData(db hpbdb.Database) func() error {
 
 			if hash[0] == byte('l') {
 				// Potential clash, the "old" `hash` must point to a live transaction.
-				if tx, _, _, _ := core.GetTransaction(db, common.BytesToHash(hash)); tx == nil || !bytes.Equal(tx.Hash().Bytes(), hash) {
+				if tx, _, _, _ := bc.GetTransaction(db, common.BytesToHash(hash)); tx == nil || !bytes.Equal(tx.Hash().Bytes(), hash) {
 					continue
 				}
 			}
