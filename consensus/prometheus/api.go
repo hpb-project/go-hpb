@@ -29,15 +29,10 @@ type API struct {
 	prometheus *Prometheus
 }
 
+// 获取最新的的快照
 func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*Historysnap, error) {
-	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return its snapshot
+	header = api.GetLatestBlockHeader(number)
 	if header == nil {
 		return nil, errUnknownBlock
 	}
@@ -54,13 +49,10 @@ func (api *API) GetHistorysnapAtHash(hash common.Hash) (*Historysnap, error) {
 
 func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
+	// 获取到最新的header
 	
+	var header *types.Header
+	header = api.GetLatestBlockHeader(number)
 	if header == nil {
 		return nil, errUnknownBlock
 	}
@@ -71,11 +63,24 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
+//跟根据区块号，获取最新的区块头
+func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header){
+	//var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	return header
+}
+
+// 获取候选节点信息
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	//获取候选节点
 	return nil, nil
 }
 
+// 获取候选社区选举节点信息
 func (api *API) GetCommunityNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	//获取社区选举结果
 	return nil, nil
@@ -86,7 +91,6 @@ func (api *API) GetPrivateRandom() (string) {
 	//if(rand ==""){
 		//rand = getUniqueRandom()
 	//}
-	
 	return  getUniqueRandom(api.chain)
 }
 
