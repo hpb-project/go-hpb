@@ -26,8 +26,8 @@ import (
 	"github.com/hpb-project/ghpb/common"
 	//"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/storage"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hashicorp/golang-lru"
+	//"github.com/hpb-project/ghpb/common/constant"
+	//"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/ghpb/common/log"
 	//"github.com/hpb-project/ghpb/consensus"
 
@@ -48,7 +48,7 @@ type Winner struct {
 }
 
 //加载快照，直接去数据库中读取
-func LoadComNodeSnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*ComNodeSnap, error) {
+func LoadComNodeSnap(db hpbdb.Database, hash common.Hash) (*ComNodeSnap, error) {
 	blob, err := db.Get(append([]byte("comnodesnap-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -58,4 +58,13 @@ func LoadComNodeSnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db
 		return nil, err
 	}
 	return snap, nil
+}
+
+// store inserts the snapshot into the database.
+func (s *ComNodeSnap) Store(db hpbdb.Database) error {
+	blob, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	return db.Put(append([]byte("comnodesnap-"), s.Hash[:]...), blob)
 }
