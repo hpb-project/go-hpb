@@ -50,7 +50,6 @@ const (
 	inmemoryHistorysnaps = 128  // 内存中的快照个数
 	inmemorySignatures   = 4096 // 内存中的签名个数
 	wiggleTime = 500 * time.Millisecond // 延时单位
-	
 	comCheckpointInterval   = 1024 // 社区投票间隔
 )
 
@@ -97,30 +96,26 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获取候选节点的投票检查点
 
 	// 获取快照
+	
+	
+	//获取社区选举，对社区选举进行触发
+	comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
+
+	
 	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
 	
-	//
+	//在非投票点
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
-		
 		// 改造点， 开始从网络中获取
-		addresses := make([]common.Address, 0, len(c.proposals))
-		for address, authorize := range c.proposals {
-			if snap.ValidVote(address, authorize) {
-				addresses = append(addresses, address)
-			}
-		}
-		// If there's pending proposals, cast a vote on them
-		if len(addresses) > 0 {
-			header.Coinbase = addresses[rand.Intn(len(addresses))]
-			if c.proposals[header.Coinbase] {
-				copy(header.Nonce[:], consensus.NonceAuthVote)
-			} else {
-				copy(header.Nonce[:], consensus.NonceDropVote)
-			}
+		// 从网络中获取一个
+		
+		if snap.ValidVote(address, true) {
+			header.Coinbase = address
+			copy(header.Nonce[:], consensus.NonceAuthVote)
 		}
 		
 		c.lock.RUnlock()
@@ -166,7 +161,43 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	return nil
 }
 
-// 获取快照
+
+// 获取候选选举的快照
+func (c *Prometheus) getCanNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
+	
+	//业务逻辑
+	var (
+	 comNodeSnap    *snapshots.ComNodeSnap
+	 header  *types.Header
+	 latestCheckPointHash common.Hash
+	 latestCheckPointNumber uint64
+	)
+	
+	latestCheckPointNumber = number%comCheckpointInterval
+	header = chain.GetHeaderByNumber(latestCheckPointNumber)
+	latestCheckPointHash = header.Hash()
+	
+	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
+		log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+		return comNodeSnap,nil
+	}
+	
+	//快照中没有正常后去，则重新计算
+	if number%comCheckpointInterval == 0 {
+		// 
+		//开始读取智能合约
+		// 
+		
+		if err := comNodeSnap.Store(c.db); err != nil {
+				return nil, err
+		}
+		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+		return comNodeSnap,nil
+	}
+	return nil,nil
+}
+
+// 获取社区选举的快照
 func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
 	
 	//业务逻辑
@@ -191,6 +222,7 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 		// 
 		//开始读取智能合约
 		// 
+		//
 		
 		if err := comNodeSnap.Store(c.db); err != nil {
 				return nil, err

@@ -33,10 +33,7 @@ import (
 
 	//"strconv"
 	//"errors"
-
 )
-
-
 
 type Vote struct {
 	Signer    common.Address `json:"signerHash"`    // 可以投票的Signer
