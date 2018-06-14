@@ -18,18 +18,18 @@
 package consensus
 
 import (
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/state"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
 // blockchain during header and/or uncle verification.
 type ChainReader interface {
 	// Config retrieves the blockchain's chain configuration.
-	Config() *params.ChainConfig
+	Config() *config.ChainConfig
 
 	// CurrentHeader retrieves the current header from the local chain.
 	CurrentHeader() *types.Header
