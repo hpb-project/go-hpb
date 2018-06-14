@@ -49,7 +49,6 @@ const (
 	checkpointInterval   = 1024 // 投票间隔
 	inmemoryHistorysnaps = 128  // 内存中的快照个数
 	inmemorySignatures   = 4096 // 内存中的签名个数
-
 	wiggleTime = 500 * time.Millisecond // 延时单位
 )
 
@@ -96,7 +95,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获取候选节点的投票检查点
 
 	// 获取快照
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
-		// Gather all the proposals that make sense voting on
+		
 		// 改造点， 开始从网络中获取
 		addresses := make([]common.Address, 0, len(c.proposals))
 		for address, authorize := range c.proposals {
@@ -121,6 +120,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				copy(header.Nonce[:], consensus.NonceDropVote)
 			}
 		}
+		
 		c.lock.RUnlock()
 	}
 
@@ -141,10 +141,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
     //在投票周期的时候，放入全部的AddressHash
 	if number%c.config.Epoch == 0 {
-		for _, signerHash := range snap.GetSigners() {
-			header.Extra = append(header.Extra, signerHash[:]...)
+		for _, signer := range snap.GetSigners() {
+			header.Extra = append(header.Extra, signer[:]...)
 		}
 	}
+	
 	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
@@ -153,6 +154,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+	
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
 	
 	//设置时间点，如果函数太小则，设置为当前的时间
@@ -163,7 +165,14 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 }
 
 // 获取快照
-func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
+	
+	//业务逻辑
+	return nil,nil
+}
+
+// 获取快照
+func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	var (
 		headers []*types.Header
@@ -181,7 +190,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 		// 如果是检查点的时候，保存周期和投票周日不一致
 		if number%checkpointInterval == 0 {
 			if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
-				log.Trace("Prometheus： Loaded voting snapshot form disk", "number", number, "hash", hash)
+				log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
 				snap = s
 				break
 			}
@@ -206,7 +215,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 			if err := snap.Store(c.db); err != nil {
 				return nil, err
 			}
-			log.Trace("Stored genesis voting snapshot to disk")
+			log.Trace("Stored genesis voting getHpbNodeSnap to disk")
 			break
 		}
 
@@ -249,7 +258,7 @@ func (c *Prometheus) snapshot(chain consensus.ChainReader, number uint64, hash c
 		if err = snap.Store(c.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		log.Trace("Stored voting getHpbNodeSnap to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
 }
@@ -410,8 +419,8 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
 		return consensus.ErrInvalidTimestamp
 	}
-	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
+	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
@@ -455,8 +464,8 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
-	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
+	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, parents)
 
 	if err != nil {
 		return err
@@ -546,7 +555,7 @@ func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	//
 	if err != nil {
 		return nil, err

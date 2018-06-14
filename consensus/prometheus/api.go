@@ -37,7 +37,7 @@ func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap,
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.prometheus.getHpbNodeSnap(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 func (api *API) GetHistorysnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
@@ -45,7 +45,7 @@ func (api *API) GetHistorysnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, 
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.prometheus.getHpbNodeSnap(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
@@ -57,7 +57,7 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	snap, err := api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.prometheus.getHpbNodeSnap(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
