@@ -40,13 +40,13 @@ type PeerManager struct {
 	hpb     *Protocol
 }
 
-var pm *PeerManager
+var pm   *PeerManager
 var lock *sync.Mutex = &sync.Mutex {}
 
 func PeerMgrInst() *PeerManager {
-	lock.Lock()
-	defer lock.Unlock()
 	if pm == nil {
+		lock.Lock()
+		defer lock.Unlock()
 		pm =&PeerManager{
 			peers:   make(map[string]*Peer),
 		}

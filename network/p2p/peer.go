@@ -124,6 +124,7 @@ type Peer struct {
 	head     common.Hash
 
 	bandwidth float32
+	txsPerSec uint64
 }
 /*
 // NewPeer returns a peer for testing purposes.
@@ -632,6 +633,15 @@ func (p *Peer) KnownTxsHas(hash common.Hash) {
 	p.knownTxs.Has(hash)
 }
 
+func (p *Peer) TxsPerSec() uint64 {
+	return 0
+}
+
+func (p *Peer) SetTxsPerSec(txs uint64) bool {
+	p.txsPerSec = txs
+	return true
+}
+
 func (p *Peer) BandWidth() float32 {
 	return p.bandwidth
 }
@@ -641,7 +651,7 @@ func (p *Peer) SetBandWidth(bw float32) bool {
 	return true
 }
 
-func (p *Peer) TestBandWidth() float32 {
+func (p *Peer) testBandWidth() float32 {
 	//TODO:开始测试对端的带宽
 	return p.bandwidth
 }
