@@ -50,6 +50,8 @@ const (
 	inmemoryHistorysnaps = 128  // 内存中的快照个数
 	inmemorySignatures   = 4096 // 内存中的签名个数
 	wiggleTime = 500 * time.Millisecond // 延时单位
+	
+	comCheckpointInterval   = 1024 // 社区投票间隔
 )
 
 // Prometheus protocol constants.
@@ -168,6 +170,34 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
 	
 	//业务逻辑
+	var (
+	 comNodeSnap    *snapshots.ComNodeSnap
+	 header  *types.Header
+	 latestCheckPointHash common.Hash
+	 latestCheckPointNumber uint64
+	)
+	
+	latestCheckPointNumber = number%comCheckpointInterval
+	header = chain.GetHeaderByNumber(latestCheckPointNumber)
+	latestCheckPointHash = header.Hash()
+	
+	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
+		log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+		return comNodeSnap,nil
+	}
+	
+	//快照中没有正常后去，则重新计算
+	if number%comCheckpointInterval == 0 {
+		// 
+		//开始读取智能合约
+		// 
+		
+		if err := comNodeSnap.Store(c.db); err != nil {
+				return nil, err
+		}
+		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+		return comNodeSnap,nil
+	}
 	return nil,nil
 }
 
@@ -180,13 +210,11 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 	)
 	//CoinbaseHash
 	for snap == nil {
-
 		// 直接使用内存中的，recents存部分
 		if s, ok := c.recents.Get(hash); ok {
 			snap = s.(*snapshots.HpbNodeSnap)
 			break
 		}
-
 		// 如果是检查点的时候，保存周期和投票周日不一致
 		if number%checkpointInterval == 0 {
 			if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
@@ -195,7 +223,6 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 				break
 			}
 		}
-
 		// 首次要创建
 		if number == 0 {
 			genesis := chain.GetHeaderByNumber(0)
