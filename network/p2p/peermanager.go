@@ -32,41 +32,83 @@ var (
 	errClosed            = errors.New("peer set is closed")
 	errAlreadyRegistered = errors.New("peer is already registered")
 	errNotRegistered     = errors.New("peer is not registered")
+	errIncomplete        = errors.New("PeerManager is incomplete creation")
 )
 
+const (
+	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //for testnet
+	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)  //for testnet
+	//handshakeTimeout = 5 * time.Second
+)
+
+// PeerInfo represents a short summary of the Hpb sub-protocol metadata known
+// about a connected peer.
+type HpbPeerInfo struct {
+	Version    uint      `json:"version"`   // Hpb protocol version negotiated
+	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
+	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
+}
+
+// statusData is the network packet for the status message.
+type statusData struct {
+	ProtocolVersion uint32
+	NetworkId       uint64
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	GenesisBlock    common.Hash
+}
+
+type peer struct {
+	id string
+
+	*Peer
+	rw MsgReadWriter
+
+	version  uint         // Protocol version negotiated
+
+	head common.Hash
+	td   *big.Int
+	lock sync.RWMutex
+
+	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+}
+
+
 type PeerManager struct {
-	peers  *peerSet
+	peers  map[string]*peer
+	lock   sync.RWMutex
+	closed bool
+
+
 	server *Server
 	hpb    *HpbProto
 }
 
 var pm   *PeerManager
 var lock *sync.Mutex = &sync.Mutex {}
-
 func PeerMgrInst() *PeerManager {
 	if pm == nil {
 		lock.Lock()
 		defer lock.Unlock()
 		pm =&PeerManager{
-			peers: newPeerSet(),
+			peers: make(map[string]*peer),
+			hpb: NewProtos(),
 		}
 	}
 	return pm
 }
 
-func (prm *PeerManager)Start() error {
-	hpb ,err := NewProtos()
-	if err != nil {
-		log.Error("PeerManager hpb protocol build","error",err)
-		return err
+func (prm *PeerManager)Start(cfg Config) error {
+	if prm.hpb == nil {
+		return errIncomplete
 	}
-	log.Info("Hpb protocol","Hpb",hpb.Protocols())
-
 
 	prm.server = &Server{
-		//Config:       config,
+		Config:       cfg,
 	}
-	copy(prm.server.Protocols, hpb.Protocols())
+	copy(prm.server.Protocols, prm.hpb.Protocols())
+
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -78,62 +120,120 @@ func (prm *PeerManager)Start() error {
 }
 
 func (prm *PeerManager)Stop(){
+	prm.Close()
 
 	prm.server.Stop()
 	prm.server = nil
 
 }
 
-//接口定义
+
 // Register injects a new peer into the working set, or returns an error if the
 // peer is already known.
 func (prm *PeerManager) Register(p *peer) error {
+	prm.lock.Lock()
+	defer prm.lock.Unlock()
 
-	return prm.peers.Register(p)
+	if prm.closed {
+		return errClosed
+	}
+	if _, ok := prm.peers[p.id]; ok {
+		return errAlreadyRegistered
+	}
+	prm.peers[p.id] = p
+	return nil
 }
 
 // Unregister removes a remote peer from the active set, disabling any further
 // actions to/from that particular entity.
 func (prm *PeerManager) Unregister(id string) error {
-	return prm.peers.Unregister(id)
+	prm.lock.Lock()
+	defer prm.lock.Unlock()
+
+	if _, ok := prm.peers[id]; !ok {
+		return errNotRegistered
+	}
+	delete(prm.peers, id)
+	return nil
 }
 
 // Peer retrieves the registered peer with the given id.
 func (prm *PeerManager) Peer(id string) *peer {
-	return prm.peers.Peer(id)
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	return prm.peers[id]
 }
 
 // Len returns if the current number of peers in the set.
-func (prm *PeerManager) PeersCount() int {
-	return prm.peers.Len()
+func (prm *PeerManager) Len() int {
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	return len(prm.peers)
 }
 
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes.
 func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*peer {
-	return nil
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	list := make([]*peer, 0, len(prm.peers))
+	for _, p := range prm.peers {
+		if !p.knownBlocks.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
 }
 
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
 func (prm *PeerManager) PeersWithoutTx(hash common.Hash) []*peer {
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
 
-	return nil
+	list := make([]*peer, 0, len(prm.peers))
+	for _, p := range prm.peers {
+		if !p.knownTxs.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
 }
 
 // BestPeer retrieves the known peer with the currently highest total difficulty.
 func (prm *PeerManager) BestPeer() *peer {
-	return nil
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	var (
+		bestPeer *peer
+		bestTd   *big.Int
+	)
+	for _, p := range prm.peers {
+		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+			bestPeer, bestTd = p, td
+		}
+	}
+	return bestPeer
 }
 
 // Close disconnects all peers.
 // No new peers can be registered after Close has returned.
-func (prm *PeerManager) closePeers() {
+func (prm *PeerManager) Close() {
+	prm.lock.Lock()
+	defer prm.lock.Unlock()
 
+	for _, p := range prm.peers {
+		p.Disconnect(DiscQuitting)
+	}
+	prm.closed = true
 }
+
 ////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
+
 //HPB 协议
 type HpbProto struct {
 	protos   []Protocol
@@ -163,7 +263,7 @@ const (
 	ErrSuspendedPeer
 )
 
-func NewProtos() (*HpbProto,error) {
+func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
 		protos:  make([]Protocol, 0, len(ProtocolVersions)),
 	}
@@ -189,10 +289,10 @@ func NewProtos() (*HpbProto,error) {
 	}
 
 	if len(hpb.protos) == 0 {
-		return nil, errors.New("protocols incompatible configuration")
+		return nil
 	}
 
-	return hpb,nil
+	return hpb
 }
 
 func (s *HpbProto) Protocols() []Protocol {
@@ -353,49 +453,8 @@ func (s *HpbProto) removePeer(id string) {
 		peer.Disconnect(DiscUselessPeer)
 	}
 }
+
 ////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
-const (
-	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //for testnet
-	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)  //for testnet
-	//handshakeTimeout = 5 * time.Second
-)
-
-// PeerInfo represents a short summary of the Hpb sub-protocol metadata known
-// about a connected peer.
-type HpbPeerInfo struct {
-	Version    uint      `json:"version"`   // Hpb protocol version negotiated
-	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
-	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
-}
-
-// statusData is the network packet for the status message.
-type statusData struct {
-	ProtocolVersion uint32
-	NetworkId       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
-}
-
-type peer struct {
-	id string
-
-	*Peer
-	rw MsgReadWriter
-
-	version  uint         // Protocol version negotiated
-
-	head common.Hash
-	td   *big.Int
-	lock sync.RWMutex
-
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-}
-
 func newpeer(version uint, p *Peer, rw MsgReadWriter) *peer {
 	id := p.ID()
 
@@ -532,127 +591,3 @@ func (p *peer) String() string {
 		fmt.Sprintf("hpb/%2d", p.version),
 	)
 }
-
-// peerSet represents the collection of active peers currently participating in
-// the Hpb sub-protocol.
-type peerSet struct {
-	peers  map[string]*peer
-	lock   sync.RWMutex
-	closed bool
-}
-
-// newPeerSet creates a new peer set to track the active participants.
-func newPeerSet() *peerSet {
-	return &peerSet{
-		peers: make(map[string]*peer),
-	}
-}
-
-// Register injects a new peer into the working set, or returns an error if the
-// peer is already known.
-func (ps *peerSet) Register(p *peer) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if ps.closed {
-		return errClosed
-	}
-	if _, ok := ps.peers[p.id]; ok {
-		return errAlreadyRegistered
-	}
-	ps.peers[p.id] = p
-	return nil
-}
-
-// Unregister removes a remote peer from the active set, disabling any further
-// actions to/from that particular entity.
-func (ps *peerSet) Unregister(id string) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if _, ok := ps.peers[id]; !ok {
-		return errNotRegistered
-	}
-	delete(ps.peers, id)
-	return nil
-}
-
-// Peer retrieves the registered peer with the given id.
-func (ps *peerSet) Peer(id string) *peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	return ps.peers[id]
-}
-
-// Len returns if the current number of peers in the set.
-func (ps *peerSet) Len() int {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	return len(ps.peers)
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// PeersWithoutTx retrieves a list of peers that do not have a given transaction
-// in their set of known hashes.
-func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownTxs.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// BestPeer retrieves the known peer with the currently highest total difficulty.
-func (ps *peerSet) BestPeer() *peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	var (
-		bestPeer *peer
-		bestTd   *big.Int
-	)
-	for _, p := range ps.peers {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = p, td
-		}
-	}
-	return bestPeer
-}
-
-// Close disconnects all peers.
-// No new peers can be registered after Close has returned.
-func (ps *peerSet) Close() {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	for _, p := range ps.peers {
-		p.Disconnect(DiscQuitting)
-	}
-	ps.closed = true
-}
-
-
-
-
-

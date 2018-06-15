@@ -67,7 +67,7 @@ type dialstate struct {
 type discoverTable interface {
 	Self() *discover.Node
 	Close()
-	ReadAllNodes()[]*discover.Node
+	FindNodes()[]*discover.Node
 }
 
 // the dial history remembers recent dials.
@@ -157,7 +157,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		}
 	}
 
-	nodes := s.ntab.ReadAllNodes()
+	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
 			log.Info("add one node to dial task","Node",n.String())

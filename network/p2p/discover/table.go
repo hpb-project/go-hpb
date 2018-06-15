@@ -24,7 +24,6 @@ package discover
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -38,21 +37,19 @@ import (
 )
 
 const (
-	alpha      = 3   // Kademlia concurrency factor
 	bucketSize = 500 // Kademlia bucket size
 	hashBits   = len(common.Hash{}) * 8
 	nBuckets   = hashBits + 1 // Number of buckets
-
 	maxBondingPingPongs = 16
-	maxFindnodeFailures = 5
-
-	autoRefreshInterval = 1 * time.Hour
-	seedCount           = 30
-	seedMaxAge          = 5 * 24 * time.Hour
-
-	MaxNodesCount  = 500 //
 	autoRefreshMin = 15 * time.Second
 	updateDBNodeMin= 10 * time.Second
+
+	//alpha      = 3   // Kademlia concurrency factor
+	//maxFindnodeFailures = 5
+	//autoRefreshInterval = 1 * time.Hour
+	//seedCount           = 30
+	//seedMaxAge          = 5 * 24 * time.Hour
+	//MaxNodesCount  = 500 //
 )
 
 type Table struct {
@@ -92,7 +89,7 @@ type transport interface {
 	waitping(NodeID) error
 	regto(NodeID, *net.UDPAddr) error
 	pingto(NodeID, *net.UDPAddr,uint16, []byte) error
-	findnode(toid NodeID, addr *net.UDPAddr, target NodeID) ([]*Node, error)
+	//findnode(toid NodeID, addr *net.UDPAddr, target NodeID) ([]*Node, error)
 	getnodes(toid NodeID, addr *net.UDPAddr) ([]*Node, error)
 	close()
 }
@@ -148,7 +145,7 @@ func newTable(t transport, ourID NodeID, nodeType NodeType, ourAddr *net.UDPAddr
 func (tab *Table) Self() *Node {
 	return tab.self
 }
-func (tab *Table) ReadAllNodes()(buf []*Node) {
+func (tab *Table) FindNodes()(buf []*Node) {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 
@@ -163,6 +160,7 @@ func (tab *Table) ReadAllNodes()(buf []*Node) {
 	log.Trace("Read all nodes from boot","cont",count,"buf",buf)
 	return buf
 }
+/*
 // ReadRandomNodes fills the given slice with random nodes from the
 // table. It will not write the same node more than once. The nodes in
 // the slice are copies and can be modified by the caller.
@@ -209,7 +207,7 @@ func randUint(max uint32) uint32 {
 	rand.Read(b[:])
 	return binary.BigEndian.Uint32(b[:]) % max
 }
-
+*/
 // Close terminates the network listener and flushes the node database.
 func (tab *Table) Close() {
 	select {
@@ -245,7 +243,7 @@ func (tab *Table) SetFallbackNodes(nodes []*Node) error {
 	tab.refresh()
 	return nil
 }
-
+/*
 // Resolve searches for a specific node with the given ID.
 // It returns nil if the node could not be found.
 func (tab *Table) Resolve(targetID NodeID) *Node {
@@ -283,7 +281,9 @@ func (tab *Table) Findout(targetID NodeID) *Node {
 
 	return nil
 }
+*/
 
+/*
 // Lookup performs a network search for nodes close
 // to the given target. It approaches the target by querying
 // nodes that are closer to it on each iteration.
@@ -362,6 +362,7 @@ func (tab *Table) lookup(targetID NodeID, refreshIfEmpty bool) []*Node {
 	}
 	return result.entries
 }
+*/
 
 func (tab *Table) refresh() <-chan struct{} {
 	done := make(chan struct{})
@@ -418,7 +419,7 @@ loop:
 	tab.db.close()
 	close(tab.closed)
 }
-
+/*
 // doRefresh performs a lookup for a random target to keep buckets
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
@@ -459,6 +460,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// Finally, do a self lookup to fill up the buckets.
 	tab.lookup(tab.self.ID, false)
 }
+*/
 
 // closest returns the n nodes in the table that are closest to the
 // given id. The caller must hold tab.mutex.
@@ -813,7 +815,7 @@ func (tab *Table) bondRegNode(id NodeID,addr *net.UDPAddr, tcpPort uint16,ext Ex
 	}
 
 	if node == nil  {
-		node = NewNode(id, LightNode, addr.IP, uint16(addr.Port), tcpPort)
+		node = NewNode(id, InitNode, addr.IP, uint16(addr.Port), tcpPort)
 	}else{
 	}
 	copy(node.Ext.RandNonce,ext.RandNonce)
@@ -825,8 +827,8 @@ func (tab *Table) bondRegNode(id NodeID,addr *net.UDPAddr, tcpPort uint16,ext Ex
 	// Ping the remote side and wait for a pong.
 	if err := tab.net.pingto(node.ID, node.addr(), node.TCP, node.Ext.RandNonce); err != nil {
 
-		if node.TYPE != LightNode {
-			node.TYPE = LightNode
+		if node.TYPE != InitNode {
+			node.TYPE = InitNode
 			tab.db.updateNode(node)
 		}
 		tab.db.updateLastRegister(id, time.Now())
