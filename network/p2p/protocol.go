@@ -18,12 +18,7 @@ package p2p
 
 import (
 	"fmt"
-	"errors"
-
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"math/big"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/log"
 )
 
 // Protocol represents a P2P subprotocol implementation.

@@ -20,8 +20,12 @@ import (
 	"sync"
 	"errors"
 	"math/big"
+	"time"
+	"fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"gopkg.in/fatih/set.v0"
 )
 
 var (
