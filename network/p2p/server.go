@@ -205,7 +205,6 @@ type conn struct {
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
-	version  string       // valid after the protocol handshake
 }
 
 type transport interface {
@@ -366,10 +365,10 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	log.Info("Starting P2P networking")
 
-	//hpbProto ,err := NewHpbProtos()
+	hpbProto ,err := NewProtos()
 	//log.Info("Hpb protocol","Hpb",hpbProto.Protocols())
 
-	//copy(srv.Protocols, hpbProto.Protocols())
+	copy(srv.Protocols, hpbProto.Protocols())
 	//log.Info("Server","protocol",srv.Protocols)
 
 	// static fields
@@ -392,7 +391,7 @@ func (srv *Server) Start() (err error) {
 	srv.peerOpDone = make(chan struct{})
 
 	// node table
-	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.LightNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
+	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.InitNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 	if err != nil {
 		return err
 	}
@@ -405,7 +404,7 @@ func (srv *Server) Start() (err error) {
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
+	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -798,6 +797,7 @@ func (srv *Server) runPeer(p *Peer) {
 
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
+	log.Info("stop peer","ID",p.ID(),"err",err)
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 

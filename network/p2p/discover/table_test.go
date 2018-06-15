@@ -34,7 +34,7 @@ import (
 func TestTable_pingReplace(t *testing.T) {
 	doit := func(newNodeIsResponding, lastInBucketIsResponding bool) {
 		transport := newPingRecorder()
-		tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{}, "")
+		tab, _ := newTable(transport, NodeID{}, InitNode, &net.UDPAddr{}, "")
 		defer tab.Close()
 		pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"), LightNode,net.IP{}, 99, 99)
 
@@ -45,7 +45,7 @@ func TestTable_pingReplace(t *testing.T) {
 		// in its bucket if the node is not responding.
 		transport.responding[last.ID] = lastInBucketIsResponding
 		transport.responding[pingSender.ID] = newNodeIsResponding
-		tab.bond(true, pingSender.ID, &net.UDPAddr{}, 0)
+		tab.bond(true, pingSender.ID, InitNode, &net.UDPAddr{}, 0,nil)
 
 		// first ping goes to sender (bonding pingback)
 		if !transport.pinged[pingSender.ID] {
@@ -178,7 +178,7 @@ func TestTable_closest(t *testing.T) {
 
 	test := func(test *closeTest) bool {
 		// for any node table, Target and N
-		tab, _ := newTable(nil, test.Self, &net.UDPAddr{}, "")
+		tab, _ := newTable(nil, test.Self, InitNode, &net.UDPAddr{}, "")
 		defer tab.Close()
 		tab.stuff(test.All)
 
@@ -237,7 +237,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		},
 	}
 	test := func(buf []*Node) bool {
-		tab, _ := newTable(nil, NodeID{}, &net.UDPAddr{}, "")
+		tab, _ := newTable(nil, NodeID{}, InitNode, &net.UDPAddr{}, "")
 		defer tab.Close()
 		for i := 0; i < len(buf); i++ {
 			ld := cfg.Rand.Intn(len(tab.buckets))
@@ -280,7 +280,7 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 
 func TestTable_Lookup(t *testing.T) {
 	self := nodeAtDistance(common.Hash{}, 0)
-	tab, _ := newTable(lookupTestnet, self.ID, &net.UDPAddr{}, "")
+	tab, _ := newTable(lookupTestnet, self.ID, InitNode, &net.UDPAddr{}, "")
 	defer tab.Close()
 
 	// lookup on empty table returns no nodes
@@ -288,7 +288,7 @@ func TestTable_Lookup(t *testing.T) {
 		t.Fatalf("lookup on empty table returned %d results: %#v", len(results), results)
 	}
 	// seed table with initial node (otherwise lookup will terminate immediately)
-	seed := NewNode(lookupTestnet.dists[256][0], LightNode,net.IP{}, 256, 0)
+	seed := NewNode(lookupTestnet.dists[256][0], InitNode,net.IP{}, 256, 0)
 	tab.stuff([]*Node{seed})
 
 	results := tab.Lookup(lookupTestnet.target)
@@ -518,7 +518,7 @@ func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target Nod
 	next := uint16(toaddr.Port) - 1
 	var result []*Node
 	for i, id := range tn.dists[toaddr.Port] {
-		result = append(result, NewNode(id, LightNode,net.ParseIP("127.0.0.1"), next, uint16(i)))
+		result = append(result, NewNode(id, InitNode,net.ParseIP("127.0.0.1"), next, uint16(i)))
 	}
 	return result, nil
 }

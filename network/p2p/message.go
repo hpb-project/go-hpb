@@ -29,15 +29,20 @@ import (
 )
 
 
-
+// message of control
 const (
+	baseMsgVersion       = 0x01
+
 	handshakeMsg = 0x00
 	discMsg      = 0x01
 	pingMsg      = 0x02
 	pongMsg      = 0x03
+	baseMsgMax   = 0x0F
 )
+
+// message of hpb protocol
 const (
-	hpbMsg             = 0x10
+	HpbMsgBegin        = 0x10
 	StatusMsg          = 0x11
 	NewBlockHashesMsg  = 0x12
 	TxMsg              = 0x13
@@ -50,6 +55,8 @@ const (
 	NodeDataMsg        = 0x1a
 	GetReceiptsMsg     = 0x1b
 	ReceiptsMsg        = 0x1c
+	HpbTestMsg         = 0x20
+	HpbTestMsgResp     = 0x21
 )
 
 // Msg defines the structure of a p2p message.
@@ -119,15 +126,6 @@ func Send(w MsgWriter, msgcode uint64, data interface{}) error {
 	return w.WriteMsg(Msg{Code: msgcode, Size: uint32(size), Payload: r})
 }
 
-// SendItems writes an RLP with the given code and data elements.
-// For a call such as:
-//
-//    SendItems(w, code, e1, e2, e3)
-//
-// the message payload will be an RLP list containing the items:
-//
-//    [e1, e2, e3]
-//
 func SendItems(w MsgWriter, msgcode uint64, elems ...interface{}) error {
 	return Send(w, msgcode, elems)
 }

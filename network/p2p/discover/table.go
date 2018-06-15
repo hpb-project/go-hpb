@@ -113,7 +113,7 @@ func newTable(t transport, ourID NodeID, nodeType NodeType, ourAddr *net.UDPAddr
 	//1.调用BOE接口，传入随机数
 	//2.返回结果和计算结果是否一一致。
 	//3.结果一致则认证通过。声明节点类型应该设置为AuthNode,此类型需要其他节点验证。
-	if nodeType > LightNode && nodeType < BootNode {
+	if nodeType > InitNode && nodeType < BootNode {
 		//硬件认证检查
 	}
 
