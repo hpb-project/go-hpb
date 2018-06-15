@@ -20,7 +20,7 @@ import (
 	"errors"
 	//"fmt"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	"sync"
 	"time"
 
@@ -101,6 +101,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获取社区选举，对社区选举进行触发
 	comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
 
+    if err != nil {
+    	log.Info("qqqqqqqq", comNodeSnap.Hash)
+		return err
+	}
 	
 	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	if err != nil {
@@ -113,10 +117,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		// 改造点， 开始从网络中获取
 		// 从网络中获取一个
 		
-		if snap.ValidVote(address, true) {
-			header.Coinbase = address
-			copy(header.Nonce[:], consensus.NonceAuthVote)
-		}
+		//if snap.ValidVote(address, true) {
+		//	header.Coinbase = address
+		//	copy(header.Nonce[:], consensus.NonceAuthVote)
+		//}
 		
 		c.lock.RUnlock()
 	}
@@ -202,20 +206,20 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	
 	//业务逻辑
 	var (
-	 comNodeSnap    *snapshots.ComNodeSnap
-	 header  *types.Header
-	 latestCheckPointHash common.Hash
-	 latestCheckPointNumber uint64
+	// comNodeSnap    *snapshots.ComNodeSnap
+	// header  *types.Header
+	 //latestCheckPointHash common.Hash
+	/// latestCheckPointNumber uint64
 	)
 	
-	latestCheckPointNumber = number%comCheckpointInterval
-	header = chain.GetHeaderByNumber(latestCheckPointNumber)
-	latestCheckPointHash = header.Hash()
+	//latestCheckPointNumber = number%comCheckpointInterval
+	//header = chain.GetHeaderByNumber(latestCheckPointNumber)
+	//latestCheckPointHash = header.Hash()
 	
-	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
-		log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-		return comNodeSnap,nil
-	}
+	//if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
+	//	log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+	//	return comNodeSnap,nil
+	//}
 	
 	//快照中没有正常后去，则重新计算
 	if number%comCheckpointInterval == 0 {
@@ -223,6 +227,13 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 		//开始读取智能合约
 		// 
 		//
+		
+		comNodeSnap := snapshots.NewComNodeSnap(number,hash)
+		
+		comNodeSnap.Winners = append(comNodeSnap.Winners,&snapshots.Winner{
+			NetworkId: "123",
+			Address: "www",
+		})
 		
 		if err := comNodeSnap.Store(c.db); err != nil {
 				return nil, err

@@ -38,14 +38,9 @@ import (
 type CanNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
-	Winners map[common.Address]Winner `json:"winners"`   // 当前的授权用户
+	//Winners map[common.Address]Winner `json:"winners"`   // 当前的授权用户
 }
 
-type Winner struct {
-	Name          string `json:"name"`                  // 获胜者的名称
-	NetworkId     string `json:"networkid"`             // 获胜者的网络ID
-	Address       common.Address `json:"address"`       // 获胜者的地址
-}
 
 //加载快照，直接去数据库中读取
 func LoadCanNodeSnap(db hpbdb.Database, hash common.Hash) (*CanNodeSnap, error) {
