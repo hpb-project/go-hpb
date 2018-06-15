@@ -108,6 +108,7 @@ func (boe *BoeHandle) Init()(error) {
         // the board will not work correctly.
         id := localInfoId()
         ret = C.SetBOEID(C.uint(id))
+        var vret = uint(ret)
         if ret != C.BOE_OK {
             return ErrIDNotMatch
         }
@@ -189,20 +190,24 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     boe.m.Lock()
     defer boe.m.Unlock()
 
-    if len(hash) != 32 || len(r) != 32 || len(s) != 32 {
-        return nil,ErrInvalidParams
-    }
     atomic.AddInt32(&boeRecoverPubTps, 1)
     var result = make([]byte, 64)
 
     if(boeRecoverPubTps > 100) {
         // use hardware
         var (
-            c_hash = (*C.uchar)(unsafe.Pointer(&hash[0]))
-            c_r = (*C.uchar)(unsafe.Pointer(&r[0]))
-            c_s = (*C.uchar)(unsafe.Pointer(&s[0]))
+            m_hash = make([] byte, 32)
+            m_r = make([] byte, 32)
+            m_s = make([] byte, 32)
+
+            c_hash = (*C.uchar)(unsafe.Pointer(&m_hash[0]))
+            c_r = (*C.uchar)(unsafe.Pointer(&m_r[0]))
+            c_s = (*C.uchar)(unsafe.Pointer(&m_s[0]))
             c_v = C.uchar(v)
         )
+        copy(m_hash[32-len(hash):32], hash)
+        copy(m_r[32-len(s):32], r)
+        copy(m_s[32-len(s):32], s)
 
         c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
         if c_ret != 0 {
@@ -233,7 +238,6 @@ func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
     if ret != 0 {
         return nil, ErrHWSignFailed
     } 
-
     return result, nil
 }
 
