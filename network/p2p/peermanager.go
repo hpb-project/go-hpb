@@ -273,7 +273,7 @@ func NewProtos() *HpbProto {
 			Name:    ProtoName,
 			Version: version,
 			Run: func(p *peer, rw MsgReadWriter) error {
-				peer := newPeer(version, p, rw)
+				peer := NewPeer(version, p, rw)
 				return hpb.handle(peer)
 			},
 			NodeInfo: func() interface{} {
@@ -455,7 +455,7 @@ func (s *HpbProto) removePeer(id string) {
 }
 
 ////////////////////////////////////////////////////////
-func newPeer(version uint, pr *peer, rw MsgReadWriter) *Peer {
+func NewPeer(version uint, pr *peer, rw MsgReadWriter) *Peer {
 	id := pr.ID()
 
 	return &Peer{
