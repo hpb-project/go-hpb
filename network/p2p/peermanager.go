@@ -344,12 +344,12 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 
 
-	/*
-	//peer层性能统计
+
+	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
 	}
-	*/
+
 
 	// Register the peer locally
 	if err := PeerMgrInst().Register(p); err != nil {
