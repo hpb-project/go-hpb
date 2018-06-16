@@ -50,10 +50,11 @@ type Winner struct {
 }
 
 // 创建对象
-func NewComNodeSnap(number uint64, hash common.Hash) *ComNodeSnap {
+func NewComNodeSnap(number uint64, hash common.Hash,Winners  []*Winner) *ComNodeSnap {
 	snap := &ComNodeSnap{
 		Number:   number,
 		Hash:     hash,
+		Winners: Winners,
 	}
 	return snap
 }

@@ -101,8 +101,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获取社区选举，对社区选举进行触发
 	comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
 
+    log.Info("############################################TESE", comNodeSnap.Winners[0].Address)
     if err != nil {
-    	log.Info("qqqqqqqq", comNodeSnap.Hash)
 		return err
 	}
 	
@@ -206,7 +206,7 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	
 	//业务逻辑
 	var (
-	// comNodeSnap    *snapshots.ComNodeSnap
+	 comNodeSnap    *snapshots.ComNodeSnap
 	// header  *types.Header
 	 //latestCheckPointHash common.Hash
 	/// latestCheckPointNumber uint64
@@ -222,26 +222,38 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	//}
 	
 	//快照中没有正常后去，则重新计算
-	if number%comCheckpointInterval == 0 {
+	//if number%2 == 0 {
 		// 
 		//开始读取智能合约
 		// 
 		//
 		
-		comNodeSnap := snapshots.NewComNodeSnap(number,hash)
+		type Winners []*snapshots.Winner
 		
+		w1 := &snapshots.Winner{"192.168.2.14","1LakUu1rn3X3zHrR21hLYWEFnBWJVZJBz9"}
+		w2 := &snapshots.Winner{"192.168.2.12","17SPaMHq1EkWNVGZuxdoLbDZQ8P39LzKgm"}
+		w3 := &snapshots.Winner{"192.168.2.33","1Ljzw8EodRSLmtxPrFsQP9Ew94htgJ3xze"}
+		
+		allWinners := Winners([]*snapshots.Winner{w1, w2, w3}) 
+		
+		comNodeSnap = snapshots.NewComNodeSnap(number,hash,allWinners)
+
+        log.Info("this is a test ************************************", comNodeSnap.Winners[0].NetworkId)
+		
+		/*
 		comNodeSnap.Winners = append(comNodeSnap.Winners,&snapshots.Winner{
 			NetworkId: "123",
 			Address: "www",
 		})
+		*/
 		
 		if err := comNodeSnap.Store(c.db); err != nil {
 				return nil, err
 		}
 		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
 		return comNodeSnap,nil
-	}
-	return nil,nil
+	//}
+	//return nil,nil
 }
 
 // 获取快照
