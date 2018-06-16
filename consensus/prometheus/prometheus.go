@@ -121,8 +121,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		
 		
 		//if snap.ValidVote(address, true) {
-			header.Coinbase = [20]byte{0, 1, 2, 3, 4,0, 1, 2, 3, 4,0, 1, 2, 3, 4,0, 1, 2, 3, 4}
-			header.VoteIndex = 3000
+			
+			address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
+			header.Coinbase = address // 设置地址
+			header.VoteIndex = 3000   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 		//}
 	
