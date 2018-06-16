@@ -23,6 +23,8 @@ import (
 	//"math/rand"
 	"sync"
 	"time"
+	"math"
+	"strconv"
 
 	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
@@ -50,7 +52,7 @@ const (
 	inmemoryHistorysnaps = 128  // 内存中的快照个数
 	inmemorySignatures   = 4096 // 内存中的签名个数
 	wiggleTime = 500 * time.Millisecond // 延时单位
-	comCheckpointInterval   = 1024 // 社区投票间隔
+	comCheckpointInterval   = 2 // 社区投票间隔
 )
 
 // Prometheus protocol constants.
@@ -206,55 +208,73 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	
 	//业务逻辑
 	var (
-	 comNodeSnap    *snapshots.ComNodeSnap
-	// header  *types.Header
-	 //latestCheckPointHash common.Hash
-	/// latestCheckPointNumber uint64
+	 //comNodeSnap    *snapshots.ComNodeSnap
+	 header  *types.Header
+	 latestCheckPointHash common.Hash
+	 //latestCheckPointNumber float64
 	)
 	
-	//latestCheckPointNumber = number%comCheckpointInterval
-	//header = chain.GetHeaderByNumber(latestCheckPointNumber)
-	//latestCheckPointHash = header.Hash()
+	// 进来的请求恰好在投票检查点，此时重新计票
+	log.Error("current number:",strconv.FormatUint(number, 10))
+	if number%comCheckpointInterval == 0 {
+		if comNodeSnap, err0 := c.CalcuComNodeSnap(number, hash); err0 == nil {
+			return comNodeSnap,nil
+		}
+	}
 	
-	//if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
-	//	log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-	//	return comNodeSnap,nil
-	//}
+	//不在投票点开始获取数据库中的内容
 	
-	//快照中没有正常后去，则重新计算
-	//if number%2 == 0 {
-		// 
+	latestCheckPointNumber :=  uint64(math.Floor(float64(number/comCheckpointInterval)))*comCheckpointInterval
+	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
+
+	header = chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
+	latestCheckPointHash = header.Hash()
+	
+	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
+		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", hash)
+		return comNodeSnap,nil
+	} else { //数据库中没有正常的获取，再次去统计
+		if comNodeSnap, err1 := c.CalcuComNodeSnap(number, hash); err1 == nil {
+			return comNodeSnap,nil
+		}
+	}
+	
+	return nil,nil
+}
+
+
+// 从社区选举中的投票中去获取
+func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapshots.ComNodeSnap, error) {
+
 		//开始读取智能合约
 		// 
 		//
 		
-		type Winners []*snapshots.Winner
+		str := strconv.FormatUint(number, 10)
 		
-		w1 := &snapshots.Winner{"192.168.2.14","1LakUu1rn3X3zHrR21hLYWEFnBWJVZJBz9"}
+		// 模拟从外部获取		
+		type Winners []*snapshots.Winner
+		w1 := &snapshots.Winner{"192.168.2.14",str}
 		w2 := &snapshots.Winner{"192.168.2.12","17SPaMHq1EkWNVGZuxdoLbDZQ8P39LzKgm"}
 		w3 := &snapshots.Winner{"192.168.2.33","1Ljzw8EodRSLmtxPrFsQP9Ew94htgJ3xze"}
 		
 		allWinners := Winners([]*snapshots.Winner{w1, w2, w3}) 
 		
-		comNodeSnap = snapshots.NewComNodeSnap(number,hash,allWinners)
+		comNodeSnap := snapshots.NewComNodeSnap(number,hash,allWinners)
 
-        log.Info("this is a test ************************************", comNodeSnap.Winners[0].NetworkId)
+        log.Info("get Com form outside************************************", comNodeSnap.Winners[0].NetworkId)
 		
-		/*
-		comNodeSnap.Winners = append(comNodeSnap.Winners,&snapshots.Winner{
-			NetworkId: "123",
-			Address: "www",
-		})
-		*/
-		
+		// 存储到数据库中
 		if err := comNodeSnap.Store(c.db); err != nil {
+				log.Error("Stored Error")
 				return nil, err
 		}
-		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+		log.Trace("Stored genesis voting ComNodeSnap to disk")
 		return comNodeSnap,nil
-	//}
-	//return nil,nil
 }
+
+
+
 
 // 获取快照
 func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
