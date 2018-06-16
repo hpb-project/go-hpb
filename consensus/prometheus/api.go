@@ -86,15 +86,12 @@ func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]map[string]string,
 	if err != nil {
 		return nil, err
 	}
-	
 	var winners = make([]map[string]string,len(comNodeSnap.Winners))
-	
 	for _, winner := range comNodeSnap.Winners {
 		winners = append(winners,map[string] string {
 		  winner.NetworkId : winner.Address,
 		})
 	}
-	
 	return winners, nil
 }
 
