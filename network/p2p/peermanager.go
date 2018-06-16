@@ -58,7 +58,7 @@ type statusData struct {
 	GenesisBlock    common.Hash
 }
 
-type PeerEx struct {
+type Peer struct {
 	id string
 
 	*peer
@@ -76,7 +76,7 @@ type PeerEx struct {
 
 
 type PeerManager struct {
-	peers  map[string]*PeerEx
+	peers  map[string]*Peer
 	lock   sync.RWMutex
 	closed bool
 
@@ -92,7 +92,7 @@ func PeerMgrInst() *PeerManager {
 		lock.Lock()
 		defer lock.Unlock()
 		pm =&PeerManager{
-			peers: make(map[string]*PeerEx),
+			peers: make(map[string]*Peer),
 			hpb: NewProtos(),
 		}
 	}
@@ -130,7 +130,7 @@ func (prm *PeerManager)Stop(){
 
 // Register injects a new peer into the working set, or returns an error if the
 // peer is already known.
-func (prm *PeerManager) Register(p *PeerEx) error {
+func (prm *PeerManager) Register(p *Peer) error {
 	prm.lock.Lock()
 	defer prm.lock.Unlock()
 
@@ -158,7 +158,7 @@ func (prm *PeerManager) Unregister(id string) error {
 }
 
 // Peer retrieves the registered peer with the given id.
-func (prm *PeerManager) Peer(id string) *PeerEx {
+func (prm *PeerManager) Peer(id string) *Peer {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
@@ -175,11 +175,11 @@ func (prm *PeerManager) Len() int {
 
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes.
-func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*PeerEx {
+func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*Peer {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
-	list := make([]*PeerEx, 0, len(prm.peers))
+	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
 		if !p.knownBlocks.Has(hash) {
 			list = append(list, p)
@@ -190,11 +190,11 @@ func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*PeerEx {
 
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
-func (prm *PeerManager) PeersWithoutTx(hash common.Hash) []*PeerEx {
+func (prm *PeerManager) PeersWithoutTx(hash common.Hash) []*Peer {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
-	list := make([]*PeerEx, 0, len(prm.peers))
+	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
 		if !p.knownTxs.Has(hash) {
 			list = append(list, p)
@@ -204,12 +204,12 @@ func (prm *PeerManager) PeersWithoutTx(hash common.Hash) []*PeerEx {
 }
 
 // BestPeer retrieves the known peer with the currently highest total difficulty.
-func (prm *PeerManager) BestPeer() *PeerEx {
+func (prm *PeerManager) BestPeer() *Peer {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
 	var (
-		bestPeer *PeerEx
+		bestPeer *Peer
 		bestTd   *big.Int
 	)
 	for _, p := range prm.peers {
@@ -327,7 +327,7 @@ func errResp(code errCode, format string, v ...interface{}) error {
 
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
-func (s *HpbProto) handle(p *PeerEx) error {
+func (s *HpbProto) handle(p *Peer) error {
 	p.Log().Debug("Peer connected", "name", p.Name())
 
 	//return errors.New("HpbProto debugging")
@@ -366,7 +366,7 @@ func (s *HpbProto) handle(p *PeerEx) error {
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (s *HpbProto) handleMsg(p *PeerEx) error {
+func (s *HpbProto) handleMsg(p *Peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
@@ -455,11 +455,11 @@ func (s *HpbProto) removePeer(id string) {
 }
 
 ////////////////////////////////////////////////////////
-func newPeer(version uint, p *peer, rw MsgReadWriter) *PeerEx {
-	id := p.ID()
+func newPeer(version uint, pr *peer, rw MsgReadWriter) *Peer {
+	id := pr.ID()
 
-	return &PeerEx{
-		peer:        p,
+	return &Peer{
+		peer:        pr,
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),
@@ -469,7 +469,7 @@ func newPeer(version uint, p *peer, rw MsgReadWriter) *PeerEx {
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
-func (p *PeerEx) Info() *HpbPeerInfo {
+func (p *Peer) Info() *HpbPeerInfo {
 	hash, td := p.Head()
 
 	return &HpbPeerInfo{
@@ -481,7 +481,7 @@ func (p *PeerEx) Info() *HpbPeerInfo {
 
 // Head retrieves a copy of the current head hash and total difficulty of the
 // peer.
-func (p *PeerEx) Head() (hash common.Hash, td *big.Int) {
+func (p *Peer) Head() (hash common.Hash, td *big.Int) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -490,7 +490,7 @@ func (p *PeerEx) Head() (hash common.Hash, td *big.Int) {
 }
 
 // SetHead updates the head hash and total difficulty of the peer.
-func (p *PeerEx) SetHead(hash common.Hash, td *big.Int) {
+func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -500,7 +500,7 @@ func (p *PeerEx) SetHead(hash common.Hash, td *big.Int) {
 
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (p *PeerEx) MarkBlock(hash common.Hash) {
+func (p *Peer) MarkBlock(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known block hash
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
@@ -510,7 +510,7 @@ func (p *PeerEx) MarkBlock(hash common.Hash) {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *PeerEx) MarkTransaction(hash common.Hash) {
+func (p *Peer) MarkTransaction(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
 	for p.knownTxs.Size() >= maxKnownTxs {
 		p.knownTxs.Pop()
@@ -519,13 +519,13 @@ func (p *PeerEx) MarkTransaction(hash common.Hash) {
 }
 
 
-func (p *PeerEx) SendData(msgCode uint64, data interface{}) error {
+func (p *Peer) SendData(msgCode uint64, data interface{}) error {
 	return Send(p.rw, msgCode, data)
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *PeerEx) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc
@@ -558,7 +558,7 @@ func (p *PeerEx) Handshake(network uint64, td *big.Int, head common.Hash, genesi
 	return nil
 }
 
-func (p *PeerEx) readStatus(network uint64, status *statusData, genesis common.Hash) (err error) {
+func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Hash) (err error) {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -586,7 +586,7 @@ func (p *PeerEx) readStatus(network uint64, status *statusData, genesis common.H
 }
 
 // String implements fmt.Stringer.
-func (p *PeerEx) String() string {
+func (p *Peer) String() string {
 	return fmt.Sprintf("Peer %s [%s]", p.id,
 		fmt.Sprintf("hpb/%2d", p.version),
 	)
