@@ -74,6 +74,12 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
+			name: 'getCandidateNodes',
+			call: 'prometheus_getCandidateNodes',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
 			name: 'getHistorysnapAtHash',
 			call: 'prometheus_getHistorysnapAtHash',
 			params: 1
