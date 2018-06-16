@@ -100,13 +100,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	// 获取快照
 	
 	
-	//获取社区选举，对社区选举进行触发
-	comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
-
-    log.Info("############################################TESE", comNodeSnap.Winners[0].Address)
-    if err != nil {
-		return err
-	}
+	
 	
 	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	if err != nil {
@@ -119,10 +113,23 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		// 改造点， 开始从网络中获取
 		// 从网络中获取一个
 		
+		
+		
+		
+		//获取社区选举，对社区选举进行触发
+		comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
+		
+		
 		//if snap.ValidVote(address, true) {
-		//	header.Coinbase = address
-		//	copy(header.Nonce[:], consensus.NonceAuthVote)
+			header.Coinbase = [20]byte{0, 1, 2, 3, 4,0, 1, 2, 3, 4,0, 1, 2, 3, 4,0, 1, 2, 3, 4}
+			header.VoteIndex = 3000
+			copy(header.Nonce[:], consensus.NonceAuthVote)
 		//}
+	
+	    log.Info("############################################TESE", comNodeSnap.Winners[0].Address)
+	    if err != nil {
+			return err
+		}
 		
 		c.lock.RUnlock()
 	}
