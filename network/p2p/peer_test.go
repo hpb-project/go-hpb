@@ -29,7 +29,7 @@ import (
 var discard = Protocol{
 	Name:   "discard",
 	Length: 1,
-	Run: func(p *Peer, rw MsgReadWriter) error {
+	Run: func(p *peer, rw MsgReadWriter) error {
 		for {
 			msg, err := rw.ReadMsg()
 			if err != nil {
@@ -43,7 +43,7 @@ var discard = Protocol{
 	},
 }
 
-func testPeer(protos []Protocol) (func(), *conn, *Peer, <-chan error) {
+func testPeer(protos []Protocol) (func(), *conn, *peer, <-chan error) {
 	fd1, fd2 := net.Pipe()
 	c1 := &conn{fd: fd1, transport: newTestTransport(randomID(), fd1)}
 	c2 := &conn{fd: fd2, transport: newTestTransport(randomID(), fd2)}
@@ -67,7 +67,7 @@ func TestPeerProtoReadMsg(t *testing.T) {
 	proto := Protocol{
 		Name:   "a",
 		Length: 5,
-		Run: func(peer *Peer, rw MsgReadWriter) error {
+		Run: func(peer *peer, rw MsgReadWriter) error {
 			if err := ExpectMsg(rw, 2, []uint{1}); err != nil {
 				t.Error(err)
 			}
@@ -102,7 +102,7 @@ func TestPeerProtoEncodeMsg(t *testing.T) {
 	proto := Protocol{
 		Name:   "a",
 		Length: 2,
-		Run: func(peer *Peer, rw MsgReadWriter) error {
+		Run: func(peer *peer, rw MsgReadWriter) error {
 			if err := SendItems(rw, 2); err == nil {
 				t.Error("expected error for out-of-range msg code, got nil")
 			}
@@ -158,12 +158,12 @@ func TestPeerDisconnectRace(t *testing.T) {
 		closer, rw, p, disc := testPeer([]Protocol{
 			{
 				Name:   "closereq",
-				Run:    func(p *Peer, rw MsgReadWriter) error { return <-protoclose },
+				Run:    func(p *peer, rw MsgReadWriter) error { return <-protoclose },
 				Length: 1,
 			},
 			{
 				Name:   "disconnect",
-				Run:    func(p *Peer, rw MsgReadWriter) error { p.Disconnect(<-protodisc); return nil },
+				Run:    func(p *peer, rw MsgReadWriter) error { p.Disconnect(<-protodisc); return nil },
 				Length: 1,
 			},
 		})

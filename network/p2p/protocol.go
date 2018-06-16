@@ -26,7 +26,7 @@ type Protocol struct {
 	Name string
 	Version uint
 	Length uint64
-	Run func(peer *Peer, rw MsgReadWriter) error
+	Run func(p *peer, rw MsgReadWriter) error
 	NodeInfo func() interface{}
 	PeerInfo func(id discover.NodeID) interface{}
 }
