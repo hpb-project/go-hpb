@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
 )
@@ -236,6 +237,7 @@ func (prm *PeerManager) Close() {
 
 //HPB 协议
 type HpbProto struct {
+	networkId uint64
 	protos   []Protocol
 }
 
@@ -265,7 +267,8 @@ const (
 
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
-		protos:  make([]Protocol, 0, len(ProtocolVersions)),
+		networkId: 0,
+		protos:    make([]Protocol, 0, len(ProtocolVersions)),
 	}
 
 	for _, version := range ProtocolVersions {
@@ -327,19 +330,19 @@ func errResp(code errCode, format string, v ...interface{}) error {
 
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
-func (s *HpbProto) handle(p *Peer) error {
+func (hp *HpbProto) handle(p *Peer) error {
 	p.Log().Debug("Peer connected", "name", p.Name())
 
 	//return errors.New("HpbProto debugging")
 	// Execute the Hpb handshake
 	//TODO: 调用blockchain接口，获取状态信息
-	/*
-	networkId,td, head, genesis := blockchain.Status()
-	if err := p.Handshake(networkId, td, head, genesis); err != nil {
+
+	td, head, genesis := bc.InstanceBlockChain().Status()
+	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
 		p.Log().Debug("Handshake failed", "err", err)
 		return err
 	}
-	*/
+
 
 	/*
 	//peer层性能统计
@@ -353,11 +356,11 @@ func (s *HpbProto) handle(p *Peer) error {
 		p.Log().Error("Hpb peer registration failed", "err", err)
 		return err
 	}
-	defer s.removePeer(p.id)
+	defer hp.removePeer(p.id)
 
 	// main loop. handle incoming messages.
 	for {
-		if err := s.handleMsg(p); err != nil {
+		if err := hp.handleMsg(p); err != nil {
 			p.Log().Debug("Message handling failed", "err", err)
 			return err
 		}
@@ -366,7 +369,7 @@ func (s *HpbProto) handle(p *Peer) error {
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (s *HpbProto) handleMsg(p *Peer) error {
+func (hp *HpbProto) handleMsg(p *Peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
@@ -436,7 +439,7 @@ func (s *HpbProto) handleMsg(p *Peer) error {
 	return nil
 }
 
-func (s *HpbProto) removePeer(id string) {
+func (hp *HpbProto) removePeer(id string) {
 	// Short circuit if the peer was already removed
 	peer := PeerMgrInst().Peer(id)
 	if peer == nil {
