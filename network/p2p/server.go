@@ -27,7 +27,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/mclock"
-	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/routinue"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
@@ -175,7 +175,8 @@ type Server struct {
 	delpeer       chan peerDrop
 	loopWG        sync.WaitGroup // loop, listenLoop
 
-	peerFeed      event.Feed
+	//peerFeed      event.Feed
+	peerEvent    *routinue.Event
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -302,8 +303,8 @@ func (srv *Server) RemovePeer(node *discover.Node) {
 }
 
 // SubscribePeers subscribes the given channel to peer events
-func (srv *Server) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
-	return srv.peerFeed.Subscribe(ch)
+func (srv *Server) SubscribeEvents(et routinue.EventType) routinue.Subscriber {
+	return srv.peerEvent.Subscribe(et)
 }
 
 // Self returns the local node's endpoint information.
@@ -365,7 +366,7 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	log.Info("Starting P2P networking")
 
-	hpbProto ,err := NewProtos()
+	hpbProto := NewProtos()
 	//log.Info("Hpb protocol","Hpb",hpbProto.Protocols())
 
 	copy(srv.Protocols, hpbProto.Protocols())
@@ -389,6 +390,7 @@ func (srv *Server) Start() (err error) {
 	srv.removestatic = make(chan *discover.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
+	srv.peerEvent = routinue.NewEvent()
 
 	// node table
 	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.InitNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
@@ -559,7 +561,7 @@ running:
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {
-					p.events = &srv.peerFeed
+					p.events = srv.peerEvent
 				}
 				name := truncateName(c.name)
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
@@ -780,17 +782,17 @@ func (srv *Server) runPeer(p *Peer) {
 	}
 
 	// broadcast peer add
-	srv.peerFeed.Send(&PeerEvent{
-		Type: PeerEventTypeAdd,
+	srv.peerEvent.Notify(PeerEventAdd,&PeerEvent{
+		Type: PeerEventAdd,
 		Peer: p.ID(),
-	})
+		})
 
 	// run the protocol
 	remoteRequested, err := p.run()
 
 	// broadcast peer drop
-	srv.peerFeed.Send(&PeerEvent{
-		Type:  PeerEventTypeDrop,
+	srv.peerEvent.Notify(PeerEventDrop,&PeerEvent{
+		Type:  PeerEventDrop,
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})

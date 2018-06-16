@@ -23,9 +23,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/routinue"
 )
 
 
@@ -167,14 +167,14 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 type msgEventer struct {
 	MsgReadWriter
 
-	feed     *event.Feed
+	feed     *routinue.Event
 	peerID   discover.NodeID
 	Protocol string
 }
 
 // newMsgEventer returns a msgEventer which sends message events to the given
 // feed
-func newMsgEventer(rw MsgReadWriter, feed *event.Feed, peerID discover.NodeID, proto string) *msgEventer {
+func newMsgEventer(rw MsgReadWriter, feed *routinue.Event, peerID discover.NodeID, proto string) *msgEventer {
 	return &msgEventer{
 		MsgReadWriter: rw,
 		feed:          feed,
@@ -190,13 +190,14 @@ func (self *msgEventer) ReadMsg() (Msg, error) {
 	if err != nil {
 		return msg, err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgRecv,
+	self.feed.Notify(PeerEventMsgRecv,&PeerEvent{
+		Type:     PeerEventMsgRecv,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,
 		MsgCode:  &msg.Code,
 		MsgSize:  &msg.Size,
 	})
+
 	return msg, nil
 }
 
@@ -207,8 +208,8 @@ func (self *msgEventer) WriteMsg(msg Msg) error {
 	if err != nil {
 		return err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgSend,
+	self.feed.Notify(PeerEventMsgSend,&PeerEvent{
+		Type:     PeerEventMsgSend,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,
 		MsgCode:  &msg.Code,

@@ -24,13 +24,10 @@ import (
 	"time"
 
 	"github.com/hpb-project/go-hpb/common/mclock"
-	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/routinue"
 	"github.com/hpb-project/go-hpb/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"gopkg.in/fatih/set.v0"
-	"github.com/hpb-project/go-hpb/common"
-	"math/big"
 )
 
 const (
@@ -57,32 +54,22 @@ type protoHandshake struct {
 type PeerEventType string
 
 const (
-	// PeerEventTypeAdd is the type of event emitted when a peer is added
-	// to a p2p.Server
-	PeerEventTypeAdd PeerEventType = "add"
-
-	// PeerEventTypeDrop is the type of event emitted when a peer is
-	// dropped from a p2p.Server
-	PeerEventTypeDrop PeerEventType = "drop"
-
-	// PeerEventTypeMsgSend is the type of event emitted when a
-	// message is successfully sent to a peer
-	PeerEventTypeMsgSend PeerEventType = "msgsend"
-
-	// PeerEventTypeMsgRecv is the type of event emitted when a
-	// message is received from a peer
-	PeerEventTypeMsgRecv PeerEventType = "msgrecv"
+	PeerEventAdd     routinue.EventType = 0x01
+	PeerEventDrop    routinue.EventType = 0x02
+	PeerEventMsgSend routinue.EventType = 0x03
+	PeerEventMsgRecv routinue.EventType = 0x04
 )
 
 // PeerEvent is an event emitted when peers are either added or dropped from
 // a p2p.Server or when a message is sent or received on a peer connection
 type PeerEvent struct {
-	Type     PeerEventType   `json:"type"`
-	Peer     discover.NodeID `json:"peer"`
-	Error    string          `json:"error,omitempty"`
-	Protocol string          `json:"protocol,omitempty"`
-	MsgCode  *uint64         `json:"msg_code,omitempty"`
-	MsgSize  *uint32         `json:"msg_size,omitempty"`
+	//Type     PeerEventType   `json:"type"`
+	Type     routinue.EventType `json:"type"`
+	Peer     discover.NodeID    `json:"peer"`
+	Error    string             `json:"error,omitempty"`
+	Protocol string             `json:"protocol,omitempty"`
+	MsgCode  *uint64            `json:"msg_code,omitempty"`
+	MsgSize  *uint32            `json:"msg_size,omitempty"`
 }
 
 // Peer represents a connected remote node.
@@ -99,7 +86,8 @@ type Peer struct {
 	disc     chan DiscReason
 
 	// events receives message send / receive events if set
-	events *event.Feed
+	//events *event.Feed
+	events   *routinue.Event
 
 	////////////////////////////////////////////////////
 	localType  discover.NodeType  //本端节点类型
