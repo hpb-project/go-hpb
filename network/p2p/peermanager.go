@@ -310,16 +310,16 @@ type HpbNodeInfo struct {
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (s *HpbProto) NodeInfo() *HpbNodeInfo {
-	/*
-	currentBlock := self.blockchain.CurrentBlock()
+func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
+
+	currentBlock := bc.InstanceBlockChain().CurrentBlock()
 	return &HpbNodeInfo{
-		Network:    self.networkId,
-		Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis:    self.blockchain.Genesis().Hash(),
+		Network:    hp.networkId,
+		Difficulty: bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
+		Genesis:    bc.InstanceBlockChain().Genesis().Hash(),
 		Head:       currentBlock.Hash(),
 	}
-	*/
+
 	return  nil
 }
 
