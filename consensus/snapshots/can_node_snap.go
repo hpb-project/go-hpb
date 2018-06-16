@@ -35,37 +35,20 @@ import (
 	//"errors"
 )
 
-//定义结构体
-type ComNodeSnap struct {
+type CanNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
-	Winners  []*Winner `json:"winners"`   // 当前的授权用户
+	//Winners map[common.Address]Winner `json:"winners"`   // 当前的授权用户
 }
 
-//定义结构体
-type Winner struct {
-	NetworkId     string `json:"networkid"`             // 获胜者的网络ID
-	//Address       common.Address `json:"address"`       // 获胜者的地址
-	Address       string `json:"address"`      // 获胜者的地址
-}
-
-// 创建对象
-func NewComNodeSnap(number uint64, hash common.Hash,Winners  []*Winner) *ComNodeSnap {
-	snap := &ComNodeSnap{
-		Number:   number,
-		Hash:     hash,
-		Winners: Winners,
-	}
-	return snap
-}
 
 //加载快照，直接去数据库中读取
-func LoadComNodeSnap(db hpbdb.Database, hash common.Hash) (*ComNodeSnap, error) {
-	blob, err := db.Get(append([]byte("comnodesnap-"), hash[:]...))
+func LoadCanNodeSnap(db hpbdb.Database, hash common.Hash) (*CanNodeSnap, error) {
+	blob, err := db.Get(append([]byte("cannodesnap-"), hash[:]...))
 	if err != nil {
 		return nil, err
 	}
-	snap := new(ComNodeSnap)
+	snap := new(CanNodeSnap)
 	if err := json.Unmarshal(blob, snap); err != nil {
 		return nil, err
 	}
@@ -73,10 +56,10 @@ func LoadComNodeSnap(db hpbdb.Database, hash common.Hash) (*ComNodeSnap, error) 
 }
 
 // store inserts the snapshot into the database.
-func (s *ComNodeSnap) Store(db hpbdb.Database) error {
+func (s *CanNodeSnap) Store(db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("comnodesnap-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("cannodesnap-"), s.Hash[:]...), blob)
 }
