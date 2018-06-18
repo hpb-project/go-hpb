@@ -19,12 +19,20 @@ package p2p
 import (
 	"testing"
 )
+
 var (
 	pmr = PeerMgrInst()
 )
 
-func TestValidateSign(t *testing.T) {
-	pmr.Start()
+func TestPeerMgrStart(t *testing.T) {
+	config := Config{
+		Name:       "test",
+		ListenAddr: "127.0.0.1:0",
+		PrivateKey: newkey(),
+	}
+
+	pmr.Start(config)
+
 }
 
 
