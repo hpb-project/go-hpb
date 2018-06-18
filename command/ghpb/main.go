@@ -122,7 +122,6 @@ var (
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 	}
-
 )
 
 func init() {

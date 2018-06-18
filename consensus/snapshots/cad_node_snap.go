@@ -35,31 +35,50 @@ import (
 	//"errors"
 )
 
-type CanNodeSnap struct {
+
+
+//定义结构体
+type CadNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
-	//Winners map[common.Address]Winner `json:"winners"`   // 当前的授权用户
+	CadWinners  []*CadWinner `json:"winners"`   // 当前的授权用户
 }
 
+//定义结构体
+type CadWinner struct {
+	NetworkId     string `json:"networkid"`             // 获胜者的网络ID
+	//Address       common.Address `json:"address"`       // 获胜者的地址
+	Address       string `json:"address"`      // 获胜者的地址
+}
+
+// 创建对象
+func NewCadNodeSnap(number uint64, hash common.Hash,CadWinners  []*CadWinner) *CadNodeSnap {
+	cadNodeSnap := &CadNodeSnap{
+		Number:   number,
+		Hash:     hash,
+		CadWinners: CadWinners,
+	}
+	return cadNodeSnap
+}
 
 //加载快照，直接去数据库中读取
-func LoadCanNodeSnap(db hpbdb.Database, hash common.Hash) (*CanNodeSnap, error) {
-	blob, err := db.Get(append([]byte("cannodesnap-"), hash[:]...))
+func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) {
+	blob, err := db.Get(append([]byte("cadnodesnap-"), hash[:]...))
 	if err != nil {
 		return nil, err
 	}
-	snap := new(CanNodeSnap)
-	if err := json.Unmarshal(blob, snap); err != nil {
+	cadNodeSnap := new(CadNodeSnap)
+	if err := json.Unmarshal(blob, cadNodeSnap); err != nil {
 		return nil, err
 	}
-	return snap, nil
+	return cadNodeSnap, nil
 }
 
 // store inserts the snapshot into the database.
-func (s *CanNodeSnap) Store(db hpbdb.Database) error {
+func (s *CadNodeSnap) Store(db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("cannodesnap-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("codnodesnap-"), s.Hash[:]...), blob)
 }
