@@ -1,46 +1,36 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-hpb Authors
+// This file is part of the go-hpb.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-hpb is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-hpb is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// Package miner implements Ethereum block creation and mining.
-package miner
+// Package miner implements HPB block creation and mining.
+package worker
 
 import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/synctrl"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
-// Backend wraps all methods required for mining.
-type Backend interface {
-	AccountManager() *accounts.Manager
-	BlockChain() *bc.BlockChain
-	TxPool() *core.TxPool
-	ChainDb() ethdb.Database
-}
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
@@ -50,44 +40,42 @@ type Miner struct {
 
 	coinbase common.Address
 	mining   int32
-	eth      Backend
 	engine   consensus.Engine
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(config *config.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
-		eth:      eth,
 		mux:      mux,
 		engine:   engine,
 		worker:   newWorker(config, engine, common.Address{}, eth, mux),
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	miner.Register(NewCpuAgent(bc.InstanceBlockChain(), engine))
 	go miner.update()
 
 	return miner
 }
 
-// update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
+// update keeps track of the synctrl events. Please be aware that this is a one shot type of update loop.
 // It's entered once and as soon as `Done` or `Failed` has been broadcasted the events are unregistered and
 // the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
 // and halt your mining operation for as long as the DOS continues.
 func (self *Miner) update() {
-	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
+	events := self.mux.Subscribe(synctrl.StartEvent{}, synctrl.DoneEvent{}, synctrl.FailedEvent{})
 out:
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
-		case downloader.StartEvent:
+		case synctrl.StartEvent:
 			atomic.StoreInt32(&self.canStart, 0)
 			if self.Mining() {
 				self.Stop()
 				atomic.StoreInt32(&self.shouldStart, 1)
 				log.Info("Mining aborted due to sync")
 			}
-		case downloader.DoneEvent, downloader.FailedEvent:
+		case synctrl.DoneEvent, synctrl.FailedEvent:
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
@@ -141,23 +129,12 @@ func (self *Miner) Mining() bool {
 }
 
 func (self *Miner) HashRate() (tot int64) {
-	if pow, ok := self.engine.(consensus.PoW); ok {
-		tot += int64(pow.Hashrate())
-	}
-	// do we care this might race? is it worth we're rewriting some
-	// aspects of the worker/locking up agents so we can get an accurate
-	// hashrate?
-	for agent := range self.worker.agents {
-		if _, ok := agent.(*CpuAgent); !ok {
-			tot += agent.GetHashRate()
-		}
-	}
 	return
 }
 
 func (self *Miner) SetExtra(extra []byte) error {
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), params.MaximumExtraDataSize)
+	if uint64(len(extra)) > config.MaximumExtraDataSize {
+		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), config.MaximumExtraDataSize)
 	}
 	self.worker.setExtra(extra)
 	return nil

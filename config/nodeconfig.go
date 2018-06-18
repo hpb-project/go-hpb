@@ -148,7 +148,7 @@ func (c *Nodeconfig) NodeName() string {
 	return name
 }
 
-func (c *Nodeconfig) name() string {
+func (c *Nodeconfig) StringName() string {
 	if c.Name == "" {
 		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
 		if progname == "" {

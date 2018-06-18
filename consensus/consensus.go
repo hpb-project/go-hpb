@@ -18,11 +18,11 @@
 package consensus
 
 import (
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/types"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -45,9 +45,8 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
-	
-	GetRandom() string
 
+	GetRandom() string
 }
 
 // Engine is an algorithm agnostic consensus engine.
