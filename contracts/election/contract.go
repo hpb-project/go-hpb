@@ -10,7 +10,7 @@ import (
 	"github.com/hpb-project/ghpb/account/abi"
 	"github.com/hpb-project/ghpb/account/abi/bind"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // ReleaseOracleABI is the input ABI used to generate the binding from.

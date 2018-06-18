@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"
@@ -87,7 +87,6 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		beats:    make(map[common.Address]time.Time),
 		all:      make(map[common.Hash]*types.Transaction),
 		gasPrice: new(big.Int).SetUint64(config.PriceLimit),
-		//FIXME
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
 		chainHeadCh: make(chan event.ChainHeadEvent, 10),
