@@ -11,7 +11,7 @@ import (
 	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // Solo protocol constants.

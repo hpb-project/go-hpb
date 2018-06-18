@@ -22,7 +22,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // ChainReader defines a small collection of methods needed to access the local

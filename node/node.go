@@ -39,7 +39,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/blockchain/event"
@@ -82,7 +81,7 @@ type Node struct {
 
 	//ApiBackend      *HpbApiBackend
 
-	//worker     *miner.Miner
+	worker     *worker.Miner
 	gasPrice        *big.Int
 	hpberbase       common.Address
 
@@ -196,8 +195,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
 
 
-	hpbnode.miner = miner.New(hpb, hpb.chainConfig, hpb.EventMux(), hpb.engine)
-	hpb.miner.SetExtra(makeExtraData(config.ExtraData))
+	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.hpbengine)
+	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
 /*
 	hpb.ApiBackend = &HpbApiBackend{hpb, nil}
 	gpoParams := config.GPO
