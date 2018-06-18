@@ -151,7 +151,7 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 	//prm.hpb.networkId = networkId
 	copy(prm.server.Protocols, prm.hpb.Protocols())
 
-	prm.rpc.startRPC()
+	//prm.rpc.startRPC()
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -165,7 +165,7 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 func (prm *PeerManager)Stop(){
 	prm.Close()
 
-	prm.rpc.stopRPC()
+	//prm.rpc.stopRPC()
 
 	prm.server.Stop()
 	prm.server = nil
@@ -283,6 +283,7 @@ func (prm *PeerManager) Close() {
 type HpbProto struct {
 	networkId uint64
 	protos   []Protocol
+	callback map[uint64]func(interface{}) (bool)
 }
 
 const ProtoName        = "hpb"
@@ -308,6 +309,10 @@ const (
 	ErrExtraStatusMsg
 	ErrSuspendedPeer
 )
+
+
+
+
 
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
@@ -430,6 +435,8 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == StatusMsg:
+		cb := hp.callback[StatusMsg]
+		cb(msg)
 		return nil
 	case msg.Code == GetBlockHeadersMsg:
 		return nil
