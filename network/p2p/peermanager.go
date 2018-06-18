@@ -23,7 +23,7 @@ import (
 	"time"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"

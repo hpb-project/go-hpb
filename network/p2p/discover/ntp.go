@@ -25,7 +25,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 const (
