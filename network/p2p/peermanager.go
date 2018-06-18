@@ -64,7 +64,7 @@ type statusData struct {
 }
 
 type Peer struct {
-	id string
+	ID string
 
 	*PeerBase
 	rw MsgReadWriter
