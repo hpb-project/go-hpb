@@ -37,7 +37,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/hpb-project/ghpb/common/math"
+	"github.com/hpb-project/go-hpb/common/math"
 )
 
 /*

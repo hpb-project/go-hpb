@@ -19,8 +19,8 @@ package evm
 import (
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/math"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/math"
 )
 
 // calculates the memory size required for a step

@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

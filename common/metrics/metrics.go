@@ -23,13 +23,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/deathowl/go-metrics-prometheus"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/deathowl/go-metrics-prometheus"
 	"net/http"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
@@ -41,7 +41,7 @@ var Enabled = true
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack
 // and peek into the command line args for the metrics flag.
-func init() {
+func Start() {
 	for _, arg := range os.Args {
 		if strings.TrimLeft(arg, "-") == MetricsEnabledFlag {
 			log.Info("Enabling metrics collection")
@@ -52,7 +52,7 @@ func init() {
 	prometheusRegistry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
 	prometheusRegistry.MustRegister(prometheus.NewGoCollector())
 	metricsRegistry := metrics.DefaultRegistry
-	pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "ghpb", "", prometheusRegistry, 1*time.Second)
+	pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "go_hpb", "", prometheusRegistry, 1*time.Second)
 	go pClient.UpdatePrometheusMetrics()
 	exp.Exp(metricsRegistry)
 	go func() {
@@ -69,7 +69,7 @@ func NewCounter(name string) metrics.Counter {
 	if !Enabled {
 		return new(metrics.NilCounter)
 	}
-	return metrics.GetOrRegisterCounter(strings.NewReplacer("/","_").Replace(name), metrics.DefaultRegistry)
+	return metrics.GetOrRegisterCounter(strings.NewReplacer("/", "_").Replace(name), metrics.DefaultRegistry)
 }
 
 // NewMeter create a new metrics Meter, either a real one of a NOP stub depending
@@ -78,7 +78,7 @@ func NewMeter(name string) metrics.Meter {
 	if !Enabled {
 		return new(metrics.NilMeter)
 	}
-	return metrics.GetOrRegisterMeter(strings.NewReplacer("/","_").Replace(name), metrics.DefaultRegistry)
+	return metrics.GetOrRegisterMeter(strings.NewReplacer("/", "_").Replace(name), metrics.DefaultRegistry)
 }
 
 // NewTimer create a new metrics Timer, either a real one of a NOP stub depending
@@ -87,7 +87,7 @@ func NewTimer(name string) metrics.Timer {
 	if !Enabled {
 		return new(metrics.NilTimer)
 	}
-	return metrics.GetOrRegisterTimer(strings.NewReplacer("/","_").Replace(name), metrics.DefaultRegistry)
+	return metrics.GetOrRegisterTimer(strings.NewReplacer("/", "_").Replace(name), metrics.DefaultRegistry)
 }
 
 // CollectProcessMetrics periodically collects various metrics about the running

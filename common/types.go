@@ -23,19 +23,19 @@ import (
 	"math/rand"
 	"reflect"
 
-	"github.com/hpb-project/ghpb/common/hexutil"
-	"github.com/hpb-project/ghpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/common/hexutil"
 )
 
 const (
-	HashLength    = 32
-	AddressLength = 20
+	HashLength        = 32
+	AddressLength     = 20
 	AddressHashLength = 4
 )
 
 var (
-	hashT    = reflect.TypeOf(Hash{})
-	addressT = reflect.TypeOf(Address{})
+	hashT        = reflect.TypeOf(Hash{})
+	addressT     = reflect.TypeOf(Address{})
 	addressHashT = reflect.TypeOf(AddressHash{})
 )
 
@@ -246,15 +246,13 @@ func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
 
-
-
 /////////// AddressHash /////////////////////////////////////////////////////////
 
 // Address represents the 20 byte address of an Hpb account.
 
 type AddressHash [AddressHashLength]byte
 
-func BytesToAddressHash (b []byte) AddressHash {
+func BytesToAddressHash(b []byte) AddressHash {
 	var ah AddressHash
 	ah.SetHashBytes(b)
 	return ah
@@ -362,4 +360,3 @@ func (a *UnprefixedAddressHash) UnmarshalText(input []byte) error {
 func (a UnprefixedAddressHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
-

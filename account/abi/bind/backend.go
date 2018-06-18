@@ -22,8 +22,8 @@ import (
 	"math/big"
 
 	"github.com/hpb-project/ghpb/interface"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/types"
 )
 
 var (

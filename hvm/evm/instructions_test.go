@@ -4,13 +4,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 func TestByteOp(t *testing.T) {
 	var (
-		env   = NewEVM(Context{}, nil, params.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env   = NewEVM(Context{}, nil, config.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		stack = newstack()
 	)
 	tests := []struct {
@@ -43,7 +43,7 @@ func TestByteOp(t *testing.T) {
 
 func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error), args ...string) {
 	var (
-		env   = NewEVM(Context{}, nil, params.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env   = NewEVM(Context{}, nil, config.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		stack = newstack()
 	)
 	// convert args

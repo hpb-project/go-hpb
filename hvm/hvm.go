@@ -1,11 +1,11 @@
 package hvm
 
 import (
-	"math/big"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/types"
+	"math/big"
 )
 
 // Message represents a message sent to a contract.
@@ -23,7 +23,6 @@ type Message interface {
 	Data() []byte
 }
 
-
 // ChainContext supports retrieving headers and consensus parameters from the
 // current blockchain to be used during transaction processing.
 type ChainContext interface {
@@ -35,7 +34,7 @@ type ChainContext interface {
 }
 
 // NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg Message, header *types.Header, chain ChainContext , author *common.Address) evm.Context {
+func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) evm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var beneficiary common.Address
 	if author == nil {

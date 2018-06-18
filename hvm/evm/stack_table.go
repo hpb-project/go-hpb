@@ -19,7 +19,7 @@ package evm
 import (
 	"fmt"
 
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {
@@ -28,8 +28,8 @@ func makeStackFunc(pop, push int) stackValidationFunc {
 			return err
 		}
 
-		if stack.len()+push-pop > int(params.StackLimit) {
-			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), params.StackLimit)
+		if stack.len()+push-pop > int(config.StackLimit) {
+			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), config.StackLimit)
 		}
 		return nil
 	}

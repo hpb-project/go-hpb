@@ -20,9 +20,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/ghpb/core/event"
 	"sync/atomic"
-	"reflect"
 )
 
 var INSTANCE = atomic.Value{}
@@ -30,10 +29,10 @@ var INSTANCE = atomic.Value{}
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
 type Manager struct {
-	store    Backend // Index of backends currently registered
+	store   Backend            // Index of backends currently registered
 	updater event.Subscription // Wallet update subscriptions for all backends
-	updates  chan WalletEvent   // Subscription sink for backend wallet changes
-	wallets  []Wallet           // Cache of all wallets from all registered backends
+	updates chan WalletEvent   // Subscription sink for backend wallet changes
+	wallets []Wallet           // Cache of all wallets from all registered backends
 
 	feed event.Feed // Wallet feed notifying of arrivals/departures
 
@@ -54,11 +53,11 @@ func NewManager(back Backend) *Manager {
 
 	// Assemble the account manager and return
 	am := &Manager{
-		store: back,
+		store:   back,
 		updater: sub,
-		updates:  updates,
-		wallets:  back.Wallets(),
-		quit:     make(chan chan error),
+		updates: updates,
+		wallets: back.Wallets(),
+		quit:    make(chan chan error),
 	}
 	go am.update()
 	INSTANCE.Store(am)
@@ -114,11 +113,6 @@ func (am *Manager) KeyStore() Backend {
 	return am.store
 }
 
-
-// Backends retrieves the backend(s) with the given type from the account manager.
-func (am *Manager) Backends(kind reflect.Type) Backend {
-	return am.store
-}
 // Wallets returns all signer accounts registered under this account manager.
 func (am *Manager) Wallets() []Wallet {
 	am.lock.RLock()

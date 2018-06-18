@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/robertkrimen/otto"
 )

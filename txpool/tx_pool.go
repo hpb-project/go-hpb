@@ -17,53 +17,27 @@
 package txpool
 
 import (
-	"sync"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/state"
-	"math/big"
-	"time"
-	"github.com/hpb-project/ghpb/common/log"
-	"math"
 	"fmt"
-	"github.com/hpb-project/ghpb/common/constant"
-	"sync/atomic"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"sort"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/types"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"math"
+	"math/big"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
 )
-
-// TxPoolConfig are the configuration parameters of the transaction pool.
-type TxPoolConfig struct {
-	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
-	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
-
-	AccountSlots uint64 // Minimum number of executable transaction slots guaranteed per account
-	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
-	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
-	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
-
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
-}
 
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 5 * time.Second // Time interval to report transaction pool stats
 )
 
-// DefaultTxPoolConfig contains the default configurations for the transaction
-// pool.
-var DefaultTxPoolConfig = TxPoolConfig{
-	PriceLimit: 1,
-	PriceBump:  10,
-
-	AccountSlots: 10000,
-	GlobalSlots:  1000000,
-	AccountQueue: 20000,
-	GlobalQueue:  2000000,
-
-	Lifetime: 3 * time.Minute,
-}
 
 var INSTANCE = atomic.Value{}
 var STOPPED = atomic.Value{}
@@ -76,21 +50,6 @@ type blockChain interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
-// sanitize checks the provided user configurations and changes anything that's
-// unreasonable or unworkable.
-func (config *TxPoolConfig) sanitize() TxPoolConfig {
-	conf := *config
-	if conf.PriceLimit < 1 {
-		log.Warn("Sanitizing invalid txpool price limit", "provided", conf.PriceLimit, "updated", DefaultTxPoolConfig.PriceLimit)
-		conf.PriceLimit = DefaultTxPoolConfig.PriceLimit
-	}
-	if conf.PriceBump < 1 {
-		log.Warn("Sanitizing invalid txpool price bump", "provided", conf.PriceBump, "updated", DefaultTxPoolConfig.PriceBump)
-		conf.PriceBump = DefaultTxPoolConfig.PriceBump
-	}
-	return conf
-}
-
 type TxPool struct {
 	wg     sync.WaitGroup
 	stopCh chan struct{}
@@ -98,12 +57,12 @@ type TxPool struct {
 	//TODO remove
 	chain        blockChain
 	chainHeadCh  chan event.ChainHeadEvent
-	txPreTrigger event.Trigger
+	txPreTrigger *event.Trigger
 
 	signer types.Signer
 	mu     sync.RWMutex
 
-	config        TxPoolConfig
+	config        config.TxPoolConfiguration
 	currentState  *state.StateDB      // Current state in the blockchain head
 	pendingState  *state.ManagedState // Pending state tracking virtual nonces
 	currentMaxGas *big.Int            // Current gas limit for transaction caps
@@ -116,12 +75,10 @@ type TxPool struct {
 }
 
 //Create the transaction pool and start main process loop.
-func NewTxPool(config TxPoolConfig, chainConfig *params.ChainConfig, blockChain blockChain) *TxPool {
+func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfig, blockChain blockChain) *TxPool {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*TxPool)
 	}
-	//1.Sanitize the input to ensure no vulnerable gas prices are set
-	config = (&config).sanitize()
 	//2.Create the transaction pool with its initial settings
 	pool := &TxPool{
 		config:   config,
@@ -485,42 +442,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
+	fmt.Println(pool.currentState.GetBalance(from))
+	fmt.Println(tx.Cost())
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil)
+	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
 	return nil
-}
-
-// IntrinsicGas computes the 'intrinsic gas' for a message
-// with the given data.
-//
-// TODO convert to uint64
-func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
-	igas := new(big.Int)
-	if contractCreation {
-		igas.SetUint64(params.TxGasContractCreation)
-	} else {
-		igas.SetUint64(params.TxGas)
-	}
-	if len(data) > 0 {
-		var nz int64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		m := big.NewInt(nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
-		igas.Add(igas, m)
-		m.SetInt64(int64(len(data)) - nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
-		igas.Add(igas, m)
-	}
-	return igas
 }
 
 // enqueueTx inserts a new transaction into the non-executable transaction queue.

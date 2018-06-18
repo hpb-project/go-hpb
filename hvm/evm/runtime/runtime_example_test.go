@@ -19,8 +19,8 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/vm/runtime"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 func ExampleExecute() {
