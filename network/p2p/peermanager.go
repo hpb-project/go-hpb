@@ -525,7 +525,9 @@ func (p *Peer) Info() *HpbPeerInfo {
 		Head:       hash.Hex(),
 	}
 }
-
+func (p *Peer) GetID() string {
+	return  p.id
+}
 // Head retrieves a copy of the current head hash and total difficulty of the
 // peer.
 func (p *Peer) Head() (hash common.Hash, td *big.Int) {

@@ -19,6 +19,8 @@ package synctrl
 import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/rand"
 )
 

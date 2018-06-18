@@ -122,6 +122,9 @@ func (s *dialstate) addStatic(n *discover.Node) {
 
 func (s *dialstate) removeStatic(n *discover.Node) {
 	delete(s.static, n.ID)
+	// This removes a previous dial timestamp so that application
+	// can force a server to reconnect with chosen peer immediately.
+	s.hist.remove(n.ID)
 }
 
 func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, now time.Time) []task {
@@ -164,8 +167,8 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 		}
 	}
 
-	if nRunning == 0 && len(newtasks) == 0 && s.hist.Len() > 0 {
-		t := &waitExpireTask{s.hist.min().exp.Sub(now)}
+	if nRunning == 0 && len(newtasks) == 0 {
+		t := &waitExpireTask{time.Second}
 		newtasks = append(newtasks, t)
 	}
 
@@ -243,6 +246,15 @@ func (h dialHistory) min() pastDial {
 }
 func (h *dialHistory) add(id discover.NodeID, exp time.Time) {
 	heap.Push(h, pastDial{id, exp})
+}
+func (h *dialHistory) remove(id discover.NodeID) bool {
+	for i, v := range *h {
+		if v.id == id {
+			heap.Remove(h, i)
+			return true
+		}
+	}
+	return false
 }
 func (h dialHistory) contains(id discover.NodeID) bool {
 	for _, v := range h {
