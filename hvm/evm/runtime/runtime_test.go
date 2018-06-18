@@ -22,10 +22,10 @@ import (
 	"testing"
 
 	"github.com/hpb-project/ghpb/account/abi"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/state"
 	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/storage"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/storage"
+	"github.com/hpb-project/go-hpb/storage/state"
 )
 
 func TestDefaults(t *testing.T) {

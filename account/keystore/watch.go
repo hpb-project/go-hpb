@@ -21,7 +21,7 @@ package keystore
 import (
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/rjeczalik/notify"
 )
 

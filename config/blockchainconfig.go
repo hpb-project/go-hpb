@@ -37,7 +37,7 @@ var (
 	MainnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1),
 
-		Prometheus: &PrometheusConfig{
+		Prometheus: PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -48,7 +48,7 @@ var (
 	TestnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(3),
 
-		Prometheus: &PrometheusConfig{
+		Prometheus: PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -59,7 +59,7 @@ var (
 	PrivatenetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1000),
 
-		Prometheus: &PrometheusConfig{
+		Prometheus: PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -142,7 +142,7 @@ var (
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 
-	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
+	Prometheus PrometheusConfig `json:"prometheus,omitempty"`
 }
 
 var DefaultBlockChainConfig = ChainConfig{
@@ -203,15 +203,8 @@ func (c *ChainConfig) GasTable(num *big.Int) GasTable {
 
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
-	var engine interface{}
-	switch {
-	case c.Prometheus != nil:
-		engine = c.Prometheus
-	default:
-		engine = "unknown"
-	}
 	return fmt.Sprintf("{ChainID: %v Engine: %v}",
 		c.ChainId,
-		engine,
+		"Prometheus",
 	)
 }

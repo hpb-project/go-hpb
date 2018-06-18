@@ -19,7 +19,7 @@ package evm
 import (
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -39,7 +39,7 @@ const (
 //
 // The cost of gas was changed during the homestead price change HF. To allow for EIP150
 // to be implemented. The returned gas is gas - base * 63 / 64.
-func callGas(gasTable params.GasTable, availableGas, base uint64, callCost *big.Int) (uint64, error) {
+func callGas(gasTable config.GasTable, availableGas, base uint64, callCost *big.Int) (uint64, error) {
 	if gasTable.CreateBySuicide > 0 {
 		availableGas = availableGas - base
 		gas := availableGas - availableGas/64

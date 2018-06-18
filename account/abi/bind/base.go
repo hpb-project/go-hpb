@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hpb-project/ghpb/interface"
 	"github.com/hpb-project/ghpb/account/abi"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/common/crypto"
+	"github.com/hpb-project/ghpb/interface"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

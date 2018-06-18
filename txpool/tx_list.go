@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

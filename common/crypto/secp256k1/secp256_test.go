@@ -24,8 +24,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common/math"
-	"github.com/hpb-project/ghpb/common/crypto/randentropy"
+	"github.com/hpb-project/go-hpb/common/crypto/randentropy"
+	"github.com/hpb-project/go-hpb/common/math"
 )
 
 const TestCount = 1000

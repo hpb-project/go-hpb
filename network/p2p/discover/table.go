@@ -33,7 +33,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 const (
@@ -44,12 +44,6 @@ const (
 	autoRefreshMin = 15 * time.Second
 	updateDBNodeMin= 10 * time.Second
 
-	//alpha      = 3   // Kademlia concurrency factor
-	//maxFindnodeFailures = 5
-	//autoRefreshInterval = 1 * time.Hour
-	//seedCount           = 30
-	//seedMaxAge          = 5 * 24 * time.Hour
-	//MaxNodesCount  = 500 //
 )
 
 type Table struct {

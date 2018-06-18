@@ -1,16 +1,16 @@
 package txpool
 
 import (
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/account"
-	"math/big"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/rlp"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/orcaman/concurrent-map"
+	"math/big"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ type SendTxArgs struct {
 
 const (
 	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+	defaultGasPrice = 50 * config.Shannon
 )
 
 var addrLocker = cmap.New()
@@ -70,13 +70,13 @@ func SubmitTx(args SendTxArgs) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		locker,ok := addrLocker.Get(args.From.String())
+		locker, ok := addrLocker.Get(args.From.String())
 		if ok {
 			locker.(*sync.Mutex).Lock()
 			defer locker.(*sync.Mutex).Unlock()
-		}else {
+		} else {
 			locker := new(sync.Mutex)
-			addrLocker.Set(args.From.String(),locker)
+			addrLocker.Set(args.From.String(), locker)
 			defer locker.Unlock()
 		}
 	}
@@ -96,7 +96,7 @@ func SubmitTx(args SendTxArgs) (common.Hash, error) {
 	}
 	//3.call tx_pool's addTx() push tx into tx_pool.
 	if err := GetTxPool().AddTx(signed); err != nil {
-		return common.Hash{},err
+		return common.Hash{}, err
 	}
 	//4.return the transaction's hash.
 	if tx.To() == nil {
@@ -123,7 +123,7 @@ func SubmitRawTx(encodedTx hexutil.Bytes) (common.Hash, error) {
 	}
 	//2.call tx_pool's addTx() push tx into tx_pool.
 	if err := GetTxPool().AddTx(tx); err != nil {
-		return common.Hash{},err
+		return common.Hash{}, err
 	}
 	//3.return the transaction's hash.
 	if tx.To() == nil {
@@ -152,7 +152,7 @@ func SubmitRawTxFromP2P(encodedTx hexutil.Bytes) (common.Hash, error) {
 	//2.call tx_pool's addTx() push tx into tx_pool.
 	tx.SetFromP2P(true)
 	if err := GetTxPool().AddTx(tx); err != nil {
-		return common.Hash{},err
+		return common.Hash{}, err
 	}
 	//3.return the transaction's hash.
 	if tx.To() == nil {

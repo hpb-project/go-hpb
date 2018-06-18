@@ -19,8 +19,8 @@ package evm
 import (
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // StateDB is an EVM database for full state querying.

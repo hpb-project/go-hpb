@@ -31,11 +31,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/event"
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 var (
@@ -407,7 +407,7 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	
+
 	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
 	if err != nil {
 		return accounts.Account{}, err

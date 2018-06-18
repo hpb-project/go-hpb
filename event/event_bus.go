@@ -1,39 +1,43 @@
 package event
 
 import (
-	"github.com/orcaman/concurrent-map"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/orcaman/concurrent-map"
 )
 
 type Event struct {
 	Topic   Topic
 	Payload interface{}
-	Trigger Trigger
+	Trigger *Trigger
 }
 
-type Trigger *actor.PID
-type Receiver *actor.PID
+type Trigger struct {
+	pid *actor.PID
+}
+type Receiver struct {
+	pid *actor.PID
+}
 
-func RegisterReceiver(name string, fn func(payload interface{})) Receiver {
+func RegisterReceiver(name string, fn func(payload interface{})) *Receiver {
 	receiver, _ := actor.SpawnNamed(actor.FromFunc(func(context actor.Context) {
 		fn(context.Message())
 	}), name)
-	return receiver
+	return &Receiver{receiver}
 }
 
-func RegisterTrigger(name string) Trigger {
-	trigger,_ := actor.SpawnNamed(actor.FromFunc(func(context actor.Context) {}),name)
-	return trigger
+func RegisterTrigger(name string) *Trigger {
+	trigger, _ := actor.SpawnNamed(actor.FromFunc(func(context actor.Context) {}), name)
+	return &Trigger{trigger}
 }
 
 var subscribers = cmap.New()
 
-func Subscribe(subscriber *actor.PID, topic Topic) {
+func Subscribe(subscriber *Receiver, topic Topic) {
 	suberSlice, _ := subscribers.Get(string(topic))
 	if suberSlice == nil {
-		subscribers.Set(string(topic), []*actor.PID{subscriber})
+		subscribers.Set(string(topic), []*actor.PID{subscriber.pid})
 	} else {
-		subscribers.Set(string(topic), append(suberSlice.([]*actor.PID), subscriber))
+		subscribers.Set(string(topic), append(suberSlice.([]*actor.PID), subscriber.pid))
 	}
 }
 
@@ -61,6 +65,17 @@ func FireEvent(event *Event) {
 	}
 	subSlice := actors.([]*actor.PID)
 	for _, subscriber := range subSlice {
-		subscriber.Request(event.Payload, event.Trigger)
+		subscriber.Request(event.Payload, event.Trigger.pid)
 	}
 }
+
+//close receivers on system stop.
+func GracefulStop() {
+	for _, slice := range subscribers.Items() {
+		subSlice := slice.([]*actor.PID)
+		for _, receiver := range subSlice {
+			receiver.GracefulPoison()
+		}
+	}
+}
+

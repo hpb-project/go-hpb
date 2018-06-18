@@ -23,11 +23,11 @@ import (
 	"errors"
 
 	"github.com/naoina/toml"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"fmt"
 	"os"
 )
-var HpbconfigIns *HpbConfig
+var HpbConfigIns *HpbConfig
 const (
 	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	DatadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
@@ -180,8 +180,8 @@ func loadConfig(file string, cfg *HpbConfig) error {
 func GetHpbConfigInstance() (*HpbConfig,  error) {
 
 	//check hpbconfigIns
-	if HpbconfigIns == nil {
-		HpbconfigIns := &HpbConfig{
+	if HpbConfigIns == nil {
+		HpbConfigIns := &HpbConfig{
 			Node: 		defaultNodeConfig() ,
 			// Configuration of peer-to-peer networking.
 			Network:	DefaultNetworkConfig(),
@@ -197,8 +197,9 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 			Gas:		DefaultGasConfig,
 		}
 		log.Info("Create New HpbConfig object")
+		return HpbConfigIns,nil
 	}
-	return HpbconfigIns, nil
+	return HpbConfigIns, nil
 }
 
 

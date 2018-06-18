@@ -18,10 +18,10 @@
 package accounts
 
 import (
-	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/event"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
-	"github.com/hpb-project/go-hpb/types"
 )
 
 // Account represents an Hpb account located at a specific location defined

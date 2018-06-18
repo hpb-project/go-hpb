@@ -21,7 +21,6 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/bitutil"
-	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
@@ -137,7 +136,7 @@ func (b *BloomIndexer) Commit() error {
 		if err != nil {
 			return err
 		}
-		core.WriteBloomBits(batch, uint(i), b.section, b.head, bitutil.CompressBytes(bits))
+		bc.WriteBloomBits(batch, uint(i), b.section, b.head, bitutil.CompressBytes(bits))
 	}
 	return batch.Write()
 }
