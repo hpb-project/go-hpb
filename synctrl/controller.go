@@ -115,7 +115,6 @@ type SynCtrl struct {
 
 	syner       *Syncer
 	puller      *Puller
-	peers       *peerSet //todo
 
 	SubProtocols []p2p.Protocol
 
@@ -125,7 +124,7 @@ type SynCtrl struct {
 	minedBlockSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh   chan *peer //todo
+	newPeerCh   chan *p2p.Peer
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
@@ -143,8 +142,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 		txpool:      txpool,
 		chaindb:     chaindb,
 		chainconfig: config,
-		peers:       newPeerSet(),
-		newPeerCh:   make(chan *peer),//todo
+		newPeerCh:   make(chan *p2p.Peer),//todo
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -199,7 +197,7 @@ func (this *SynCtrl) Start() {
 // already have the given transaction.
 func (this *SynCtrl) broadcastTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
-	peers := this.peers.PeersWithoutTx(hash)//todo qinghua's
+	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
 	for _, peer := range peers {
 		if peer.RemoteType() == p2p.NtHpnode || peer.RemoteType() == p2p.NtPrenode {//todo qinghua's
 			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
@@ -249,14 +247,14 @@ func (this *SynCtrl) sync() {
 		select {
 		case <-this.newPeerCh:
 			// Make sure we have peers to select from, then sync
-			if this.peers.Len() < minDesiredPeerCount {
+			if p2p.PeerMgrInst().Len() < minDesiredPeerCount {
 				break
 			}
-			go this.synchronise(this.peers.BestPeer())
+			go this.synchronise(p2p.PeerMgrInst().BestPeer())
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
-			go this.synchronise(this.peers.BestPeer())
+			go this.synchronise(p2p.PeerMgrInst().BestPeer())
 
 		case <-this.noMorePeers:
 			return
@@ -265,7 +263,7 @@ func (this *SynCtrl) sync() {
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
-func (this *SynCtrl) synchronise(peer *peer) {
+func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
@@ -294,7 +292,7 @@ func (this *SynCtrl) synchronise(peer *peer) {
 		mode = FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
-	err := this.syner.Start(peer.id, pHead, pTd, mode)
+	err := this.syner.Start(peer.GetID(), pHead, pTd, mode)
 
 	if atomic.LoadUint32(&this.fastSync) == 1 {
 		// Disable fast sync if we indeed have something in our chain
@@ -334,7 +332,7 @@ func (this *SynCtrl) Stop() {
 	// This also closes the gate for any new registrations on the peer set.
 	// sessions which are already established but not added to pm.peers yet
 	// will exit when they try to register.
-	this.peers.Close()//todo qinghua's
+	p2p.PeerMgrInst().Close()
 
 	// Wait for all peer handler goroutines and the loops to come down.
 	this.wg.Wait()
@@ -346,7 +344,7 @@ func (this *SynCtrl) Stop() {
 // will only announce it's availability (depending what's requested).
 func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
-	peers := this.peers.PeersWithoutBlock(hash)//todo qinghua's
+	peers := p2p.PeerMgrInst().PeersWithoutBlock(hash)
 
 	// If propagation is requested, send to a subset of the peer
 	if propagate {
@@ -402,7 +400,7 @@ func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 
 func (this *SynCtrl) removePeer(id string) {
 	// Short circuit if the peer was already removed
-	peer := this.peers.Peer(id)
+	peer := p2p.PeerMgrInst().Peer(id)
 	if peer == nil {
 		return
 	}
@@ -410,11 +408,11 @@ func (this *SynCtrl) removePeer(id string) {
 
 	// Unregister the peer from the downloader and Hpb peer set
 	this.syner.UnregisterPeer(id)
-	if err := this.peers.Unregister(id); err != nil {
+	if err := p2p.PeerMgrInst().Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		peer.Peer.Disconnect(p2p.DiscUselessPeer)//todo qinghua's peer
+		peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
