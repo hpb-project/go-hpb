@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // The ABI holds information about a contract's context and available

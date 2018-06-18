@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/hpb-project/ghpb/common/crypto"
+	ethcrypto "github.com/hpb-project/go-hpb/common/crypto"
 )
 
 var (

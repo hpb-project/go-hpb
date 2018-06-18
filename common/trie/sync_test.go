@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/storage"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/storage"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

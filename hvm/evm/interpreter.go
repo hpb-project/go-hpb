@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/math"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/math"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 // Config are the configuration options for the Interpreter
@@ -56,7 +56,7 @@ type Config struct {
 type Interpreter struct {
 	evm      *EVM
 	cfg      Config
-	gasTable params.GasTable
+	gasTable config.GasTable
 	intPool  *intPool
 
 	readOnly   bool   // Whether to throw on stateful modifications

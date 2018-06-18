@@ -18,7 +18,7 @@ package keystore
 
 import (
 	"math/big"
-	
+
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/types"
 )

@@ -19,7 +19,7 @@ package evm
 import (
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common/math"
+	"github.com/hpb-project/go-hpb/common/math"
 )
 
 func memorySha3(stack *Stack) *big.Int {

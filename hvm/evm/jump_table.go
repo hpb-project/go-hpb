@@ -20,12 +20,12 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 type (
 	executionFunc       func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
-	gasFunc             func(params.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
+	gasFunc             func(config.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	stackValidationFunc func(*Stack) error
 	memorySizeFunc      func(*Stack) *big.Int
 )
@@ -451,7 +451,7 @@ func NewFrontierInstructionSet() [256]operation {
 		},
 		JUMPDEST: {
 			execute:       opJumpdest,
-			gasCost:       constGasFunc(params.JumpdestGas),
+			gasCost:       constGasFunc(config.JumpdestGas),
 			validateStack: makeStackFunc(0, 0),
 			valid:         true,
 		},

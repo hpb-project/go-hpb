@@ -19,9 +19,9 @@ package runtime
 import (
 	"math/big"
 
-	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core"
 	"github.com/hpb-project/ghpb/core/vm"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

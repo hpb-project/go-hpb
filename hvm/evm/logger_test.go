@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 type dummyContractRef struct {
@@ -48,7 +48,7 @@ type dummyStateDB struct {
 
 func TestStoreCapture(t *testing.T) {
 	var (
-		env      = NewEVM(Context{}, nil, params.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env      = NewEVM(Context{}, nil, config.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()
@@ -75,7 +75,7 @@ func TestStorageCapture(t *testing.T) {
 	var (
 		ref      = &dummyContractRef{}
 		contract = NewContract(ref, ref, new(big.Int), 0)
-		env      = NewEVM(Context{}, dummyStateDB{ref: ref}, params.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env      = NewEVM(Context{}, dummyStateDB{ref: ref}, config.TestnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()

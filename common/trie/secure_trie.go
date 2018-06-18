@@ -19,8 +19,8 @@ package trie
 import (
 	"fmt"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 var secureKeyPrefix = []byte("secure-key-")

@@ -1,9 +1,9 @@
 package native
 
 import (
-	"math/big"
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/hvm/evm"
+	"math/big"
 )
 
 // CanTransfer checks wether there are enough funds in the address' account to make a transfer.

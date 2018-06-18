@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hpb-project/ghpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 // Callable method given a `Name` and whether the method is a constant.

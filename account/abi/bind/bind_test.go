@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 	"golang.org/x/tools/imports"
 )
 
