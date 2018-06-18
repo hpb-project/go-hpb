@@ -27,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 var (
@@ -100,16 +101,33 @@ func PeerMgrInst() *PeerManager {
 	return pm
 }
 
-func (prm *PeerManager)Start(cfg Config) error {
+func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
+
+
 	if prm.hpb == nil {
 		return errIncomplete
 	}
 
 	prm.server = &Server{
-		Config:       cfg,
+		Config: Config{
+			PrivateKey: netCfg.PrivateKey,
+			MaxPendingPeers: netCfg.MaxPendingPeers,
+			Name: netCfg.Name,
+			RoleType: netCfg.RoleType,
+			//BootstrapNodes: netCfg.,
+			//StaticNodes: netCfg.,
+			//TrustedNodes: netCfg.,
+			NetRestrict: netCfg.NetRestrict,
+			NodeDatabase: netCfg.NodeDatabase,
+			Protocols: prm.hpb.Protocols(),
+			ListenAddr: netCfg.ListenAddr,
+			NAT: netCfg.NAT,
+			Dialer: netCfg.Dialer,
+			NoDial: netCfg.NoDial,
+			EnableMsgEvents: netCfg.EnableMsgEvents,
+		},
 	}
-	copy(prm.server.Protocols, prm.hpb.Protocols())
-
+	//copy(prm.server.Protocols, prm.hpb.Protocols())
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
