@@ -43,7 +43,7 @@ import (
 	"github.com/hpb-project/ghpb/storage"
 	
 	"github.com/hpb-project/ghpb/consensus/snapshots"
-	
+	"github.com/hpb-project/ghpb/consensus/voting"
 	
 )
 
@@ -53,6 +53,7 @@ const (
 	inmemorySignatures   = 4096 // 内存中的签名个数
 	wiggleTime = 500 * time.Millisecond // 延时单位
 	comCheckpointInterval   = 2 // 社区投票间隔
+	cadCheckpointInterval   = 2 // 社区投票间隔
 )
 
 // Prometheus protocol constants.
@@ -99,7 +100,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	// 获取快照
 	
+	cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash, nil)
 	
+	log.Info("rujia test", cadNodeSnap.CadWinners[0].Address)
+
+	//cadNodeSnap.
 	
 	
 	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
@@ -114,19 +119,17 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		// 从网络中获取一个
 		
 		
-		
-		
 		//获取社区选举，对社区选举进行触发
 		comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
 		
 		
-		//if snap.ValidVote(address, true) {
-			
-			address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
+		address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
+
+		if snap.ValidVote(address, true) {
 			header.Coinbase = address // 设置地址
-			header.VoteIndex = 3000   // 设置最新的计算结果
+			header.VoteIndex = big.NewInt(3000)   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
-		//}
+		}
 	
 	    log.Info("############################################TESE", comNodeSnap.Winners[0].Address)
 	    if err != nil {
@@ -177,40 +180,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 }
 
 
-// 获取候选选举的快照
-func (c *Prometheus) getCanNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
-	
-	//业务逻辑
-	var (
-	 comNodeSnap    *snapshots.ComNodeSnap
-	 header  *types.Header
-	 latestCheckPointHash common.Hash
-	 latestCheckPointNumber uint64
-	)
-	
-	latestCheckPointNumber = number%comCheckpointInterval
-	header = chain.GetHeaderByNumber(latestCheckPointNumber)
-	latestCheckPointHash = header.Hash()
-	
-	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
-		log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-		return comNodeSnap,nil
-	}
-	
-	//快照中没有正常后去，则重新计算
-	if number%comCheckpointInterval == 0 {
-		// 
-		//开始读取智能合约
-		// 
-		
-		if err := comNodeSnap.Store(c.db); err != nil {
-				return nil, err
-		}
-		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
-		return comNodeSnap,nil
-	}
-	return nil,nil
-}
 
 // 获取社区选举的快照
 func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
@@ -247,7 +216,6 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 			return comNodeSnap,nil
 		}
 	}
-	
 	return nil,nil
 }
 

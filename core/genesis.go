@@ -48,7 +48,8 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
-	ExtraHash  []byte              `json:"extraHash"`
+	//ExtraHash  []byte              `json:"extraHash"`
+	VoteIndex  uint64              `json:"voteIndex"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
@@ -92,7 +93,8 @@ type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
-	ExtraHash  hexutil.Bytes
+	//ExtraHash  hexutil.Bytes
+	VoteIndex  math.HexOrDecimal64
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Number     math.HexOrDecimal64
@@ -249,6 +251,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		//CoinbaseHash:   g.CoinbaseHash,
+		VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
 		Root:       root,
 	}
 	if g.GasLimit == 0 {
