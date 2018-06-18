@@ -84,7 +84,7 @@ type Server struct {
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
 	newTransport func(net.Conn) transport
-	newPeerHook  func(*peer)
+	newPeerHook  func(*PeerBase)
 
 	lock    sync.Mutex // protects running
 	running bool
@@ -111,10 +111,10 @@ type Server struct {
 	peerEvent    *routinue.Event
 }
 
-type peerOpFunc func(map[discover.NodeID]*peer)
+type peerOpFunc func(map[discover.NodeID]*PeerBase)
 
 type peerDrop struct {
-	*peer
+	*PeerBase
 	err       error
 	requested bool // true if signaled by the peer
 }
@@ -188,13 +188,13 @@ func (c *conn) is(f connFlag) bool {
 }
 
 // Peers returns all connected peers.
-func (srv *Server) Peers() []*peer {
-	var ps []*peer
+func (srv *Server) Peers() []*PeerBase {
+	var ps []*PeerBase
 	select {
 	// Note: We'd love to put this function into a variable but
 	// that seems to cause a weird compiler error in some
 	// environments.
-	case srv.peerOp <- func(peers map[discover.NodeID]*peer) {
+	case srv.peerOp <- func(peers map[discover.NodeID]*PeerBase) {
 		for _, p := range peers {
 			ps = append(ps, p)
 		}
@@ -209,7 +209,7 @@ func (srv *Server) Peers() []*peer {
 func (srv *Server) PeerCount() int {
 	var count int
 	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*peer) { count = len(ps) }:
+	case srv.peerOp <- func(ps map[discover.NodeID]*PeerBase) { count = len(ps) }:
 		<-srv.peerOpDone
 	case <-srv.quit:
 	}
@@ -384,7 +384,7 @@ func (srv *Server) startListening() error {
 }
 
 type dialer interface {
-	newTasks(running int, peers map[discover.NodeID]*peer, now time.Time) []task
+	newTasks(running int, peers map[discover.NodeID]*PeerBase, now time.Time) []task
 	taskDone(task, time.Time)
 	addStatic(*discover.Node)
 	removeStatic(*discover.Node)
@@ -393,7 +393,7 @@ type dialer interface {
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
-		peers        = make(map[discover.NodeID]*peer)
+		peers        = make(map[discover.NodeID]*PeerBase)
 		trusted      = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
 		taskdone     = make(chan task, maxActiveDialTasks)
 		runningTasks []task
@@ -539,7 +539,7 @@ running:
 	}
 }
 
-func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*peer, c *conn) error {
+func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
 		return DiscUselessPeer
@@ -549,7 +549,7 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*peer, c *conn
 	return srv.encHandshakeChecks(peers, c)
 }
 
-func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*peer, c *conn) error {
+func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	switch {
 	/*
 	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
@@ -706,7 +706,7 @@ func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
 // runPeer runs in its own goroutine for each peer.
 // it waits until the Peer logic returns and removes
 // the peer.
-func (srv *Server) runPeer(p *peer) {
+func (srv *Server) runPeer(p *PeerBase) {
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}

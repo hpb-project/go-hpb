@@ -124,7 +124,7 @@ func (s *dialstate) removeStatic(n *discover.Node) {
 	delete(s.static, n.ID)
 }
 
-func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*peer, now time.Time) []task {
+func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, now time.Time) []task {
 	if s.start == (time.Time{}) {
 		s.start = now
 	}
@@ -180,7 +180,7 @@ var (
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
 
-func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*peer) error {
+func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*PeerBase) error {
 	_, dialing := s.dialing[n.ID]
 	switch {
 	case dialing:

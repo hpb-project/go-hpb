@@ -66,7 +66,7 @@ type statusData struct {
 type Peer struct {
 	id string
 
-	*peer
+	*PeerBase
 	rw MsgReadWriter
 
 	version  uint         // Protocol version negotiated
@@ -308,7 +308,7 @@ func NewProtos() *HpbProto {
 		hpb.protos = append(hpb.protos, Protocol{
 			Name:    ProtoName,
 			Version: version,
-			Run: func(p *peer, rw MsgReadWriter) error {
+			Run: func(p *PeerBase, rw MsgReadWriter) error {
 				peer := NewPeer(version, p, rw)
 				return hpb.handle(peer)
 			},
@@ -491,11 +491,11 @@ func (hp *HpbProto) removePeer(id string) {
 }
 
 ////////////////////////////////////////////////////////
-func NewPeer(version uint, pr *peer, rw MsgReadWriter) *Peer {
+func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 	id := pr.ID()
 
 	return &Peer{
-		peer:        pr,
+		PeerBase:    pr,
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),

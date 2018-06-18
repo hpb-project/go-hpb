@@ -73,7 +73,7 @@ type PeerEvent struct {
 }
 
 // Peer represents a connected remote node.
-type peer struct {
+type PeerBase struct {
 	rw      *conn
 	//running map[string]*protoRW
 	running *protoRW
@@ -104,10 +104,10 @@ func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
 }
 */
 
-func newpeer(conn *conn, proto Protocol) *peer {
+func newpeer(conn *conn, proto Protocol) *PeerBase {
 	//protomap := matchProtocols(protocols, conn.caps, conn)
 	protorw := &protoRW{Protocol: proto,in: make(chan Msg), w: conn}
-	p := &peer{
+	p := &PeerBase{
 		rw:       conn,
 		running:  protorw,
 		created:  mclock.Now(),
@@ -120,49 +120,49 @@ func newpeer(conn *conn, proto Protocol) *peer {
 }
 
 // ID returns the node's public key.
-func (p *peer) ID() discover.NodeID {
+func (p *PeerBase) ID() discover.NodeID {
 	return p.rw.id
 }
 
 // Name returns the node name that the remote node advertised.
-func (p *peer) Name() string {
+func (p *PeerBase) Name() string {
 	return p.rw.name
 }
 
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
-func (p *peer) Caps() []Cap {
+func (p *PeerBase) Caps() []Cap {
 	// TODO: maybe return copy
 	return p.rw.caps
 }
 
 // RemoteAddr returns the remote address of the network connection.
-func (p *peer) RemoteAddr() net.Addr {
+func (p *PeerBase) RemoteAddr() net.Addr {
 	return p.rw.fd.RemoteAddr()
 }
 
 // LocalAddr returns the local address of the network connection.
-func (p *peer) LocalAddr() net.Addr {
+func (p *PeerBase) LocalAddr() net.Addr {
 	return p.rw.fd.LocalAddr()
 }
 
 //  RemoteType returns the remote type of the node.
-func (p *peer) RemoteType() discover.NodeType {
+func (p *PeerBase) RemoteType() discover.NodeType {
 	return p.remoteType
 }
 
-func (p *peer) SetRemoteType(nt discover.NodeType) bool {
+func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
 	p.remoteType = nt
 	return true
 }
 
 // LocalType returns the local type of the node.
-func (p *peer) LocalType() discover.NodeType {
+func (p *PeerBase) LocalType() discover.NodeType {
 	return p.localType
 }
 
 // Disconnect terminates the peer connection with the given reason.
 // It returns immediately and does not wait until the connection is closed.
-func (p *peer) Disconnect(reason DiscReason) {
+func (p *PeerBase) Disconnect(reason DiscReason) {
 	select {
 	case p.disc <- reason:
 	case <-p.closed:
@@ -170,15 +170,15 @@ func (p *peer) Disconnect(reason DiscReason) {
 }
 
 // String implements fmt.Stringer.
-func (p *peer) String() string {
+func (p *PeerBase) String() string {
 	return fmt.Sprintf("Peer %x %v", p.rw.id[:8], p.RemoteAddr())
 }
 
-func (p *peer) Log() log.Logger {
+func (p *PeerBase) Log() log.Logger {
 	return p.log
 }
 
-func (p *peer) run() (remoteRequested bool, err error) {
+func (p *PeerBase) run() (remoteRequested bool, err error) {
 	var (
 		writeStart = make(chan struct{}, 1)
 		writeErr   = make(chan error, 1)
@@ -227,7 +227,7 @@ loop:
 	return remoteRequested, err
 }
 
-func (p *peer) pingLoop() {
+func (p *PeerBase) pingLoop() {
 	ping := time.NewTimer(pingInterval)
 	defer p.wg.Done()
 	defer ping.Stop()
@@ -246,7 +246,7 @@ func (p *peer) pingLoop() {
 	}
 }
 
-func (p *peer) readLoop(errc chan<- error) {
+func (p *PeerBase) readLoop(errc chan<- error) {
 	defer p.wg.Done()
 	for {
 		msg, err := p.rw.ReadMsg()
@@ -262,7 +262,7 @@ func (p *peer) readLoop(errc chan<- error) {
 	}
 }
 
-func (p *peer) handle(msg Msg) error {
+func (p *PeerBase) handle(msg Msg) error {
 	//log.Trace("Peer handle massage","Msg",msg.String())
 	switch {
 	case msg.Code == pingMsg:
@@ -305,7 +305,7 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 	return n
 }
 
-func (p *peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
+func (p *PeerBase) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
 
 	p.wg.Add(1)
 	proto := p.running
@@ -384,7 +384,7 @@ type PeerInfo struct {
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
-func (p *peer) Info() *PeerInfo {
+func (p *PeerBase) Info() *PeerInfo {
 	// Gather the protocol capabilities
 	var caps []string
 	for _, cap := range p.Caps() {
