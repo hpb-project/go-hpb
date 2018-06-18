@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/account/keystore"
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/console"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
