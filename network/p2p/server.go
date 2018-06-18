@@ -350,8 +350,8 @@ func (srv *Server) Start() (err error) {
 			return err
 		}
 	}
-	if srv.NoDial && srv.ListenAddr == "" {
-		log.Warn("P2P server will be useless, neither dialing nor listening")
+	if srv.ListenAddr == "" {
+		log.Warn("P2P server will be useless, no listening")
 	}
 
 
@@ -578,9 +578,7 @@ func (srv *Server) listenLoop() {
 	// active inbound connections that are lingering pre-handshake.
 	// If all slots are taken, no further connections are accepted.
 	tokens := maxAcceptConns
-	if srv.MaxPendingPeers > 0 {
-		tokens = srv.MaxPendingPeers
-	}
+
 	slots := make(chan struct{}, tokens)
 	for i := 0; i < tokens; i++ {
 		slots <- struct{}{}

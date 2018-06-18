@@ -85,7 +85,7 @@ type PeerManager struct {
 	lock   sync.RWMutex
 	closed bool
 
-
+	rpc    *Rpc
 	server *Server
 	hpb    *HpbProto
 }
@@ -111,6 +111,10 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 		return errIncomplete
 	}
 
+	prm.rpc    = &Rpc{
+
+	}
+
 	prm.server = &Server{
 		Config: Config{
 			PrivateKey: netCfg.PrivateKey,
@@ -131,7 +135,10 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 			//NetworkId: netCfg.NetworkId,
 		},
 	}
-	//copy(prm.server.Protocols, prm.hpb.Protocols())
+	//prm.hpb.networkId = networkId
+	copy(prm.server.Protocols, prm.hpb.Protocols())
+
+	prm.rpc.startRPC()
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -143,6 +150,10 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 }
 
 func (prm *PeerManager)Stop(){
+	prm.rpc.stopWS()
+	prm.rpc.stopHTTP()
+	prm.rpc.stopIPC()
+
 	prm.Close()
 
 	prm.server.Stop()
