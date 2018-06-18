@@ -72,6 +72,8 @@ type Config struct {
 	Dialer          NodeDialer `toml:"-"`
 	NoDial          bool `toml:",omitempty"`
 	EnableMsgEvents bool
+
+	NetworkId       uint64
 }
 
 // Server manages all peer connections.

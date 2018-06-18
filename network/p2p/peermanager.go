@@ -125,6 +125,7 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 			Dialer: netCfg.Dialer,
 			NoDial: netCfg.NoDial,
 			EnableMsgEvents: netCfg.EnableMsgEvents,
+			//NetworkId: netCfg.NetworkId,
 		},
 	}
 	//copy(prm.server.Protocols, prm.hpb.Protocols())
