@@ -87,7 +87,6 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		beats:    make(map[common.Address]time.Time),
 		all:      make(map[common.Hash]*types.Transaction),
 		gasPrice: new(big.Int).SetUint64(config.PriceLimit),
-		//FIXME
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
 		chainHeadCh: make(chan event.ChainHeadEvent, 10),

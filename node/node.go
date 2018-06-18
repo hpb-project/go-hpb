@@ -48,7 +48,6 @@ import (
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/go-hpb-backkup/vm"
 )
 
 // Node is a container on which services can be registered.
@@ -145,7 +144,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, conf.Node.SyncMode, conf.Node.NetworkId, eventmux, hpbtxpool,/*todo txpool*/
 		engine, db)
 
-	stopDbUpgrade := upgradeDeduplicateData(db)	//Hpbtxpool 		*Txpool
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
@@ -166,7 +164,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		accountManager:	   am,
 		hpbengine:		   engine,
 
-		stopDbUpgrade:  stopDbUpgrade,
 		gasPrice:       conf.Node.GasPrice,
 		hpberbase:      conf.Node.Hpberbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
@@ -181,7 +178,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}
 		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
 	}
-	hpbnode.Hpbbc, err = bc.NewBlockChain(db, hpbnode.Hpbconfig.BlockChain, hpbnode.hpbengine)
+	hpbnode.Hpbbc, err = bc.NewBlockChain(db, &hpbnode.Hpbconfig.BlockChain, hpbnode.hpbengine)
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +190,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	hpb.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
-	if conf.TxPool.Journal != "" {
-		conf.TxPool.Journal = conf.Node.ResolvePath(conf.TxPool.Journal)
-	}
-	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, conf.BlockChain, hpbnode.Hpbbc)
+
+	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
 
 
 	//hpbnode.miner = miner.New(hpb, hpb.chainConfig, hpb.EventMux(), hpb.engine)
@@ -261,22 +256,19 @@ func makeAccountManager(conf  *config.Nodeconfig) (*accounts.Manager, string, er
 	if err := os.MkdirAll(keydir, 0700); err != nil {
 		return nil, "", err
 	}
-	// Assemble the account manager and supported backends
-	backends := []accounts.Backend{
-		keystore.NewKeyStore(keydir, scryptN, scryptP),
-	}
-	return accounts.NewManager(backends...), ephemeral, nil
+
+	return accounts.NewManager(keystore.NewKeyStore(keydir, scryptN, scryptP)), ephemeral, nil
 }
 
 
 
 
 func (n *Node) openDataDir() error {
-	if n.config.DataDir == "" {
+	if n.Hpbconfig.Node.DataDir == "" {
 		return nil // ephemeral
 	}
 
-	instdir := filepath.Join(n.config.DataDir, n.config.name())
+	instdir := filepath.Join(n.Hpbconfig.Node.DataDir, n.config.name())
 	if err := os.MkdirAll(instdir, 0700); err != nil {
 		return err
 	}
