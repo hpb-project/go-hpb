@@ -8,7 +8,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/orcaman/concurrent-map"
 	"math/big"
 	"sync"

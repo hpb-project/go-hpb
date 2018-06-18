@@ -26,7 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	hpbinter "github.com/hpb-project/go-hpb/interface"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"math/big"
 	"sync"
 	"sync/atomic"

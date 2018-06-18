@@ -32,7 +32,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/trie"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -109,7 +109,6 @@ type BlockChain struct {
 	engine    consensus.Engine
 	processor Processor // block processor interface
 	validator Validator // block and state validator interface
-	vmConfig  vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
 }
@@ -120,7 +119,7 @@ func InstanceBlockChain() (*BlockChain) {
 		reentryMux.Lock()
 		if  nil == singletonInstance {
 			// todo for merge
-			singletonInstance, err = NewBlockChain(hpbdb.ChainDbInstance(), config.GetChainCfg, consensus.engine.InstanceEngine(), config.GetVmConfig())
+			singletonInstance, err = NewBlockChain(hpbdb.ChainDbInstance(), config.GetChainCfg, consensus.engine.InstanceEngine())
 		}
 		reentryMux.Unlock()
 	}
@@ -131,7 +130,7 @@ func InstanceBlockChain() (*BlockChain) {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Hpb Validator and
 // Processor.
-func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine consensus.Engine) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -148,7 +147,6 @@ func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine co
 		blockCache:   blockCache,
 		futureBlocks: futureBlocks,
 		engine:       engine,
-		vmConfig:     vmConfig,
 		badBlocks:    badBlocks,
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
@@ -661,7 +659,7 @@ func (bc *BlockChain) Rollback(chain []common.Hash) {
 
 // SetReceiptsData computes all the non-consensus fields of the receipts
 func SetReceiptsData(config *config.ChainConfig, block *types.Block, receipts types.Receipts) {
-	signer := types.MakeSigner(config, block.Number())
+	signer := types.MakeSigner(config)
 
 	transactions, logIndex := block.Transactions(), uint(0)
 
@@ -961,7 +959,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
+		receipts, logs, usedGas, err := bc.processor.Process(block, state)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err

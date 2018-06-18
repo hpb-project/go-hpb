@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"sync"
 	"sync/atomic"
 	"time"

@@ -23,7 +23,7 @@ import (
 	"errors"
 
 	"github.com/naoina/toml"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"fmt"
 	"os"
 )

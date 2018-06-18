@@ -31,7 +31,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/prometheus/prometheus/util/flock"
@@ -155,7 +155,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
 		Hpbsyncctr:		   syncctr,
-		Hpbtxpool:		   txpool.TxPool,
+		Hpbtxpool:		   txpool.GetTxPool(),
 		Hpbbc:			   block,
 		//boe
 
@@ -177,12 +177,11 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if !conf.Node.SkipBcVersionCheck {
 		bcVersion := bc.GetBlockChainVersion(db)
 		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, core.BlockChainVersion)
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
 		}
 		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
 	}
-	vmConfig := vm.Config{EnablePreimageRecording: conf.Node.EnablePreimageRecording}
-	hpbnode.Hpbbc, err = bc.NewBlockChain(db, hpbnode.Hpbconfig.BlockChain, hpbnode.hpbengine, vmConfig)
+	hpbnode.Hpbbc, err = bc.NewBlockChain(db, hpbnode.Hpbconfig.BlockChain, hpbnode.hpbengine)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +214,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 func (hpnode *Node)Start(conf  *config.HpbConfig) (error){
 
-	retval := hpnode.Hpbpeermanager.Start()
+	retval := hpnode.Hpbpeermanager.Start(conf.Network)
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)

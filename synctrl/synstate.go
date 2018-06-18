@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/trie"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"hash"
 	"sync"
 	"sync/atomic"

@@ -24,7 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
 	"math/rand"
 	"testing"

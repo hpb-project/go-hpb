@@ -9,7 +9,7 @@ package txpool
 //	"github.com/hpb-project/go-hpb/blockchain"
 //	"github.com/hpb-project/go-hpb/storage"
 //	"github.com/hpb-project/go-hpb/storage/state"
-//	"github.com/hpb-project/go-hpb/types"
+//	"github.com/hpb-project/go-hpb/blockchain/types"
 //	"io/ioutil"
 //	"math/big"
 //	"os"

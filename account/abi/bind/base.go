@@ -26,7 +26,7 @@ import (
 	"github.com/hpb-project/ghpb/interface"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

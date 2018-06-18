@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"

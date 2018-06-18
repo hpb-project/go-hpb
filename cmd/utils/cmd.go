@@ -26,12 +26,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/internal/debug"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 const (
@@ -80,7 +80,7 @@ func StartNode(stack *node.Node) {
 	}()
 }
 
-func ImportChain(chain *core.BlockChain, fn string) error {
+func ImportChain(chain *bc.BlockChain, fn string) error {
 	// Watch for Ctrl-C while the import is running.
 	// If a signal is received, the import will stop at the next batch.
 	interrupt := make(chan os.Signal, 1)
@@ -162,7 +162,7 @@ func ImportChain(chain *core.BlockChain, fn string) error {
 	return nil
 }
 
-func hasAllBlocks(chain *core.BlockChain, bs []*types.Block) bool {
+func hasAllBlocks(chain *bc.BlockChain, bs []*types.Block) bool {
 	for _, b := range bs {
 		if !chain.HasBlock(b.Hash(), b.NumberU64()) {
 			return false
@@ -171,7 +171,7 @@ func hasAllBlocks(chain *core.BlockChain, bs []*types.Block) bool {
 	return true
 }
 
-func ExportChain(blockchain *core.BlockChain, fn string) error {
+func ExportChain(blockchain *bc.BlockChain, fn string) error {
 	log.Info("Exporting blockchain", "file", fn)
 	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -193,7 +193,7 @@ func ExportChain(blockchain *core.BlockChain, fn string) error {
 	return nil
 }
 
-func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, last uint64) error {
+func ExportAppendChain(blockchain *bc.BlockChain, fn string, first uint64, last uint64) error {
 	log.Info("Exporting blockchain", "file", fn)
 	// TODO verify mode perms
 	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)

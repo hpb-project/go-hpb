@@ -31,7 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
@@ -62,14 +62,14 @@ func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
-			uint(params.VersionMajor<<16 | params.VersionMinor<<8 | params.VersionPatch),
+			uint(config.VersionMajor<<16 | config.VersionMinor<<8 | config.VersionPatch),
 			"geth",
 			runtime.Version(),
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+	if uint64(len(extra)) > config.MaximumExtraDataSize {
+		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", config.MaximumExtraDataSize)
 		extra = nil
 	}
 	return extra
@@ -191,7 +191,7 @@ func (s *Hpb) IsMining() bool      { return s.miner.Mining() }
 func (s *Hpb) Miner() *miner.Miner { return s.miner }
 
 func (s *Hpb) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *Hpb) BlockChain() *core.BlockChain       { return s.blockchain }
+func (s *Hpb) BlockChain() *bc.BlockChain       { return s.blockchain }
 func (s *Hpb) TxPool() *core.TxPool               { return s.txPool }
 func (s *Hpb) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Hpb) Engine() consensus.Engine           { return s.engine }
