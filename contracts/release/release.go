@@ -28,12 +28,12 @@ import (
 	"github.com/hpb-project/ghpb/account/abi/bind"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/protocol"
-	"github.com/hpb-project/ghpb/internal/hpbapi"
 	"github.com/hpb-project/ghpb/protocol/lhs"
 	"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/ghpb/node"
 	"github.com/hpb-project/ghpb/network/p2p"
 	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
 )
 
 // Interval to check for new releases
