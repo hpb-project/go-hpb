@@ -17,10 +17,11 @@
 
 #include "common.h"
 #include <stdio.h>
+#include <sys/time.h>
 #include <stdlib.h>
 
-#define get_major(version) (version>>0x4)
-#define get_minor(version) (version&0x0f)
+#define get_major(version) (version&0xFF>>0x4)
+#define get_minor(version) (version&0x0F)
 
 PublicKey_t* new_pubkey(void)
 {
@@ -63,4 +64,13 @@ uint32_t checksum(uint8_t *data, uint32_t len)
         }
     }
     return chk;
+}
+
+uint64_t get_timestamp_us()
+{
+    struct timeval tl;
+    uint64_t ts = 0;
+    gettimeofday(&tl, NULL);
+    ts = tl.tv_sec * 1000 * 1000 * 1000 + tl.tv_usec;
+    return ts;
 }
