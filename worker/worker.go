@@ -1,20 +1,20 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 The go-hpb Authors
+// This file is part of the go-hpb.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-hpb is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-hpb is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package miner
+package worker
 
 import (
 	"bytes"
@@ -23,19 +23,18 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	
 	"gopkg.in/fatih/set.v0"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/hvm"
+	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
 const (
@@ -63,7 +62,7 @@ type Agent interface {
 // Work is the workers current environment and holds
 // all of the current state information
 type Work struct {
-	config *params.ChainConfig
+	config *config.ChainConfig
 	signer types.Signer
 
 	state     *state.StateDB // apply state changes here
@@ -88,28 +87,27 @@ type Result struct {
 
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
-	config *params.ChainConfig
+	config *config.ChainConfig
 	engine consensus.Engine
 
 	mu sync.Mutex
 
 	// update loop
 	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent
+	txCh         chan bc.TxPreEvent
 	txSub        event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
+	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
+	chainSideCh  chan bc.ChainSideEvent
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	eth     Backend
 	chain   *bc.BlockChain
-	proc    core.Validator
-	chainDb ethdb.Database
+	proc    bc.Validator
+	chainDb hpbdb.Database
 
 	coinbase common.Address
 	extra    []byte
@@ -127,29 +125,28 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
+func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
-		eth:            eth,
 		mux:            mux,
-		txCh:           make(chan core.TxPreEvent, txChanSize),
-		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainDb:        eth.ChainDb(),
+		txCh:           make(chan bc.TxPreEvent, txChanSize),
+		chainHeadCh:    make(chan bc.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh:    make(chan bc.ChainSideEvent, chainSideChanSize),
+		chainDb:        hpbdb.ChainDbInstance(),
 		recv:           make(chan *Result, resultQueueSize),
-		chain:          eth.BlockChain(),
-		proc:           eth.BlockChain().Validator(),
+		chain:          bc.InstanceBlockChain(),
+		proc:           bc.InstanceBlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
-	worker.txSub = eth.TxPool().SubscribeTxPreEvent(worker.txCh)
+	worker.txSub = txpool.GetTxPool().SubscribeTxPreEvent(worker.txCh)
 	// Subscribe events for blockchain
-	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 
 	go worker.wait()
@@ -310,19 +307,19 @@ func (self *worker) wait() {
 				continue
 			}
 			// check if canon block and write transactions
-			if stat == core.CanonStatTy {
+			if stat == bc.CanonStatTy {
 				// implicit by posting ChainHeadEvent
 				mustCommitNewWork = false
 			}
 			// Broadcast the block and announce chain insertion event
-			self.mux.Post(core.NewMinedBlockEvent{Block: block})
+			self.mux.Post(bc.NewMinedBlockEvent{Block: block})
 			var (
 				events []interface{}
 				logs   = work.state.Logs()
 			)
-			events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-			if stat == core.CanonStatTy {
-				events = append(events, core.ChainHeadEvent{Block: block})
+			events = append(events, bc.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+			if stat == bc.CanonStatTy {
+				events = append(events, bc.ChainHeadEvent{Block: block})
 			}
 			self.chain.PostChainEvents(events, logs)
 
@@ -357,7 +354,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 	work := &Work{
 		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainId),
+		signer:    types.NewBoeSigner(self.config.ChainId),
 		state:     state,
 		ancestors: set.New(),
 		family:    set.New(),
@@ -407,7 +404,7 @@ func (self *worker) commitNewWork() {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
+		GasLimit:   bc.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
@@ -423,12 +420,12 @@ func (self *worker) commitNewWork() {
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
 	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range
-		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
+		limit := new(big.Int).Add(daoBlock, config.DAOForkExtraRange)
 		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
 			// Depending whether we support or oppose the fork, override differently
 			if self.config.DAOForkSupport {
-				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
+				header.Extra = common.CopyBytes(config.DAOForkBlockExtra)
+			} else if bytes.Equal(header.Extra, config.DAOForkBlockExtra) {
 				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
 			}
 		}
@@ -444,7 +441,7 @@ func (self *worker) commitNewWork() {
 	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(work.state)
 	}
-	pending, err := self.eth.TxPool().Pending()
+	pending, err := txpool.GetTxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
@@ -503,7 +500,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *bc.BlockChain, coinbase common.Address) {
-	gp := new(core.GasPool).AddGas(env.header.GasLimit)
+	gp := new(hvm.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
 
@@ -531,17 +528,17 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
 		switch err {
-		case core.ErrGasLimitReached:
+		case bc.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
-		case core.ErrNonceTooLow:
+		case bc.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
-		case core.ErrNonceTooHigh:
+		case bc.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
@@ -571,19 +568,19 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		go func(logs []*types.Log, tcount int) {
 			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})
+				mux.Post(bc.PendingLogsEvent{Logs: logs})
 			}
 			if tcount > 0 {
-				mux.Post(core.PendingStateEvent{})
+				mux.Post(bc.PendingStateEvent{})
 			}
 		}(cpy, env.tcount)
 	}
 }
 
-func (env *Work) commitTransaction(tx *types.Transaction, bc *bc.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
+func (env *Work) commitTransaction(tx *types.Transaction, bc *bc.BlockChain, coinbase common.Address, gp *hvm.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed, vm.Config{})
+	receipt, _, err := bc.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil

@@ -26,8 +26,6 @@ import (
 	"time" 
 
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
@@ -37,25 +35,10 @@ import (
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/ghpb/protocol"
 )
 
 
-var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
-		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...)),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
-	}
-
-	configFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
-)
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	GitCommit = gitCommit
@@ -206,7 +189,7 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	hpbnode, cfg := MakeConfigNode(ctx)
+	hpbnode, _ := MakeConfigNode(ctx)
 	startNode(ctx, hpbnode)
 	hpbnode.Wait()
 	return nil
@@ -220,7 +203,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	utils.StartNode(stack)
 
 	// Unlock any account specifically requested
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType).(*keystore.KeyStore)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
