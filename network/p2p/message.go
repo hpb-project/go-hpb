@@ -55,9 +55,12 @@ const (
 	NodeDataMsg        = 0x1a
 	GetReceiptsMsg     = 0x1b
 	ReceiptsMsg        = 0x1c
+
 	HpbTestMsg         = 0x20
 	HpbTestMsgResp     = 0x21
 )
+
+
 
 // Msg defines the structure of a p2p message.
 //
