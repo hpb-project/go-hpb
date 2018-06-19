@@ -98,18 +98,27 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		
 		
 		/* 使用 make 函数 */
-		//CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
+		CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
 		
 		for i := 0; i < 10; i++ {
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
 			strnum := strconv.Itoa(i)
-			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
+			CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
 		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)})
 		}
 		
-		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
+		// 先获取长度，然后进行随机获取
+		lnlen := int(math.Log2(float64(len(cadWinners))))
+		lastCadWinners := []*snapshots.CadWinner{}
+		for i := 0 ; i < lnlen; i++{
+			lastCadWinners[i] = cadWinners[rand.Intn(lnlen)]
+		}
+		
+		
+		
+		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,lastCadWinners)
 
         log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].Address)
 		
