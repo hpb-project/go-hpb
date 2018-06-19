@@ -100,9 +100,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	// 获取快照
 	
-	cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash, nil)
-	
-	log.Info("rujia test", cadNodeSnap.CadWinners[0].Address)
 
 	//cadNodeSnap.
 	
@@ -118,12 +115,14 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		// 改造点， 开始从网络中获取
 		// 从网络中获取一个
 		
-		
 		//获取社区选举，对社区选举进行触发
-		comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
+		//comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
 		
+		cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash, nil)
+		//log.Info("rujia test", cadNodeSnap.CadWinners[1].Address)
 		
-		address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
+		//address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
+		address := common.HexToAddress(cadNodeSnap.CadWinners[0].Address)
 
 		if snap.ValidVote(address, true) {
 			header.Coinbase = address // 设置地址
@@ -131,7 +130,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 		}
 	
-	    log.Info("############################################TESE", comNodeSnap.Winners[0].Address)
+	    log.Info("############################################TESE", cadNodeSnap.CadWinners[0].Address)
 	    if err != nil {
 			return err
 		}

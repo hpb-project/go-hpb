@@ -20,6 +20,7 @@ package voting
 import (
 	"math"
 	"strconv"
+	"math/rand"
 
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/consensus"
@@ -28,7 +29,6 @@ import (
 	"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/storage"
-
 )
 
 const (
@@ -84,15 +84,34 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
 		type CadWinners []*snapshots.CadWinner
-		w1 := &snapshots.CadWinner{"192.168.2.14","0xfa7b9770ca4cb04296cac84f37736d4041251cdf"}
-		w2 := &snapshots.CadWinner{"192.168.2.12","0x058fee5c36a11fc9be56b2a5b2c40372c983c4a2"}
-		w3 := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd"}
+		//w1 := &snapshots.CadWinner{"192.168.2.14","0xfa7b9770ca4cb04296cac84f37736d4041251cdf",uint64(10)}
+		//w2 := &snapshots.CadWinner{"192.168.2.12","0x058fee5c36a11fc9be56b2a5b2c40372c983c4a2",uint64(10)}
+		//w3 := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",uint64(10)}
 		
-		cadWinners := CadWinners([]*snapshots.CadWinner{w1, w2, w3}) 
+		//cadWinners := CadWinners([]*snapshots.CadWinner{w1, w2, w3}) 
+		cadWinners := []*snapshots.CadWinner{} 
+		//var cadWinners [10]*snapshots.CadWinner{} 
+		//从peers中获取
+		// 模拟从peer中获取
+		
+		//cadWinners := make([]*snapshots.CadWinner,10)
+		
+		
+		/* 使用 make 函数 */
+		//CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
+		
+		for i := 0; i < 10; i++ {
+			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
+			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
+			VoteIndex := networkBandwidth + transactionNum
+			strnum := strconv.Itoa(i)
+			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
+		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)})
+		}
 		
 		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
 
-        log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].NetworkId)
+        log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].Address)
 		
 		// 存储到数据库中
 		if err := cadNodeSnap.Store(db); err != nil {
