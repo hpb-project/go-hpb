@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
