@@ -9,7 +9,7 @@
 
 int iperf_server(int port)
 {
-    port = 5201;
+    //port = 5201;
     struct iperf_test *test;
     int consecutive_errors;
 
@@ -47,6 +47,8 @@ int iperf_server(int port)
     return IPERF_OK;
 }
 
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 int iperf_test(char* host, int port)
 {
     host = "127.0.0.1";
