@@ -21,25 +21,16 @@ import (
 	"crypto/ecdsa"
 
 	/*
-		"github.com/hpb-project/ghpb/account"
-		"github.com/hpb-project/ghpb/account/keystore"
-		"github.com/hpb-project/ghpb/common"
-		"github.com/hpb-project/ghpb/common/crypto"
-		"github.com/hpb-project/ghpb/common/log"
-		"github.com/hpb-project/ghpb/network/p2p"
-		"github.com/hpb-project/ghpb/network/p2p/discover"
-		"math/big"
-		"time"
+
 		*/
 
-	"runtime"
-	"strings"
-	"path/filepath"
-	"os"
 	"fmt"
 	"time"
+	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+
 )
 
 const (
@@ -166,7 +157,7 @@ const(
 //节点数据库相关
 
 var (
-	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
+	nodeDBNilNodeID      = discover.NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
 
@@ -182,11 +173,6 @@ var defaultNetworkConfig = NetworkConfig{
 	ListenAddr:      ":30303",
 	MaxPeers:        50,
 	NAT:             nat.Any(),
-
-
-	IPCPath:   "ghpb.ipc",
-
-
 }
 
 var MainnetBootnodes = []string{
@@ -285,7 +271,7 @@ type NetworkConfig struct {
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
-	Protocols []Protocol `toml:"-"`
+	Protocols []p2p.Protocol `toml:"-"`
 
 	// If ListenAddr is set to a non-nil address, the server
 	// will listen for incoming connections.
@@ -302,7 +288,7 @@ type NetworkConfig struct {
 
 	// If Dialer is set to a non-nil value, the given Dialer
 	// is used to dial outbound peer connections.
-	Dialer NodeDialer `toml:"-"`
+	Dialer p2p.NodeDialer `toml:"-"`
 
 	// If NoDial is true, the server will not dial any peers.
 	NoDial bool `toml:",omitempty"`
@@ -311,40 +297,12 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	// IPCPath is the requested location to place the IPC endpoint. If the path is
-	// a simple file name, it is placed inside the data directory (or on the root
-	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
-	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `toml:",omitempty"`
+
 }
 
 
-// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
-// account the set data folders as well as the designated platform we're currently
-// running on.
-func (c *networkConfig) IPCEndpoint() string {
-	// Short circuit if IPC has not been enabled
-	if c.IPCPath == "" {
-		return ""
-	}
-	// On windows we can only use plain top-level pipes
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
-			return c.IPCPath
-		}
-		return `\\.\pipe\` + c.IPCPath
-	}
-	// Resolve names into the data directory full paths otherwise
-	if filepath.Base(c.IPCPath) == c.IPCPath {
-		if c.DataDir == "" {
-			return filepath.Join(os.TempDir(), c.IPCPath)
-		}
-		return filepath.Join(c.DataDir, c.IPCPath)
-	}
-	return c.IPCPath
-}
 
-func DefaultNetworkConfig() networkConfig{
+func DefaultNetworkConfig() NetworkConfig{
 	cfg:= defaultNetworkConfig
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
@@ -352,21 +310,11 @@ func DefaultNetworkConfig() networkConfig{
 
 	return cfg
 }
-// DefaultIPCEndpoint returns the IPC path used by default.
-func DefaultIPCEndpoint(clientIdentifier string) string {
-	if clientIdentifier == "" {
-		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if clientIdentifier == "" {
-			panic("empty executable name")
-		}
-	}
-	config := &networkConfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
-	return config.IPCEndpoint()
-}
+
 
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
 // and port parameters.
-func (c *networkConfig) HTTPEndpoint() string {
+func (c *NetworkConfig) HTTPEndpoint() string {
 	if c.HTTPHost == "" {
 		return ""
 	}
@@ -375,13 +323,13 @@ func (c *networkConfig) HTTPEndpoint() string {
 
 // DefaultHTTPEndpoint returns the HTTP endpoint used by default.
 func DefaultHTTPEndpoint() string {
-	config := &networkConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
+	config := &NetworkConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
 	return config.HTTPEndpoint()
 }
 
 // WSEndpoint resolves an websocket endpoint based on the configured host interface
 // and port parameters.
-func (c *Config) WSEndpoint() string {
+func (c *NetworkConfig) WSEndpoint() string {
 	if c.WSHost == "" {
 		return ""
 	}
@@ -390,7 +338,7 @@ func (c *Config) WSEndpoint() string {
 
 // DefaultWSEndpoint returns the websocket endpoint used by default.
 func DefaultWSEndpoint() string {
-	config := &networkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
+	config := &NetworkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
 
