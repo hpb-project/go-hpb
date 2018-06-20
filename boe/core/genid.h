@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef GENID_H
+#define GENID_H
 
-#ifndef TSU_CONNECTOR_H
-#define TSU_CONNECTOR_H
-
-#include "common.h"
-
-int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, uint8_t *result);
-
-#endif  /*TSU_CONNECTOR_H*/
+/*
+ * scan host pc and general an id to check with BOE board bound id.
+ */
+int general_id(char *genid);
+#endif  /*GENID_H*/

@@ -75,16 +75,15 @@ typedef enum A_CMD {
     ACMD_END                    = 0xff,
 }ACmd;
 
-typedef struct TSInfo
-{
+typedef struct ImageHeader{
     uint8_t usage;
-    uint32_t fid;
+    uint8_t vendor[3];
     uint32_t chk;
     uint32_t len;
     TVersion hw;
     TVersion fw;
     TVersion axu;
-}TSInfo;
+}ImageHeader;
 
 A_Package* axu_package_new(int len);
 int axu_package_free(A_Package* pack);

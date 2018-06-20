@@ -14,12 +14,31 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
+#pragma once
 
-#ifndef TSU_CONNECTOR_H
-#define TSU_CONNECTOR_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "common.h"
+#include <stdint.h>
+#include <stdlib.h>
 
-int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, uint8_t *result);
+#define decsha3(bits) \
+    int sha3_##bits(uint8_t*, size_t, uint8_t const*, size_t);
 
-#endif  /*TSU_CONNECTOR_H*/
+decsha3(256)
+decsha3(512)
+
+static inline void SHA3_256(uint8_t* ret, uint8_t const* data, size_t const size)
+{
+    sha3_256(ret, 32, data, size);
+}
+
+static inline void SHA3_512(uint8_t* ret, uint8_t const* data, size_t const size)
+{
+    sha3_512(ret, 64, data, size);
+}
+
+#ifdef __cplusplus
+}
+#endif

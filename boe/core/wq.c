@@ -1,4 +1,4 @@
-// Last Update:2018-06-18 15:42:15
+// Last Update:2018-06-20 19:04:43
 /**
  * @file wq.c
  * @brief 
@@ -15,6 +15,7 @@
 #include "msg_manager.h"
 #include "list.h"
 
+// wait response. 
 typedef struct WMessage{
     uint32_t uid;     // unique id.
     uint32_t timeout; // timeout unit us.
@@ -24,10 +25,17 @@ typedef struct WMessage{
     uint8_t **rcv_buff;
 }WMessage;
 
+// wait list.
 typedef struct WaitNode{
     WMessage *wmsg;
     struct list_head list; 
 }WaitNode;
+
+
+// receive msg list.
+typedef struct ReadNode{
+    struct list_head list; 
+}ReadNode;
 
 typedef struct WQ_Handle{
     WaitNode wHead;

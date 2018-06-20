@@ -38,7 +38,6 @@ import (
 )
 
 type BoeHandle struct {
-    m   sync.Mutex
     boeEvent *routinue.Event
     boeInit  bool
 }
@@ -52,36 +51,18 @@ type TVersion struct {
 }
 
 type BoeId uint32
+
+
 const (
     BoeEventBase routinue.EventType = iota+100
     BoeEventMax
 )
 
 var (
-    ErrInvalidParams         = errors.New("invalid params")
-    ErrInitFailed            = errors.New("init failed")
-    ErrReleaseFailed         = errors.New("release failed")
-    ErrSignCheckFailed       = errors.New("sign check failed")
-    ErrHWSignFailed          = errors.New("hw sign failed")
-    ErrUnknownEvent          = errors.New("unknown event")
-    ErrIDNotMatch            = errors.New("id not match")
-    ErrUpdateFailed          = errors.New("update failed")
-    ErrUpdateAbortFailed     = errors.New("update abort failed")
-
     boeRecoverPubTps         = int32(0)
     bcontinue                = false
     boeHandle                = &BoeHandle{boeEvent:routinue.NewEvent(), boeInit:false}
 )
-
-
-func BoeGetInstance() (*BoeHandle) {
-    return boeHandle
-}
-
-func localInfoId() uint32 {
-    // scan local local info and calc the id.
-    return 0xfffffff
-}
 
 func innerResetCounter() {
     timestamp1 := time.Now().UTC().UnixNano()
@@ -95,35 +76,26 @@ func innerResetCounter() {
     }
 }
 
-func (boe *BoeHandle) Init()(error) {
-    boe.m.Lock()
-    defer boe.m.Unlock()
+func BoeGetInstance() (*BoeHandle) {
+    return boeHandle
+}
 
+func (boe *BoeHandle) Init()(error) {
     if boe.boeInit {
         return nil
     }
+
     ret := C.BOEInit()
     if ret == C.BOE_OK {
-        // calc local id, then set it to board, if id is not matched, 
-        // the board will not work correctly.
-        id := localInfoId()
-        ret = C.SetBOEID(C.uint(id))
-        var vret = uint(ret)
-        if ret != C.BOE_OK {
-            return ErrIDNotMatch
-        }
         boe.boeInit = true
         bcontinue = true
         go innerResetCounter()
         return nil
     }
     return ErrInitFailed
-
 }
 
 func (boe *BoeHandle) Release() (error) {
-    boe.m.Lock()
-    defer boe.m.Unlock()
 
     bcontinue = false
     ret := C.BOERelease()
@@ -139,6 +111,14 @@ func (boe *BoeHandle) SubscribeEvent(event routinue.EventType) (routinue.Subscri
         return sub, nil
     }
     return nil,ErrUnknownEvent
+}
+
+func (boe *BoeHandle) HWBind(account []byte) (error){
+    // 1. calc local id.
+    var id = localInfoId()
+    // 2. call c interface, and check result.
+    //C.BOEHWBind(id, account)
+    return nil
 }
 
 func (boe *BoeHandle) GetHWVersion() TVersion {
@@ -165,13 +145,19 @@ func (boe *BoeHandle) GetRandom() uint32{
 }
 
 func (boe *BoeHandle) GetBoeId() BoeId{
-
     var id = BoeId(C.GetBOEID())
     return id
 }
 
 func (boe *BoeHandle) FWUpdate() error{
-    var ret = C.BOEFWUpdate()
+    // download version record file.
+    // get board version info.
+    // get correct update image url.
+    // download update image.
+    // call C api to update.
+    var image = make([]byte, 1024*10*1024)
+    var len = 10*1024*1024;
+    var ret = C.BOEFWUpdate(image, len)
     if ret == C.BOE_OK {
         return nil
     }
@@ -186,9 +172,28 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     return ErrUpdateFailed
 }
 
+func (boe *BoeHandle) SetBoundAccount(baccount []byte) (error) {
+    // call C interface.
+    ret := C.BOE_OK//C.BOESetBindInfo((*C.uchar)((unsafe.Pointer)(&bid[0])), (*C.uchar)((unsafe.Pointer)(&baccount[0])))
+    if ret == C.BOE_OK {
+        return baccount, nil
+    }
+    return ErrHWSignFailed
+}
+
+func (boe *BoeHandle) GetBoundAccount() ([]byte, error) {
+    var (
+        baccount = make([]byte, 32)
+    )
+    // call C interface.
+    ret := C.BOE_OK//C.BOEGetBindInfo((*C.uchar)((unsafe.Pointer)(&bid[0])), (*C.uchar)((unsafe.Pointer)(&baccount[0])))
+    if ret == C.BOE_OK {
+        return baccount, nil
+    }
+    return nil,ErrHWSignFailed
+}
+
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
-    boe.m.Lock()
-    defer boe.m.Unlock()
 
     atomic.AddInt32(&boeRecoverPubTps, 1)
     var result = make([]byte, 64)
@@ -240,4 +245,3 @@ func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
     } 
     return result, nil
 }
-

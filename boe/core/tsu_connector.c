@@ -101,35 +101,3 @@ int tsu_validate_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v, uint8_t 
     return 0;
 }
 
-int tsu_hw_sign(uint8_t *info, int info_len, uint8_t *result)
-{
-    if(info_len > TSU_PAYLOAD_MAX_SIZE)
-        return -1;
-    T_Package *pack = (T_Package*)malloc(sizeof(T_Package) + info_len);
-    if(pack == NULL)
-        return -2;
-    tsu_init_package(pack);
-    pack->function_id = FUNCTION_ECSDA_SIGN;
-    memcpy(pack->payload, info, info_len);
-    pack->length = info_len;
-    pack->checksum = checksum(pack->payload, pack->length);
-
-    // Todo: send request.
-    if(pcie_write((uint8_t*)pack, info_len + sizeof(T_Package)) < 0)
-    {
-        free(pack);
-        return -3;
-    }
-
-    // Todo: get response.
-    T_Package *res = (T_Package*)malloc(sizeof(T_Package) + 2*32+1);
-    if(pcie_read((uint8_t*)res, sizeof(T_Package) + 2*32+1) < 0)
-    {
-        free(res);
-        return -4;
-    }
-    memcpy(result, res->payload, 32);
-
-    free(res);
-    return 0;
-}

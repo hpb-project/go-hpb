@@ -1,4 +1,4 @@
-// Last Update:2018-06-19 11:03:46
+// Last Update:2018-06-20 17:39:26
 /**
  * @file docommand.c
  * @brief 
@@ -8,6 +8,7 @@
  */
 
 #include <string.h>
+#include "docommand.h"
 #include "common.h"
 #include "wq.h"
 #include "axu_connector.h"
@@ -63,16 +64,16 @@ static A_Package* make_query_ts_start(ACmd cmd, uint8_t usage, uint32_t fid, uin
     return p;
 }
 
-static A_Package* make_query_ts_mid(ACmd cmd, uint32_t fid, uint32_t doffset, uint32_t len, uint8_t *data)
+static A_Package* make_query_ts_mid(ACmd cmd, uint32_t fid, uint16_t doffset, int len, uint8_t *data)
 {
     A_Package *p = axu_package_new(PACKAGE_MAX_SIZE);
     int offset = 0;
+    int maxlen = p->header.body_length - sizeof(fid) - sizeof(doffset);
     if(p)
     {
         axu_package_init(p, NULL, cmd);
         PSetData(p, offset, fid);
         PSetData(p, offset, doffset);
-        PSetData(p, offset, len);
         PSetDataLen(p, offset, data, len);
 
         axu_finish_package(p);
@@ -80,7 +81,7 @@ static A_Package* make_query_ts_mid(ACmd cmd, uint32_t fid, uint32_t doffset, ui
     return p;
 }
 
-static A_Package* make_query_ts_fin(ACmd cmd, uint32_t fid, uint32_t doffset, uint32_t len, uint8_t *data)
+static A_Package* make_query_ts_fin(ACmd cmd, uint32_t fid, uint16_t doffset, uint32_t len, uint8_t *data)
 {
     A_Package *p = axu_package_new(PACKAGE_MAX_SIZE);
     int offset = 0;
@@ -139,38 +140,6 @@ static A_Package* make_query_set_boeid(ACmd cmd, uint32_t id)
     return p;
 }
 
-static A_Package* make_query_check_bind(ACmd cmd, uint8_t *bid, uint8_t *baccount)
-{
-    A_Package *p = axu_package_new(256*2 + sizeof(A_Package));
-    int offset = 0;
-    if(p)
-    {
-        axu_package_init(p, NULL, cmd);
-        axu_set_data(p, offset, bid, 256);
-        offset += 256;
-        axu_set_data(p, offset, baccount, 256);
-        offset += 256;
-
-        axu_finish_package(p);
-    }
-    return p;
-}
-
-static A_Package* make_query_bind_id(ACmd cmd, uint8_t *bid)
-{
-    A_Package *p = axu_package_new(256 + sizeof(A_Package));
-    int offset = 0;
-    if(p)
-    {
-        axu_package_init(p, NULL, cmd);
-        axu_set_data(p, offset, bid, 256);
-        offset += 256;
-
-        axu_finish_package(p);
-    }
-    return p;
-}
-
 static A_Package* make_query_bind_account(ACmd cmd, uint8_t *baccount)
 {
     A_Package *p = axu_package_new(256 + sizeof(A_Package));
@@ -219,6 +188,16 @@ static inline int isAck(A_Package *p)
 static inline int isErr(A_Package *p)
 {
     return p->header.acmd == ACMD_BP_RES_ERR;
+}
+struct BoeErr{
+    int errCode;
+    char errMsg[100];
+};
+static inline int getErr(A_Package *p, struct BoeErr *err)
+{
+    err->errCode = p->data[0];
+    strncpy(err->errMsg, (char*)(p->data+1), 90);
+    return 0;
 }
 
 
@@ -326,9 +305,8 @@ int doGetSingleVer(TVersion *v, ACmd cmd)
     return 1;
 }
 
-#define GetBindId(p)   (p->data)
-#define GetBindAccount(p)   (p->data + 256)
-int doGetBindInfo(uint8_t * id_256, uint8_t *account_256)
+#define GetBindAccount(p)   (p->data)
+int doGetBindAccount(uint8_t *account_256)
 {
     A_Package *p = make_query_simple(ACMD_PB_GET_BINDINFO);
     if(p)
@@ -341,33 +319,12 @@ int doGetBindInfo(uint8_t * id_256, uint8_t *account_256)
         A_Package *r = (A_Package*)WMessageWait(wm);
         if(r!=NULL && isAck(r))
         {
-            memcpy(id_256, GetBindId(r), 256);
             memcpy(account_256, GetBindAccount(r), 256);
             return 0;
         }
     }
     return 1;
 }
-
-int doUnBind(void)
-{
-    A_Package *p = make_query_simple(ACMD_PB_UNBIND);
-    if(p)
-    {
-        WMessage * wm = WMessageNew(p->header.package_id, axu_check_response, gShortTimeout);
-        wq_push(wqc, wm);
-        // Todo: send msg.
-        pcie_write((uint8_t*)p, axu_package_len(p));
-        // wait response
-        A_Package *r = (A_Package*)WMessageWait(wm);
-        if(r!=NULL && isAck(r))
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 int doGetHWVer(TVersion *hw)
 {
     return doGetSingleVer(hw, ACMD_PB_GET_HW_VER);
@@ -386,45 +343,6 @@ int doGetAXUVer(TVersion *axu)
 int doSetBoeID(uint32_t id)
 {
     A_Package *p = make_query_set_boeid(ACMD_PB_SET_BOEID, id);
-    if(p)
-    {
-        WMessage * wm = WMessageNew(p->header.package_id, axu_check_response, gShortTimeout);
-        wq_push(wqc, wm);
-        // Todo: send msg.
-        pcie_write((uint8_t*)p, axu_package_len(p));
-        // wait response
-        A_Package *r = (A_Package*)WMessageWait(wm);
-        if(r!=NULL && isAck(r))
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-
-int doCheckBind(uint8_t *bid, uint8_t *baccount)
-{
-    A_Package *p = make_query_check_bind(ACMD_PB_CHECK_BIND, bid, baccount);
-    if(p)
-    {
-        WMessage * wm = WMessageNew(p->header.package_id, axu_check_response, gShortTimeout);
-        wq_push(wqc, wm);
-        // Todo: send msg.
-        pcie_write((uint8_t*)p, axu_package_len(p));
-        // wait response
-        A_Package *r = (A_Package*)WMessageWait(wm);
-        if(r!=NULL && isAck(r))
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-int doBindID(uint8_t *bid)
-{
-    A_Package *p = make_query_bind_id(ACMD_PB_BIND_ID, bid);
     if(p)
     {
         WMessage * wm = WMessageNew(p->header.package_id, axu_check_response, gShortTimeout);
@@ -460,8 +378,7 @@ int doBindAccount(uint8_t *baccount)
     return 1;
 }
 
-
-int doHWSign(uint8_t *data, int len)
+int doHWSign(uint8_t *data, int len, uint8_t *result)
 {
     A_Package *p = make_query_hwsign(ACMD_PB_HW_SIGN, data, len);
     if(p)
@@ -474,15 +391,18 @@ int doHWSign(uint8_t *data, int len)
         A_Package *r = (A_Package*)WMessageWait(wm);
         if(r!=NULL && isAck(r))
         {
+            // get sign r.
+            // get sign s.
+            // get sign v.
             return 0;
         }
     }
     return 1;
 }
 
-int doTransportStart(TSInfo *info)
+int doTransportStart(ImageHeader *info)
 {
-    A_Package *p = make_query_ts_start(ACMD_PB_TRANSPORT_START, info->usage, info->fid, info->chk, info->len, info->hw, info->fw, info->axu);
+    A_Package *p = make_query_ts_start(ACMD_PB_TRANSPORT_START, info->usage, info->chk, info->chk, info->len, info->hw, info->fw, info->axu);
     if(p)
     {
         WMessage * wm = WMessageNew(p->header.package_id, axu_check_response, gShortTimeout);
@@ -499,6 +419,9 @@ int doTransportStart(TSInfo *info)
     return 1;
 }
 
+#define TransMidFidOffset()   (0)
+#define TransMidOffsetOffset()   (4)
+#define TransMidDataOffset()   (6)
 int doTransportMid(uint32_t fid, uint32_t offset, int len, uint8_t *data)
 {
     A_Package *p = make_query_ts_mid(ACMD_PB_TRANSPORT_MIDDLE, fid, offset, len, data);
@@ -537,6 +460,33 @@ int doTransportFin(uint32_t fid, uint32_t offset, int len, uint8_t *data)
     return 1;
 }
 
+int doTransport(ImageHeader *info, uint8_t *data)
+{
+    int ret = doTransportStart(info);
+    if(ret == 0)
+    {
+        uint16_t offset = 0;
+        int plen = 0, pmaxlen = PACKAGE_MAX_SIZE - sizeof(A_Package) - TransMidDataOffset(); 
+        while(1)
+        {
+            plen = info->len - offset;
+            if(plen > pmaxlen)
+            {
+                ret = doTransportMid(info->chk, offset, pmaxlen, data+offset);
+                offset += pmaxlen;
+                if(ret != 0)
+                    break;
+            }
+            else
+            {
+                ret = doTransportFin(info->chk, offset, plen, data+offset);
+                offset += plen;
+                break;
+            }
+        }
+        return ret;
+    }
+}
 int doUpgradeStart(uint32_t fid)
 {
     A_Package *p = make_query_upgrade_start(ACMD_PB_UPGRADE_START, fid);
@@ -575,8 +525,14 @@ int doUpgradeAbort(uint32_t fid)
     return 1;
 }
 
-int doc_init()
+int doc_init(MsgHandle func, void *userdata)
 {
     wq_init(&wqc);
+    return 0;
 }
 
+int doc_release()
+{
+    wq_final(&wqc);
+    return 0;
+}
