@@ -25,7 +25,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/routinue"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 
@@ -55,9 +55,12 @@ const (
 	NodeDataMsg        = 0x1a
 	GetReceiptsMsg     = 0x1b
 	ReceiptsMsg        = 0x1c
+
 	HpbTestMsg         = 0x20
 	HpbTestMsgResp     = 0x21
 )
+
+
 
 // Msg defines the structure of a p2p message.
 //
@@ -167,14 +170,14 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 type msgEventer struct {
 	MsgReadWriter
 
-	feed     *routinue.Event
+	feed     *event.SyncEvent
 	peerID   discover.NodeID
 	Protocol string
 }
 
 // newMsgEventer returns a msgEventer which sends message events to the given
 // feed
-func newMsgEventer(rw MsgReadWriter, feed *routinue.Event, peerID discover.NodeID, proto string) *msgEventer {
+func newMsgEventer(rw MsgReadWriter, feed *event.SyncEvent, peerID discover.NodeID, proto string) *msgEventer {
 	return &msgEventer{
 		MsgReadWriter: rw,
 		feed:          feed,

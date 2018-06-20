@@ -26,8 +26,6 @@ import (
 	"time" 
 
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
@@ -37,24 +35,11 @@ import (
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/protocol"
 )
 
-
-var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
-		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...)),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
-	}
-
-	configFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
+const (
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
@@ -206,7 +191,7 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	hpbnode, cfg := MakeConfigNode(ctx)
+	hpbnode, _ := MakeConfigNode(ctx)
 	startNode(ctx, hpbnode)
 	hpbnode.Wait()
 	return nil
@@ -220,7 +205,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	utils.StartNode(stack)
 
 	// Unlock any account specifically requested
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType).(*keystore.KeyStore)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 
 	passwords := utils.MakePasswordList(ctx)
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
@@ -262,7 +247,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		// Mining only makes sense if a full Hpb node is running
-		var hpb *hpb.Hpb
+		var hpb *node.Node
 		if err := stack.Service(&hpb); err != nil {
 			utils.Fatalf("hpb service not running: %v", err)
 		}
@@ -271,7 +256,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := hpb.Engine().(threaded); ok {
+			if th, ok := hpb.hpbeng().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}

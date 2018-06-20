@@ -14,35 +14,33 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package filter
+package iperf
 
-type Generic struct {
-	Str1, Str2, Str3 string
-	Data             map[string]struct{}
+import (
+	"testing"
+	"time"
+)
 
-	Fn func(data interface{})
+var (
+	iperf = &Iperf{SrvPort:5201,CliHost:"127.0.0.1",CliPort:5201,quit: make(chan int)}
+)
+
+func TestValidateSign(t *testing.T) {
+
+	time.Sleep(time.Second)
+	iperf.StartTest("127.0.0.1",5202,5)
+	//t.Log("iperf test","result",result)
 }
 
-// self = registered, f = incoming
-func (self Generic) Compare(f Filter) bool {
-	var strMatch, dataMatch = true, true
-
-	filter := f.(Generic)
-	if (len(self.Str1) > 0 && filter.Str1 != self.Str1) ||
-		(len(self.Str2) > 0 && filter.Str2 != self.Str2) ||
-		(len(self.Str3) > 0 && filter.Str3 != self.Str3) {
-		strMatch = false
-	}
-
-	for k := range self.Data {
-		if _, ok := filter.Data[k]; !ok {
-			return false
-		}
-	}
-
-	return strMatch && dataMatch
-}
-
-func (self Generic) Trigger(data interface{}) {
-	self.Fn(data)
-}
+//func TestValidateSign(t *testing.T) {
+//
+//	go iperf.StartSever(5202)
+//
+//	time.Sleep(time.Second*20)
+//
+//
+//	err :=iperf.StopSever(3)
+//
+//	t.Log("Stop iperf server","err",err)
+//
+//}

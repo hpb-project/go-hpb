@@ -8,17 +8,15 @@ import (
 	"strings"
 	"path/filepath"
 	"crypto/ecdsa"
-	"io/ioutil"
 	"os/user"
 
 
-	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/account"
+
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/ghpb"
 )
 
@@ -109,6 +107,15 @@ type Nodeconfig struct {
 
 	MaxTrieCacheGen  uint16
 
+	// This field must be set to a valid secp256k1 private key.
+	PrivateKey *ecdsa.PrivateKey `toml:"-"`
+
+	// IPCPath is the requested location to place the IPC endpoint. If the path is
+	// a simple file name, it is placed inside the data directory (or on the root
+	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
+	// relative), then that specific path is enforced. An empty path disables IPC.
+	IPCPath string `toml:",omitempty"`
+
 
 }
 
@@ -128,7 +135,7 @@ func (c *Nodeconfig) NodeDB() string {
 	if c.DataDir == "" {
 		return "" // ephemeral
 	}
-	return c.resolvePath(datadirNodeDatabase)
+	return c.ResolvePath(DatadirNodeDatabase)
 }
 // NodeName returns the devp2p node identifier.
 func (c *Nodeconfig) NodeName() string {
@@ -149,6 +156,17 @@ func (c *Nodeconfig) NodeName() string {
 }
 
 func (c *Nodeconfig) name() string {
+	if c.Name == "" {
+		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if progname == "" {
+			panic("empty executable name, set Config.Name")
+		}
+		return progname
+	}
+	return c.Name
+}
+
+func (c *Nodeconfig) StringName() string {
 	if c.Name == "" {
 		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
 		if progname == "" {
@@ -203,8 +221,8 @@ func (c *Nodeconfig) instanceDir() string {
 // data folder. If no key can be found, a new one is generated.
 func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 	// Use any specifically configured key.
-	if c.P2P.PrivateKey != nil {
-		return c.P2P.PrivateKey
+	if c.PrivateKey != nil {
+		return c.PrivateKey
 	}
 	// Generate ephemeral key if no datadir is being used.
 	if c.DataDir == "" {
@@ -215,7 +233,7 @@ func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 		return key
 	}
 
-	keyfile := c.resolvePath(datadirPrivateKey)
+	keyfile := c.ResolvePath(DatadirPrivateKey)
 	if key, err := crypto.LoadECDSA(keyfile); err == nil {
 		return key
 	}
@@ -229,22 +247,13 @@ func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 		return key
 	}
-	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
+	keyfile = filepath.Join(instanceDir, DatadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
 	return key
 }
 
-// StaticNodes returns a list of node hnode URLs configured as static nodes.
-func (c *Nodeconfig) StaticNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirStaticNodes))
-}
-
-// TrustedNodes returns a list of node hnode URLs configured as trusted nodes.
-func (c *Nodeconfig) TrustedNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirTrustedNodes))
-}
 
 // parsePersistentNodes parses a list of discovery node URLs loaded from a .json
 // file from within the data directory.
@@ -318,3 +327,40 @@ func defaultNodeConfig() Nodeconfig {
 }
 
 
+
+// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
+// account the set data folders as well as the designated platform we're currently
+// running on.
+func (c *Nodeconfig) IPCEndpoint() string {
+	// Short circuit if IPC has not been enabled
+	if c.IPCPath == "" {
+		return ""
+	}
+	// On windows we can only use plain top-level pipes
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
+			return c.IPCPath
+		}
+		return `\\.\pipe\` + c.IPCPath
+	}
+	// Resolve names into the data directory full paths otherwise
+	if filepath.Base(c.IPCPath) == c.IPCPath {
+		if c.DataDir == "" {
+			return filepath.Join(os.TempDir(), c.IPCPath)
+		}
+		return filepath.Join(c.DataDir, c.IPCPath)
+	}
+	return c.IPCPath
+}
+
+// DefaultIPCEndpoint returns the IPC path used by default.
+func DefaultIPCEndpoint(clientIdentifier string) string {
+	if clientIdentifier == "" {
+		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if clientIdentifier == "" {
+			panic("empty executable name")
+		}
+	}
+	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
+	return config.IPCEndpoint()
+}

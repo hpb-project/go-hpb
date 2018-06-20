@@ -59,7 +59,7 @@ func Fatalf(format string, args ...interface{}) {
 }
 
 func StartNode(stack *node.Node) {
-	if err := stack.Start(); err != nil {
+	if err := stack.Start(stack.Hpbconfig); err != nil {
 		Fatalf("Error starting protocol stack: %v", err)
 	}
 	go func() {

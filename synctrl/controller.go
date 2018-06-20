@@ -19,7 +19,6 @@ package synctrl
 import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -35,6 +34,8 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -108,7 +109,7 @@ type SynCtrl struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	txpool      txPool //todo xinqyu's
+	txpool      *txpool.TxPool //todo xinqyu's
 	chaindb     hpbdb.Database
 	chainconfig *config.ChainConfig
 	maxPeers    int
@@ -119,7 +120,7 @@ type SynCtrl struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux      *event.TypeMux
-	txCh          chan bc.TxPreEvent
+	txCh          chan event.TxPreEvent
 	txSub         event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 
@@ -135,7 +136,7 @@ type SynCtrl struct {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    mux,
@@ -180,9 +181,26 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 
 func (this *SynCtrl) Start() {
 	// broadcast transactions
+<<<<<<< HEAD
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
 	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
 	go this.txRoutingLoop()
+=======
+	this.txCh = make(chan event.TxPreEvent, txChanSize)
+	txReceiver := event.RegisterReceiver("tx_pool_tx_pre_subscriber",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				log.Info("SynCtrl get TxPreEvent %s", msg.Message.String())
+				this.txCh  <- msg
+			default:
+				log.Warn("SynCtrl get Unknown msg")
+			}
+		})
+	event.Subscribe(txReceiver, event.TxPreTopic)
+
+	go this.txBroadcastLoop()
+>>>>>>> 696ecf6afe84576e6894de5e4d31eee2f54b0716
 
 	// broadcast mined blocks
 	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})

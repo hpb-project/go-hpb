@@ -39,7 +39,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/blockchain/event"
@@ -48,6 +47,9 @@ import (
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/solo"
+	"github.com/hpb-project/ghpb/protocol"
+	"github.com/hpb-project/go-hpb/worker"
 )
 
 // Node is a container on which services can be registered.
@@ -68,7 +70,7 @@ type Node struct {
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	accman   		*accounts.Manager
 	eventMux        *event.TypeMux
-	hpbengine          consensus.Engine
+	Hpbengine          consensus.Engine
 	accountManager  *accounts.Manager
 	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
@@ -79,7 +81,7 @@ type Node struct {
 
 	//ApiBackend      *HpbApiBackend
 
-	//worker     *miner.Miner
+	worker     *worker.Miner
 	gasPrice        *big.Int
 	hpberbase       common.Address
 
@@ -90,16 +92,17 @@ type Node struct {
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
 	lock sync.RWMutex
+	ApiBackend *HpbApiBackend
 }
 
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
 func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
-	if chainConfig.Prometheus == nil {
+	if &chainConfig.Prometheus == nil {
 		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
 	}
-	return prometheus.New(chainConfig.Prometheus, db)
+	return solo.New()
 }
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){
@@ -128,7 +131,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
-	am, ephemeralKeystore, err := makeAccountManager(&conf.Node)
+	am, _, err := makeAccountManager(&conf.Node)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +144,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	eventmux    := new(event.TypeMux)
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, conf.Node.Genesis)
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, conf.Node.SyncMode, conf.Node.NetworkId, eventmux, hpbtxpool,/*todo txpool*/
-		engine, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, synctrl.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, eventmux, hpbtxpool,engine, db)
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
@@ -188,14 +190,14 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbnode.Hpbbc.SetHead(compat.RewindTo)
 		bc.WriteChainConfig(db, genesisHash, chainConfig)
 	}
-	hpb.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
 
 	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
 
 
-	//hpbnode.miner = miner.New(hpb, hpb.chainConfig, hpb.EventMux(), hpb.engine)
-	//hpb.miner.SetExtra(makeExtraData(config.ExtraData))
+	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.hpbengine)
+	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
 /*
 	hpb.ApiBackend = &HpbApiBackend{hpb, nil}
 	gpoParams := config.GPO
@@ -268,7 +270,7 @@ func (n *Node) openDataDir() error {
 		return nil // ephemeral
 	}
 
-	instdir := filepath.Join(n.Hpbconfig.Node.DataDir, n.config.name())
+	instdir := filepath.Join(n.Hpbconfig.Node.DataDir, n.Hpbconfig.Node.StringName())
 	if err := os.MkdirAll(instdir, 0700); err != nil {
 		return err
 	}

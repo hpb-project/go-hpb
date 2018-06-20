@@ -106,9 +106,7 @@ const (
 	Douglas  = 1e42
 )
 
-const (
-	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
+
 
 type hpbStatsConfig struct {
 	URL string `toml:",omitempty"`
