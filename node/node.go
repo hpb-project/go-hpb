@@ -70,7 +70,7 @@ type Node struct {
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	accman   		*accounts.Manager
 	eventMux        *event.TypeMux
-	hpbengine          consensus.Engine
+	Hpbengine          consensus.Engine
 	accountManager  *accounts.Manager
 	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
@@ -92,6 +92,7 @@ type Node struct {
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
 	lock sync.RWMutex
+	ApiBackend *HpbApiBackend
 }
 
 

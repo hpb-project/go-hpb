@@ -21,17 +21,17 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/core/state"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/protocol/downloader"
-	"github.com/hpb-project/ghpb/storage"
-	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/hvm"
+	"github.com/hpb-project/go-hpb/protocol/downloader"
+	"github.com/hpb-project/go-hpb/storage"
+	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 // Backend interface provides the common API services (that are provided by

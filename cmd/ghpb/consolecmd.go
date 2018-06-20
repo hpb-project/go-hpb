@@ -21,10 +21,10 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/console"
-	"github.com/hpb-project/ghpb/node"
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/common/console"
+	"github.com/hpb-project/go-hpb/node"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -37,15 +37,15 @@ import (
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/protocol/filters"
-	"github.com/hpb-project/go-hpb/protocol/gasprice"
-	"github.com/hpb-project/go-hpb/protocol/miner"
-	"github.com/hpb-project/go-hpb/storage"
 	"github.com/go-hpb-backkup/txpool"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event"
+	//"github.com/hpb-project/go-hpb/synctrl"
+	"github.com/go-hpb-backkup/worker"
 )
 
 type LesServer interface {
@@ -54,8 +54,8 @@ type LesServer interface {
 	Protocols() []p2p.Protocol
 }
 
-func (s *Hpb) AddLesServer(ls LesServer) {
-	s.lesServer = ls
+/*func (s *Node) AddLesServer(ls LesServer) {
+	s.lesServer = ls*/
 }
 
 func makeExtraData(extra []byte) []byte {
@@ -80,11 +80,11 @@ func makeExtraData(extra []byte) []byte {
 
 // APIs returns the collection of RPC services the hpb package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *Hpb) APIs() []rpc.API {
+func (s *Node) APIs() []rpc.API {
 	apis := hpbapi.GetAPIs(s.ApiBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
-	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+	apis = append(apis, s.Hpbengine.APIs(s.BlockChain())...)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -130,11 +130,11 @@ func (s *Hpb) APIs() []rpc.API {
 	}...)
 }
 
-func (s *Hpb) ResetWithGenesisBlock(gb *types.Block) {
+func (s *Node) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Hpb) Hpberbase() (eb common.Address, err error) {
+func (s *Node) Hpberbase() (eb common.Address, err error) {
 	s.lock.RLock()
 	hpberbase := s.hpberbase
 	s.lock.RUnlock()
@@ -151,7 +151,7 @@ func (s *Hpb) Hpberbase() (eb common.Address, err error) {
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (self *Hpb) SetHpberbase(hpberbase common.Address) {
+func (self *Node) SetHpberbase(hpberbase common.Address) {
 	self.lock.Lock()
 	self.hpberbase = hpberbase
 	self.lock.Unlock()
@@ -159,13 +159,13 @@ func (self *Hpb) SetHpberbase(hpberbase common.Address) {
 	self.miner.SetHpberbase(hpberbase)
 }
 
-func (s *Hpb) StartMining(local bool) error {
+func (s *Node) StartMining(local bool) error {
 	eb, err := s.Hpberbase()
 	if err != nil {
 		log.Error("Cannot start mining without hpberbase", "err", err)
 		return fmt.Errorf("hpberbase missing: %v", err)
 	}
-	if prometheus, ok := s.engine.(*prometheus.Prometheus); ok {
+	if prometheus, ok := s.Hpbengine.(*prometheus.Prometheus); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
 			log.Error("Hpberbase account unavailable locally", "err", err)
@@ -173,7 +173,7 @@ func (s *Hpb) StartMining(local bool) error {
 		}
 		prometheus.Authorize(eb, wallet.SignHash)
 	} else {
-		log.Error("Cannot start mining without prometheus", "err", s.engine)
+		log.Error("Cannot start mining without prometheus", "err", s.Hpbengine)
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
@@ -186,20 +186,20 @@ func (s *Hpb) StartMining(local bool) error {
 	return nil
 }
 
-func (s *Hpb) StopMining()         { s.miner.Stop() }
-func (s *Hpb) IsMining() bool      { return s.miner.Mining() }
-func (s *Hpb) Miner() *miner.Miner { return s.miner }
+func (s *Node) StopMining()         { s.Stop() }
+func (s *Node) IsMining() bool      { return s.miner.Mining() }
+func (s *Node) Miner() *miner.Miner { return s.miner }
 
-func (s *Hpb) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *Hpb) BlockChain() *bc.BlockChain       { return s.blockchain }
-func (s *Hpb) TxPool() *core.TxPool               { return s.txPool }
-func (s *Hpb) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *Hpb) Engine() consensus.Engine           { return s.engine }
-func (s *Hpb) ChainDb() hpbdb.Database            { return s.chainDb }
-func (s *Hpb) IsListening() bool                  { return true } // Always listening
-func (s *Hpb) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *Hpb) NetVersion() uint64                 { return s.networkId }
-func (s *Hpb) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *Node) AccountManager() *accounts.Manager  { return s.accountManager }
+func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
+func (s *Node) TxPool() *core.TxPool               { return s.Hpbtxpool }
+//func (s *Node) EventMux() *event.T       		   { return s.eventMux }
+func (s *Node) Engine() consensus.Engine           { return s.Hpbengine }
+func (s *Node) ChainDb() hpbdb.Database            { return s.chainDb }
+func (s *Node) IsListening() bool                  { return true } // Always listening
+func (s *Node) EthVersion() int                    { return int(s.Hpbsyncctr.SubProtocols[0].Version) }
+func (s *Node) NetVersion() uint64                 { return s.networkId }
+//func (s *Node) Downloader() *downloader.Downloader { return s.Hpbsyncctr.downloader }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
@@ -212,7 +212,7 @@ func (s *Hpb) Protocols() []p2p.Protocol {
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // Hpb protocol implementation.
-func (s *Hpb) Start(srvr *p2p.Server) error {
+func (s *Node) Start(srvr *p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -237,17 +237,17 @@ func (s *Hpb) Start(srvr *p2p.Server) error {
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Hpb protocol.
-func (s *Hpb) Stop() error {
+func (s *Node) Stop() error {
 	if s.stopDbUpgrade != nil {
 		s.stopDbUpgrade()
 	}
 	s.bloomIndexer.Close()
-	s.blockchain.Stop()
+	s.Hpbbc.Stop()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()
 	}
-	s.txPool.Stop()
+	s.Hpbtxpool.Stop()
 	s.miner.Stop()
 	s.eventMux.Stop()
 
