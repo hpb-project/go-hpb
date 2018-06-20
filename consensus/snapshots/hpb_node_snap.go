@@ -37,20 +37,17 @@ import (
 
 type Vote struct {
 	Signer    common.Address `json:"signerHash"`    // 可以投票的Signer
-	Block     uint64         `json:"block"`     // 开始计票的区块
-	Address   common.Address `json:"address"`   // 操作的账户
-	Authorize bool           `json:"authorize"` // 投票的建议
+	Block     uint64         `json:"block"`         // 开始计票的区块
+	Address   common.Address `json:"address"`       // 操作的账户
 }
 
 type Tally struct {
-	Authorize bool `json:"authorize"` // 投票的想法，加入还是剔除
 	Votes     int  `json:"votes"`     // 通过投票的个数
 }
 
 type HpbNodeSnap struct {
 	config   *params.PrometheusConfig 
 	sigcache *lru.ARCCache       
-	
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
 	Signers map[common.Address]struct{} `json:"signers"` // 当前的授权用户
@@ -147,24 +144,17 @@ func (s *HpbNodeSnap) copy() *HpbNodeSnap {
 }
 
 // 判断投票的有效性
-func (s *HpbNodeSnap) ValidVote(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 	_, signer := s.Signers[address]
-	//如果已经在，应该删除，如果不在申请添加才合法
-	return (signer && !authorize) || (!signer && authorize)
+	return !signer
 }
 
-/*
-// 判断投票的有效性
-func (s *HpbNodeSnap) validVoteHash(addressHash common.AddressHash, authorizeHash bool) bool {
-	_, signerHash := s.SignersHash[addressHash]
-	//如果已经在，应该删除，如果不在申请添加才合法
-	return (signerHash && !authorizeHash) || (!signerHash && authorizeHash)
-}
+
 */
 // 投票池中添加
-func (s *HpbNodeSnap) cast(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) cast(address common.Address) bool {
 
-	if !s.ValidVote(address, authorize) {
+	if !s.ValidVote(address) {
 		return false
 	}
 	
@@ -172,20 +162,16 @@ func (s *HpbNodeSnap) cast(address common.Address, authorize bool) bool {
 		old.Votes++
 		s.Tally[address] = old
 	} else {
-		s.Tally[address] = Tally{Authorize: authorize, Votes: 1}
+		s.Tally[address] = Tally{Votes: 1}
 	}
 	return true
 }
 
 // 从投票池中删除
-func (s *HpbNodeSnap) uncast(address common.Address, authorize bool) bool {
+func (s *HpbNodeSnap) uncast(address common.Address) bool {
 
 	tally, ok := s.Tally[address]
 	if !ok {
-		return false
-	}
-
-	if tally.Authorize != authorize {
 		return false
 	}
 
@@ -296,13 +282,13 @@ func (s *HpbNodeSnap) Apply(headers []*types.Header,chain consensus.ChainReader)
 		
 		// signerHash 是否在 recent中，说明已经签过名
 		// 防止连续放入
-		/*
+		
 		for _, recent := range snap.Recents {
 			if recent == signerHash {
 				return nil, errUnauthorized
 			}
 		}
-		*/
+		
 		// 根据块号放入
 		snap.Recents[number] = signer
 
@@ -322,55 +308,27 @@ func (s *HpbNodeSnap) Apply(headers []*types.Header,chain consensus.ChainReader)
 				break // only one vote allowed
 			}
 		}
-		// 开始新的投票
-		var authorize bool
-		switch {
-		case bytes.Equal(header.Nonce[:], consensus.NonceAuthVote):
-			authorize = true
-		case bytes.Equal(header.Nonce[:], consensus.NonceDropVote):
-			authorize = false
-		default:
-			return nil, consensus.ErrInvalidVote
-		}
+	
 		
 		//将投票结果进行放入到计票池子中
-		if snap.cast(header.Coinbase, authorize) {
+		if snap.cast(header.Coinbase) {
 			snap.Votes = append(snap.Votes, &Vote{
 				Signer:    signer,
 				Block:     number,
 				Address:   header.Coinbase,
-				Authorize: authorize,
 			})
 		}
 
 		// 如果投票通过，则更新 signers
 		if tally := snap.Tally[header.Coinbase]; tally.Votes > len(snap.Signers)/2 {
 			// 如果投票被批准，则放入
-			if tally.Authorize {
-				snap.Signers[header.Coinbase] = struct{}{}
-			} else {
-				delete(snap.Signers, header.Coinbase)
-				// Signer list shrunk, delete any leftover recent caches
-				// Signer 移动，删除左边的最新caches
-				if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
-					delete(snap.Recents, number-limit)
-				}
-				// Discard any previous votes the deauthorized signerHash cast
-				// 删除
-				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Signer == header.Coinbase {
-						// Uncast the vote from the cached tally
-						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
 
-						// Uncast the vote from the chronological list
-						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-
-						i--
-					}
-				}
-			}
 			// Discard any previous votes around the just changed account
 			// 删除之前的投票
+			
+			snap.Signers[header.Coinbase] = struct{}{}
+
+			
 			for i := 0; i < len(snap.Votes); i++ {
 				if snap.Votes[i].Address == header.Coinbase {
 					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)

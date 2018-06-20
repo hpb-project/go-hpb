@@ -88,22 +88,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
-	//log.Info("Prepare the parameters for mining")
-	
-	//uniquerand := getUniqueRandom(chain)
-    //signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(c.signer.Str() + uniquerand)))
-	//header.Random = uniquerand
-
-	//设置社区投票检查点
-	
-	//获取候选节点的投票检查点
-
-	// 获取快照
-	
-
-	//cadNodeSnap.
-	
-	
 	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
@@ -112,29 +96,19 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//在非投票点
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
-		// 改造点， 开始从网络中获取
 		// 从网络中获取一个
-		
-		//获取社区选举，对社区选举进行触发
-		//comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
-		
-		cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash)
-		//log.Info("rujia test", cadNodeSnap.CadWinners[1].Address)
-		
-		//address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
-		address := common.HexToAddress(cadNodeSnap.CadWinners[0].Address)
-
-		if snap.ValidVote(address, true) {
-			header.Coinbase = address // 设置地址
-			header.VoteIndex = big.NewInt(3000)   // 设置最新的计算结果
+		if cadWinner,err := voting.GetBestCadNodeFromNetwork(c.db, chain, number-1, header.ParentHash); err == nil{
+			caddress := common.HexToAddress(cadWinner.Address)
+			//if snap.ValidVote(address, true) {
+			header.Coinbase = caddress // 设置地址
+			header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
+			//}
+			log.Info("#########################################TESE", cadWinner.Address)
 		}
-	
-	    log.Info("############################################TESE", cadNodeSnap.CadWinners[0].Address)
 	    if err != nil {
 			return err
 		}
-		
 		c.lock.RUnlock()
 	}
 
@@ -225,9 +199,7 @@ func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapsho
 		//开始读取智能合约
 		// 
 		//
-		
 		str := strconv.FormatUint(number, 10)
-		
 		// 模拟从外部获取		
 		type Winners []*snapshots.Winner
 		w1 := &snapshots.Winner{"192.168.2.14",str}
@@ -259,6 +231,41 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 		headers []*types.Header
 		snap    *snapshots.HpbNodeSnap
 	)
+	
+	// 首次要创建
+	if number == 0 {
+		genesis := chain.GetHeaderByNumber(0)
+		if err := c.VerifyHeader(chain, genesis, false); err != nil {
+			return nil, err
+		}
+
+		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
+
+		for i := 0; i < len(signers); i++ {
+			log.Info("miner initialization", "i:",i)
+			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
+		}
+
+		snap = snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
+
+		if err := snap.Store(c.db); err != nil {
+			return nil, err
+		}
+		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+	}
+	
+	//前十轮不会进行投票，前10轮采用
+	if(number < checkpointInterval * 10){
+		genesis := chain.GetHeaderByNumber(0)
+		hash := genesis.Hash()
+		
+		if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
+				log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+				snap = s
+				break
+		}
+	}
+	
 	//CoinbaseHash
 	for snap == nil {
 		// 直接使用内存中的，recents存部分
@@ -274,28 +281,7 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 				break
 			}
 		}
-		// 首次要创建
-		if number == 0 {
-			genesis := chain.GetHeaderByNumber(0)
-			if err := c.VerifyHeader(chain, genesis, false); err != nil {
-				return nil, err
-			}
-
-			signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-
-			for i := 0; i < len(signers); i++ {
-				log.Info("miner initialization", "i:",i)
-				copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
-			}
-
-			snap = snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
-
-			if err := snap.Store(c.db); err != nil {
-				return nil, err
-			}
-			log.Trace("Stored genesis voting getHpbNodeSnap to disk")
-			break
-		}
+		
 
 		// 没有发现快照，开始收集Header 然后往回回溯
 		var header *types.Header
