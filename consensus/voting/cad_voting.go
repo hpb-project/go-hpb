@@ -21,7 +21,7 @@ import (
 	"math"
 	"strconv"
 	"math/rand"
-
+    "fmt"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/types"
@@ -40,7 +40,7 @@ const (
 )
 
 // 获取候选选举的快照
-func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.CadNodeSnap, error) {
+func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
 	
 	//业务逻辑
 	var (
@@ -98,27 +98,47 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		
 		
 		/* 使用 make 函数 */
-		CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
+		//CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
 		
+		// 模拟从peer中获取
 		for i := 0; i < 10; i++ {
+			
+			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
+			
 			strnum := strconv.Itoa(i)
-			CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
+			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
 		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)})
 		}
 		
 		// 先获取长度，然后进行随机获取
 		lnlen := int(math.Log2(float64(len(cadWinners))))
-		lastCadWinners := []*snapshots.CadWinner{}
+		
+		var lastCadWinners []*snapshots.CadWinner
+		
 		for i := 0 ; i < lnlen; i++{
-			lastCadWinners[i] = cadWinners[rand.Intn(lnlen)]
+			lastCadWinners = append(lastCadWinners,cadWinners[rand.Intn(len(cadWinners)-1)])
 		}
 		
+		//fmt.Println("len:", len(lastCadWinners))
 		
+		//开始进行排序获取最大值
+		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",uint64(10)}
+		voteIndexTemp := uint64(0)
 		
-		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,lastCadWinners)
+		for _, lastCadWinner := range lastCadWinners {
+	        if(lastCadWinner.VoteIndex > voteIndexTemp){
+	        	  voteIndexTemp = lastCadWinner.VoteIndex
+	        	  lastCadWinnerToChain = lastCadWinner
+	        }
+	    }
+		
+		fmt.Println("len:", voteIndexTemp)
+		fmt.Println("len:", lastCadWinnerToChain.VoteIndex)
+
+		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
 
         log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].Address)
 		

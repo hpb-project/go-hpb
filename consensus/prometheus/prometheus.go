@@ -118,7 +118,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		//获取社区选举，对社区选举进行触发
 		//comNodeSnap, err := c.getComNodeSnap(chain, number-1, header.ParentHash, nil)
 		
-		cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash, nil)
+		cadNodeSnap, err := voting.GetCadNodeSnap(c.db, chain, number-1, header.ParentHash)
 		//log.Info("rujia test", cadNodeSnap.CadWinners[1].Address)
 		
 		//address := common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
