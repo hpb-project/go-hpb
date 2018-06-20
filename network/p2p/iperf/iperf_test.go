@@ -18,13 +18,29 @@ package iperf
 
 import (
 	"testing"
+	"time"
 )
 
 var (
-	iperf = &Iperf{SrvPort:5201,CliHost:"127.0.0.1",CliPort:5201}
+	iperf = &Iperf{SrvPort:5201,CliHost:"127.0.0.1",CliPort:5201,quit: make(chan int)}
 )
 
 func TestValidateSign(t *testing.T) {
 
-	iperf.StartSever()
+	time.Sleep(time.Second)
+	iperf.StartTest("127.0.0.1",5202,5)
+	//t.Log("iperf test","result",result)
 }
+
+//func TestValidateSign(t *testing.T) {
+//
+//	go iperf.StartSever(5202)
+//
+//	time.Sleep(time.Second*20)
+//
+//
+//	err :=iperf.StopSever(3)
+//
+//	t.Log("Stop iperf server","err",err)
+//
+//}

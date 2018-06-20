@@ -19,6 +19,7 @@ package bc
 import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 // TxPreEvent is posted when a transaction enters the transaction pool.
@@ -37,6 +38,12 @@ type NewMinedBlockEvent struct{ Block *types.Block }
 
 // RemovedTransactionEvent is posted when a reorg happens
 type RemovedTransactionEvent struct{ Txs types.Transactions }
+
+var RemovedLogsEventType event.EventType = 10
+var ChainSideEventType event.EventType = 11
+var LogsEventType event.EventType = 12
+var ChainEventType event.EventType = 13
+var ChainHeadEvenType event.EventType = 14
 
 // RemovedLogsEvent is posted when a reorg happens
 type RemovedLogsEvent struct{ Logs []*types.Log }

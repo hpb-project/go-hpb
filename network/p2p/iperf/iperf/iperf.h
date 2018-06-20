@@ -13,12 +13,22 @@
 extern "C" { /* open extern "C" */
 #endif
 
-#define  IPERF_OK  0x00
-#define  IPERF_ERR 0x10
+#define  IPERF_TRUE        0x01
+#define  IPERF_FALSE       0x00
+
+#define  IPERF_OK          0x00
+#define  IPERF_ERR         0x10
+#define  IPERF_ERR_RUNNING 0x11
+#define  IPERF_ERR_NEWTEST 0x10
 
 
-int iperf_server(int port);
-int iperf_test(char* host, int port);
+int iperf_server_init(int port);
+int iperf_server_start();
+int iperf_server_stop();
+int iperf_server_kill();
+
+
+char* iperf_test(char* host, int port, int duration);
 
 
 #ifdef __cplusplus
