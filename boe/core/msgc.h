@@ -14,28 +14,23 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef AQ_H
-#define AQ_H
+#ifndef MSGC_H
+#define MSGC_H
 
 #include <stdint.h>
-typedef struct AQData{
-    uint8_t *buf;
-    int len;
-}AQData;
+#include "aq.h"
 
-typedef struct AtomicQ{
-    AQData ** queue;
-    uint64_t r_idx;
-    uint64_t w_idx;
-    uint64_t q_len;
-}AtomicQ;
+typedef int (*CheckResponse)(uint8_t *res, int len, uint32_t uid);
+typedef int (*MsgHandle)(uint8_t *data, int len, void *userdata);
 
-AQData* aqd_new(int len);
-int aqd_free(AQData *d);
-int aq_init(AtomicQ *q, uint64_t qlen);
-int aq_free(AtomicQ *q);
-int aq_empty(AtomicQ *q);
-int aq_full(AtomicQ *q);
-int aq_push(AtomicQ *q, AQData *data);
-AQData* aq_pop(AtomicQ *q);
-#endif  /*AQ_H*/
+typedef struct WMessage WMessage;
+typedef struct MsgContext MsgContext;
+WMessage* WMessageNew(uint32_t uid, CheckResponse cfunc, uint32_t timeout);
+int WMessageFree(WMessage *m);
+
+int msgc_init(MsgContext *c, char *r_devname, char *w_devname, MsgHandle msghandle, void*userdata);
+int msgc_release(MsgContext *ctx);
+int msgc_send(MsgContext *ctx, WMessage *wmsg);
+AQData* msgc_read(MsgContext *ctx, WMessage *wmsg);
+
+#endif  /*MSGC_H*/
