@@ -116,7 +116,7 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 		//HttpEndpoint: ,
 		//WsEndpoint: ,
 
-		IPCPath:     netCfg.IPCPath,
+		//IPCPath:     netCfg.IPCPath,
 		HTTPHost:    netCfg.HTTPHost,
 		HTTPPort:    netCfg.HTTPPort,
 		HTTPCors:    netCfg.HTTPCors,
