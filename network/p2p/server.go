@@ -489,7 +489,7 @@ running:
 			err := srv.protoHandshakeChecks(peers, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p := newpeer(c, srv.Protocols[0])
+				p := newPeerBase(c, srv.Protocols[0])
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {

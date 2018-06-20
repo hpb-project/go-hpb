@@ -93,18 +93,8 @@ type PeerBase struct {
 	localType  discover.NodeType  //本端节点类型
 	remoteType discover.NodeType  //远端验证后节点类型
 }
-/*
-// NewPeer returns a peer for testing purposes.
-func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
-	pipe, _ := net.Pipe()
-	conn := &conn{fd: pipe, transport: nil, id: id, caps: caps, name: name}
-	peer := newPeer(conn, nil)
-	close(peer.closed) // ensures Disconnect doesn't block
-	return peer
-}
-*/
 
-func newpeer(conn *conn, proto Protocol) *PeerBase {
+func newPeerBase(conn *conn, proto Protocol) *PeerBase {
 	//protomap := matchProtocols(protocols, conn.caps, conn)
 	protorw := &protoRW{Protocol: proto,in: make(chan Msg), w: conn}
 	p := &PeerBase{

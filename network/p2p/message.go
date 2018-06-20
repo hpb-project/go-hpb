@@ -44,6 +44,7 @@ const (
 const (
 	HpbMsgBegin        = 0x10
 	StatusMsg          = 0x11
+
 	NewBlockHashesMsg  = 0x12
 	TxMsg              = 0x13
 	GetBlockHeadersMsg = 0x14
