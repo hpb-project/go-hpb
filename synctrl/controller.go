@@ -182,7 +182,7 @@ func (this *SynCtrl) Start() {
 	// broadcast transactions
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
 	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
-	go this.txBroadcastLoop()
+	go this.txRoutingLoop()
 
 	// broadcast mined blocks
 	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})
@@ -191,32 +191,6 @@ func (this *SynCtrl) Start() {
 	// start sync handlers
 	go this.sync()
 	go this.txsyncLoop()
-}
-
-// BroadcastTx will propagate a transaction to all peers which are not known to
-// already have the given transaction.
-func (this *SynCtrl) broadcastTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtHpnode || peer.RemoteType() == p2p.NtPrenode {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtAccess {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtLight {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
 // Mined broadcast loop
