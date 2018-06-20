@@ -35,10 +35,12 @@ import (
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/ghpb/protocol"
+	"github.com/hpb-project/go-hpb/protocol"
 )
 
-
+const (
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
+)
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	GitCommit = gitCommit
@@ -245,7 +247,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		// Mining only makes sense if a full Hpb node is running
-		var hpb *hpb.Hpb
+		var hpb *node.Node
 		if err := stack.Service(&hpb); err != nil {
 			utils.Fatalf("hpb service not running: %v", err)
 		}
@@ -254,7 +256,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := hpb.Engine().(threaded); ok {
+			if th, ok := hpb.hpbeng().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}

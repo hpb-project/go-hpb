@@ -22,10 +22,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/protocol"
-	"github.com/hpb-project/ghpb/common/constant"
+
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 var (
@@ -50,13 +51,13 @@ The output of this command is supposed to be machine-readable.
 
 func version(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
-	fmt.Println("Version:", params.Version)
+	fmt.Println("Version:", config.Version)
 	if gitCommit != "" {
 		fmt.Println("Git Commit:", gitCommit)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
-	fmt.Println("Protocol Versions:", hpb.ProtocolVersions)
-	fmt.Println("Network Id:", hpb.DefaultConfig.NetworkId)
+	fmt.Println("Protocol Versions:", p2p.ProtocolVersions)
+	fmt.Println("Network Id:", config.DefaultConfig.NetworkId)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	fmt.Printf("GOPATH=%s\n", os.Getenv("GOPATH"))

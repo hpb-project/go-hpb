@@ -22,8 +22,8 @@ import (
 	"io"
 	"sort"
 
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/internal/debug"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/internal/debug"
 	"gopkg.in/urfave/cli.v1"
 )
 
