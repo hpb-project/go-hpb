@@ -24,20 +24,69 @@ package iperf
 #include "iperf/iperf.c"
 */
 import "C"
-
+import (
+	"github.com/hpb-project/go-hpb/common/log"
+	//"time"
+	"errors"
+	"time"
+)
+var (
+	errServerTimeout   = errors.New("iperf server stop time out")
+)
 type Iperf struct {
 	SrvPort  uint
 
 	CliHost  string
 	CliPort  uint
+	quit     chan int
 }
 
-func (iperf *Iperf) StartSever() (error) {
-	C.iperf_server(C.int(5201))
+func (iperf *Iperf) StartSever(port int) error {
+
+	C.iperf_server_init(C.int(port))
+
+	ret := C.iperf_server_start()
+
+	iperf.quit <- int(ret)
+
 	return nil
 
 }
 
+func (iperf *Iperf) KillSever() error {
+
+	C.iperf_server_kill()
+	return nil
+}
+
+func (iperf *Iperf) StopSever(seconds uint) error {
+
+	timeout  := time.NewTimer(0)
+	timeout.Reset(time.Second)
+	defer timeout.Stop()
+
+	timeoutCount := uint(0)
+loop:
+	for {
+		select {
+		case ret := <-iperf.quit:
+			log.Info("Stop server ok.","ret",ret)
+			break loop
+		case <-timeout.C:
+			C.iperf_server_stop()
+			timeoutCount =timeoutCount+1
+			if timeoutCount > seconds {
+				C.iperf_server_kill()
+				log.Info("Stop server time out")
+				return errServerTimeout
+			}
+			timeout.Reset(time.Second)
+		}
+	}
+
+
+	return nil
+}
 
 func (iperf *Iperf) StartTest() (error) {
 	C.iperf_test(C.CString("127.0.0.1"),C.int(5201))
