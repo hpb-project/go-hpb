@@ -34,6 +34,7 @@ int iperf_server_init(int port)
     iperf_set_test_role( SERVER, 's' );
     iperf_set_test_server_port( SERVER, port );
     iperf_set_test_json_output( SERVER, 1 );
+    /*iperf_set_test_one_off( SERVER, 1 );*/
 
     return IPERF_OK;
 }
@@ -94,44 +95,39 @@ int iperf_server_start()
 
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-int iperf_test(char* host, int port)
+char* iperf_test(char* host, int port, int duration)
 {
-    host = "127.0.0.1";
-    port = 5201;
-    struct iperf_test *test;
+    struct iperf_test *client;
+    char   *result = NULL;
 
-    test = iperf_new_test();
-    if ( test == NULL ) { return IPERF_ERR; }
-
-
-    iperf_defaults( test );
-    iperf_set_verbose( test, 1 );
-
-    iperf_set_test_role( test, 'c' );
-    iperf_set_test_server_hostname( test, host );
-    iperf_set_test_server_port( test, port );
-    /* iperf_set_test_reverse( test, 1 ); */
-    iperf_set_test_omit( test, 3 );
-    iperf_set_test_duration( test, 5 );
-    iperf_set_test_reporter_interval( test, 1 );
-    iperf_set_test_stats_interval( test, 1 );
-    /* iperf_set_test_json_output( test, 1 ); */
-
-    if ( iperf_run_client( test ) < 0 )
+    client = iperf_new_test();
+    if ( client == NULL )
     {
-        //fprintf( stderr, "error - %s\n", iperf_strerror( i_errno ) );
-        return IPERF_ERR;
+        return result;
     }
 
-    if (iperf_get_test_json_output_string(test))
+    iperf_defaults( client );
+
+    iperf_set_test_role( client, 'c' );
+    iperf_set_test_server_hostname( client, host );
+    iperf_set_test_server_port( client, port );
+    iperf_set_test_duration( client, duration);
+
+    iperf_set_verbose( client, 1 );
+    /* iperf_set_test_reverse( client, 1 ); */
+    iperf_set_test_omit( client, 1 );
+    //iperf_set_test_reporter_interval( client, 1 );
+    iperf_set_test_stats_interval( client, 1 );
+    iperf_set_test_json_output( client, 1 );
+
+
+    if ( iperf_run_client( client ) < 0 )
     {
-        fprintf(iperf_get_test_outfile(test), "%zd bytes of JSON emitted\n",
-        strlen(iperf_get_test_json_output_string(test)));
+        return result;
     }
 
-    iperf_free_test( test );
+    result = iperf_get_test_json_output_string(client);
+    iperf_free_test( client );
 
-    return IPERF_OK;
-
-
+    return result;
 }

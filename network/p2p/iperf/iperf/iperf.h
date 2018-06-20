@@ -28,7 +28,7 @@ int iperf_server_stop();
 int iperf_server_kill();
 
 
-int iperf_test(char* host, int port);
+char* iperf_test(char* host, int port, int duration);
 
 
 #ifdef __cplusplus

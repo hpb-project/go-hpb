@@ -27,13 +27,20 @@ var (
 
 func TestValidateSign(t *testing.T) {
 
-	go iperf.StartSever(5202)
-
-	time.Sleep(time.Second*20)
-
-
-	err :=iperf.StopSever(3)
-
-	t.Log("Stop iperf server","err",err)
-
+	time.Sleep(time.Second)
+	iperf.StartTest("127.0.0.1",5202,5)
+	//t.Log("iperf test","result",result)
 }
+
+//func TestValidateSign(t *testing.T) {
+//
+//	go iperf.StartSever(5202)
+//
+//	time.Sleep(time.Second*20)
+//
+//
+//	err :=iperf.StopSever(3)
+//
+//	t.Log("Stop iperf server","err",err)
+//
+//}

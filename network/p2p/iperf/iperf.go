@@ -26,22 +26,24 @@ package iperf
 import "C"
 import (
 	"github.com/hpb-project/go-hpb/common/log"
-	//"time"
 	"errors"
 	"time"
 )
+
 var (
 	errServerTimeout   = errors.New("iperf server stop time out")
 )
+
 type Iperf struct {
-	SrvPort  uint
+	SrvPort  int
+	quit     chan int
 
 	CliHost  string
-	CliPort  uint
-	quit     chan int
+	CliPort  int
 }
 
 func (iperf *Iperf) StartSever(port int) error {
+	iperf.SrvPort = port
 
 	C.iperf_server_init(C.int(port))
 
@@ -84,12 +86,13 @@ loop:
 		}
 	}
 
-
 	return nil
 }
 
-func (iperf *Iperf) StartTest() (error) {
-	C.iperf_test(C.CString("127.0.0.1"),C.int(5201))
+func (iperf *Iperf) StartTest(host string, port int, duration int) (error) {
+	result := C.GoString(C.iperf_test(C.CString(host),C.int(port),C.int(duration)))
+
+	log.Info("StartTest","result",result)
 	return  nil
 }
 
