@@ -27,7 +27,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/mclock"
-	"github.com/hpb-project/go-hpb/routinue"
+	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
@@ -108,7 +108,7 @@ type Server struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 
 	//peerFeed      event.Feed
-	peerEvent    *routinue.Event
+	peerEvent    *event.SyncEvent
 }
 
 type peerOpFunc func(map[discover.NodeID]*PeerBase)
@@ -235,7 +235,7 @@ func (srv *Server) RemovePeer(node *discover.Node) {
 }
 
 // SubscribePeers subscribes the given channel to peer events
-func (srv *Server) SubscribeEvents(et routinue.EventType) routinue.Subscriber {
+func (srv *Server) SubscribeEvents(et event.EventType) event.Subscriber {
 	return srv.peerEvent.Subscribe(et)
 }
 
@@ -322,7 +322,7 @@ func (srv *Server) Start() (err error) {
 	srv.removestatic = make(chan *discover.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
-	srv.peerEvent = routinue.NewEvent()
+	srv.peerEvent = event.NewEvent()
 
 	// node table
 	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.InitNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
@@ -489,7 +489,7 @@ running:
 			err := srv.protoHandshakeChecks(peers, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p := newpeer(c, srv.Protocols[0])
+				p := newPeerBase(c, srv.Protocols[0])
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {

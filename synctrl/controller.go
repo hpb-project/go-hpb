@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	"math"
 	"math/big"
@@ -107,7 +108,7 @@ type FailedEvent struct{ Err error }
 
 type SynCtrl struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
-	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
+	AcceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      *txpool.TxPool //todo xinqyu's
 	chaindb     hpbdb.Database
@@ -171,7 +172,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 			log.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
 			return 0, nil
 		}
-		atomic.StoreUint32(&synctrl.acceptTxs, 1) // Mark initial sync done on any fetcher import
+		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
 	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.broadcastBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
@@ -181,20 +182,9 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 
 func (this *SynCtrl) Start() {
 	// broadcast transactions
-	this.txCh = make(chan event.TxPreEvent, txChanSize)
-	txReceiver := event.RegisterReceiver("tx_pool_tx_pre_subscriber",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.TxPreEvent:
-				log.Info("SynCtrl get TxPreEvent %s", msg.Message.String())
-				this.txCh  <- msg
-			default:
-				log.Warn("SynCtrl get Unknown msg")
-			}
-		})
-	event.Subscribe(txReceiver, event.TxPreTopic)
-
-	go this.txBroadcastLoop()
+	this.txCh = make(chan bc.TxPreEvent, txChanSize)
+	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
+	go this.txRoutingLoop()
 
 	// broadcast mined blocks
 	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})
@@ -203,32 +193,6 @@ func (this *SynCtrl) Start() {
 	// start sync handlers
 	go this.sync()
 	go this.txsyncLoop()
-}
-
-// BroadcastTx will propagate a transaction to all peers which are not known to
-// already have the given transaction.
-func (this *SynCtrl) broadcastTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtHpnode || peer.RemoteType() == p2p.NtPrenode {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtAccess {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	for _, peer := range peers {
-		if peer.RemoteType() == p2p.NtLight {//todo qinghua's
-			peer.SendTransactions(types.Transactions{tx})//todo qinghua's
-		}
-	}
-
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
 // Mined broadcast loop
@@ -315,7 +279,7 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 	if err != nil {
 		return
 	}
-	atomic.StoreUint32(&this.acceptTxs, 1) // Mark initial sync done
+	atomic.StoreUint32(&this.AcceptTxs, 1) // Mark initial sync done
 	if head := bc.InstanceBlockChain().CurrentBlock(); head.NumberU64() > 0 {
 		// We've completed a sync cycle, notify all peers of new state. This path is
 		// essential in star-topology networks where a gateway node needs to notify
@@ -352,7 +316,24 @@ func (this *SynCtrl) Stop() {
 	log.Info("Hpb data sync stopped")
 }
 
-// BroadcastBlock will either propagate a block to a subset of it's peers, or
+func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
+	peer.knownBlocks.Add(block.Hash())
+	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
+}
+
+func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
+	for _, hash := range hashes {
+		peer.knownBlocks.Add(hash)
+	}
+	request := make(newBlockHashesData, len(hashes))
+	for i := 0; i < len(hashes); i++ {
+		request[i].Hash = hashes[i]
+		request[i].Number = numbers[i]
+	}
+	return peer.SendData(p2p.NewBlockHashesMsg, request)
+}
+
+// broadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
@@ -371,19 +352,30 @@ func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
-			if peer.RemoteType() == p2p.NtHpnode || peer.RemoteType() == p2p.NtPrenode {//todo qinghua's
-				peer.SendNewBlock(block, td)//todo qinghua's
-			}
-		}
-		for _, peer := range transfer {
-			if peer.RemoteType() == p2p.NtAccess {//todo qinghua's
-				peer.SendNewBlock(block, td)//todo qinghua's
-
-			}
-		}
-		for _, peer := range transfer {
-			if peer.RemoteType() == p2p.NtLight {//todo qinghua's
-				peer.SendNewBlock(block, td)//todo qinghua's
+			switch peer.LocalType() {
+			case discover.PreNode:
+				switch peer.RemoteType() {
+				case discover.PreNode:
+					sendNewBlock(peer, block, td)
+					break
+				default:
+					break
+				}
+				break
+			case discover.HpNode:
+				switch peer.RemoteType() {
+				case discover.PreNode:
+					sendNewBlock(peer, block, td)
+					break
+				case discover.HpNode:
+					sendNewBlock(peer, block, td)
+					break
+				default:
+					break
+				}
+				break
+			default:
+				break
 			}
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
@@ -392,18 +384,30 @@ func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
 	// Otherwise if the block is indeed in out own chain, announce it
 	if bc.InstanceBlockChain().HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
-			if peer.LocalType() == p2p.NtHpnode || peer.LocalType() == p2p.NtPrenode {//todo qinghua's
-				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})//todo qinghua's
-			}
-		}
-		for _, peer := range peers {
-			if peer.LocalType() == p2p.NtAccess {//todo qinghua's
-				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})//todo qinghua's
-			}
-		}
-		for _, peer := range peers {
-			if peer.LocalType() == p2p.NtLight {//todo qinghua's
-				peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})//todo qinghua's
+			switch peer.LocalType() {
+			case discover.PreNode:
+				switch peer.RemoteType() {
+				case discover.PreNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
+				default:
+					break
+				}
+				break
+			case discover.HpNode:
+				switch peer.RemoteType() {
+				case discover.PreNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
+				case discover.HpNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
+				default:
+					break
+				}
+				break
+			default:
+				break
 			}
 		}
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))

@@ -116,7 +116,7 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
 		//HttpEndpoint: ,
 		//WsEndpoint: ,
 
-		IPCPath:     netCfg.IPCPath,
+		//IPCPath:     netCfg.IPCPath,
 		HTTPHost:    netCfg.HTTPHost,
 		HTTPPort:    netCfg.HTTPPort,
 		HTTPCors:    netCfg.HTTPCors,
@@ -554,26 +554,36 @@ func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (p *Peer) MarkBlock(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known block hash
+func (p *Peer) KnownBlockAdd(hash common.Hash){
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(hash)
 }
 
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (p *Peer) MarkTransaction(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known transaction hash
+func (p *Peer) KnownBlockHas(hash common.Hash) bool{
+	return p.knownBlocks.Has(hash)
+}
+
+func (p *Peer) KnownBlockSize() int{
+	return p.knownBlocks.Size()
+}
+
+
+func (p *Peer) KnownTxsAdd(hash common.Hash){
 	for p.knownTxs.Size() >= maxKnownTxs {
 		p.knownTxs.Pop()
 	}
 	p.knownTxs.Add(hash)
 }
 
+func (p *Peer) KnownTxsHas(hash common.Hash) bool{
+	return p.knownTxs.Has(hash)
+}
+
+func (p *Peer) KnownTxsSize() int{
+	return p.knownTxs.Size()
+}
 
 func (p *Peer) SendData(msgCode uint64, data interface{}) error {
 	return Send(p.rw, msgCode, data)

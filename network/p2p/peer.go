@@ -24,10 +24,10 @@ import (
 	"time"
 
 	"github.com/hpb-project/go-hpb/common/mclock"
-	"github.com/hpb-project/go-hpb/routinue"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -54,17 +54,17 @@ type protoHandshake struct {
 type PeerEventType string
 
 const (
-	PeerEventAdd     routinue.EventType = 0x01
-	PeerEventDrop    routinue.EventType = 0x02
-	PeerEventMsgSend routinue.EventType = 0x03
-	PeerEventMsgRecv routinue.EventType = 0x04
+	PeerEventAdd     event.EventType = 0x01
+	PeerEventDrop    event.EventType = 0x02
+	PeerEventMsgSend event.EventType = 0x03
+	PeerEventMsgRecv event.EventType = 0x04
 )
 
 // PeerEvent is an event emitted when peers are either added or dropped from
 // a p2p.Server or when a message is sent or received on a peer connection
 type PeerEvent struct {
 	//Type     PeerEventType   `json:"type"`
-	Type     routinue.EventType `json:"type"`
+	Type     event.EventType    `json:"type"`
 	Peer     discover.NodeID    `json:"peer"`
 	Error    string             `json:"error,omitempty"`
 	Protocol string             `json:"protocol,omitempty"`
@@ -87,24 +87,14 @@ type PeerBase struct {
 
 	// events receives message send / receive events if set
 	//events *event.Feed
-	events   *routinue.Event
+	events   *event.SyncEvent
 
 	////////////////////////////////////////////////////
 	localType  discover.NodeType  //本端节点类型
 	remoteType discover.NodeType  //远端验证后节点类型
 }
-/*
-// NewPeer returns a peer for testing purposes.
-func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
-	pipe, _ := net.Pipe()
-	conn := &conn{fd: pipe, transport: nil, id: id, caps: caps, name: name}
-	peer := newPeer(conn, nil)
-	close(peer.closed) // ensures Disconnect doesn't block
-	return peer
-}
-*/
 
-func newpeer(conn *conn, proto Protocol) *PeerBase {
+func newPeerBase(conn *conn, proto Protocol) *PeerBase {
 	//protomap := matchProtocols(protocols, conn.caps, conn)
 	protorw := &protoRW{Protocol: proto,in: make(chan Msg), w: conn}
 	p := &PeerBase{

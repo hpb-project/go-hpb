@@ -25,7 +25,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/routinue"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 
@@ -44,6 +44,7 @@ const (
 const (
 	HpbMsgBegin        = 0x10
 	StatusMsg          = 0x11
+
 	NewBlockHashesMsg  = 0x12
 	TxMsg              = 0x13
 	GetBlockHeadersMsg = 0x14
@@ -170,14 +171,14 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 type msgEventer struct {
 	MsgReadWriter
 
-	feed     *routinue.Event
+	feed     *event.SyncEvent
 	peerID   discover.NodeID
 	Protocol string
 }
 
 // newMsgEventer returns a msgEventer which sends message events to the given
 // feed
-func newMsgEventer(rw MsgReadWriter, feed *routinue.Event, peerID discover.NodeID, proto string) *msgEventer {
+func newMsgEventer(rw MsgReadWriter, feed *event.SyncEvent, peerID discover.NodeID, proto string) *msgEventer {
 	return &msgEventer{
 		MsgReadWriter: rw,
 		feed:          feed,
