@@ -38,11 +38,12 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/go-hpb-backkup/txpool"
-	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/event"
 	//"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/go-hpb-backkup/worker"
@@ -58,22 +59,6 @@ type LesServer interface {
 	s.lesServer = ls*/
 }
 
-func makeExtraData(extra []byte) []byte {
-	if len(extra) == 0 {
-		// create default extradata
-		extra, _ = rlp.EncodeToBytes([]interface{}{
-			uint(config.VersionMajor<<16 | config.VersionMinor<<8 | config.VersionPatch),
-			"geth",
-			runtime.Version(),
-			runtime.GOOS,
-		})
-	}
-	if uint64(len(extra)) > config.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", config.MaximumExtraDataSize)
-		extra = nil
-	}
-	return extra
-}
 
 
 
@@ -120,7 +105,7 @@ func (s *Node) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+			Service:   NewPrivateDebugAPI(&s.Hpbconfig.BlockChain, s),
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
@@ -130,67 +115,11 @@ func (s *Node) APIs() []rpc.API {
 	}...)
 }
 
-func (s *Node) ResetWithGenesisBlock(gb *types.Block) {
-	s.blockchain.ResetWithGenesisBlock(gb)
-}
-
-func (s *Node) Hpberbase() (eb common.Address, err error) {
-	s.lock.RLock()
-	hpberbase := s.hpberbase
-	s.lock.RUnlock()
-
-	if hpberbase != (common.Address{}) {
-		return hpberbase, nil
-	}
-	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
-		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			return accounts[0].Address, nil
-		}
-	}
-	return common.Address{}, fmt.Errorf("hpberbase address must be explicitly specified")
-}
-
-// set in js console via admin interface or wrapper from cli flags
-func (self *Node) SetHpberbase(hpberbase common.Address) {
-	self.lock.Lock()
-	self.hpberbase = hpberbase
-	self.lock.Unlock()
-
-	self.miner.SetHpberbase(hpberbase)
-}
-
-func (s *Node) StartMining(local bool) error {
-	eb, err := s.Hpberbase()
-	if err != nil {
-		log.Error("Cannot start mining without hpberbase", "err", err)
-		return fmt.Errorf("hpberbase missing: %v", err)
-	}
-	if prometheus, ok := s.Hpbengine.(*prometheus.Prometheus); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-		if wallet == nil || err != nil {
-			log.Error("Hpberbase account unavailable locally", "err", err)
-			return fmt.Errorf("signer missing: %v", err)
-		}
-		prometheus.Authorize(eb, wallet.SignHash)
-	} else {
-		log.Error("Cannot start mining without prometheus", "err", s.Hpbengine)
-	}
-	if local {
-		// If local (CPU) mining is started, we can disable the transaction rejection
-		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
-		// so noone will ever hit this path, whereas marking sync done on CPU mining
-		// will ensure that private networks work in single miner mode too.
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
-	}
-	go s.miner.Start(eb)
-	return nil
-}
-
 func (s *Node) StopMining()         { s.Stop() }
 func (s *Node) IsMining() bool      { return s.miner.Mining() }
 func (s *Node) Miner() *miner.Miner { return s.miner }
 
-func (s *Node) AccountManager() *accounts.Manager  { return s.accountManager }
+func (s *Node) APIAccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
 func (s *Node) TxPool() *core.TxPool               { return s.Hpbtxpool }
 //func (s *Node) EventMux() *event.T       		   { return s.eventMux }
@@ -200,59 +129,3 @@ func (s *Node) IsListening() bool                  { return true } // Always lis
 func (s *Node) EthVersion() int                    { return int(s.Hpbsyncctr.SubProtocols[0].Version) }
 func (s *Node) NetVersion() uint64                 { return s.networkId }
 //func (s *Node) Downloader() *downloader.Downloader { return s.Hpbsyncctr.downloader }
-
-// Protocols implements node.Service, returning all the currently configured
-// network protocols to start.
-func (s *Hpb) Protocols() []p2p.Protocol {
-	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
-	}
-	return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
-}
-
-// Start implements node.Service, starting all internal goroutines needed by the
-// Hpb protocol implementation.
-func (s *Node) Start(srvr *p2p.Server) error {
-	// Start the bloom bits servicing goroutines
-	s.startBloomHandlers()
-
-	// Start the RPC service
-	s.netRPCService = hpbapi.NewPublicNetAPI(srvr, s.NetVersion())
-
-	// Figure out a max peers count based on the server limits
-	maxPeers := srvr.MaxPeers
-	if s.config.LightServ > 0 {
-		maxPeers -= s.config.LightPeers
-		if maxPeers < srvr.MaxPeers/2 {
-			maxPeers = srvr.MaxPeers / 2
-		}
-	}
-	// Start the networking layer and the light server if requested
-	s.protocolManager.Start(maxPeers)
-	if s.lesServer != nil {
-		s.lesServer.Start(srvr)
-	}
-	return nil
-}
-
-// Stop implements node.Service, terminating all internal goroutines used by the
-// Hpb protocol.
-func (s *Node) Stop() error {
-	if s.stopDbUpgrade != nil {
-		s.stopDbUpgrade()
-	}
-	s.bloomIndexer.Close()
-	s.Hpbbc.Stop()
-	s.protocolManager.Stop()
-	if s.lesServer != nil {
-		s.lesServer.Stop()
-	}
-	s.Hpbtxpool.Stop()
-	s.miner.Stop()
-	s.eventMux.Stop()
-
-	s.chainDb.Close()
-	close(s.shutdownChan)
-
-	return nil
-}

@@ -186,30 +186,8 @@ var isOldGethResource = map[string]bool{
 	"trusted-nodes.json": true,
 }
 
-// resolvePath resolves path in the instance directory.
-func (c *Nodeconfig) ResolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	if c.DataDir == "" {
-		return ""
-	}
-	// Backwards-compatibility: ensure that data directory files created
-	// by geth 1.4 are used if they exist.
-	if c.name() == "ghpb" && isOldGethResource[path] {
-		oldpath := ""
-		if c.Name == "ghpb" {
-			oldpath = filepath.Join(c.DataDir, path)
-		}
-		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
-			return oldpath
-		}
-	}
-	return filepath.Join(c.instanceDir(), path)
-}
 
-func (c *Nodeconfig) instanceDir() string {
+func (c *Nodeconfig) InstanceDir() string {
 	if c.DataDir == "" {
 		return ""
 	}
@@ -363,4 +341,35 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 	}
 	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
 	return config.IPCEndpoint()
+}
+
+func (c *Nodeconfig) instanceDir() string {
+	if c.DataDir == "" {
+		return ""
+	}
+	return filepath.Join(c.DataDir, c.name())
+}
+
+
+// resolvePath resolves path in the instance directory.
+func (c *Nodeconfig) ResolvePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	if c.DataDir == "" {
+		return ""
+	}
+	// Backwards-compatibility: ensure that data directory files created
+	// by geth 1.4 are used if they exist.
+	if c.name() == "ghpb" && isOldGethResource[path] {
+		oldpath := ""
+		if c.Name == "ghpb" {
+			oldpath = filepath.Join(c.DataDir, path)
+		}
+		if oldpath != "" && common.FileExist(oldpath) {
+			// TODO: print warning
+			return oldpath
+		}
+	}
+	return filepath.Join(c.instanceDir(), path)
 }
