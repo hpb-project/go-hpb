@@ -74,9 +74,9 @@ func (this *SynCtrl) txsyncLoop() {
 			delete(pending, s.p.ID())//todo qinghua's peer
 		}
 		// Send the pack in the background.
-		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)//todo qinghua's peer
+		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
-		go func() { done <- pack.p.SendTransactions(pack.txs) }()//todo qinghua's peer
+		go func() { done <- sendTransactions(pack.p, pack.txs) }()
 	}
 
 	// pick chooses the next pending sync.
@@ -140,10 +140,10 @@ func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
 		case discover.PreNode:
 			switch peer.RemoteType() {
 			case discover.PreNode:
-				peer.SendTransactions(types.Transactions{tx})
+				sendTransactions(peer, types.Transactions{tx})
 				break
 			case discover.HpNode:
-				peer.SendTransactions(types.Transactions{tx})
+				sendTransactions(peer, types.Transactions{tx})
 				break
 			default:
 				break
@@ -152,7 +152,7 @@ func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
 		case discover.HpNode:
 			switch peer.RemoteType() {
 			case discover.HpNode:
-				peer.SendTransactions(types.Transactions{tx})
+				sendTransactions(peer, types.Transactions{tx})
 				break
 			default:
 				break
@@ -164,4 +164,11 @@ func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
 	}
 
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+
+func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
+	for _, tx := range txs {
+		peer.knownTxs.Add(tx.Hash())
+	}
+	return peer.SendData(p2p.TxMsg, txs)
 }
