@@ -25,16 +25,14 @@ static uint16_t  g_sequence_id = 0;
 
 #define fetch_axu_package_sequence() atomic_fetch_and_add(&g_sequence_id,1)
 
-A_Package* axu_package_new(int len)
+A_Package* axu_package_new(uint32_t len)
 {
-    if(len < PACKAGE_MIN_SIZE)
-        len = PACKAGE_MIN_SIZE;
     if(len > PACKAGE_MAX_SIZE)
         return NULL;
 
-    A_Package * pack = (A_Package*)malloc(len);
+    A_Package * pack = (A_Package*)malloc(len + sizeof(A_Package));
     if(pack != NULL)
-        pack->header.body_length = len - sizeof(A_Package_Header);
+        pack->header.body_length = len;
 
     return pack;
 }

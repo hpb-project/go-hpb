@@ -47,7 +47,7 @@ typedef struct WaitNode{
     struct list_head list; 
 }WaitNode;
 
-typedef struct MsgContext{
+typedef struct IMsgContext{
     AtomicQ  r_q;
     WaitNode wList;
     pthread_t r_thread; // receive msg thread.
@@ -58,7 +58,7 @@ typedef struct MsgContext{
     uint8_t  th_flag;  // thread control.
     void*    userdata;
     // pthread_mutex_t lock; // Todo 
-}MsgContext;
+}IMsgContext;
 
 static void *sorting_thread(void*userdata);
 static void *receive_thread(void*userdata);
@@ -81,10 +81,12 @@ int WMessageFree(WMessage *m)
     return 0;
 }
 
-int msgc_init(MsgContext *c, char *r_devname, char *w_devname, MsgHandle msghandle, void*userdata)
+int msgc_init(MsgContext *ctx, char *r_devname, char *w_devname, MsgHandle msghandle, void*userdata)
 {
     int ret = 0;
-    memset(c, 0, sizeof(MsgContext));
+    IMsgContext *c = (IMsgContext*)malloc(sizeof(IMsgContext));
+    memset(c, 0, sizeof(IMsgContext));
+
 
     INIT_LIST_HEAD(&c->wList.list);
     ret = aq_init(&(c->r_q), 1000000); // 100w
@@ -102,38 +104,41 @@ int msgc_init(MsgContext *c, char *r_devname, char *w_devname, MsgHandle msghand
     ret = pthread_create(&c->r_thread, NULL, receive_thread, (void*)c);
     ret = pthread_create(&c->s_thread, NULL, sorting_thread, (void*)c);
     c->th_flag = 1; // start thread.
+    *ctx = c;
 
     return 0;
 }
 
 int msgc_release(MsgContext *ctx)
 {
-    ctx->th_flag = 2;
-    pthread_join(ctx->r_thread, NULL);
-    pthread_join(ctx->s_thread, NULL);
-    if(ctx->r_fd > 0)
+    IMsgContext *c = *ctx;
+    c->th_flag = 2;
+    pthread_join(c->r_thread, NULL);
+    pthread_join(c->s_thread, NULL);
+    if(c->r_fd > 0)
     {
-        close(ctx->r_fd);
-        ctx->r_fd = 0;
+        close(c->r_fd);
+        c->r_fd = 0;
     }
-    if(ctx->w_fd > 0)
+    if(c->w_fd > 0)
     {
-        close(ctx->w_fd);
-        ctx->w_fd = 0;
+        close(c->w_fd);
+        c->w_fd = 0;
     }
-    aq_free(&ctx->r_q);
+    aq_free(&c->r_q);
     return 0;
 }
 
 int msgc_send(MsgContext *ctx, WMessage *wmsg)
 {
+    IMsgContext *c = *ctx;
     WaitNode *n = (WaitNode*)malloc(sizeof(WaitNode));
     if(n == NULL)
         return -1;
     wmsg->sTime = get_timestamp_us();
     n->wmsg = wmsg;
 //    pthread_mutex_lock(&ctx->mLock);
-    list_add_tail(&(n->list), &(ctx->wList.list));
+    list_add_tail(&(n->list), &(c->wList.list));
  //   pthread_mutex_unlock(&handle->mLock);
 
     return 0;
@@ -147,7 +152,7 @@ AQData* msgc_read(MsgContext *ctx, WMessage *wmsg)
 
 static void *receive_thread(void*userdata)
 {
-    MsgContext *c = (MsgContext*)userdata;
+    IMsgContext *c = (IMsgContext*)userdata;
     int ret = 0;
     int cycle_ms = 20;
     int maxfd = 0;
@@ -193,7 +198,7 @@ static void *receive_thread(void*userdata)
 
 static void *sorting_thread(void*userdata)
 {
-    MsgContext *c = (MsgContext*)userdata;
+    IMsgContext *c = (IMsgContext*)userdata;
     WaitNode *head = &c->wList;
     WaitNode *pnode = NULL;
     struct list_head *pos, *next; 
@@ -234,7 +239,7 @@ static void *sorting_thread(void*userdata)
             {
                 c->msgHandleFunc(d->buf, d->len, c->userdata);
             }
-            aqd_free(d);
+            //aqd_free(d);
         }
 
         list_for_each_safe(pos, next, &head->list) 
@@ -271,10 +276,4 @@ static void *sorting_thread(void*userdata)
 
     return NULL;
 }
-
-
-
-
-
-
 

@@ -24,7 +24,7 @@ typedef int (*CheckResponse)(uint8_t *res, int len, uint32_t uid);
 typedef int (*MsgHandle)(uint8_t *data, int len, void *userdata);
 
 typedef struct WMessage WMessage;
-typedef struct MsgContext MsgContext;
+typedef void*  MsgContext;
 WMessage* WMessageNew(uint32_t uid, CheckResponse cfunc, uint32_t timeout);
 int WMessageFree(WMessage *m);
 

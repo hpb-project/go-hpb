@@ -20,6 +20,11 @@
 #include <stdint.h>
 
 typedef uint8_t TVersion;
+typedef struct BoeErr{
+    int ecode;
+    char emsg[100];
+    uint8_t bfree;
+}BoeErr;
 
 typedef enum BOE_ERR_ENUM{
     BOE_OK = 0,

@@ -19,11 +19,7 @@
 #include <stdint.h>
 #include "common.h"
 
-#define PACKAGE_MAX_SIZE 	(2048)   // 2KB
-#define PACKAGE_MIN_SIZE 	(100)
 
-#define AXU_MAGIC_START (0xaacc)
-#define AXU_MAGIC_END   (0xccaa)
 typedef enum {
     AP_QUERY = 0,
     AP_RESPONSE = 1
@@ -43,6 +39,11 @@ typedef struct A_PACKAGE{
     uint32_t    checksum;
     uint8_t     data[];
 }A_Package;
+
+#define PACKAGE_MAX_SIZE 	(2048 - sizeof(A_Package))   // 2KB
+#define MAX_AXU_ERRNUM (30)
+#define AXU_MAGIC_START (0xaacc)
+#define AXU_MAGIC_END   (0xccaa)
 
 typedef enum A_CMD {
     ACMD_START = 0x0,
@@ -85,7 +86,7 @@ typedef struct ImageHeader{
     TVersion axu;
 }ImageHeader;
 
-A_Package* axu_package_new(int len);
+A_Package* axu_package_new(uint32_t len);
 int axu_package_free(A_Package* pack);
 
 void axu_package_init(A_Package *pack, A_Package* req, ACmd cmd);
