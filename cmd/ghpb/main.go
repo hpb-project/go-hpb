@@ -35,7 +35,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/go-hpb/protocol"
 )
 
 const (
@@ -246,23 +245,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
-		// Mining only makes sense if a full Hpb node is running
-		var hpb *node.Node
-		if err := stack.Service(&hpb); err != nil {
-			utils.Fatalf("hpb service not running: %v", err)
-		}
-		// Use a reduced number of threads if requested
-		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
-			type threaded interface {
-				SetThreads(threads int)
-			}
-			if th, ok := hpb.hpbeng().(threaded); ok {
-				th.SetThreads(threads)
-			}
-		}
 		// Set the gas price to the limits from the CLI and start mining
-		hpb.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := hpb.StartMining(true); err != nil {
+		stack.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		if err := stack.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

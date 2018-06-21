@@ -331,17 +331,7 @@ func (c *Nodeconfig) IPCEndpoint() string {
 	return c.IPCPath
 }
 
-// DefaultIPCEndpoint returns the IPC path used by default.
-func DefaultIPCEndpoint(clientIdentifier string) string {
-	if clientIdentifier == "" {
-		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if clientIdentifier == "" {
-			panic("empty executable name")
-		}
-	}
-	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
-	return config.IPCEndpoint()
-}
+
 
 func (c *Nodeconfig) instanceDir() string {
 	if c.DataDir == "" {
