@@ -17,24 +17,19 @@
 package boe
 
 /*
-#cgo CFLAGS: -I./core
-#include "core/boe.h"
-#include "core/boe.c"
-#include "core/common.c"
-#include "core/community.c"
-#include "core/tsu_connector.c"
-#include "core/axu_connector.c"
+#cgo CFLAGS: -I.
+#cgo LDFLAGS: -L . -lboe
+#include "boe.h"
 */
 import "C"
 import (
     "unsafe"
-    "errors"
-    "sync"
     "sync/atomic"
     "time"
 
     "github.com/hpb-project/go-hpb/routinue"
     "github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 type BoeHandle struct {
@@ -43,7 +38,9 @@ type BoeHandle struct {
 }
 
 type SignResult struct {
-    val   []byte 
+    r   []byte 
+    s   []byte 
+    v   byte 
 }
 
 type TVersion struct {
@@ -85,23 +82,27 @@ func (boe *BoeHandle) Init()(error) {
         return nil
     }
 
-    ret := C.BOEInit()
+    ret := C.boe_init()
     if ret == C.BOE_OK {
         boe.boeInit = true
         bcontinue = true
         go innerResetCounter()
         return nil
     }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return ErrInitFailed
 }
 
 func (boe *BoeHandle) Release() (error) {
 
     bcontinue = false
-    ret := C.BOERelease()
+    ret := C.boe_release()
     if ret == C.BOE_OK {
         return nil
     }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return ErrInitFailed
 }
 
@@ -113,39 +114,75 @@ func (boe *BoeHandle) SubscribeEvent(event routinue.EventType) (routinue.Subscri
     return nil,ErrUnknownEvent
 }
 
-func (boe *BoeHandle) HWBind(account []byte) (error){
-    // 1. calc local id.
-    var id = localInfoId()
-    // 2. call c interface, and check result.
-    //C.BOEHWBind(id, account)
-    return nil
+func (boe *BoeHandle) GetBindAccount()([]byte, error){
+    var acc = make([]byte, 256)
+    ret := C.boe_get_bind_account((*C.uchar)(unsafe.Pointer(&acc[0])))
+    if ret == C.BOE_OK{
+        return acc,nil
+    }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
+    return nil,ErrGetAccountFailed
+
+}
+
+func (boe *BoeHandle) SetBindAccount(account []byte) (error){
+
+    ret := C.boe_set_bind_account((*C.uchar)(unsafe.Pointer(&account[0])))
+    if ret == C.BOE_OK{
+        return nil
+    }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
+    return ErrGetAccountFailed
 }
 
 func (boe *BoeHandle) GetHWVersion() TVersion {
     var v TVersion
-    v.ver = uint8(C.GetBOEHWVersion())
+    ret := C.boe_get_hw_version((*C.TVersion)(unsafe.Pointer(&v)))
+    if ret == C.BOE_OK {
+        return v
+    }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return v
 }
 
 func (boe *BoeHandle) GetFWVersion() TVersion {
     var v TVersion
-    v.ver = uint8(C.GetBOEFWVersion())
+    ret := C.boe_get_fw_version((*C.TVersion)(unsafe.Pointer(&v)))
+    if ret == C.BOE_OK {
+        return v
+    }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return v
 }
 
 func (boe *BoeHandle) GetAXUVersion() TVersion {
     var v TVersion
-    v.ver = uint8(C.GetBOEAXUVersion())
+    ret := C.boe_get_axu_version((*C.TVersion)(unsafe.Pointer(&v)))
+    if ret == C.BOE_OK {
+        return v
+    }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return v
 }
 
 func (boe *BoeHandle) GetRandom() uint32{
-    var r = uint32(C.GetRand())
+    var r uint32
+    C.boe_get_random((*C.uint)(unsafe.Pointer(&r)))
     return r
 }
 
 func (boe *BoeHandle) GetBoeId() BoeId{
-    var id = BoeId(C.GetBOEID())
+    var id BoeId
+    ret := C.boe_get_boeid((*C.uint)(unsafe.Pointer(&id)))
+    if ret != C.BOE_OK{
+        log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+        C.boe_err_free(ret)
+    }
     return id
 }
 
@@ -157,40 +194,23 @@ func (boe *BoeHandle) FWUpdate() error{
     // call C api to update.
     var image = make([]byte, 1024*10*1024)
     var len = 10*1024*1024;
-    var ret = C.BOEFWUpdate(image, len)
+    var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(len))
     if ret == C.BOE_OK {
         return nil
     }
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
     return ErrUpdateFailed
 }
 
 func (boe *BoeHandle) FWUpdateAbort() error{
-    var ret = C.BOEFWUpdateAbort()
+    var ret = C.boe_upgrade_abort()
     if ret == C.BOE_OK {
         return nil
     }
-    return ErrUpdateFailed
-}
-
-func (boe *BoeHandle) SetBoundAccount(baccount []byte) (error) {
-    // call C interface.
-    ret := C.BOE_OK//C.BOESetBindInfo((*C.uchar)((unsafe.Pointer)(&bid[0])), (*C.uchar)((unsafe.Pointer)(&baccount[0])))
-    if ret == C.BOE_OK {
-        return baccount, nil
-    }
-    return ErrHWSignFailed
-}
-
-func (boe *BoeHandle) GetBoundAccount() ([]byte, error) {
-    var (
-        baccount = make([]byte, 32)
-    )
-    // call C interface.
-    ret := C.BOE_OK//C.BOEGetBindInfo((*C.uchar)((unsafe.Pointer)(&bid[0])), (*C.uchar)((unsafe.Pointer)(&baccount[0])))
-    if ret == C.BOE_OK {
-        return baccount, nil
-    }
-    return nil,ErrHWSignFailed
+    log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    C.boe_err_free(ret)
+    return ErrUpdateAbortFailed
 }
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
@@ -214,8 +234,8 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
         copy(m_r[32-len(s):32], r)
         copy(m_s[32-len(s):32], s)
 
-        c_ret := C.BOEValidSign(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
-        if c_ret != 0 {
+        c_ret := C.boe_valid_sign_sync(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
+        if c_ret != C.BOE_OK {
             return nil,ErrSignCheckFailed
         }
     }else {
@@ -238,10 +258,15 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
 }
 
 func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
-    var result = &SignResult{val: make([]byte, 32)}
-    var ret = C.BOEHWSign((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)), (*C.uchar)(unsafe.Pointer(&result.val[0])))
-    if ret != 0 {
-        return nil, ErrHWSignFailed
+    var result = make([]byte, 65)
+    var sig = &SignResult{r: make([]byte, 32), s: make([]byte, 32)}
+    var ret = C.boe_hw_sign((*C.char)(unsafe.Pointer(&data[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+    if ret == C.BOE_OK {
+        copy(sig.r, result[0:32])
+        copy(sig.s, result[32:64])
+        sig.v = result[64]
+        return sig, nil
+
     } 
-    return result, nil
+    return nil, ErrHWSignFailed
 }

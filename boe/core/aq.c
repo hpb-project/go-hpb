@@ -95,7 +95,7 @@ AQData* aq_pop(AtomicQ *q)
     return d;
 }
 
-int aq_fgee(AtomicQ *q)
+int aq_free(AtomicQ *q)
 {
     AQData *d = NULL;
     while(d=aq_pop(q))

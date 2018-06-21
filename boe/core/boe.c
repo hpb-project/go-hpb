@@ -1,4 +1,4 @@
-// Last Update:2018-06-21 16:27:17
+// Last Update:2018-06-21 20:28:46
 /**
  * @file nboe.c
  * @brief 
@@ -65,6 +65,13 @@ static int connected(struct BoeInstance *ins)
         ins->bConnect = 0;
     }
     return ins->bConnect;
+}
+void boe_err_free(BoeErr *e)
+{
+    if(e->bfree)
+    {
+        free(e);
+    }
 }
 
 BoeErr* boe_init(void)

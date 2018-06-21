@@ -125,7 +125,7 @@ int msgc_release(MsgContext *ctx)
         close(c->w_fd);
         c->w_fd = 0;
     }
-    aq_free(&c->r_q);
+    aq_free(&(c->r_q));
     return 0;
 }
 
