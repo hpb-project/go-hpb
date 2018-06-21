@@ -1,37 +1,30 @@
 # 1、准备工作，编译方式、目标文件名、依赖库路径的定义。
 TOP=${PWD}
+OUT_FILE_NAME=libboe.a
+
+
 CROSS=
-INSTALL_DIR=.
+INC= -I .
 
 CC=${CROSS}gcc
-CFLAGS  := -Wall -g -O3 -std=gnu99
+CFLAGS  := -Wall -g -fPIC -c -fpermissive
 
+OBJ_DIR=./obj
+OUT_DIR=./lib
 
-OBJS =  common.o community.o tsu_connector.o axu_connector.o boe.o #.o文件与.cpp文件同名
-LIB = libboe.so # 目标文件名
+$(OUT_FILE_NAME): $(patsubst %.c,$(OBJ_DIR)/%.o,$(wildcard *.c))
+	ar -r -o $(OUT_DIR)/$@ $^
 
+$(OBJ_DIR)/%.o:%.c dirmake
+	$(CC) -c $(INC) $(CFLAGS) -o $@ $<
 
-INCLUDE_PATH = -I .
+dirmake:
+	@mkdir -p $(OUT_DIR)
+	@mkdir -p $(OBJ_DIR)
 
-# 依赖的lib名称
-LD_LIB = 
-
-all : $(LIB)
-
-# 2. 生成.o文件 
-%.o : %.c
-	$(CC) $(CFLAGS) -fpic -c $< -o $@ $(INCLUDE_PATH) $(LIB_PATH) $(LD_LIB)
-
-# 3. 生成动态库文件
-$(LIB) : $(OBJS)
-	rm -f $@
-	$(CC) -shared -o $@ $(OBJS)
-	rm -f $(OBJS)
-
-
-# 4. 删除中间过程生成的文件 
 clean:
-	rm -f $(OBJS) $(TARGET) $(LIB)
+	rm -f $(OBJ_DIR)/*.o $(OUT_DIR)/$(OUT_FILE_NAME) 
 
-install:
-	cp -f $(LIB) $(INSTALL_DIR)
+rebuild: clean build
+
+

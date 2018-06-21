@@ -238,8 +238,9 @@ static void *sorting_thread(void*userdata)
             if(bmatch == 0 && c->msgHandleFunc != NULL)
             {
                 c->msgHandleFunc(d->buf, d->len, c->userdata);
+                aqd_free(d);
             }
-            //aqd_free(d);
+
         }
 
         list_for_each_safe(pos, next, &head->list) 

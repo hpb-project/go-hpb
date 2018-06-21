@@ -1,10 +1,10 @@
 #include <string.h>
-#include "docommand.h"
 #include "common.h"
 #include "msgc.h"
 #include "axu_connector.h"
 #include "community.h"
 #include "error.h"
+#include "doAXU.h"
 
 static int gShortTimeout = 100000; // 100ms
 static int gLongTimeout = 5000000; // 5s
@@ -219,8 +219,12 @@ int axu_check_response(uint8_t* data, int plen, uint32_t uid)
     if(plen >= sizeof(A_Package))
     {
         A_Package *p = (A_Package*)data;
-        if(p->header.package_id == uid && p->header.q_or_r == AP_RESPONSE)
-            return 1;
+        if(p->header.magic_aacc == AXU_MAGIC_START &&
+                p->header.magic_ccaa == AXU_MAGIC_END)
+        {
+            if(p->header.package_id == uid && p->header.q_or_r == AP_RESPONSE)
+                return 1;
+        }
     }
     return 0;
 }

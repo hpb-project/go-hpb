@@ -1,4 +1,4 @@
-// Last Update:2018-06-20 17:34:23
+// Last Update:2018-06-21 16:27:17
 /**
  * @file nboe.c
  * @brief 
@@ -10,9 +10,9 @@
 #include <string.h>
 #include "genid.h"
 #include "boe.h"
+#include "error.h"
 #include "common.h"
-#include "wq.h"
-#include "docommand.h"
+#include "doAXU.h"
 
 struct BoeInstance {
     TVersion hw;
@@ -26,131 +26,152 @@ struct BoeInstance {
 
 static struct BoeInstance gIns;
 
-
-static int msg_handle(uint8_t *data, int len, void *userdata)
+#define GetProgress(p)   (p->data[0])
+#define GetProgressMsg(p) (p->data+1)
+static int axu_msg_handle(uint8_t *data, int len, void *userdata)
 {
+    A_Package *p = (A_Package*)data;
+    struct BoeInstance *ins = (struct BoeInstance*)userdata;
+    if(p->header.magic_aacc == AXU_MAGIC_START &&
+            p->header.magic_ccaa == AXU_MAGIC_END)
+    {
+        switch(p->header.acmd)
+        {
+            case ACMD_BP_RES_UPGRADE_PROGRESS:
+                {
+                    int progress = GetProgress(p);
+                    char *msg    = GetProgressMsg(p);
+                    if(ins->updateCallback != NULL)
+                    {
+                        ins->updateCallback(progress, msg);
+                    }
+                    break;
+                }
+            default:
+                break;
+        }
+    }
+
     return 0;
 }
 
-static int connected(void)
+static int connected(struct BoeInstance *ins)
 {
-    if(doGetVersionInfo(&gIns.hw, &gIns.fw, &gIns.axu) == 0)
+    if(doAXU_GetVersionInfo(&ins->hw, &ins->fw, &ins->axu) == BOE_OK)
     {
-        gIns.bConnect = 1;
+        ins->bConnect = 1;
     }else
     {
-        gIns.bConnect = 0;
+        ins->bConnect = 0;
     }
-    return gIns.bConnect;
+    return ins->bConnect;
 }
 
-int boe_init(void)
+BoeErr* boe_init(void)
 {
     // pcie , init community.
-    // create wq and init.
     // axu/tsu
-    doc_init(msg_handle, (void*)&gIns);
-    if(!connected())
+    //doAXU_init(msg_handle, (void*)&gIns);
+    if(!connected(&gIns))
     {
-        return 1;
+        return &e_init_fail;
     }
 
     return BOE_OK;
 }
-int boe_release(void)
+BoeErr* boe_release(void)
 {
+    doAXU_Release();
     // pcie, release pcie.
-    doc_release();
     return BOE_OK;
 }
-int boe_reg_update_callback(BoeUpgradeCallback func)
+BoeErr* boe_reg_update_callback(BoeUpgradeCallback func)
 {
     gIns.updateCallback = func;
     return BOE_OK;
 }
-int boe_reg_resign_callback(BoeRecoverPubCallback func)
+BoeErr* boe_reg_resign_callback(BoeRecoverPubCallback func)
 {
     gIns.revocerCallback = func;
     return BOE_OK;
 }
 
-int boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu)
+BoeErr* boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu)
 {
-    return doGetVersionInfo(hw, fw, axu);
+    return doAXU_GetVersionInfo(hw, fw, axu);
 }
 
-int boe_get_hw_version(TVersion *hw)
+BoeErr* boe_get_hw_version(TVersion *hw)
 {
-    return doGetHWVer(hw);
+    return doAXU_GetHWVer(hw);
 }
-int boe_get_fw_version(TVersion *fw)
+BoeErr* boe_get_fw_version(TVersion *fw)
 {
-    return doGetFWVer(fw);
+    return doAXU_GetFWVer(fw);
 }
-int boe_get_axu_version(TVersion *axu)
+BoeErr* boe_get_axu_version(TVersion *axu)
 {
-    return doGetAXUVer(axu);
+    return doAXU_GetAXUVer(axu);
 }
 
-int boe_upgrade(uint8_t *image, int imagelen)
+BoeErr* boe_upgrade(uint8_t *image, int imagelen)
 {
     ImageHeader header;
-    int ret = 0;
+    BoeErr* ret = NULL;
     memcpy(&header, image, sizeof(header));
     if((memcmp(header.vendor, "hpb", 3) == 0)
             && (imagelen - sizeof(header) == header.len))
     {
         uint32_t chk = checksum(image+sizeof(header), header.len);
         if(chk != header.chk)
-            return 1;
+            return &e_image_chk_error;
         
-        ret = doTransport(&header, image+sizeof(header));
-        if(ret != 0)
+        ret = doAXU_Transport(&header, image+sizeof(header));
+        if(ret != BOE_OK)
             return ret;
-        ret = doUpgradeStart(header.chk);
-        if(ret == 0)
+        ret = doAXU_UpgradeStart(header.chk);
+        if(ret == BOE_OK)
         {
             gIns.updateFid = header.chk;
         }
     }
     else
     {
-        return 1;
+        return &e_image_header_error;
     }
-    return ret;
 }
 
-int boe_upgrade_abort(void)
+BoeErr* boe_upgrade_abort(void)
 {
-    return doUpgradeAbort(gIns.updateFid);
+    return doAXU_UpgradeAbort(gIns.updateFid);
 }
-int boe_reset(void)
+BoeErr* boe_reset(void)
 {
-    return doReset();
+    return doAXU_Reset();
 }
-int boe_set_boeid(uint32_t id)
+BoeErr* boe_set_boeid(uint32_t id)
 {
-    return doSetBoeID(id);
+    return doAXU_SetBoeID(id);
 }
-int boe_set_bind_account(uint8_t *baccount)
+BoeErr* boe_set_bind_account(uint8_t *baccount)
 {
-    return doBindAccount(baccount);
-}
-
-int boe_get_random(uint32_t *val)
-{
-    return doGetRandom(val);
-}
-int boe_get_boeid(uint32_t *id)
-{
-    return doGetBOEID(id);
-}
-int boe_get_bind_account(uint8_t *baccount)
-{
-    return doGetBindAccount(baccount);
+    return doAXU_BindAccount(baccount);
 }
 
-int boe_hw_sign(char *p_data, uint8_t *sig)
+BoeErr* boe_get_random(uint32_t *val)
+{
+    return doAXU_GetRandom(val);
+}
+BoeErr* boe_get_boeid(uint32_t *id)
+{
+    return doAXU_GetBOEID(id);
+}
+BoeErr* boe_get_bind_account(uint8_t *baccount)
+{
+    return doAXU_GetBindAccount(baccount);
+}
+
+BoeErr* boe_hw_sign(char *p_data, uint8_t *sig)
 {
     int len = strlen(p_data) + 2*32 + 1;
     char *p_buf = (char*)malloc(len);
@@ -158,21 +179,20 @@ int boe_hw_sign(char *p_data, uint8_t *sig)
     if(0 == general_id(p_buf))
     {
         strcat(p_buf, p_data);
-        return doHWSign((uint8_t*)p_buf, len, sig);
+        return doAXU_HWSign((uint8_t*)p_buf, len, sig);
     }
-
-    return 1;
+    return &e_gen_host_id_failed;
 }
 /* -------------------  tsu command -------------------------*/
-int boe_get_s_random(uint8_t *hash, uint8_t *nexthash)
+BoeErr* boe_get_s_random(uint8_t *hash, uint8_t *nexthash)
 {
     return BOE_OK;
 }
-int boe_valid_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v)
+BoeErr* boe_valid_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v)
 {
     return BOE_OK;
 }
-int boe_valid_sign_sync(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, uint8_t *result)
+BoeErr* boe_valid_sign_sync(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, uint8_t *result)
 {
     return BOE_OK;
 }

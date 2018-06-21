@@ -1,4 +1,4 @@
-// Last Update:2018-06-21 15:00:06
+// Last Update:2018-06-21 15:41:00
 /**
  * @file error.h
  * @brief 
@@ -21,6 +21,9 @@ BoeErr e_param_invalid;
 BoeErr e_msgc_send_fail;
 BoeErr e_msgc_read_timeout;
 BoeErr e_result_invalid;
+BoeErr e_image_chk_error;
+BoeErr e_image_header_error;
+BoeErr e_gen_host_id_failed;
 BoeErr e_axu_inner[MAX_AXU_ERRNUM];
 
 

@@ -19,39 +19,37 @@
 #define BOE_H
 #include <stdint.h>
 
-typedef uint8_t TVersion;
+
 typedef struct BoeErr{
     int ecode;
     char emsg[100];
     uint8_t bfree;
 }BoeErr;
 
-typedef enum BOE_ERR_ENUM{
-    BOE_OK = 0,
-}BOE_ERR_CODE;
-
+BoeErr *BOE_OK;
 typedef int (*BoeUpgradeCallback)(int,char*);
 typedef int (*BoeRecoverPubCallback)(int,uint8_t*);
+typedef uint8_t TVersion;
 
-int boe_init(void);
-int boe_release(void);
-int boe_reg_update_callback(BoeUpgradeCallback func);
-int boe_reg_resign_callback(BoeRecoverPubCallback func);
-int boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu);
-int boe_get_hw_version(TVersion *hw);
-int boe_get_fw_version(TVersion *fw);
-int boe_get_axu_version(TVersion *axu);
-int boe_upgrade(uint8_t *image, int imagelen);
-int boe_upgrade_abort(void);
-int boe_reset(void);
-int boe_set_boeid(uint32_t id);
-int boe_set_bind_account(uint8_t *baccount);
-int boe_get_random(uint32_t *val);
-int boe_get_boeid(uint32_t *id);
-int boe_get_bind_account(uint8_t *baccount);
-int boe_hw_sign(char *p_data, uint8_t *sig);
-int boe_get_s_random(uint8_t *hash, uint8_t *nexthash);
-int boe_valid_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v);
-int boe_valid_sign_sync(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, uint8_t *result);
+BoeErr* boe_init(void);
+BoeErr* boe_release(void);
+BoeErr* boe_reg_update_callback(BoeUpgradeCallback func);
+BoeErr* boe_reg_resign_callback(BoeRecoverPubCallback func);
+BoeErr* boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu);
+BoeErr* boe_get_hw_version(TVersion *hw);
+BoeErr* boe_get_fw_version(TVersion *fw);
+BoeErr* boe_get_axu_version(TVersion *axu);
+BoeErr* boe_upgrade(uint8_t *image, int imagelen);
+BoeErr* boe_upgrade_abort(void);
+BoeErr* boe_reset(void);
+BoeErr* boe_set_boeid(uint32_t id);
+BoeErr* boe_set_bind_account(uint8_t *baccount);
+BoeErr* boe_get_random(uint32_t *val);
+BoeErr* boe_get_boeid(uint32_t *id);
+BoeErr* boe_get_bind_account(uint8_t *baccount);
+BoeErr* boe_hw_sign(char *p_data, uint8_t *sig);
+BoeErr* boe_get_s_random(uint8_t *hash, uint8_t *nexthash);
+BoeErr* boe_valid_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v);
+BoeErr* boe_valid_sign_sync(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, uint8_t *result);
 
 #endif  /*BOE_H*/
