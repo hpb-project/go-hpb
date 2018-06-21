@@ -18,35 +18,15 @@
 package node
 
 import (
-	"errors"
-	"fmt"
-	"math/big"
-	"runtime"
-	"sync"
-	"sync/atomic"
-
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/consensus/prometheus"
-
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/rlp"
-
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/node"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/go-hpb-backkup/txpool"
-	"github.com/hpb-project/go-hpb/synctrl"
-	"github.com/hpb-project/go-hpb/event"
-	//"github.com/hpb-project/go-hpb/synctrl"
-	"github.com/go-hpb-backkup/worker"
+	"github.com/hpb-project/go-hpb/worker"
+	"github.com/hpb-project/go-hpb/txpool"
 )
 
 type LesServer interface {
@@ -116,12 +96,12 @@ func (s *Node) APIs() []rpc.API {
 }
 
 func (s *Node) StopMining()         { s.Stop() }
-func (s *Node) IsMining() bool      { return s.miner.Mining() }
-func (s *Node) Miner() *miner.Miner { return s.miner }
+func (s *Node) IsMining() bool      { return s.worker.Mining() }
+func (s *Node) Miner() *worker.Miner { return s.worker }
 
 func (s *Node) APIAccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
-func (s *Node) TxPool() *core.TxPool               { return s.Hpbtxpool }
+func (s *Node) TxPool() *txpool.TxPool               { return s.Hpbtxpool }
 //func (s *Node) EventMux() *event.T       		   { return s.eventMux }
 func (s *Node) Engine() consensus.Engine           { return s.Hpbengine }
 func (s *Node) ChainDb() hpbdb.Database            { return s.chainDb }
