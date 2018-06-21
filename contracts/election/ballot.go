@@ -1,16 +1,15 @@
-// Code generated - DO NOT EDIT.
-// This file is a generated binding and any manual changes will be lost.
 
 package election
 
 import (
-	"DNA/vm/evm/abi"
 	"math/big"
 	"strings"
 
-	"github.com/hpb-project/ghpb/account/abi/bind"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/ontio/ontology/core/types"
+	"github.com/hpb-project/go-hpb/account/abi/bind"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+
+	"github.com/hpb-project/go-hpb/account/abi"
 )
 
 // HpbballotABI is the input ABI used to generate the binding from.
