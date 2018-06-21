@@ -221,7 +221,51 @@ func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapsho
 		return comNodeSnap,nil
 }
 
+// 从数据库和缓存中获取数据
+func (c *Prometheus) getDataFromCacheAndDb(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
+		
+		if s, ok := c.recents.Get(hash); ok {
+			snapcache := s.(*snapshots.HpbNodeSnap)
+			return snapcache, nil
+		}else{
+			// 从数据库中获取
+			if snapdb, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
+				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+				return snapdb, err
+			}
+		}
+		return nil, nil
+}
 
+//将数据存入到缓存和数据库中
+func (c *Prometheus) storeDataToCacheAndDb(db hpbdb.Database,snap *snapshots.HpbNodeSnap) error {
+		// 存入到缓存中
+		c.recents.Add(snap.Hash, snap)
+		// 存入数据库
+		err := snap.Store(db)
+		return err
+}
+
+
+func (c *Prometheus) genGenesisSnap(chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
+
+		genesis := chain.GetHeaderByNumber(0)
+		if err := c.VerifyHeader(chain, genesis, false); err != nil {
+			return nil, err
+		}
+		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
+		for i := 0; i < len(signers); i++ {
+			log.Info("miner initialization", "i:",i)
+			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
+		}
+		snap := snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
+		// 存入缓存和数据库中
+		if err := c.storeDataToCacheAndDb(c.db, snap); err != nil {
+			return nil, err
+		}
+		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+		return snap, nil
+}
 
 
 // 获取快照
@@ -234,97 +278,57 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 	
 	// 首次要创建
 	if number == 0 {
-		genesis := chain.GetHeaderByNumber(0)
-		if err := c.VerifyHeader(chain, genesis, false); err != nil {
-			return nil, err
+		if snapg,err := c.genGenesisSnap(chain); err == nil{
+			return snapg, err
 		}
-
-		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-
-		for i := 0; i < len(signers); i++ {
-			log.Info("miner initialization", "i:",i)
-			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
-		}
-
-		snap = snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
-
-		if err := snap.Store(c.db); err != nil {
-			return nil, err
-		}
-		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
 	}
 	
-	//前十轮不会进行投票，前10轮采用
+	//前十轮不会进行投票，前10轮采用区块0时候的数据
+	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
 	if(number < checkpointInterval * 10){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
-		
-		if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
-				log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				snap = s
-				break
+		// 从缓存中获取
+		if snapcd, err := c.getDataFromCacheAndDb(hash); err == nil {
+			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			return snapcd, err
+		}else{
+			if snapg,err := c.genGenesisSnap(chain); err == nil{
+				return snapg, err
+			}
 		}
 	}
 	
-	//CoinbaseHash
-	for snap == nil {
-		// 直接使用内存中的，recents存部分
-		if s, ok := c.recents.Get(hash); ok {
-			snap = s.(*snapshots.HpbNodeSnap)
-			break
-		}
-		// 如果是检查点的时候，保存周期和投票周日不一致
-		if number%checkpointInterval == 0 {
-			if s, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
-				log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				snap = s
-				break
+	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
+	// 开始计算最后一次的确认区块
+	latestCheckPointNumber :=  uint64(math.Floor(float64(number/checkpointInterval)-3))*checkpointInterval
+	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
+
+	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
+	latestCheckPointHash := header.Hash()
+	
+	if snapcd, err := c.getDataFromCacheAndDb(latestCheckPointHash); err == nil {
+			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			return snapcd, err
+	}else{
+		// 开始获取之前的所有header
+		for number := latestCheckPointNumber - 3 * checkpointInterval; number < latestCheckPointNumber; number++{
+			header := chain.GetHeaderByNumber(number)
+			if header == nil {
+				headers = append(headers, header)
 			}
 		}
 		
-
-		// 没有发现快照，开始收集Header 然后往回回溯
-		var header *types.Header
-		if len(parents) > 0 {
-			// 如果有指定的父亲，直接用
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			// 没有指定的父亲
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
-		}
-
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
-	}
-
-	// 找到了之前的快照，然后进行处理
-	for i := 0; i < len(headers)/2; i++ {
-		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
-	}
-
-	snap, err := snap.Apply(headers,chain)
-	if err != nil {
-		return nil, err
-	}
-
-	// 存入到缓存中
-	c.recents.Add(snap.Hash, snap)
-
-	// 检查点的时候，保存硬盘
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.Store(c.db); err != nil {
+		if snapa, err := snapshots.CalculateHpbSnap(headers,chain); err != nil {
 			return nil, err
+		}else{
+			if err := c.storeDataToCacheAndDb(c.db, snap); err != nil {
+				return nil, err
+			}
+			return snapa, err
 		}
-		log.Trace("Stored voting getHpbNodeSnap to disk", "number", snap.Number, "hash", snap.Hash)
 	}
-	return snap, err
+	return nil, nil
 }
 
 

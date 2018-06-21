@@ -22,7 +22,7 @@ import (
 	//"sort"
 	//"fmt"
 	"encoding/json"
-	
+	"math/big"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/storage"
@@ -35,14 +35,11 @@ import (
 	//"errors"
 )
 
-type Vote struct {
-	Signer    common.Address `json:"signerHash"`    // 可以投票的Signer
-	Block     uint64         `json:"block"`         // 开始计票的区块
-	Address   common.Address `json:"address"`       // 操作的账户
-}
-
 type Tally struct {
-	Votes     int  `json:"votes"`     // 通过投票的个数
+	CandAddress    common.Address  `json:"candAddress"`     // 通过投票的个数
+	VoteNumbers    *big.Int  `json:"voteNumbers"`     // 通过投票的个数
+	VoteIndexs     *big.Int   `json:"voteIndexs"`     // 通过投票的个数
+	VotePercent    *big.Int  `json:"votePercent"`     // 通过投票的个数
 }
 
 type HpbNodeSnap struct {
@@ -51,9 +48,7 @@ type HpbNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
 	Signers map[common.Address]struct{} `json:"signers"` // 当前的授权用户
-	//SignersHash map[common.AddressHash]struct{} `json:"signersHash"` // 当前的授权用户
 	Recents map[uint64]common.Address   `json:"recents"` // 最近签名者 spam
-	Votes   []*Vote                     `json:"votes"`   // 最近的投票
 	Tally   map[common.Address]Tally    `json:"tally"`   // 目前的计票情况
 }
 
@@ -65,19 +60,12 @@ func NewHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, num
 		Number:   number,
 		Hash:     hash,
 		Signers:  make(map[common.Address]struct{}),
-		//SignersHash:  make(map[common.AddressHash]struct{}),
 		Recents:  make(map[uint64]common.Address),
 		Tally:    make(map[common.Address]Tally),
 	}
-	
 	for _, signerHash := range signersHash {
 		snap.Signers[signerHash] = struct{}{}
 	}
-	
-	//for _, signerhash := range signersHash {
-	//	snap.SignersHash[signerhash] = struct{}{}
-	//}
-	
 	return snap
 }
 
@@ -93,55 +81,18 @@ func LoadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db
 	}
 	snap.config = config
 	snap.sigcache = sigcache
-
 	return snap, nil
 }
 
 // store inserts the snapshot into the database.
 func (s *HpbNodeSnap) Store(db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
-	
-	//log.Error("cuo wu le a", "err", err)
-
-
 	if err != nil {
 		return err
 	}
 	return db.Put(append([]byte("prometheus-"), s.Hash[:]...), blob)
 }
 
-// 深度拷贝
-func (s *HpbNodeSnap) copy() *HpbNodeSnap {
-	cpy := &HpbNodeSnap{
-		config:   s.config,
-		sigcache: s.sigcache,
-		
-		Number:   s.Number,
-		Hash:     s.Hash,
-		Signers:  make(map[common.Address]struct{}),
-		//SignersHash:  make(map[common.AddressHash]struct{}),
-		Recents:  make(map[uint64]common.Address),
-		Votes:    make([]*Vote, len(s.Votes)),
-		Tally:    make(map[common.Address]Tally),
-	}
-	for signerHash := range s.Signers {
-		cpy.Signers[signerHash] = struct{}{}
-	}
-	
-	//for signerHash := range s.SignersHash {
-	//	cpy.SignersHash[signerHash] = struct{}{}
-	//}
-	
-	for block, signerHash := range s.Recents {
-		cpy.Recents[block] = signerHash
-	}
-	for address, tally := range s.Tally {
-		cpy.Tally[address] = tally
-	}
-	copy(cpy.Votes, s.Votes)
-
-	return cpy
-}
 
 // 判断投票的有效性
 func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
@@ -150,41 +101,26 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 }
 
 
-*/
 // 投票池中添加
-func (s *HpbNodeSnap) cast(address common.Address) bool {
-
-	if !s.ValidVote(address) {
-		return false
-	}
-	
-	if old, ok := s.Tally[address]; ok {
-		old.Votes++
-		s.Tally[address] = old
+func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
+	//if !s.ValidVote(address) {
+	//	return false
+	//}
+	if old, ok := s.Tally[candAddress]; ok {
+        old.VoteNumbers = new(big.Int).Add(old.VoteNumbers, big.NewInt(1))
+        old.VoteIndexs = new(big.Int).Add(old.VoteIndexs, voteIndexs)
+        old.VoteIndexs = new(big.Int).Div(old.VoteIndexs, old.VoteNumbers)
+        old.CandAddress = candAddress
 	} else {
-		s.Tally[address] = Tally{Votes: 1}
+		s.Tally[candAddress] = Tally{
+			VoteNumbers: big.NewInt(1),
+			VoteIndexs: voteIndexs,
+			VotePercent: voteIndexs,
+			CandAddress: candAddress,
+		}
 	}
 	return true
 }
-
-// 从投票池中删除
-func (s *HpbNodeSnap) uncast(address common.Address) bool {
-
-	tally, ok := s.Tally[address]
-	if !ok {
-		return false
-	}
-
-	if tally.Votes > 1 {
-		tally.Votes--
-		s.Tally[address] = tally
-	} else {
-		delete(s.Tally, address)
-	}
-	return true
-}
-
-
 
 // 判断当前的次序
 func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
@@ -194,7 +130,6 @@ func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
 }
-
 
 // 判断当前的次序
 func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
@@ -219,19 +154,15 @@ func (s *HpbNodeSnap) GetSigners() []common.Address {
 			}
 		}
 	}
-	
 	return signers
 }
 
-
-// apply creates a new authorization snapshot by applying the given headers to
-// the original one.
-func (s *HpbNodeSnap) Apply(headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 	
 	// 如果头部为空，直接返回
 	if len(headers) == 0 {
-		return s, nil
+		return nil, nil
 	}
 
 	// 检查所有的头部，检查连续性
@@ -240,107 +171,25 @@ func (s *HpbNodeSnap) Apply(headers []*types.Header,chain consensus.ChainReader)
 			return nil, consensus.ErrInvalidVotingChain
 		}
 	}
-	// 回溯到上一个阶段，在下一轮的第一个进行投票
-	if headers[0].Number.Uint64() != s.Number+1 {
-		return nil, consensus.ErrInvalidVotingChain
-	}
 	
-	// 创建一个新的快照
-	snap := s.copy()
-
-    //迭代头文件
+	snap := &HpbNodeSnap{}
+	snap.Tally = make(map[common.Address]Tally)
+	
+	//开始投票
 	for _, header := range headers {
-		// Remove any votes on checkpoint blocks
-		// 初始化
-		number := header.Number.Uint64()
-		
-		//到了投票点会进行重置
-		if number%s.config.Epoch == 0 {
-			snap.Votes = nil
-			snap.Tally = make(map[common.Address]Tally)
-		}
-		// Delete the oldest signerHash from the recent list to allow it signing again
-		// 删除Recents中已经保存的，允许从新签名，删除老的
-		if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {
-			delete(snap.Recents, number-limit)
-		}
-		// 获取当前header是由谁打包的，从签名中还原
-		signer, err := consensus.Ecrecover(header, s.sigcache)
-
-		//log.Info("current head", "Random",header.Random,"number",number)
-
-		//signerHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
-		
-		if err != nil {
-			return nil, err
-		}
-		
-		// signerHash 是否在Signers中，如果不在则返回错误
-		if _, ok := snap.Signers[signer]; !ok {
-			return nil, consensus.ErrUnauthorized
-		}
-		
-		// signerHash 是否在 recent中，说明已经签过名
-		// 防止连续放入
-		
-		for _, recent := range snap.Recents {
-			if recent == signerHash {
-				return nil, errUnauthorized
-			}
-		}
-		
-		// 根据块号放入
-		snap.Recents[number] = signer
-
-		// Header authorized, discard any previous votes from the signerHash
-		// 确认删除，删除之前的投票,删除signer之前的投票
-		for i, vote := range snap.Votes {
-			// 签名人已经在Signer，而且已经对当前的区块签了名字
-			
-			if vote.Signer == signer && vote.Address == header.Coinbase {
-				// Uncast the vote from the cached tally
-				// 从票池进行处理
-				snap.uncast(vote.Address, vote.Authorize)
-
-				// Uncast the vote from the chronological list
-				// 删除投票
-				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-				break // only one vote allowed
-			}
-		}
-	
-		
-		//将投票结果进行放入到计票池子中
-		if snap.cast(header.Coinbase) {
-			snap.Votes = append(snap.Votes, &Vote{
-				Signer:    signer,
-				Block:     number,
-				Address:   header.Coinbase,
-			})
-		}
-
-		// 如果投票通过，则更新 signers
-		if tally := snap.Tally[header.Coinbase]; tally.Votes > len(snap.Signers)/2 {
-			// 如果投票被批准，则放入
-
-			// Discard any previous votes around the just changed account
-			// 删除之前的投票
-			
-			snap.Signers[header.Coinbase] = struct{}{}
-
-			
-			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].Address == header.Coinbase {
-					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-					i--
-				}
-			}
-			delete(snap.Tally, header.Coinbase)
-		}
+		snap.cast(header.CandAddress, header.VoteIndex);
 	}
+	
+	//var indexTally  map[*big.Int]Tally
+	for _, v := range snap.Tally{
+		//indexTally[v.VoteIndexs] = v;
+		snap.Signers[v.CandAddress] = struct{}{}
+	}
+	
+	//等待完善
+	
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
-
 	return snap, nil
 }
 
