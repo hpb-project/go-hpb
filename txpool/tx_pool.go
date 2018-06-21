@@ -797,3 +797,18 @@ func (pool *TxPool) State() *state.ManagedState {
 
 	return pool.pendingState
 }
+
+func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	queued := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.queue {
+		queued[addr] = list.Flatten()
+	}
+	return pending, queued
+}
