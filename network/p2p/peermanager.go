@@ -28,7 +28,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/config"
-
 	"net"
 	"github.com/hpb-project/go-hpb/network/rpc"
 )
@@ -284,6 +283,9 @@ type HpbProto struct {
 	networkId uint64
 	protos   []Protocol
 	callback map[uint64]func(interface{}) (bool)
+
+	//gs *gatherShards
+
 }
 
 const ProtoName        = "hpb"
@@ -318,6 +320,7 @@ func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
 		networkId: 0,
 		protos:    make([]Protocol, 0, len(ProtocolVersions)),
+		//gs:        &gatherShards{make(map[string]*blockShards)},
 	}
 
 	for _, version := range ProtocolVersions {
@@ -741,9 +744,9 @@ type RpcMgr struct {
 // startRPC is a helper method to start all the various RPC endpoint during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
-func (n *RpcMgr) startRPC() error {
+func (n *RpcMgr) startRPC(apis []rpc.API) error {
 	// Gather all the possible APIs to surface
-	apis := n.apis()
+	//apis := n.apis()
 
 	// Start the various API endpoints, terminating all in case of errors
 	if err := n.startInProc(apis); err != nil {
@@ -999,3 +1002,182 @@ func (n *RpcMgr) apis() []rpc.API {
 		*/
 	}
 }
+
+
+
+///////////////////////////////////////////////////////////////
+/*
+//shard case
+type shardHead struct {
+	hash    string  //block的哈希
+	size    int     //payload size
+	each    int     //
+	mask    uint64  //最多64片.每位代表对应的shard。
+	//0x0000 0000 0000 0000 ~ 0xFFFF FFFF FFFF FFFF
+	//代表需要接收0~63个shard
+	tail    []byte  //第0个分片
+}
+
+type shardData struct {
+	hash    string //block的哈希
+	index   int    //索引，代表piece对应的位置
+	piece   []byte //索引指定的分片数据
+}
+// 区块分片数据
+type blockShards struct {
+	start    time.Time //
+	mask     uint64    //
+	each     int       //
+	data     []byte    //
+}
+
+// 分片数据收集器
+type gatherShards struct {
+	blocks map[string]*blockShards
+}
+
+//
+func (pm *HpbProto) SendBlockByShards(peers []*Peer, block * types.Block, td *big.Int) error {
+
+	payload, err := rlp.EncodeToBytes([]interface{}{block, td})
+	if err != nil {
+		panic(fmt.Errorf("SendBlockByShards can't encode object: %v", err))
+	}
+	size := len(payload)
+	hash := block.Hash()
+
+	//len(peers) == (31-1) or (61-1) 其他所有hpnode
+	copy := len(peers)
+	if copy != 30 || copy != 60 {
+		log.Warn("The number of synchronized peers is abnormal")
+	}
+
+	//计算分片数据的mask
+	mask := uint64(^0)
+	mask  = mask << uint(64 -copy)
+	mask  = mask >> uint(64 -copy)
+
+	//计算需要发送tail数据
+	each := size / copy
+	var tail []byte
+	if (size % copy) == 0 {
+		tail   = []byte{}
+	}else {
+		remain := size - (each*copy)
+		tail    = payload[size-remain:]
+	}
+
+	for _, p := range peers {
+		if err := p2p.Send(p.rw, ShardHeadMsg, &shardHead{hash:hash.String(),size:size,each:each,mask:mask,tail:tail}); err!=nil {
+			log.Error("Send block tail shard data error","peer",p.id,"err",err)
+		}
+	}
+
+	//正序一遍
+	for index, p := range peers {
+		piece := payload[index*int(each):(index+1)*int(each)]
+		if err := p2p.Send(p.rw, ShardPieceMsg, &shardData{hash:hash.String(),index:index,piece:piece}); err!=nil {
+			log.Error("Positively send block shard data error","index",index,"peer",p.id,"err",err)
+		}
+	}
+
+	//反序一遍
+	for index, p := range peers {
+		piece := payload[(int(copy)- index-1)*int(each):(int(copy)- index)*int(each)]
+		if err := p2p.Send(p.rw, ShardPieceMsg, &shardData{hash:hash.String(),index:index,piece:piece}); err!=nil {
+			log.Error("Reversely send block shard data error","index",index,"peer",p.id,"err",err)
+		}
+	}
+
+	//乱序一遍
+	//for index, p := range peers {
+	//	piece := payload[index*int(each):(index+1)*int(each)]
+	//	if err := p2p.Send(p.rw, ShardPieceMsg, &shardData{hash:hash.String(),index:index,piece:piece}); err!=nil {
+	//		log.Error("Disorderly send block shard data error","index",index,"peer",p.id,"err",err)
+	//	}
+	//}
+
+	log.Trace("Send block shard data over")
+
+	return nil
+}
+
+//
+func (pm *HpbProto) ForwardBlockShards(peers []*peer, shard *shardData) error {
+
+	for _, p := range peers {
+		if err := p2p.Send(p.rw, ShardPieceMsg, shard); err!=nil {
+			log.Error("Forward block shard data error","index",shard.index,"peer",p.id,"err",err)
+		}
+	}
+	return nil
+}
+
+//
+func (pm *HpbProto) ProcShardHeadMsg(peer *peer, msg p2p.Msg) error {
+	var head shardHead
+	if err := msg.Decode(&head); err != nil {
+		return nil
+	}
+
+	//创建接收block的容器
+	if pm.gs.blocks[head.hash] != nil {
+		log.Warn("Duplicate shard head message data")
+	}
+	bs := &blockShards{start:time.Now(),mask:head.mask,each:head.each,data:make([]byte,head.size,head.size)}
+	pm.gs.blocks[head.hash] = bs
+
+	//复制可能存在的tail数据到payload尾部
+	if len(head.tail) != 0 {
+		n := copy(bs.data[int(head.size)-len(head.tail):],head.tail)
+		if n != len(head.tail){
+			log.Error("Copy tail shard data error")
+		}
+	}
+
+	return nil
+}
+
+//
+func (pm *HpbProto) ProcShardPieceMsg(peer *peer, msg p2p.Msg) *newBlockData {
+
+	var shard shardData
+	if err := msg.Decode(&shard); err != nil {
+		return nil
+	}
+
+	bs := pm.gs.blocks[shard.hash]
+	if bs == nil {
+		log.Error("Could not find the shard piece belongs to")
+		return nil
+	}
+
+	if len(shard.piece) != bs.each {
+		log.Error("Copy shard data len error","expect",bs.each,"receive",len(shard.piece))
+		return nil
+	}
+
+	n := copy(bs.data[bs.each*shard.index:bs.each*(shard.index+1)],shard.piece)
+	if n != bs.each {
+		log.Error("Copy tail shard data error")
+	}
+
+	// 把对应位 mask置0
+	bs.mask = bs.mask &^ (uint64(1)<<uint(shard.index))
+
+	// 继续等待其他分片数据
+	if bs.mask != 0 {
+		return nil
+	}
+
+	// 已经接收到全部分片数据
+	var newBlock newBlockData
+	if err := rlp.DecodeBytes(bs.data, &newBlock); err != nil {
+		log.Error("NewBlockShardMsg DecodeBytes Err")
+		return nil
+	}
+
+	log.Info("","block",newBlock.Block.Hash(),"td",newBlock.TD)
+	return &newBlock
+}
+*/

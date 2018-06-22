@@ -41,7 +41,7 @@ const RandNonceSize = 32
 // 节点类型
 type NodeType  uint8
 const(
-	InitNode  NodeType  = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型
+	InitNode   NodeType  = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型
 
 	AuthNode   NodeType = 0x30  //普通节点 经过认证的节点
 	PreNode    NodeType = 0x31  //候选节点

@@ -57,8 +57,11 @@ const (
 	GetReceiptsMsg     = 0x1b
 	ReceiptsMsg        = 0x1c
 
+
 	HpbTestMsg         = 0x20
 	HpbTestMsgResp     = 0x21
+	//ShardHeadMsg       = 0x28
+	//ShardPieceMsg      = 0x29
 )
 
 
