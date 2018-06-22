@@ -35,6 +35,7 @@ import (
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -94,7 +95,7 @@ type worker struct {
 
 	// update loop
 	mux          *event.TypeMux
-	txCh         chan bc.TxPreEvent
+	txCh         chan event.TxPreEvent
 	txSub        event.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -143,6 +144,15 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
+
+	txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				worker.txCh <- msg
+			}
+		})
+	event.Subscribe(txPreReceiver, event.TxPreTopic)
 	worker.txSub = txpool.GetTxPool().SubscribeTxPreEvent(worker.txCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
