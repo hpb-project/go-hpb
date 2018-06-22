@@ -43,7 +43,7 @@ import (
 
 var (
 	reentryMux sync.Mutex
-	bcInstance *BlockChain
+	singletonInstance *BlockChain
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
 	ErrNoGenesis = errors.New("Genesis not found in chain")
 )
@@ -111,16 +111,16 @@ type BlockChain struct {
 
 // InstanceBlockChain returns the singleton of BlockChain.
 func InstanceBlockChain() (*BlockChain) {
-	if nil == bcInstance {
+	if nil == singletonInstance {
 		reentryMux.Lock()
-		if  nil == bcInstance {
+		if  nil == singletonInstance {
 			// todo for merge
-			bcInstance, err = NewBlockChain(hpbdb.ChainDbInstance(), config.GetChainCfg, consensus.engine.InstanceEngine())
+			singletonInstance, err = NewBlockChain(hpbdb.ChainDbInstance(), config.GetChainCfg, consensus.engine.InstanceEngine())
 		}
 		reentryMux.Unlock()
 	}
 
-	return bcInstance
+	return singletonInstance
 }
 
 // NewBlockChain returns a fully initialised block chain using information

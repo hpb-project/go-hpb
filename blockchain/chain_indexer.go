@@ -19,11 +19,11 @@ package bc
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain/event"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/event"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -102,8 +102,51 @@ func NewChainIndexer(chainDb, indexDb hpbdb.Database, backend ChainIndexerBacken
 // Start creates a goroutine to feed chain head events into the indexer for
 // cascading background processing. Children do not need to be started, they
 // are notified about new events by their parents.
-func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) event.Subscription) {
+func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func() event.Subscriber) {
 	go c.eventLoop(currentHeader, chainEventer)
+}
+
+// eventLoop is a secondary - optional - event loop of the indexer which is only
+// started for the outermost indexer to push chain head events into a processing
+// queue.
+func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func() event.Subscriber) {
+	// Mark the chain indexer as active, requiring an additional teardown
+	atomic.StoreUint32(&c.active, 1)
+
+	events := make(chan ChainEvent, 10)
+	sub := chainEventer()
+	defer sub.UnSubscribe()
+
+	// Fire the initial new head event to start any outstanding processing
+	c.newHead(currentHeader.Number.Uint64(), false)
+
+	var (
+		prevHeader = currentHeader
+		prevHash   = currentHeader.Hash()
+	)
+	for {
+		select {
+		case errc := <-c.quit:
+			// Chain indexer terminating, report no failure and abort
+			errc <- nil
+			return
+
+		case ev, ok := <-events:
+			// Received a new event, ensure it's not nil (closing) and update
+			if !ok {
+				errc := <-c.quit
+				errc <- nil
+				return
+			}
+			header := ev.Block.Header()
+			if header.ParentHash != prevHash {
+				c.newHead(FindCommonAncestor(c.chainDb, prevHeader, header).Number.Uint64(), true)
+			}
+			c.newHead(header.Number.Uint64(), false)
+
+			prevHeader, prevHash = header, header.Hash()
+		}
+	}
 }
 
 // Close tears down all goroutines belonging to the indexer and returns any error
@@ -140,49 +183,6 @@ func (c *ChainIndexer) Close() error {
 
 	default:
 		return fmt.Errorf("%v", errs)
-	}
-}
-
-// eventLoop is a secondary - optional - event loop of the indexer which is only
-// started for the outermost indexer to push chain head events into a processing
-// queue.
-func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) event.Subscription) {
-	// Mark the chain indexer as active, requiring an additional teardown
-	atomic.StoreUint32(&c.active, 1)
-
-	events := make(chan ChainEvent, 10)
-	sub := chainEventer(events)
-	defer sub.Unsubscribe()
-
-	// Fire the initial new head event to start any outstanding processing
-	c.newHead(currentHeader.Number.Uint64(), false)
-
-	var (
-		prevHeader = currentHeader
-		prevHash   = currentHeader.Hash()
-	)
-	for {
-		select {
-		case errc := <-c.quit:
-			// Chain indexer terminating, report no failure and abort
-			errc <- nil
-			return
-
-		case ev, ok := <-events:
-			// Received a new event, ensure it's not nil (closing) and update
-			if !ok {
-				errc := <-c.quit
-				errc <- nil
-				return
-			}
-			header := ev.Block.Header()
-			if header.ParentHash != prevHash {
-				c.newHead(FindCommonAncestor(c.chainDb, prevHeader, header).Number.Uint64(), true)
-			}
-			c.newHead(header.Number.Uint64(), false)
-
-			prevHeader, prevHash = header, header.Hash()
-		}
 	}
 }
 
