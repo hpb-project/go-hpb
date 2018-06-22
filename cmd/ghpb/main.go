@@ -190,7 +190,7 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	hpbnode, _ := MakeConfigNode(ctx)
+	hpbnode, cfg := MakeConfigNode(ctx)
 	startNode(ctx, hpbnode)
 	hpbnode.Wait()
 	return nil
@@ -200,6 +200,9 @@ func ghpb(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+
+	//set rpc aii
+	//utils.SetNodeAPI()
 	// Start up the node itself
 	utils.StartNode(stack)
 
