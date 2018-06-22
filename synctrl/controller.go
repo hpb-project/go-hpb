@@ -38,6 +38,9 @@ import (
 )
 
 const (
+	SoftResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
+	EstHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
+
 	forceSyncCycle      = 10 * time.Second
 	minDesiredPeerCount = 5 // Amount of peers desired to start syncing
 	txChanSize = 100000
@@ -173,7 +176,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.broadcastBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
 
 	return synctrl, nil
 }
@@ -186,21 +189,21 @@ func (this *SynCtrl) Start() {
 
 	// broadcast mined blocks
 	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})
-	go this.minedBroadcastLoop()
+	go this.minedRoutingLoop()
 
 	// start sync handlers
 	go this.sync()
 	go this.txsyncLoop()
 }
 
-// Mined broadcast loop
-func (this *SynCtrl) minedBroadcastLoop() {
+// Mined routing loop
+func (this *SynCtrl) minedRoutingLoop() {
 	// automatically stops if unsubscribe
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
-			this.broadcastBlock(ev.Block, true)  // First propagate block to peers
-			this.broadcastBlock(ev.Block, false) // Only then announce to the rest
+			this.routingBlock(ev.Block, true)  // First propagate block to peers
+			this.routingBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }
@@ -285,15 +288,15 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 		// scenario will most often crop up in private and hackathon networks with
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
-		go this.broadcastBlock(head, false)
+		go this.routingBlock(head, false)
 	}
 }
 
 func (this *SynCtrl) Stop() {
 	log.Info("Stopping Hpb data sync")
 
-	this.txSub.Unsubscribe()         // quits txBroadcastLoop
-	this.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	this.txSub.Unsubscribe()         // quits txRoutingLoop
+	this.minedBlockSub.Unsubscribe() // quits minedRoutingLoop
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -314,26 +317,9 @@ func (this *SynCtrl) Stop() {
 	log.Info("Hpb data sync stopped")
 }
 
-func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
-	peer.KnownTxsAdd(block.Hash())
-	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
-}
-
-func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
-	for _, hash := range hashes {
-		peer.KnownTxsAdd(hash)
-	}
-	request := make(newBlockHashesData, len(hashes))
-	for i := 0; i < len(hashes); i++ {
-		request[i].Hash = hashes[i]
-		request[i].Number = numbers[i]
-	}
-	return peer.SendData(p2p.NewBlockHashesMsg, request)
-}
-
-// broadcastBlock will either propagate a block to a subset of it's peers, or
+// routingBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
-func (this *SynCtrl) broadcastBlock(block *types.Block, propagate bool) {
+func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
 	peers := p2p.PeerMgrInst().PeersWithoutBlock(hash)
 
@@ -429,4 +415,25 @@ func (this *SynCtrl) removePeer(id string) {
 	if peer != nil {
 		peer.Disconnect(p2p.DiscUselessPeer)
 	}
+}
+
+func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
+	peer.KnownTxsAdd(block.Hash())
+	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
+}
+
+func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
+	for _, hash := range hashes {
+		peer.KnownTxsAdd(hash)
+	}
+	request := make(newBlockHashesData, len(hashes))
+	for i := 0; i < len(hashes); i++ {
+		request[i].Hash = hashes[i]
+		request[i].Number = numbers[i]
+	}
+	return peer.SendData(p2p.NewBlockHashesMsg, request)
+}
+
+func SendBlockHeaders(peer *p2p.Peer, headers []*types.Header) error {
+	return peer.SendData(p2p.BlockHeadersMsg, headers)
 }

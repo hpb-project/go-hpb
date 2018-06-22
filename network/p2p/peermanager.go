@@ -17,6 +17,7 @@
 package p2p
 
 import (
+	"encoding/json"
 	"sync"
 	"errors"
 	"math/big"
@@ -25,6 +26,8 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/config"
@@ -442,7 +445,82 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		cb(msg)
 		return nil
 	case msg.Code == GetBlockHeadersMsg:
-		return nil
+		// Decode the complex header query
+		var query synctrl.GetBlockHeadersData
+		if err := msg.Decode(&query); err != nil {
+			return errResp(ErrDecode, "%v: %v", msg, err)
+		}
+		hashMode := query.Origin.Hash != (common.Hash{})
+
+		// Gather headers until the fetch or network limits is reached
+		var (
+			bytes   common.StorageSize
+			headers []*types.Header
+			unknown bool
+		)
+		for !unknown && len(headers) < int(query.Amount) && bytes < synctrl.SoftResponseLimit && len(headers) < synctrl.MaxHeaderFetch {
+			// Retrieve the next header satisfying the query
+			var origin *types.Header
+			if hashMode {
+				origin = bc.InstanceBlockChain().GetHeaderByHash(query.Origin.Hash)
+			} else {
+				origin = bc.InstanceBlockChain().GetHeaderByNumber(query.Origin.Number)
+			}
+			if origin == nil {
+				break
+			}
+			number := origin.Number.Uint64()
+			headers = append(headers, origin)
+			bytes += synctrl.EstHeaderRlpSize
+
+			// Advance to the next header of the query
+			switch {
+			case query.Origin.Hash != (common.Hash{}) && query.Reverse:
+				// Hash based traversal towards the genesis block
+				for i := 0; i < int(query.Skip)+1; i++ {
+					if header := bc.InstanceBlockChain().GetHeader(query.Origin.Hash, number); header != nil {
+						query.Origin.Hash = header.ParentHash
+						number--
+					} else {
+						unknown = true
+						break
+					}
+				}
+			case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
+				// Hash based traversal towards the leaf block
+				var (
+					current = origin.Number.Uint64()
+					next    = current + query.Skip + 1
+				)
+				if next <= current {
+					infos, _ := json.MarshalIndent(p.Info(), "", "  ")
+					p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+					unknown = true
+				} else {
+					if header := bc.InstanceBlockChain().GetHeaderByNumber(next); header != nil {
+						if bc.InstanceBlockChain().GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
+							query.Origin.Hash = header.Hash()
+						} else {
+							unknown = true
+						}
+					} else {
+						unknown = true
+					}
+				}
+			case query.Reverse:
+				// Number based traversal towards the genesis block
+				if query.Origin.Number >= query.Skip+1 {
+					query.Origin.Number -= (query.Skip + 1)
+				} else {
+					unknown = true
+				}
+
+			case !query.Reverse:
+				// Number based traversal towards the leaf block
+				query.Origin.Number += (query.Skip + 1)
+			}
+		}
+		return synctrl.SendBlockHeaders(p, headers)
 
 	case msg.Code == BlockHeadersMsg:
 		return nil
