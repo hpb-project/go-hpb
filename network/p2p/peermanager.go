@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"net"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"sync/atomic"
 )
 
 var (
@@ -92,18 +93,19 @@ type PeerManager struct {
 	hpb    *HpbProto
 }
 
-var pm   *PeerManager
-var lock *sync.Mutex = &sync.Mutex {}
+var INSTANCE = atomic.Value{}
+
 func PeerMgrInst() *PeerManager {
-	if pm == nil {
-		lock.Lock()
-		defer lock.Unlock()
-		pm =&PeerManager{
+	if INSTANCE.Load() == nil {
+		//Please init PeerManager
+		pm :=&PeerManager{
 			peers: make(map[string]*Peer),
 			hpb: NewProtos(),
 		}
+		INSTANCE.Store(pm)
 	}
-	return pm
+
+	return INSTANCE.Load().(*PeerManager)
 }
 
 func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
@@ -983,40 +985,6 @@ func (n *RpcMgr) stopWS() {
 		n.wsHandler = nil
 	}
 }
-
-
-// apis returns the collection of RPC descriptors this node offers.
-func (n *RpcMgr) apis() []rpc.API {
-	return []rpc.API{
-		/*{
-			Namespace: "admin",
-			Version:   "1.0",
-			Service:   NewPrivateAdminAPI(n),
-		}, {
-			Namespace: "admin",
-			Version:   "1.0",
-			Service:   NewPublicAdminAPI(n),
-			Public:    true,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPublicDebugAPI(n),
-			Public:    true,
-		}, {
-			Namespace: "web3",
-			Version:   "1.0",
-			Service:   NewPublicWeb3API(n),
-			Public:    true,
-		},
-		*/
-	}
-}
-
-
 
 ///////////////////////////////////////////////////////////////
 /*
