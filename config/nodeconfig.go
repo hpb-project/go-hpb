@@ -14,7 +14,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/cmd/ghpb"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -116,7 +115,7 @@ type Nodeconfig struct {
 	// relative), then that specific path is enforced. An empty path disables IPC.
 	IPCPath string `toml:",omitempty"`
 
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
+	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
 
 }

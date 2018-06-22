@@ -91,5 +91,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
 
+	//set node rpc api
+	utils.SetNodeAPI(&cfg.Node, stack)
 	return stack, cfg
 }

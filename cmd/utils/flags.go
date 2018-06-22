@@ -41,10 +41,12 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/hpb-project/go-hpb/common/metrics"
-	"github.com/hpb-project/go-hpb/synccontroller/downloader"
-	"github.com/hpb-project/ghpb/protocol"
-	"github.com/hpb-project/ghpb/protocol/lhs"
-	"github.com/hpb-project/ghpb/protocol/hpbstats"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/node/gasprice"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
 var (
@@ -793,6 +795,11 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Network.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
 
+}
+
+//set nodeconfig API
+func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
+	cfg.RpcAPIs = node.APIs()
 }
 
 // SetNodeConfig applies node-related command line flags to the config.

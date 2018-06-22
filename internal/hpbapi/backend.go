@@ -28,12 +28,8 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/network/rpc"
-
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/ghpb/protocol/downloader"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/config"
 )
 
@@ -41,7 +37,7 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	// general Hpb API
-	Downloader() *downloader.Downloader
+	Downloader() *synctrl.Syncer
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() hpbdb.Database
