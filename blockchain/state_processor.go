@@ -19,13 +19,13 @@ package bc
 import (
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/state"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

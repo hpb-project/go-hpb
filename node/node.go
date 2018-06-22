@@ -19,10 +19,10 @@ package node
 import (
 	"errors"
 	"fmt"
-	"net"
 	"os"
+	"sync/atomic"
+	"runtime"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 	"io/ioutil"
@@ -51,8 +51,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
-	"sync/atomic"
-	"runtime"
+
 	"github.com/go-hpb-backkup/blockchain/event"
 	"github.com/hpb-project/go-hpb/consensus/solo"
 )
@@ -419,7 +418,7 @@ func (n *Node) OpenDatabase(name string, cache int, handles int) (hpbdb.Database
 }
 
 // CreateDB creates the chain database.
-func (n *Node) CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
+func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
 	db, err := n.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err

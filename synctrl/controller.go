@@ -18,25 +18,23 @@ package synctrl
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/network/p2p"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -120,10 +118,10 @@ type SynCtrl struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux      *event.TypeMux
-	txCh          chan event.TxPreEvent
-	txSub         event.Subscription
-	minedBlockSub *event.TypeMuxSubscription
+	eventMux      *sub.TypeMux
+	txCh          chan bc.TxPreEvent
+	txSub         sub.Subscription
+	minedBlockSub *sub.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *p2p.Peer
@@ -137,7 +135,7 @@ type SynCtrl struct {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *sub.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    mux,
@@ -317,13 +315,13 @@ func (this *SynCtrl) Stop() {
 }
 
 func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
-	peer.knownBlocks.Add(block.Hash())
+	peer.KnownTxsAdd(block.Hash())
 	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
 }
 
 func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
 	for _, hash := range hashes {
-		peer.knownBlocks.Add(hash)
+		peer.KnownTxsAdd(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
 	for i := 0; i < len(hashes); i++ {

@@ -18,7 +18,7 @@ package synctrl
 
 import (
 	"context"
-	"github.com/hpb-project/go-hpb/blockchain/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 	hpb "github.com/hpb-project/go-hpb/interface"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync"
@@ -28,7 +28,7 @@ import (
 // It offers only methods that operates on data that can be available to anyone without security risks.
 type PublicSyncerAPI struct {
 	syncer                         *Syncer
-	mux                       *event.TypeMux
+	mux                       *sub.TypeMux
 	installSyncSubscription   chan chan interface{}
 	uninstallSyncSubscription chan *uninstallSyncSubscriptionRequest
 }
@@ -37,7 +37,7 @@ type PublicSyncerAPI struct {
 // listens for events from the syncer through the global event mux. In case it receives one of
 // these events it broadcasts it to all syncing subscriptions that are installed through the
 // installSyncSubscription channel.
-func NewPublicSyncerAPI(syncer *Syncer, m *event.TypeMux) *PublicSyncerAPI {
+func NewPublicSyncerAPI(syncer *Syncer, m *sub.TypeMux) *PublicSyncerAPI {
 	api := &PublicSyncerAPI{
 		syncer:   syncer,
 		mux:      m,

@@ -31,6 +31,9 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
+	"strings"
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -40,6 +43,9 @@ const (
 	DefaultWSPort   = 8546        // Default TCP port for the websocket RPC server
 )
 
+const (
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
+)
 const (
 	// BloomBitsBlocks is the number of blocks a single bloom bit section vector
 	// contains.
@@ -166,13 +172,16 @@ var (
 
 var defaultNetworkConfig = NetworkConfig{
 
-	HTTPPort:    DefaultHTTPPort,
-	HTTPModules: []string{"net", "web3"},
-	WSPort:      DefaultWSPort,
-	WSModules:   []string{"net", "web3"},
-	ListenAddr:      ":30303",
-	MaxPeers:        50,
-	NAT:             nat.Any(),
+	HTTPPort:     DefaultHTTPPort,
+	HTTPModules:  []string{"net", "web3"},
+	WSPort:       DefaultWSPort,
+	WSModules:    []string{"net", "web3"},
+	ListenAddr:   ":30303",
+	MaxPeers:     50,
+	NAT:          nat.Any(),
+	ipcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
+	httpEndpoint: DefaultHTTPEndpoint(),
+	wsEndpoint:   DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
@@ -297,6 +306,10 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
+	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	httpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+
 
 }
 
@@ -327,6 +340,17 @@ func DefaultHTTPEndpoint() string {
 	return config.HTTPEndpoint()
 }
 
+// DefaultIPCEndpoint returns the IPC path used by default.
+func DefaultIPCEndpoint(clientIdentifier string) string {
+	if clientIdentifier == "" {
+		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if clientIdentifier == "" {
+			panic("empty executable name")
+		}
+	}
+	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
+	return config.IPCEndpoint()
+}
 // WSEndpoint resolves an websocket endpoint based on the configured host interface
 // and port parameters.
 func (c *NetworkConfig) WSEndpoint() string {
