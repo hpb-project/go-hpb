@@ -3,24 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "b5bkSc2hlmUV7PlLY6JlLwiJpiE=",
-			"path": "bazil.org/fuse",
-			"revision": "371fbbdaa8987b715bdd21d6adc4c9b20155f748",
-			"revisionTime": "2016-08-11T21:22:31Z"
-		},
-		{
-			"checksumSHA1": "389JFJTJADMtZkTIfdSnsmHVOUs=",
-			"path": "bazil.org/fuse/fs",
-			"revision": "371fbbdaa8987b715bdd21d6adc4c9b20155f748",
-			"revisionTime": "2016-08-11T21:22:31Z"
-		},
-		{
-			"checksumSHA1": "NPgkh9UWMsaTtsAAs3kPrclHT9Y=",
-			"path": "bazil.org/fuse/fuseutil",
-			"revision": "371fbbdaa8987b715bdd21d6adc4c9b20155f748",
-			"revisionTime": "2016-08-11T21:22:31Z"
-		},
-		{
 			"checksumSHA1": "+mPwk+SSQv/UloCR0fPIwPvq/NA=",
 			"path": "github.com/AsynkronIT/protoactor-go/actor",
 			"revision": "3992780c0af683deb5ec3746f4ec5845139c6e42",
@@ -61,24 +43,6 @@
 			"path": "github.com/Azure/azure-storage-go",
 			"revision": "12ccaadb081cdd217702067d28da9a7ff4305239",
 			"revisionTime": "2017-03-02T22:15:08Z"
-		},
-		{
-			"checksumSHA1": "+sxS3YEvxf1VxlRskIdXFRWq9rY=",
-			"path": "github.com/Azure/go-autorest/autorest",
-			"revision": "ec5f4903f77ed9927ac95b19ab8e44ada64c1356",
-			"revisionTime": "2017-02-15T19:58:14Z"
-		},
-		{
-			"checksumSHA1": "ghrnc4vZv6q8zzeakZnrS8CGFhE=",
-			"path": "github.com/Azure/go-autorest/autorest/azure",
-			"revision": "ec5f4903f77ed9927ac95b19ab8e44ada64c1356",
-			"revisionTime": "2017-02-15T19:58:14Z"
-		},
-		{
-			"checksumSHA1": "q9Qz8PAxK5FTOZwgYKe5Lj38u4c=",
-			"path": "github.com/Azure/go-autorest/autorest/date",
-			"revision": "ec5f4903f77ed9927ac95b19ab8e44ada64c1356",
-			"revisionTime": "2017-02-15T19:58:14Z"
 		},
 		{
 			"checksumSHA1": "9D7/RhxyPegMVxngNgi1DgIVTp4=",
@@ -123,22 +87,10 @@
 			"revisionTime": "2017-07-31T14:15:57Z"
 		},
 		{
-			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
-			"path": "github.com/dgrijalva/jwt-go",
-			"revision": "2268707a8f0843315e2004ee4f1d021dc08baedf",
-			"revisionTime": "2017-02-01T22:58:49Z"
-		},
-		{
 			"checksumSHA1": "lutCa+IVM60R1OYBm9RtDAW50Ys=",
 			"path": "github.com/docker/docker/pkg/reexec",
 			"revision": "83ee902ecc3790c33c1e2d87334074436056bb49",
 			"revisionTime": "2017-04-22T21:51:12Z"
-		},
-		{
-			"checksumSHA1": "zYnPsNAVm1/ViwCkN++dX2JQhBo=",
-			"path": "github.com/edsrzf/mmap-go",
-			"revision": "935e0e8a636ca4ba70b713f3e38a19e1b77739e8",
-			"revisionTime": "2016-05-12T03:30:02Z"
 		},
 		{
 			"checksumSHA1": "IlDHv+GrkfH+xp1pdKzOqws1sLY=",
@@ -219,12 +171,6 @@
 			"revisionTime": "2017-07-26T21:28:29Z"
 		},
 		{
-			"checksumSHA1": "Z1gJ3PKzwBpOoPnTSEM5yd0zHYA=",
-			"path": "github.com/golang/protobuf/protoc-gen-go/descriptor",
-			"revision": "748d386b5c1ea99658fd69fe9f03991ce86a90c1",
-			"revisionTime": "2017-07-26T21:28:29Z"
-		},
-		{
 			"checksumSHA1": "p/8vSviYF91gFflhrt5vkyksroo=",
 			"path": "github.com/golang/snappy",
 			"revision": "553a641470496b2327abcac10b36396bd98e45c9",
@@ -289,19 +235,6 @@
 			"path": "github.com/jackpal/go-nat-pmp",
 			"revision": "1fa385a6f45828c83361136b45b1a21a12139493",
 			"revisionTime": "2016-06-03T03:41:37Z"
-		},
-		{
-			"checksumSHA1": "gKyBj05YkfuLFruAyPZ4KV9nFp8=",
-			"path": "github.com/julienschmidt/httprouter",
-			"revision": "975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e",
-			"revisionTime": "2017-04-30T22:20:11Z"
-		},
-		{
-			"checksumSHA1": "UpjhOUZ1+0zNt+iIvdtECSHXmTs=",
-			"path": "github.com/karalabe/hid",
-			"revision": "f00545f9f3748e591590be3732d913c77525b10f",
-			"revisionTime": "2017-08-21T10:38:37Z",
-			"tree": true
 		},
 		{
 			"checksumSHA1": "7hln62oZPZmyqEmgXaybf9WxQ7A=",
@@ -710,12 +643,6 @@
 			"path": "golang.org/x/net/websocket",
 			"revision": "b4690f45fa1cafc47b1c280c2e75116efe40cc13",
 			"revisionTime": "2017-02-15T08:41:58Z"
-		},
-		{
-			"checksumSHA1": "4TEYFKrAUuwBMqExjQBsnf/CgjQ=",
-			"path": "golang.org/x/sync/syncmap",
-			"revision": "f52d1811a62927559de87708c8913c1650ce4f26",
-			"revisionTime": "2017-05-17T20:25:26Z"
 		},
 		{
 			"checksumSHA1": "rTPzsn0jeqfgnQR0OsMKR8JRy5Y=",
