@@ -776,7 +776,7 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 		p.KnownTxsAdd(tx.Hash())
 	}
-	txpool.INSTANCE.AddRemotes(txs)
+	txpool.GetTxPool().AddRemotes(txs)
 	return nil
 }
 
