@@ -39,6 +39,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -47,14 +48,14 @@ const (
 
 	forceSyncCycle      = 10 * time.Second
 	minDesiredPeerCount = 5 // Amount of peers desired to start syncing
-	txChanSize = 100000
+	txChanSize          = 100000
 	// This is the target size for the packs of transactions sent by txsyncLoop.
 	// A pack can get larger than this if a single transactions exceeds this size.
 	txsyncPackSize = 100 * 1024
 )
 
 var (
-	reentryMux sync.Mutex
+	reentryMux   sync.Mutex
 	syncInstance *SynCtrl
 )
 
@@ -125,8 +126,8 @@ type SynCtrl struct {
 	chainconfig *config.ChainConfig
 	maxPeers    int
 
-	syner       *Syncer
-	puller      *Puller
+	syner  *Syncer
+	puller *Puller
 
 	SubProtocols []p2p.Protocol
 
@@ -150,7 +151,7 @@ type SynCtrl struct {
 func InstanceSynCtrl() *SynCtrl {
 	if nil == syncInstance {
 		reentryMux.Lock()
-		if  nil == syncInstance {
+		if nil == syncInstance {
 			// todo for merge
 			syncInstance, err = NewSynCtrl(hpbdb.GetChainConfig(), config.GetNetworkid, txpool.GetTxPool())
 			if err != nil {
@@ -164,14 +165,14 @@ func InstanceSynCtrl() *SynCtrl {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool, /*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    new(sub.TypeMux),
 		txpool:      txpool,
 		chaindb:     chaindb,
 		chainconfig: config,
-		newPeerCh:   make(chan *p2p.Peer),//todo
+		newPeerCh:   make(chan *p2p.Peer), //todo
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -185,7 +186,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txp
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
-	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer)//todo removePeer
+	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer) //todo removePeer
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
@@ -202,7 +203,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txp
 		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer) //todo removerPeer
 
 	return synctrl, nil
 }
@@ -210,7 +211,14 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txp
 func (this *SynCtrl) Start() {
 	// broadcast transactions
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
-	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
+	txPreReceiver := event.RegisterReceiver("synctrl_tx_pre_receiver",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				this.txCh <- bc.TxPreEvent{Tx: msg.Message}
+			}
+		})
+	event.Subscribe(txPreReceiver, event.TxPreTopic)
 	go this.txRoutingLoop()
 
 	// broadcast mined blocks
@@ -776,10 +784,6 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 		p.KnownTxsAdd(tx.Hash())
 	}
-	txpool.INSTANCE.AddRemotes(txs)
+	txpool.GetTxPool().AddTxs(txs)
 	return nil
 }
-
-
-
-
