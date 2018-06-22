@@ -28,19 +28,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/hexutil"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/core/state"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/internal/hpbapi"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/common/rlp"
-	"github.com/hpb-project/ghpb/network/rpc"
-	"github.com/hpb-project/ghpb/common/trie"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/common/trie"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/go-hpb/hvm"
 )
 
 const defaultTraceTimeout = 5 * time.Second
@@ -48,11 +49,11 @@ const defaultTraceTimeout = 5 * time.Second
 // PublicHpbAPI provides an API to access Hpb full node-related
 // information.
 type PublicHpbAPI struct {
-	e *Hpb
+	e *Node
 }
 
 // NewPublicHpbAPI creates a new Hpb protocol API for full nodes.
-func NewPublicHpbAPI(e *Hpb) *PublicHpbAPI {
+func NewPublicHpbAPI(e *Node) *PublicHpbAPI {
 	return &PublicHpbAPI{e}
 }
 
@@ -68,17 +69,17 @@ func (api *PublicHpbAPI) Coinbase() (common.Address, error) {
 
 // Mining returns the miner is mining
 func (api *PublicHpbAPI) Mining() bool {
-	return api.e.miner.Mining()
+	return api.e.worker.Mining()
 }
 
-// PrivateMinerAPI provides private RPC methods to control the miner.
+// PrivateMinerAPI provides private RPC methods tso control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateMinerAPI struct {
-	e *Hpb
+	e *Node
 }
 
 // NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
-func NewPrivateMinerAPI(e *Hpb) *PrivateMinerAPI {
+func NewPrivateMinerAPI(e *Node) *PrivateMinerAPI {
 	return &PrivateMinerAPI{e: e}
 }
 
@@ -97,7 +98,7 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 	type threaded interface {
 		SetThreads(threads int)
 	}
-	if th, ok := api.e.engine.(threaded); ok {
+	if th, ok := api.e.Hpbengine.(threaded); ok {
 		log.Info("Updated mining threads", "threads", *threads)
 		th.SetThreads(*threads)
 	}
@@ -108,7 +109,7 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		price := api.e.gasPrice
 		api.e.lock.RUnlock()
 
-		api.e.txPool.SetGasPrice(price)
+		api.e.Hpbtxpool.SetGasPrice(price)
 		return api.e.StartMining(true)
 	}
 	return nil
@@ -119,7 +120,7 @@ func (api *PrivateMinerAPI) Stop() bool {
 	type threaded interface {
 		SetThreads(threads int)
 	}
-	if th, ok := api.e.engine.(threaded); ok {
+	if th, ok := api.e.Hpbengine.(threaded); ok {
 		th.SetThreads(-1)
 	}
 	api.e.StopMining()
@@ -140,7 +141,7 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.gasPrice = (*big.Int)(&gasPrice)
 	api.e.lock.Unlock()
 
-	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
+	api.e.Hpbtxpool.SetGasPrice((*big.Int)(&gasPrice))
 	return true
 }
 
@@ -153,12 +154,12 @@ func (api *PrivateMinerAPI) SetHpberbase(hpberbase common.Address) bool {
 // PrivateAdminAPI is the collection of Hpb full node-related APIs
 // exposed over the private admin endpoint.
 type PrivateAdminAPI struct {
-	hpb *Hpb
+	hpb *Node
 }
 
 // NewPrivateAdminAPI creates a new API definition for the full node private
 // admin methods of the Hpb service.
-func NewPrivateAdminAPI(hpb *Hpb) *PrivateAdminAPI {
+func NewPrivateAdminAPI(hpb *Node) *PrivateAdminAPI {
 	return &PrivateAdminAPI{hpb: hpb}
 }
 
@@ -184,7 +185,7 @@ func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
 	return true, nil
 }
 
-func hasAllBlocks(chain *core.BlockChain, bs []*types.Block) bool {
+func hasAllBlocks(chain *bc.BlockChain, bs []*types.Block) bool {
 	for _, b := range bs {
 		if !chain.HasBlock(b.Hash(), b.NumberU64()) {
 			return false
@@ -246,12 +247,12 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 // PublicDebugAPI is the collection of Hpb full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
-	hpb *Hpb
+	hpb *Node
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
 // related public debug methods of the Hpb service.
-func NewPublicDebugAPI(hpb *Hpb) *PublicDebugAPI {
+func NewPublicDebugAPI(hpb *Node) *PublicDebugAPI {
 	return &PublicDebugAPI{hpb: hpb}
 }
 
@@ -261,14 +262,14 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.hpb.miner.Pending()
+		_, stateDb := api.hpb.worker.Pending()
 		return stateDb.RawDump(), nil
 	}
 	var block *types.Block
 	if blockNr == rpc.LatestBlockNumber {
-		block = api.hpb.blockchain.CurrentBlock()
+		block = api.hpb.Hpbbc.CurrentBlock()
 	} else {
-		block = api.hpb.blockchain.GetBlockByNumber(uint64(blockNr))
+		block = api.hpb.Hpbbc.GetBlockByNumber(uint64(blockNr))
 	}
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
@@ -283,8 +284,8 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 // PrivateDebugAPI is the collection of Hpb full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
-	config *params.ChainConfig
-	hpb    *Hpb
+	config *config.ChainConfig
+	hpb    *Node
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
@@ -303,14 +304,14 @@ type BlockTraceResult struct {
 
 // TraceArgs holds extra parameters to trace functions
 type TraceArgs struct {
-	*vm.LogConfig
+	*evm.LogConfig
 	Tracer  *string
 	Timeout *string
 }
 
 // TraceBlock processes the given block'api RLP but does not import the block in to
 // the chain.
-func (api *PrivateDebugAPI) TraceBlock(blockRlp []byte, config *vm.LogConfig) BlockTraceResult {
+func (api *PrivateDebugAPI) TraceBlock(blockRlp []byte, config *evm.LogConfig) BlockTraceResult {
 	var block types.Block
 	err := rlp.Decode(bytes.NewReader(blockRlp), &block)
 	if err != nil {
@@ -327,7 +328,7 @@ func (api *PrivateDebugAPI) TraceBlock(blockRlp []byte, config *vm.LogConfig) Bl
 
 // TraceBlockFromFile loads the block'api RLP from the given file name and attempts to
 // process it but does not import the block in to the chain.
-func (api *PrivateDebugAPI) TraceBlockFromFile(file string, config *vm.LogConfig) BlockTraceResult {
+func (api *PrivateDebugAPI) TraceBlockFromFile(file string, config *evm.LogConfig) BlockTraceResult {
 	blockRlp, err := ioutil.ReadFile(file)
 	if err != nil {
 		return BlockTraceResult{Error: fmt.Sprintf("could not read file: %v", err)}
@@ -336,17 +337,17 @@ func (api *PrivateDebugAPI) TraceBlockFromFile(file string, config *vm.LogConfig
 }
 
 // TraceBlockByNumber processes the block by canonical block number.
-func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *vm.LogConfig) BlockTraceResult {
+func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *evm.LogConfig) BlockTraceResult {
 	// Fetch the block that we aim to reprocess
 	var block *types.Block
 	switch blockNr {
 	case rpc.PendingBlockNumber:
 		// Pending block is only known by the miner
-		block = api.hpb.miner.PendingBlock()
+		block = api.hpb.worker.PendingBlock()
 	case rpc.LatestBlockNumber:
-		block = api.hpb.blockchain.CurrentBlock()
+		block = api.hpb.Hpbbc.CurrentBlock()
 	default:
-		block = api.hpb.blockchain.GetBlockByNumber(uint64(blockNr))
+		block = api.hpb.Hpbbc.GetBlockByNumber(uint64(blockNr))
 	}
 
 	if block == nil {
@@ -362,7 +363,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *
 }
 
 // TraceBlockByHash processes the block by hash.
-func (api *PrivateDebugAPI) TraceBlockByHash(hash common.Hash, config *vm.LogConfig) BlockTraceResult {
+func (api *PrivateDebugAPI) TraceBlockByHash(hash common.Hash, config *evm.LogConfig) BlockTraceResult {
 	// Fetch the block that we aim to reprocess
 	block := api.hpb.BlockChain().GetBlockByHash(hash)
 	if block == nil {
@@ -378,7 +379,7 @@ func (api *PrivateDebugAPI) TraceBlockByHash(hash common.Hash, config *vm.LogCon
 }
 
 // traceBlock processes the given block but does not save the state.
-func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *vm.LogConfig) (bool, []vm.StructLog, error) {
+func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogConfig) (bool, []evm.StructLog, error) {
 	// Validate and reprocess the block
 	var (
 		blockchain = api.hpb.BlockChain()
@@ -386,13 +387,13 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *vm.LogConf
 		processor  = blockchain.Processor()
 	)
 
-	structLogger := vm.NewStructLogger(logConfig)
+	structLogger := evm.NewStructLogger(logConfig)
 
-	config := vm.Config{
+	config := evm.Config{
 		Debug:  true,
 		Tracer: structLogger,
 	}
-	if err := api.hpb.engine.VerifyHeader(blockchain, block.Header(), true); err != nil {
+	if err := api.hpb.Hpbengine.VerifyHeader(blockchain, block.Header(), true); err != nil {
 		return false, structLogger.StructLogs(), err
 	}
 	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
@@ -428,7 +429,7 @@ func (t *timeoutError) Error() string {
 // TraceTransaction returns the structured logs created during the execution of EVM
 // and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.Hash, config *TraceArgs) (interface{}, error) {
-	var tracer vm.Tracer
+	var tracer evm.Tracer
 	if config != nil && config.Tracer != nil {
 		timeout := defaultTraceTimeout
 		if config.Timeout != nil {
@@ -451,13 +452,13 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 		}()
 		defer cancel()
 	} else if config == nil {
-		tracer = vm.NewStructLogger(nil)
+		tracer = evm.NewStructLogger(nil)
 	} else {
-		tracer = vm.NewStructLogger(config.LogConfig)
+		tracer = evm.NewStructLogger(config.LogConfig)
 	}
 
 	// Retrieve the tx from the chain and the containing block
-	tx, blockHash, _, txIndex := core.GetTransaction(api.hpb.ChainDb(), txHash)
+	tx, blockHash, _, txIndex := bc.GetTransaction(api.hpb.ChainDb(), txHash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction %x not found", txHash)
 	}
@@ -467,8 +468,10 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	}
 
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
-	ret, gas, failed, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()))
+	vmenv := evm.NewEVM(context, statedb, api.config, evm.Config{Debug: true, Tracer: tracer})
+
+	ApplyMessage(bc *BlockChain, header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool)
+	ret, gas, failed, err := bc.ApplyMessage(vmenv, msg, new(bc.GasPool).AddGas(tx.Gas()))
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
