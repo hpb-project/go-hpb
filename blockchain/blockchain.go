@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -38,7 +39,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/hpb-project/go-hpb/event"
+
 )
 
 var (
@@ -78,8 +79,12 @@ type BlockChain struct {
 
 	hc            *HeaderChain
 	chainDb       hpbdb.Database
-	syncEvent 	  *event.SyncEvent
-
+	rmLogsFeed    sub.Feed
+	chainFeed     sub.Feed
+	chainSideFeed sub.Feed
+	chainHeadFeed sub.Feed
+	logsFeed      sub.Feed
+	scope         sub.SubscriptionScope
 	genesisBlock  *types.Block
 
 	mu      sync.RWMutex // global mutex for locking chain operations
@@ -144,7 +149,6 @@ func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine co
 		futureBlocks: futureBlocks,
 		engine:       engine,
 		badBlocks:    badBlocks,
-		syncEvent: 	  event.NewEvent(),
 	}
 	bc.SetValidator(NewBlockValidator(config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(config, bc, engine))
@@ -1154,12 +1158,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		DeleteTxLookupEntry(bc.chainDb, tx.Hash())
 	}
 	if len(deletedLogs) > 0 {
-		go bc.syncEvent.Notify(RemovedLogsEventType,RemovedLogsEvent{deletedLogs})
+		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
 	}
 	if len(oldChain) > 0 {
 		go func() {
 			for _, block := range oldChain {
-				bc.syncEvent.Notify(ChainSideEventType,ChainSideEvent{Block: block})
+				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 			}
 		}()
 	}
@@ -1172,18 +1176,18 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 	// post event logs for further processing
 	if logs != nil {
-		bc.syncEvent.Notify(LogsEventType,logs)
+		bc.logsFeed.Send(logs)
 	}
 	for _, event := range events {
 		switch ev := event.(type) {
 		case ChainEvent:
-			bc.syncEvent.Notify(ChainEventType,ev)
+			bc.chainFeed.Send(ev)
 
 		case ChainHeadEvent:
-			bc.syncEvent.Notify(ChainHeadEvenType,ev)
+			bc.chainHeadFeed.Send(ev)
 
 		case ChainSideEvent:
-			bc.syncEvent.Notify(ChainSideEventType,ev)
+			bc.chainSideFeed.Send(ev)
 		}
 	}
 }
@@ -1362,26 +1366,27 @@ func (bc *BlockChain) Config() *config.ChainConfig { return bc.config }
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
 
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
-func (bc *BlockChain) SubscribeRemovedLogsEvent() event.Subscriber {
-	return bc.syncEvent.Subscribe(RemovedLogsEventType)
+func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) sub.Subscription {
+	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))
 }
 
 // SubscribeChainEvent registers a subscription of ChainEvent.
-func (bc *BlockChain) SubscribeChainEvent() event.Subscriber {
-	return bc.syncEvent.Subscribe(ChainEventType)
+func (bc *BlockChain) SubscribeChainEvent(ch chan<- ChainEvent) sub.Subscription {
+	return bc.scope.Track(bc.chainFeed.Subscribe(ch))
 }
 
 // SubscribeChainHeadEvent registers a subscription of ChainHeadEvent.
-func (bc *BlockChain) SubscribeChainHeadEvent() event.Subscriber {
-	return bc.syncEvent.Subscribe(ChainHeadEvenType)
+func (bc *BlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) sub.Subscription {
+	return bc.scope.Track(bc.chainHeadFeed.Subscribe(ch))
 }
 
 // SubscribeChainSideEvent registers a subscription of ChainSideEvent.
-func (bc *BlockChain) SubscribeChainSideEvent() event.Subscriber {
-	return bc.syncEvent.Subscribe(ChainSideEventType)
+func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) sub.Subscription {
+	return bc.scope.Track(bc.chainSideFeed.Subscribe(ch))
 }
 
 // SubscribeLogsEvent registers a subscription of []*types.Log.
-func (bc *BlockChain) SubscribeLogsEvent() event.Subscriber {
-	return bc.syncEvent.Subscribe(LogsEventType)
+func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) sub.Subscription {
+	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
+

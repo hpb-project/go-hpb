@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -102,20 +102,20 @@ func NewChainIndexer(chainDb, indexDb hpbdb.Database, backend ChainIndexerBacken
 // Start creates a goroutine to feed chain head events into the indexer for
 // cascading background processing. Children do not need to be started, they
 // are notified about new events by their parents.
-func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func() event.Subscriber) {
+func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) sub.Subscription) {
 	go c.eventLoop(currentHeader, chainEventer)
 }
 
 // eventLoop is a secondary - optional - event loop of the indexer which is only
 // started for the outermost indexer to push chain head events into a processing
 // queue.
-func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func() event.Subscriber) {
+func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) sub.Subscription) {
 	// Mark the chain indexer as active, requiring an additional teardown
 	atomic.StoreUint32(&c.active, 1)
 
 	events := make(chan ChainEvent, 10)
-	sub := chainEventer()
-	defer sub.UnSubscribe()
+	sub := chainEventer(events)
+	defer sub.Unsubscribe()
 
 	// Fire the initial new head event to start any outstanding processing
 	c.newHead(currentHeader.Number.Uint64(), false)

@@ -36,7 +36,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 const (
@@ -120,10 +120,10 @@ type SynCtrl struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux      *event.TypeMux
-	txCh          chan event.TxPreEvent
-	txSub         event.Subscription
-	minedBlockSub *event.TypeMuxSubscription
+	eventMux      *sub.TypeMux
+	txCh          chan bc.TxPreEvent
+	txSub         sub.Subscription
+	minedBlockSub *sub.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *p2p.Peer
@@ -137,7 +137,7 @@ type SynCtrl struct {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *event.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *sub.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    mux,

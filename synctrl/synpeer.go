@@ -22,7 +22,7 @@ package synctrl
 import (
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -350,8 +350,8 @@ func (p *peerConnection) Lacks(hash common.Hash) bool {
 // download procedure.
 type peerSet struct {
 	peers        map[string]*peerConnection
-	newPeerFeed  event.Feed
-	peerDropFeed event.Feed
+	newPeerFeed  sub.Feed
+	peerDropFeed sub.Feed
 	lock         sync.RWMutex
 }
 
@@ -363,12 +363,12 @@ func newPeerSet() *peerSet {
 }
 
 // SubscribeNewPeers subscribes to peer arrival events.
-func (ps *peerSet) SubscribeNewPeers(ch chan<- *peerConnection) event.Subscription {
+func (ps *peerSet) SubscribeNewPeers(ch chan<- *peerConnection) sub.Subscription {
 	return ps.newPeerFeed.Subscribe(ch)
 }
 
 // SubscribePeerDrops subscribes to peer departure events.
-func (ps *peerSet) SubscribePeerDrops(ch chan<- *peerConnection) event.Subscription {
+func (ps *peerSet) SubscribePeerDrops(ch chan<- *peerConnection) sub.Subscription {
 	return ps.peerDropFeed.Subscribe(ch)
 }
 

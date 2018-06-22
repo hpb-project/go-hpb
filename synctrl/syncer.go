@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -157,7 +157,7 @@ type Syncer struct {
 	mode         SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
 	strategy     syncStrategy
 
-	mux     *event.TypeMux // Event multiplexer to announce sync operation events
+	mux     *sub.TypeMux // Event multiplexer to announce sync operation events
 	stateDB hpbdb.Database
 	lightchain LightChain
 
@@ -188,7 +188,7 @@ type Syncer struct {
 	quitCh   chan struct{} // Quit channel to signal termination
 }
 
-func NewSyncer(mode SyncMode, stateDb hpbdb.Database, mux *event.TypeMux, lightchain LightChain,
+func NewSyncer(mode SyncMode, stateDb hpbdb.Database, mux *sub.TypeMux, lightchain LightChain,
 	dropPeer peerDropFn) *Syncer {
 	if lightchain == nil {
 		lightchain = bc.InstanceBlockChain()
