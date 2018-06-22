@@ -376,7 +376,7 @@ func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
 	return  nil
 }
 
-func errResp(code errCode, format string, v ...interface{}) error {
+func ErrResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
 
@@ -431,7 +431,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	//log.Trace("HpbProto handle massage","Msg",msg.String())
 
 	if msg.Size > ProtoMaxMsg {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtoMaxMsg)
+		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtoMaxMsg)
 	}
 
 	defer msg.Discard()
@@ -489,7 +489,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return nil
 
 	default:
-		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
+		return ErrResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
 	return nil
 }
@@ -634,23 +634,23 @@ func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Has
 		return err
 	}
 	if msg.Code != StatusMsg {
-		return errResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
+		return ErrResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
 	}
 	//if msg.Size > ProtocolMaxMsgSize {
 	//	return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	//}
 	// Decode the handshake and make sure everything matches
 	if err := msg.Decode(&status); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	if status.GenesisBlock != genesis {
-		return errResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
+		return ErrResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
 	}
 	if status.NetworkId != network {
-		return errResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
+		return ErrResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
 	}
 	if uint(status.ProtocolVersion) != p.version {
-		return errResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
+		return ErrResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
 	}
 	return nil
 }
