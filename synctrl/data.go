@@ -24,6 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 // statusData is the network packet for the status message.
@@ -42,7 +43,7 @@ type newBlockHashesData []struct {
 }
 
 // GetBlockHeadersData represents a block header query.
-type GetBlockHeadersData struct {
+type getBlockHeadersData struct {
 	Origin  hashOrNumber // Block from which to retrieve headers
 	Amount  uint64       // Maximum number of headers to retrieve
 	Skip    uint64       // Blocks to skip between consecutive headers
@@ -99,3 +100,24 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
+	peer.KnownTxsAdd(block.Hash())
+	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
+}
+
+func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
+	for _, hash := range hashes {
+		peer.KnownTxsAdd(hash)
+	}
+	request := make(newBlockHashesData, len(hashes))
+	for i := 0; i < len(hashes); i++ {
+		request[i].Hash = hashes[i]
+		request[i].Number = numbers[i]
+	}
+	return peer.SendData(p2p.NewBlockHashesMsg, request)
+}
+
+func sendBlockHeaders(peer *p2p.Peer, headers []*types.Header) error {
+	return peer.SendData(p2p.BlockHeadersMsg, headers)
+}

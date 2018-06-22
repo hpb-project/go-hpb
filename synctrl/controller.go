@@ -17,6 +17,7 @@
 package synctrl
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -38,8 +39,8 @@ import (
 )
 
 const (
-	SoftResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
-	EstHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
+	softResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
+	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
 
 	forceSyncCycle      = 10 * time.Second
 	minDesiredPeerCount = 5 // Amount of peers desired to start syncing
@@ -417,23 +418,81 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 }
 
-func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
-	peer.KnownTxsAdd(block.Hash())
-	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
-}
-
-func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
-	for _, hash := range hashes {
-		peer.KnownTxsAdd(hash)
+func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Decode the complex header query
+	var query getBlockHeadersData
+	if err := msg.Decode(&query); err != nil {
+		return errResp(ErrDecode, "%v: %v", msg, err)
 	}
-	request := make(newBlockHashesData, len(hashes))
-	for i := 0; i < len(hashes); i++ {
-		request[i].Hash = hashes[i]
-		request[i].Number = numbers[i]
-	}
-	return peer.SendData(p2p.NewBlockHashesMsg, request)
-}
+	hashMode := query.Origin.Hash != (common.Hash{})
 
-func SendBlockHeaders(peer *p2p.Peer, headers []*types.Header) error {
-	return peer.SendData(p2p.BlockHeadersMsg, headers)
+	// Gather headers until the fetch or network limits is reached
+	var (
+		bytes   common.StorageSize
+		headers []*types.Header
+		unknown bool
+	)
+	for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < MaxHeaderFetch {
+		// Retrieve the next header satisfying the query
+		var origin *types.Header
+		if hashMode {
+			origin = bc.InstanceBlockChain().GetHeaderByHash(query.Origin.Hash)
+		} else {
+			origin = bc.InstanceBlockChain().GetHeaderByNumber(query.Origin.Number)
+		}
+		if origin == nil {
+			break
+		}
+		number := origin.Number.Uint64()
+		headers = append(headers, origin)
+		bytes += estHeaderRlpSize
+
+		// Advance to the next header of the query
+		switch {
+		case query.Origin.Hash != (common.Hash{}) && query.Reverse:
+			// Hash based traversal towards the genesis block
+			for i := 0; i < int(query.Skip)+1; i++ {
+				if header := bc.InstanceBlockChain().GetHeader(query.Origin.Hash, number); header != nil {
+					query.Origin.Hash = header.ParentHash
+					number--
+				} else {
+					unknown = true
+					break
+				}
+			}
+		case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
+			// Hash based traversal towards the leaf block
+			var (
+				current = origin.Number.Uint64()
+				next    = current + query.Skip + 1
+			)
+			if next <= current {
+				infos, _ := json.MarshalIndent(p.Info(), "", "  ")
+				p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+				unknown = true
+			} else {
+				if header := bc.InstanceBlockChain().GetHeaderByNumber(next); header != nil {
+					if bc.InstanceBlockChain().GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
+						query.Origin.Hash = header.Hash()
+					} else {
+						unknown = true
+					}
+				} else {
+					unknown = true
+				}
+			}
+		case query.Reverse:
+			// Number based traversal towards the genesis block
+			if query.Origin.Number >= query.Skip+1 {
+				query.Origin.Number -= (query.Skip + 1)
+			} else {
+				unknown = true
+			}
+
+		case !query.Reverse:
+			// Number based traversal towards the leaf block
+			query.Origin.Number += (query.Skip + 1)
+		}
+	}
+	return sendBlockHeaders(p, headers)
 }
