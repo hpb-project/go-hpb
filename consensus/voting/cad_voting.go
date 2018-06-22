@@ -110,7 +110,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			
 			strnum := strconv.Itoa(i)
 			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
-		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)})
+		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,VoteIndex})
 		}
 		
 		// 先获取长度，然后进行随机获取
@@ -125,8 +125,8 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		//fmt.Println("len:", len(lastCadWinners))
 		
 		//开始进行排序获取最大值
-		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",uint64(10)}
-		voteIndexTemp := uint64(0)
+		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",float64(10)}
+		voteIndexTemp := float64(0)
 		
 		for _, lastCadWinner := range lastCadWinners {
 	        if(lastCadWinner.VoteIndex > voteIndexTemp){

@@ -49,7 +49,7 @@ type Genesis struct {
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
 	//ExtraHash  []byte              `json:"extraHash"`
-	VoteIndex  uint64              `json:"voteIndex"`
+	VoteIndex  float64              `json:"voteIndex"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
@@ -251,7 +251,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		//CoinbaseHash:   g.CoinbaseHash,
-		VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
+		VoteIndex:  g.VoteIndex,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {

@@ -19,10 +19,10 @@ package snapshots
 
 import (
 	"bytes"
-	//"sort"
-	//"fmt"
+	"sort"
+	"fmt"
 	"encoding/json"
-	"math/big"
+	//"math/big"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/storage"
@@ -37,9 +37,9 @@ import (
 
 type Tally struct {
 	CandAddress    common.Address  `json:"candAddress"`     // 通过投票的个数
-	VoteNumbers    *big.Int  `json:"voteNumbers"`     // 通过投票的个数
-	VoteIndexs     *big.Int   `json:"voteIndexs"`     // 通过投票的个数
-	VotePercent    *big.Int  `json:"votePercent"`     // 通过投票的个数
+	VoteNumbers    int  `json:"voteNumbers"`     // 通过投票的个数
+	VoteIndexs     float64   `json:"voteIndexs"`     // 通过投票的个数
+	VotePercent    float64  `json:"votePercent"`     // 通过投票的个数
 }
 
 type HpbNodeSnap struct {
@@ -102,18 +102,18 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 
 
 // 投票池中添加
-func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
+func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs float64) bool {
 	//if !s.ValidVote(address) {
 	//	return false
 	//}
 	if old, ok := s.Tally[candAddress]; ok {
-        old.VoteNumbers = new(big.Int).Add(old.VoteNumbers, big.NewInt(1))
-        old.VoteIndexs = new(big.Int).Add(old.VoteIndexs, voteIndexs)
-        old.VoteIndexs = new(big.Int).Div(old.VoteIndexs, old.VoteNumbers)
+        old.VoteNumbers = old.VoteNumbers + 1
+        old.VoteIndexs = old.VoteIndexs + voteIndexs
+        old.VoteIndexs = old.VoteIndexs/float64(old.VoteNumbers)
         old.CandAddress = candAddress
 	} else {
 		s.Tally[candAddress] = Tally{
-			VoteNumbers: big.NewInt(1),
+			VoteNumbers: 1,
 			VoteIndexs: voteIndexs,
 			VotePercent: voteIndexs,
 			CandAddress: candAddress,
@@ -124,7 +124,7 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 
 // 判断当前的次序
 func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
-	signers, offset := s.GetSigners(), 0
+	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
@@ -133,7 +133,7 @@ func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
 
 // 判断当前的次序
 func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
-	signers, offset := s.GetSigners(), 0
+	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
@@ -141,7 +141,7 @@ func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
 }
 
 // 已经授权的signers, 无需进行排序
-func (s *HpbNodeSnap) GetSigners() []common.Address {
+func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	signers := make([]common.Address, 0, len(s.Signers))
 	for signer := range s.Signers {
 		signers = append(signers, signer)
@@ -180,14 +180,21 @@ func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*Hp
 		snap.cast(header.CandAddress, header.VoteIndex);
 	}
 	
-	//var indexTally  map[*big.Int]Tally
+	var keys []float64
+	var indexTally  map[float64]Tally
 	for _, v := range snap.Tally{
-		//indexTally[v.VoteIndexs] = v;
+		indexTally[v.VotePercent] = v;
+		keys = append(keys,v.VotePercent)
 		snap.Signers[v.CandAddress] = struct{}{}
 	}
 	
-	//等待完善
+	sort.Float64s(keys)
 	
+	for i := 0; i < len(keys)-1; i++ {
+		fmt.Printf("#####%.f\n", i)
+	}
+
+	//等待完善
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 	return snap, nil

@@ -309,8 +309,8 @@ func PublicKeys(signers ...Signer) AuthMethod {
 
 // PublicKeysCallback returns an AuthMethod that runs the given
 // function to obtain a list of key pairs.
-func PublicKeysCallback(getSigners func() (signers []Signer, err error)) AuthMethod {
-	return publicKeyCallback(getSigners)
+func PublicKeysCallback(getHpbNodes func() (signers []Signer, err error)) AuthMethod {
+	return publicKeyCallback(getHpbNodes)
 }
 
 // handleAuthResponse returns whether the preceding authentication request succeeded

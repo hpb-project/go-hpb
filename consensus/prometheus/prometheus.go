@@ -60,23 +60,53 @@ const (
 var (
 	epochLength = uint64(30000) // 充值投票的时的间隔，默认 30000个
 	blockPeriod = uint64(15)    // 两个区块之间的默认时间 15 秒
-
-	//extraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signerHash vanity
-	//extraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
-
-	//nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signerHash
-	//nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signerHash.
-
 	uncleHash = types.CalcUncleHash(nil) //
-
 	diffInTurn = big.NewInt(2) // 当轮到的时候难度值设置 2
 	diffNoTurn = big.NewInt(1) // 当非轮到的时候难度设置 1
 )
 
+// Prometheus 的主体结构
+type Prometheus struct {
+	config *params.PrometheusConfig // Consensus 共识配置
+	db     hpbdb.Database           // 数据库
+
+	recents    *lru.ARCCache // 最近的签名
+	signatures *lru.ARCCache // 签名后的缓存
+
+	proposals map[common.Address]bool // 当前的proposals
+	//proposalsHash map[common.AddressHash]bool // 当前 proposals hash
+
+	signer     common.Address     // 签名的 Key
+	//signerHash common.AddressHash // 地址的hash
+	randomStr  string             // 产生的随机数
+	signFn     SignerFn           // 回调函数
+	lock       sync.RWMutex       // Protects the signerHash fields
+}
+
+// 新创建,在backend中调用
+func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
+
+	conf := *config
+
+	//设置默认参数
+	if conf.Epoch == 0 {
+		conf.Epoch = epochLength
+	}
+	// 分配内存
+	recents, _ := lru.NewARC(inmemoryHistorysnaps)
+	signatures, _ := lru.NewARC(inmemorySignatures)
+
+	return &Prometheus{
+		config:     &conf,
+		db:         db,
+		recents:    recents,
+		signatures: signatures,
+		proposals:  make(map[common.Address]bool),
+	}
+}
+
 // 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
-
-
 
 // 实现引擎的Prepare函数
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
@@ -93,15 +123,16 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return err
 	}
 	
-	//在非投票点
+	//在非投票点, 从网络中获取进行提案
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
 		// 从网络中获取一个
 		if cadWinner,err := voting.GetBestCadNodeFromNetwork(c.db, chain, number-1, header.ParentHash); err == nil{
 			caddress := common.HexToAddress(cadWinner.Address)
 			//if snap.ValidVote(address, true) {
-			header.Coinbase = caddress // 设置地址
-			header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
+			header.CandAddress = caddress // 设置地址
+			//header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
+			header.VoteIndex = cadWinner.VoteIndex   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 			//}
 			log.Info("#########################################TESE", cadWinner.Address)
@@ -119,7 +150,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.Difficulty = diffInTurn
 	}
 	
-	// Ensure the extra data has all it's components
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
@@ -127,9 +157,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	header.Extra = header.Extra[:consensus.ExtraVanity]
 
-    //在投票周期的时候，放入全部的AddressHash
+    //在投票周期的时候，放入全部的Address
 	if number%c.config.Epoch == 0 {
-		for _, signer := range snap.GetSigners() {
+		for _, signer := range snap.GetHpbNodes() {
 			header.Extra = append(header.Extra, signer[:]...)
 		}
 	}
@@ -137,7 +167,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
-	// 获取父亲的节点
+	//获取父亲的节点
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
@@ -150,6 +180,128 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.Time = big.NewInt(time.Now().Unix())
 	}
 	return nil
+}
+
+
+//生成区块
+func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+	header := block.Header()
+
+	log.Info("HPB Prometheus Seal is starting")
+
+	// Sealing the genesis block is not supported
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil, consensus.ErrUnknownBlock
+	}
+	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
+	if c.config.Period == 0 && len(block.Transactions()) == 0 {
+		return nil, consensus.ErrWaitTransactions
+	}
+	// Don't hold the signerHash fields for the entire sealing procedure
+	c.lock.RLock()
+	signer, signFn := c.signer, c.signFn
+
+	//log.Info("Current seal random is" + header.Random)
+	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
+
+	log.Info("signer's address","signer", signer.Hex())
+
+	c.lock.RUnlock()
+
+	// Bail out if we're unauthorized to sign a block
+	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
+	//
+	if err != nil {
+		return nil, err
+	}
+
+	if _, authorized := snap.Signers[signer]; !authorized {
+		return nil, consensus.ErrUnauthorized
+	}
+
+	//log.Info("Proposed the random number in current round:" + header.Random)
+
+	// If we're amongst the recent signers, wait for the next block
+	// 如果最近已经签名，则需要等待时序
+	/*
+	for seen, recent := range snap.Recents {
+		if recent == signerHash {
+			// 签名者在recents缓存中，等待被移除
+			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
+				log.Info("Prometheus： Signed recently, must wait for others")
+				<-stop
+				return nil, nil
+			}
+		}
+	}*/
+	// Sweet, the protocol permits us to sign the block, wait for our time
+	// 轮到我们的签名
+	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
+	// 比较难度值，确定是否为适合的时间
+	if header.Difficulty.Cmp(diffNoTurn) == 0 {
+		// It's not our turn explicitly to sign, delay it a bit
+		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
+		//delay += time.Duration(rand.Int63n(int64(wiggle)))
+
+		log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		
+		currentIndex := number % uint64(len(snap.Signers))	
+		offset := snap.GetOffset(header.Number.Uint64(), signer)
+
+       //在一定范围内延迟8分,当前的currentIndex往前的没有超过
+       if(currentIndex <= uint64(len(snap.Signers)/2)){
+	       if(offset - currentIndex <= uint64(len(snap.Signers)/2)){
+				wiggle = time.Duration(1000) * wiggleTime
+				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","less than half",common.PrettyDuration(wiggle))
+				delay += wiggle;
+			}else{
+				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
+			}
+       }else{
+       	    if(offset + uint64(len(snap.Signers)/2) <= currentIndex){
+				wiggle = time.Duration(1000) * wiggleTime
+				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","more than half",common.PrettyDuration(wiggle))
+				delay += wiggle;
+			}else{
+				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
+			}
+       }
+		
+		log.Info("Out-of-turn signing requested ++++++++++++++++++++++++++++++++++", "delay", common.PrettyDuration(delay))
+	}
+
+	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
+
+	select {
+	case <-stop:
+		return nil, nil
+	case <-time.After(delay):
+	}
+	// 签名交易，signFn为回掉函数
+	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	//将签名后的结果返给到Extra中
+	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
+
+	return block.WithSeal(header), nil
+}
+
+
+
+
+
+// Authorize injects a private key into the consensus engine to mint new blocks
+// with.
+func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.signer = signer
+	c.signFn = signFn
 }
 
 
@@ -174,7 +326,6 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	}
 	
 	//不在投票点开始获取数据库中的内容
-	
 	latestCheckPointNumber :=  uint64(math.Floor(float64(number/comCheckpointInterval)))*comCheckpointInterval
 	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
 
@@ -319,9 +470,7 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 			}
 		}
 		
-		if snapa, err := snapshots.CalculateHpbSnap(headers,chain); err != nil {
-			return nil, err
-		}else{
+		if snapa, err := snapshots.CalculateHpbSnap(headers,chain); err == nil {
 			if err := c.storeDataToCacheAndDb(c.db, snap); err != nil {
 				return nil, err
 			}
@@ -331,46 +480,6 @@ func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, 
 	return nil, nil
 }
 
-
-// Prometheus 的主体结构
-type Prometheus struct {
-	config *params.PrometheusConfig // Consensus 共识配置
-	db     hpbdb.Database           // 数据库
-
-	recents    *lru.ARCCache // 最近的签名
-	signatures *lru.ARCCache // 签名后的缓存
-
-	proposals map[common.Address]bool // 当前的proposals
-	//proposalsHash map[common.AddressHash]bool // 当前 proposals hash
-
-	signer     common.Address     // 签名的 Key
-	//signerHash common.AddressHash // 地址的hash
-	randomStr  string             // 产生的随机数
-	signFn     SignerFn           // 回调函数
-	lock       sync.RWMutex       // Protects the signerHash fields
-}
-
-// 新创建,在backend中调用
-func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
-
-	conf := *config
-
-	//设置默认参数
-	if conf.Epoch == 0 {
-		conf.Epoch = epochLength
-	}
-	// 分配内存
-	recents, _ := lru.NewARC(inmemoryHistorysnaps)
-	signatures, _ := lru.NewARC(inmemorySignatures)
-
-	return &Prometheus{
-		config:     &conf,
-		db:         db,
-		recents:    recents,
-		signatures: signatures,
-		proposals:  make(map[common.Address]bool),
-	}
-}
 
 // 从当前的签名中，返回追溯到签名者
 func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
@@ -497,7 +606,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		//获取出当前快照的内容, snap.Signers 实际为hash
 		log.Info("the block is at epoch checkpoint", "block number",number)
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
-		for i, signerHash := range snap.GetSigners() {
+		for i, signerHash := range snap.GetHpbNodes() {
 			copy(signers[i*common.AddressLength:], signerHash[:])
 		}
 		extraSuffix := len(header.Extra) - consensus.ExtraSeal
@@ -585,123 +694,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
-// Authorize injects a private key into the consensus engine to mint new blocks
-// with.
-func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 
-	c.signer = signer
-	c.signFn = signFn
-}
-
-// Seal implements consensus.Engine, attempting to create a sealed block using
-// the local signing credentials.
-func (c *Prometheus) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
-	header := block.Header()
-
-	log.Info("HPB Prometheus Seal is starting ")
-
-	// Sealing the genesis block is not supported
-	number := header.Number.Uint64()
-	if number == 0 {
-		return nil, consensus.ErrUnknownBlock
-	}
-	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
-	if c.config.Period == 0 && len(block.Transactions()) == 0 {
-		return nil, consensus.ErrWaitTransactions
-	}
-	// Don't hold the signerHash fields for the entire sealing procedure
-	c.lock.RLock()
-	signer, signFn := c.signer, c.signFn
-
-	//log.Info("Current seal random is" + header.Random)
-	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
-
-	log.Info("signer's address","signer", signer.Hex())
-
-	c.lock.RUnlock()
-
-	// Bail out if we're unauthorized to sign a block
-	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
-	//
-	if err != nil {
-		return nil, err
-	}
-
-	if _, authorized := snap.Signers[signer]; !authorized {
-		return nil, consensus.ErrUnauthorized
-	}
-
-	//log.Info("Proposed the random number in current round:" + header.Random)
-
-	// If we're amongst the recent signers, wait for the next block
-	// 如果最近已经签名，则需要等待时序
-	/*
-	for seen, recent := range snap.Recents {
-		if recent == signerHash {
-			// 签名者在recents缓存中，等待被移除
-			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Prometheus： Signed recently, must wait for others")
-				<-stop
-				return nil, nil
-			}
-		}
-	}*/
-	// Sweet, the protocol permits us to sign the block, wait for our time
-	// 轮到我们的签名
-	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
-	// 比较难度值，确定是否为适合的时间
-	if header.Difficulty.Cmp(diffNoTurn) == 0 {
-		// It's not our turn explicitly to sign, delay it a bit
-		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		//delay += time.Duration(rand.Int63n(int64(wiggle)))
-
-		log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-		
-		currentIndex := number % uint64(len(snap.Signers))	
-		offset := snap.GetOffset(header.Number.Uint64(), signer)
-
-       //在一定范围内延迟8分,当前的currentIndex往前的没有超过
-       if(currentIndex <= uint64(len(snap.Signers)/2)){
-	       if(offset - currentIndex <= uint64(len(snap.Signers)/2)){
-				wiggle = time.Duration(1000) * wiggleTime
-				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","less than half",common.PrettyDuration(wiggle))
-				delay += wiggle;
-			}else{
-				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
-			}
-       }else{
-       	    if(offset + uint64(len(snap.Signers)/2) <= currentIndex){
-				wiggle = time.Duration(1000) * wiggleTime
-				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","more than half",common.PrettyDuration(wiggle))
-				delay += wiggle;
-			}else{
-				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
-			}
-       }
-		
-		log.Info("Out-of-turn signing requested ++++++++++++++++++++++++++++++++++", "delay", common.PrettyDuration(delay))
-	}
-
-	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
-
-	select {
-	case <-stop:
-		return nil, nil
-	case <-time.After(delay):
-	}
-	// 签名交易，signFn为回掉函数
-	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	//将签名后的结果返给到Extra中
-	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
-
-	return block.WithSeal(header), nil
-}
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
 // controlling the signerHash voting.

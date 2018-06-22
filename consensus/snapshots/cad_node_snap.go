@@ -48,7 +48,7 @@ type CadNodeSnap struct {
 type CadWinner struct {
 	NetworkId     string `json:"networkid"`             // 获胜者的网络ID
 	Address       string `json:"address"`      // 获胜者的地址
-	VoteIndex     uint64 `json:"voteIndex"`       // 获胜者的地址
+	VoteIndex     float64 `json:"voteIndex"`       // 获胜者的地址
 }
 
 // 创建对象
