@@ -215,7 +215,9 @@ func (this *SynCtrl) Start() {
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
-				this.txCh <- bc.TxPreEvent{Tx: msg.Message}
+				if ! msg.Message.IsFromP2P() {
+					this.txCh <- bc.TxPreEvent{Tx: msg.Message}
+				}
 			}
 		})
 	event.Subscribe(txPreReceiver, event.TxPreTopic)
