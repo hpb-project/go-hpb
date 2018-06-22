@@ -71,6 +71,8 @@ type Peer struct {
 
 	version  uint         // Protocol version negotiated
 
+	txsRate  uint
+
 	head common.Hash
 	td   *big.Int
 	lock sync.RWMutex
@@ -396,13 +398,10 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return err
 	}
 
-
-
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
 	}
-
 
 	// Register the peer locally
 	if err := PeerMgrInst().Register(p); err != nil {
@@ -556,6 +555,19 @@ func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 
 	copy(p.head[:], hash[:])
 	p.td.Set(td)
+}
+
+func (p *Peer) TxsRate() uint {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.txsRate
+}
+
+func (p *Peer) SetTxsRate(txs uint) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.txsRate = txs
 }
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
