@@ -823,3 +823,13 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	}
 	return pending, queued
 }
+
+// SetGasPrice updates the minimum price required by the transaction pool for a
+// new transaction, and drops all transactions below this threshold.
+func (pool *TxPool) SetGasPrice(price *big.Int) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.gasPrice = price
+	log.Info("Transaction pool price threshold updated", "price", price)
+}
