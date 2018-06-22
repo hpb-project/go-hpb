@@ -19,6 +19,8 @@ package synctrl
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hpb-project/ghpb/core"
+	"github.com/hpb-project/ghpb/protocol/downloader"
 	"math"
 	"math/big"
 	"sync"
@@ -30,12 +32,14 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -44,10 +48,15 @@ const (
 
 	forceSyncCycle      = 10 * time.Second
 	minDesiredPeerCount = 5 // Amount of peers desired to start syncing
-	txChanSize = 100000
+	txChanSize          = 100000
 	// This is the target size for the packs of transactions sent by txsyncLoop.
 	// A pack can get larger than this if a single transactions exceeds this size.
 	txsyncPackSize = 100 * 1024
+)
+
+var (
+	reentryMux   sync.Mutex
+	syncInstance *SynCtrl
 )
 
 // SyncMode represents the synchronisation mode of the downloader.
@@ -117,8 +126,8 @@ type SynCtrl struct {
 	chainconfig *config.ChainConfig
 	maxPeers    int
 
-	syner       *Syncer
-	puller      *Puller
+	syner  *Syncer
+	puller *Puller
 
 	SubProtocols []p2p.Protocol
 
@@ -138,15 +147,32 @@ type SynCtrl struct {
 	wg sync.WaitGroup
 }
 
+// InstanceSynCtrl returns the singleton of SynCtrl.
+func InstanceSynCtrl() *SynCtrl {
+	if nil == syncInstance {
+		reentryMux.Lock()
+		if nil == syncInstance {
+			// todo for merge
+			syncInstance, err = NewSynCtrl(hpbdb.GetChainConfig(), config.GetNetworkid, txpool.GetTxPool())
+			if err != nil {
+				syncInstance = nil
+			}
+		}
+		reentryMux.Unlock()
+	}
+
+	return syncInstance
+}
+
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux *sub.TypeMux, txpool *txpool.TxPool,/*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool, /*todo txpool*/
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
-		eventMux:    mux,
+		eventMux:    new(sub.TypeMux),
 		txpool:      txpool,
 		chaindb:     chaindb,
 		chainconfig: config,
-		newPeerCh:   make(chan *p2p.Peer),//todo
+		newPeerCh:   make(chan *p2p.Peer), //todo
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -160,7 +186,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
-	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer)//todo removePeer
+	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer) //todo removePeer
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
@@ -177,7 +203,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)//todo removerPeer
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer) //todo removerPeer
 
 	return synctrl, nil
 }
@@ -185,7 +211,14 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, mux
 func (this *SynCtrl) Start() {
 	// broadcast transactions
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
-	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xinyu
+	txPreReceiver := event.RegisterReceiver("synctrl_tx_pre_receiver",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				this.txCh <- bc.TxPreEvent{Tx: msg.Message}
+			}
+		})
+	event.Subscribe(txPreReceiver, event.TxPreTopic)
 	go this.txRoutingLoop()
 
 	// broadcast mined blocks
@@ -418,11 +451,12 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 }
 
+// HandleGetBlockHeadersMsg deal received GetBlockHeadersMsg
 func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Decode the complex header query
 	var query getBlockHeadersData
 	if err := msg.Decode(&query); err != nil {
-		return errResp(ErrDecode, "%v: %v", msg, err)
+		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
 	}
 	hashMode := query.Origin.Hash != (common.Hash{})
 
@@ -495,4 +529,261 @@ func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 	}
 	return sendBlockHeaders(p, headers)
+}
+
+// HandleBlockHeadersMsg deal received BlockHeadersMsg
+func HandleBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// A batch of headers arrived to one of our previous requests
+	var headers []*types.Header
+	if err := msg.Decode(&headers); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	// Filter out any explicitly requested headers, deliver the rest to the downloader
+	filter := len(headers) == 1
+	if filter {
+		// Irrelevant of the fork checks, send the header to the fetcher just in case
+		headers = InstanceSynCtrl().puller.FilterHeaders(p.GetID(), headers, time.Now())
+	}
+	if len(headers) > 0 || !filter {
+		err := InstanceSynCtrl().syner.DeliverHeaders(p.GetID(), headers)
+		if err != nil {
+			log.Debug("Failed to deliver headers", "err", err)
+		}
+	}
+	return nil
+}
+
+// HandleGetBlockBodiesMsg deal received GetBlockBodiesMsg
+func HandleGetBlockBodiesMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather blocks until the fetch or network limits is reached
+	var (
+		hash   common.Hash
+		bytes  int
+		bodies []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(bodies) < MaxBlockFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested block body, stopping if enough was found
+		if data := bc.InstanceBlockChain().GetBodyRLP(hash); len(data) != 0 {
+			bodies = append(bodies, data)
+			bytes += len(data)
+		}
+	}
+	return sendBlockBodiesRLP(p, bodies)
+}
+
+// HandleBlockBodiesMsg deal received BlockBodiesMsg
+func HandleBlockBodiesMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// A batch of block bodies arrived to one of our previous requests
+	var request blockBodiesData
+	if err := msg.Decode(&request); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver them all to the downloader for queuing
+	trasactions := make([][]*types.Transaction, len(request))
+	uncles := make([][]*types.Header, len(request))
+
+	for i, body := range request {
+		trasactions[i] = body.Transactions
+		uncles[i] = body.Uncles
+	}
+	// Filter out any explicitly requested bodies, deliver the rest to the downloader
+	filter := len(trasactions) > 0 || len(uncles) > 0
+	if filter {
+		trasactions, uncles = InstanceSynCtrl().puller.FilterBodies(p.GetID(), trasactions, uncles, time.Now())
+	}
+	if len(trasactions) > 0 || len(uncles) > 0 || !filter {
+		err := InstanceSynCtrl().syner.DeliverBodies(p.GetID(), trasactions, uncles)
+		if err != nil {
+			log.Debug("Failed to deliver bodies", "err", err)
+		}
+	}
+	return nil
+}
+
+// HandleGetNodeDataMsg deal received GetNodeDataMsg
+func HandleGetNodeDataMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash  common.Hash
+		bytes int
+		data  [][]byte
+	)
+	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
+		// Retrieve the hash of the next state entry
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested state entry, stopping if enough was found
+		if entry, err := IntanceChainDB().Get(hash.Bytes()); err == nil {
+			data = append(data, entry)
+			bytes += len(entry)
+		}
+	}
+	return sendNodeData(p, data)
+}
+
+// HandleNodeDataMsg deal received NodeDataMsg
+func HandleNodeDataMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// A batch of node state data arrived to one of our previous requests
+	var data [][]byte
+	if err := msg.Decode(&data); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := InstanceSynCtrl().syner.DeliverNodeData(p.GetID(), data); err != nil {
+		log.Debug("Failed to deliver node state data", "err", err)
+	}
+	return nil
+}
+
+// HandleGetReceiptsMsg deal received GetReceiptsMsg
+func HandleGetReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash     common.Hash
+		bytes    int
+		receipts []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+		}
+		// Retrieve the requested block's receipts, skipping if unknown to us
+		results := core.GetBlockReceipts(IntanceChainDB(), hash, core.GetBlockNumber(IntanceChainDB(), hash))
+		if results == nil {
+			if header := bc.InstanceBlockChain().GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
+				continue
+			}
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(results); err != nil {
+			log.Error("Failed to encode receipt", "err", err)
+		} else {
+			receipts = append(receipts, encoded)
+			bytes += len(encoded)
+		}
+	}
+	return sendReceiptsRLP(p, receipts)
+}
+
+// HandleReceiptsMsg deal received ReceiptsMsg
+func HandleReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// A batch of receipts arrived to one of our previous requests
+	var receipts [][]*types.Receipt
+	if err := msg.Decode(&receipts); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := InstanceSynCtrl().syner.DeliverReceipts(p.GetID(), receipts); err != nil {
+		log.Debug("Failed to deliver receipts", "err", err)
+	}
+	return nil
+}
+
+// HandleNewBlockHashesMsg deal received NewBlockHashesMsg
+func HandleNewBlockHashesMsg(p *p2p.Peer, msg p2p.Msg) error {
+	var announces newBlockHashesData
+	if err := msg.Decode(&announces); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
+	}
+	// Mark the hashes as present at the remote node
+	for _, block := range announces {
+		p.KnownBlockAdd(block.Hash)
+	}
+	// Schedule all the unknown hashes for retrieval
+	unknown := make(newBlockHashesData, 0, len(announces))
+	for _, block := range announces {
+		if !bc.InstanceBlockChain().HasBlock(block.Hash, block.Number) {
+			unknown = append(unknown, block)
+		}
+	}
+	for _, block := range unknown {
+		InstanceSynCtrl().puller.Notify(p.GetID(), block.Hash, block.Number, time.Now(), requestOneHeader, requestBodies)
+	}
+
+	return nil
+}
+
+// HandleNewBlockMsg deal received NewBlockMsg
+func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Retrieve and decode the propagated block
+	var request newBlockData
+	if err := msg.Decode(&request); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
+	}
+	request.Block.ReceivedAt = msg.ReceivedAt
+	request.Block.ReceivedFrom = p
+
+	// Mark the peer as owning the block and schedule it for import
+	p.KnownBlockAdd(request.Block.Hash())
+	InstanceSynCtrl().puller.Enqueue(p.GetID(), request.Block)
+
+	// Assuming the block is importable by the peer, but possibly not yet done so,
+	// calculate the head hash and TD that the peer truly must have.
+	var (
+		trueHead = request.Block.ParentHash()
+		trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
+	)
+	// Update the peers total difficulty if better than the previous
+	if _, td := p.Head(); trueTD.Cmp(td) > 0 {
+		p.SetHead(trueHead, trueTD)
+
+		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
+		// a singe block (as the true TD is below the propagated block), however this
+		// scenario should easily be covered by the fetcher.
+		currentBlock := bc.InstanceBlockChain().CurrentBlock()
+		if trueTD.Cmp(bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
+			go InstanceSynCtrl().synchronise(p)
+		}
+	}
+	return nil
+}
+
+// HandleTxMsg deal received TxMsg
+func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Transactions arrived, make sure we have a valid and fresh chain to handle them
+	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+		return nil // todo : agone  break
+	}
+	// Transactions can be processed, parse all of them and deliver to the pool
+	var txs []*types.Transaction
+	if err := msg.Decode(&txs); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
+	}
+	for i, tx := range txs {
+		// Validate and mark the remote transaction
+		if tx == nil {
+			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
+		}
+		p.KnownTxsAdd(tx.Hash())
+	}
+	txpool.GetTxPool().AddTxs(txs)
+	return nil
 }

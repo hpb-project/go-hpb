@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"net"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"sync/atomic"
 )
 
 var (
@@ -71,6 +72,8 @@ type Peer struct {
 
 	version  uint         // Protocol version negotiated
 
+	txsRate  uint
+
 	head common.Hash
 	td   *big.Int
 	lock sync.RWMutex
@@ -90,18 +93,19 @@ type PeerManager struct {
 	hpb    *HpbProto
 }
 
-var pm   *PeerManager
-var lock *sync.Mutex = &sync.Mutex {}
+var INSTANCE = atomic.Value{}
+
 func PeerMgrInst() *PeerManager {
-	if pm == nil {
-		lock.Lock()
-		defer lock.Unlock()
-		pm =&PeerManager{
+	if INSTANCE.Load() == nil {
+		//Please init PeerManager
+		pm :=&PeerManager{
 			peers: make(map[string]*Peer),
 			hpb: NewProtos(),
 		}
+		INSTANCE.Store(pm)
 	}
-	return pm
+
+	return INSTANCE.Load().(*PeerManager)
 }
 
 func (prm *PeerManager)Start(netCfg config.NetworkConfig) error {
@@ -396,13 +400,10 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return err
 	}
 
-
-
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
 	}
-
 
 	// Register the peer locally
 	if err := PeerMgrInst().Register(p); err != nil {
@@ -556,6 +557,19 @@ func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 
 	copy(p.head[:], hash[:])
 	p.td.Set(td)
+}
+
+func (p *Peer) TxsRate() uint {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.txsRate
+}
+
+func (p *Peer) SetTxsRate(txs uint) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.txsRate = txs
 }
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
@@ -971,40 +985,6 @@ func (n *RpcMgr) stopWS() {
 		n.wsHandler = nil
 	}
 }
-
-
-// apis returns the collection of RPC descriptors this node offers.
-func (n *RpcMgr) apis() []rpc.API {
-	return []rpc.API{
-		/*{
-			Namespace: "admin",
-			Version:   "1.0",
-			Service:   NewPrivateAdminAPI(n),
-		}, {
-			Namespace: "admin",
-			Version:   "1.0",
-			Service:   NewPublicAdminAPI(n),
-			Public:    true,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   debug.Handler,
-		}, {
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPublicDebugAPI(n),
-			Public:    true,
-		}, {
-			Namespace: "web3",
-			Version:   "1.0",
-			Service:   NewPublicWeb3API(n),
-			Public:    true,
-		},
-		*/
-	}
-}
-
-
 
 ///////////////////////////////////////////////////////////////
 /*
