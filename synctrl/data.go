@@ -121,3 +121,35 @@ func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) 
 func sendBlockHeaders(peer *p2p.Peer, headers []*types.Header) error {
 	return peer.SendData(p2p.BlockHeadersMsg, headers)
 }
+
+// sendBlockBodiesRLP sends a batch of block contents to the remote peer from
+// an already RLP encoded format.
+func sendBlockBodiesRLP(peer *p2p.Peer, bodies []rlp.RawValue) error {
+	return peer.SendData(p2p.BlockBodiesMsg, bodies)
+}
+
+// sendNodeData sends a batch of arbitrary internal data, corresponding to the
+// hashes requested.
+func sendNodeData(peer *p2p.Peer, data [][]byte) error {
+	return peer.SendData(p2p.NodeDataMsg, data)
+}
+
+// sendReceiptsRLP sends a batch of transaction receipts, corresponding to the
+// ones requested from an already RLP encoded format.
+func sendReceiptsRLP(peer *p2p.Peer, receipts []rlp.RawValue) error {
+	return peer.SendData(p2p.ReceiptsMsg, receipts)
+}
+
+// requestOneHeader is a wrapper around the header query functions to fetch a
+// single header. It is used solely by the fetcher.
+func requestOneHeader(peer *p2p.Peer, hash common.Hash) error {
+	peer.Log().Debug("Fetching single header", "hash", hash)
+	return peer.SendData(p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+}
+
+// requestBodies fetches a batch of blocks' bodies corresponding to the hashes
+// specified.
+func requestBodies(peer *p2p.Peer, hashes []common.Hash) error {
+	peer.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
+	return peer.SendData(p2p.GetBlockBodiesMsg, hashes)
+}
