@@ -90,7 +90,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	//	g.ExtraHash = dec.ExtraHash
 	//}
 	if dec.VoteIndex != nil {
-		g.VoteIndex = uint64(*dec.VoteIndex)
+		g.VoteIndex = float64(*dec.VoteIndex)
 	}
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for Genesis")

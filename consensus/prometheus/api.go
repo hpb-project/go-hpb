@@ -61,7 +61,7 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	return snap.GetSigners(), nil
+	return snap.GetHpbNodes(), nil
 }
 
 //跟根据区块号，获取最新的区块头
