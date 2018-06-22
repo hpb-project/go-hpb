@@ -19,14 +19,15 @@ package bc
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in

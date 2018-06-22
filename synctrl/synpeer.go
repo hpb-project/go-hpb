@@ -22,16 +22,17 @@ package synctrl
 import (
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/common/log"
 	"math"
 	"math/big"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 const (

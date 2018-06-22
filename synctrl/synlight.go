@@ -18,15 +18,16 @@ package synctrl
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/rcrowley/go-metrics"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/rcrowley/go-metrics"
 )
 
 type lightSync struct {

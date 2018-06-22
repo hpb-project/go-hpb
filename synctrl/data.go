@@ -21,9 +21,9 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // statusData is the network packet for the status message.

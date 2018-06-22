@@ -19,18 +19,19 @@ package synctrl
 import (
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	hpbinter "github.com/hpb-project/go-hpb/interface"
-	"github.com/hpb-project/go-hpb/common/log"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	hpbinter "github.com/hpb-project/go-hpb/interface"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var (

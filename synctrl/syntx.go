@@ -168,7 +168,7 @@ func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
 
 func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
 	for _, tx := range txs {
-		peer.knownTxs.Add(tx.Hash())
+		peer.KnownTxsAdd(tx.Hash())
 	}
 	return peer.SendData(p2p.TxMsg, txs)
 }
