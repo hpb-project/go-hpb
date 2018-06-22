@@ -23,15 +23,18 @@ import (
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/protocol/downloader"
-	"github.com/hpb-project/go-hpb/storage"
-	"github.com/hpb-project/go-hpb/core/event"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/network/rpc"
+
+	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/ghpb/protocol/downloader"
+	"github.com/hpb-project/ghpb/core"
+	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -52,7 +55,7 @@ type Backend interface {
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
 	GetTd(blockHash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (*evm.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 	SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription
@@ -66,7 +69,7 @@ type Backend interface {
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
 
-	ChainConfig() *params.ChainConfig
+	ChainConfig() *config.ChainConfig
 	CurrentBlock() *types.Block
 }
 

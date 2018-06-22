@@ -27,6 +27,8 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/ghpb/protocol/downloader"
+	"github.com/hpb-project/ghpb/protocol/filters"
 )
 
 type LesServer interface {
@@ -37,7 +39,7 @@ type LesServer interface {
 
 /*func (s *Node) AddLesServer(ls LesServer) {
 	s.lesServer = ls*/
-}
+
 
 
 
