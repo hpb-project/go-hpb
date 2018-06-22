@@ -34,7 +34,7 @@ var (
 	addr   = crypto.PubkeyToAddress(key.PublicKey)
 )
 
-func TestENS(t *testing.T) {
+func TestHPB_ElectionContract(t *testing.T) {
 	contractBackend := backends.NewSimulatedBackend(bc.GenesisAlloc{addr: {Balance: big.NewInt(1000000000)}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	// Workaround for bug estimating gas in the call to Register

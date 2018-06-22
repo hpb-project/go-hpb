@@ -17,7 +17,6 @@
 package txpool
 
 import (
-	"fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
@@ -31,6 +30,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"fmt"
 )
 
 var (
@@ -293,6 +293,18 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
+	for _, tx := range txs {
+		hash := tx.Hash()
+		if pool.all[hash] != nil {
+			log.Trace("Discarding already known transaction", "hash", hash)
+			return fmt.Errorf("known transaction: %x", hash)
+		}
+		// If the transaction fails basic validation, discard it
+		if err := pool.validateTx(tx); err != nil {
+			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+			return err
+		}
+	}
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	return pool.addTxsLocked(txs)
@@ -300,6 +312,16 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
+	hash := tx.Hash()
+	if pool.all[hash] != nil {
+		log.Trace("Discarding already known transaction", "hash", hash)
+		return fmt.Errorf("known transaction: %x", hash)
+	}
+	// If the transaction fails basic validation, discard it
+	if err := pool.validateTx(tx); err != nil {
+		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		return err
+	}
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	return pool.addTxLocked(tx)
@@ -355,15 +377,6 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
-	if pool.all[hash] != nil {
-		log.Trace("Discarding already known transaction", "hash", hash)
-		return false, fmt.Errorf("known transaction: %x", hash)
-	}
-	// If the transaction fails basic validation, discard it
-	if err := pool.validateTx(tx); err != nil {
-		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
-		return false, err
-	}
 	// If the transaction pool is full, reject
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		return false, ErrTxPoolFull
@@ -441,8 +454,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	fmt.Println(pool.currentState.GetBalance(from))
-	fmt.Println(tx.Cost())
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
