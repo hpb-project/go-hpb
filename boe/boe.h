@@ -51,7 +51,6 @@ BoeErr* boe_get_boeid(uint32_t *id);
 BoeErr* boe_get_bind_account(uint8_t *baccount);
 BoeErr* boe_hw_sign(char *p_data, uint8_t *sig);
 BoeErr* boe_get_s_random(uint8_t *hash, uint8_t *nexthash);
-BoeErr* boe_valid_sign(uint8_t *hash, uint8_t *r, uint8_t *s, uint8_t v);
-BoeErr* boe_valid_sign_sync(uint8_t* hash, uint8_t* r, uint8_t* s, uint8_t v, uint8_t *result);
+BoeErr* boe_valid_sign(uint8_t *sig, uint8_t *pub);
 
 #endif  /*BOE_H*/

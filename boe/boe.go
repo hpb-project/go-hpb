@@ -221,20 +221,15 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     if(boeRecoverPubTps > 100) {
         // use hardware
         var (
-            m_hash = make([] byte, 32)
-            m_r = make([] byte, 32)
-            m_s = make([] byte, 32)
-
-            c_hash = (*C.uchar)(unsafe.Pointer(&m_hash[0]))
-            c_r = (*C.uchar)(unsafe.Pointer(&m_r[0]))
-            c_s = (*C.uchar)(unsafe.Pointer(&m_s[0]))
-            c_v = C.uchar(v)
+            m_sig  = make([]byte, 97)
+            c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
         )
-        copy(m_hash[32-len(hash):32], hash)
-        copy(m_r[32-len(s):32], r)
-        copy(m_s[32-len(s):32], s)
+        copy(m_sig[32-len(hash):32], hash)
+        copy(m_sig[64-len(r):64], r)
+        copy(m_sig[96-len(s):96], s)
+        m_sig[96] = v
 
-        c_ret := C.boe_valid_sign_sync(c_hash, c_r, c_s, c_v, (*C.uchar)(unsafe.Pointer(&result[0])))
+        c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[0])))
         if c_ret != C.BOE_OK {
             return nil,ErrSignCheckFailed
         }
@@ -269,4 +264,14 @@ func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
 
     } 
     return nil, ErrHWSignFailed
+}
+
+func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
+    var result = make([]byte, 256)
+    var ret = C.boe_get_s_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+    if ret == C.BOE_OK {
+        return result, nil
+
+    } 
+    return nil, ErrGetNextHashFailed
 }
