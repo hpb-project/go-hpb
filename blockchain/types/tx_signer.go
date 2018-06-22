@@ -68,7 +68,7 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		sigCache := sc.(sigCache)
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
-		// the cache.
+		// the cache.2
 		if sigCache.signer.Equal(signer) {
 			return sigCache.from, nil
 		}

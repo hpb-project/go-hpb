@@ -80,6 +80,8 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	utils.SetNodeConfig(ctx, cfg)
 	utils.SetTxPool(ctx, &cfg.TxPool)
 
+
+
 	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
 	cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
 	}
