@@ -488,11 +488,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return nil
 
 	case msg.Code == HpbTestMsg:
-		data := make([]byte,3)
-		data[0] = 0x01
-		data[1] = 0x02
-		data[2] = 0x03
-
+		data :=[] byte {0x4C,0x51,0x48}
 		err := p.SendData(HpbTestMsgResp,data)
 		log.Debug("handleMsg test send ...","peer",p.id, "Msg",msg.String(),"send err",err)
 		return nil
