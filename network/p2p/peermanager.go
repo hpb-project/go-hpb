@@ -494,10 +494,10 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		data[2] = 0x03
 
 		err := p.SendData(HpbTestMsgResp,data)
-		log.Info("HpbProto handle HpbTestMsg","Msg",msg.String(),"send err",err)
+		log.Debug("handleMsg test send ...","peer",p.id, "Msg",msg.String(),"send err",err)
 		return nil
 	case msg.Code == HpbTestMsgResp:
-		log.Info("HpbProto handle HpbTestMsgResp","Msg",msg.String())
+		log.Debug("handleMsg rest recv ...","peer",p.id, "Msg",msg.String())
 		return nil
 
 	default:
