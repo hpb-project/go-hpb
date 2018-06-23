@@ -39,7 +39,11 @@ import (
 	"github.com/hpb-project/ghpb/common/rlp"
 	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/ghpb/storage"
-	
+
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -310,7 +314,7 @@ type Prometheus struct {
 }
 
 // 新创建
-func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
+func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 	conf := *config
 

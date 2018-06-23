@@ -23,9 +23,9 @@ import (
 
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common/console"
-	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 var (
@@ -71,7 +71,7 @@ The JavaScript VM exposes a node admin interface as well as the Ðapp`,
 // same time.
 func localConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
-	node := makeFullNode(ctx)
+	node, _ := MakeConfigNode(ctx)
 	startNode(ctx, node)
 	defer node.Stop()
 
@@ -143,7 +143,7 @@ func remoteConsole(ctx *cli.Context) error {
 // for "ghpb attach" and "ghpb monitor" with no argument.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+		endpoint = config.DefaultIPCEndpoint(clientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
 		// Backwards compatibility with ghpb < 1.5 which required
 		// these prefixes.
@@ -157,7 +157,7 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 // everything down.
 func ephemeralConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
-	node := makeFullNode(ctx)
+	node, _ := MakeConfigNode(ctx)
 	startNode(ctx, node)
 	defer node.Stop()
 

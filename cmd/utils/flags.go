@@ -46,6 +46,8 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/synctrl"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
 )
 
 var (
@@ -971,19 +973,19 @@ func MakeGenesis(ctx *cli.Context) *bc.Genesis {
 	}
 	return genesis
 }
-/*
+
 // MakeChain creates a chain manager from set command line flags.
 func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainDb hpbdb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	config, _, err := bc.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
+	cfg, _, err := bc.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Prometheus != nil {
-		engine = prometheus.New(config.Prometheus, chainDb)
+	if cfg.Prometheus != nil {
+		engine = prometheus.New(cfg.Prometheus, chainDb)
 	} else {
 		//engine = hpbhash.NewFaker()
 		//if !ctx.GlobalBool(FakePoWFlag.Name) {
@@ -993,14 +995,14 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 		//	)
 		//}
 	}
-	vmcfg := hvm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = bc.NewBlockChain(chainDb, config, engine, vmcfg)
+
+	chain, err = bc.NewBlockChain(chainDb, cfg, engine)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}
 	return chain, chainDb
 }
-*/
+
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript
 // scripts to preload before starting.
 func MakeConsolePreloads(ctx *cli.Context) []string {
