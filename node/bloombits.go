@@ -85,7 +85,7 @@ const (
 	bloomThrottling = 100 * time.Millisecond
 )
 
-// BloomIndexer implements a core.ChainIndexer, building up a rotated bloom bits index
+// BloomIndexer implements a bc.ChainIndexer, building up a rotated bloom bits index
 // for the Hpb header bloom filters, permitting blazing fast filtering.
 type BloomIndexer struct {
 	size uint64 // section size to generate bloombits for
@@ -109,7 +109,7 @@ func NewBloomIndexer(db hpbdb.Database, size uint64) *bc.ChainIndexer {
 	return bc.NewChainIndexer(db, table, backend, size, bloomConfirms, bloomThrottling, "bloombits")
 }
 
-// Reset implements core.ChainIndexerBackend, starting a new bloombits index
+// Reset implements bc.ChainIndexerBackend, starting a new bloombits index
 // section.
 func (b *BloomIndexer) Reset(section uint64) {
 	gen, err := bloombits.NewGenerator(uint(b.size))
@@ -119,14 +119,14 @@ func (b *BloomIndexer) Reset(section uint64) {
 	b.gen, b.section, b.head = gen, section, common.Hash{}
 }
 
-// Process implements core.ChainIndexerBackend, adding a new header's bloom into
+// Process implements bc.ChainIndexerBackend, adding a new header's bloom into
 // the index.
 func (b *BloomIndexer) Process(header *types.Header) {
 	b.gen.AddBloom(uint(header.Number.Uint64()-b.section*b.size), header.Bloom)
 	b.head = header.Hash()
 }
 
-// Commit implements core.ChainIndexerBackend, finalizing the bloom section and
+// Commit implements bc.ChainIndexerBackend, finalizing the bloom section and
 // writing it out into the database.
 func (b *BloomIndexer) Commit() error {
 	batch := b.db.NewBatch()

@@ -48,7 +48,7 @@ import (
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
@@ -59,7 +59,7 @@ import (
 type Node struct {
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	accman   		*accounts.Manager
-	eventMux        *event.TypeMux
+	eventMux        *sub.TypeMux
 
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
@@ -148,10 +148,10 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	peermanager := p2p.PeerMgrInst()
 	hpbtxpool      := txpool.GetTxPool()
 	db, err      := CreateDB(&conf.Node, "chaindata")
-	eventmux    := new(event.TypeMux)
+	eventmux    := new(sub.TypeMux)
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, conf.Node.Genesis)
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, synctrl.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, eventmux, hpbtxpool,engine, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, synctrl.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
@@ -397,7 +397,7 @@ func (n *Node) AccountManager() *accounts.Manager {
 
 // EventMux retrieves the event multiplexer used by all the network services in
 // the current protocol stack.
-func (n *Node) EventMux() *event.TypeMux {
+func (n *Node) EventMux() *sub.TypeMux {
 	return n.eventMux
 }
 
@@ -405,11 +405,13 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
-	if n.Hpbconfig.Node.DataDir == ""{
+func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
+
+	var cfg, _ = config.GetHpbConfigInstance()
+	if cfg.Node.DataDir == ""{
 		return hpbdb.NewMemDatabase()
 	}
-	db, err := hpbdb.NewLDBDatabase(n.Hpbconfig.Node.ResolvePath(name), cache, handles)
+	db, err := hpbdb.NewLDBDatabase(cfg.Node.ResolvePath(name), cache, handles)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +420,7 @@ func (n *Node) OpenDatabase(name string, cache int, handles int) (hpbdb.Database
 
 // CreateDB creates the chain database.
 func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
-	db, err := n.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
+	db, err := OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}

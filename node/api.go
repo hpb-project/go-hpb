@@ -35,11 +35,13 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/trie"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const defaultTraceTimeout = 5 * time.Second
@@ -578,4 +580,64 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) StorageRangeResu
 		result.NextKey = &next
 	}
 	return result
+}
+// PublicAdminAPI is the collection of administrative API methods exposed over
+// both secure and unsecure RPC channels.
+type PublicAdminAPI struct {
+	node *Node // Node interfaced by this API
+}
+
+// NewPublicAdminAPI creates a new API definition for the public admin methods
+// of the node itself.
+func NewPublicAdminAPI(node *Node) *PublicAdminAPI {
+	return &PublicAdminAPI{node: node}
+}
+
+// Peers retrieves all the information we know about each individual peer at the
+// protocol granularity.
+func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
+	pm := api.node.Hpbpeermanager
+	if pm == nil {
+		return nil, ErrNodeStopped
+	}
+	return nil ,nil//TODO
+	//return pm.PeersInfo(), nil //TODO
+}
+
+// NodeInfo retrieves all the information we know about the host node at the
+// protocol granularity.
+func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
+	pm := api.node.Hpbpeermanager
+	if pm == nil {
+		return nil, ErrNodeStopped
+	}
+	return nil,nil
+	//return pm.NodeInfo(), nil //TODO
+}
+
+// Datadir retrieves the current data directory the node is using.
+func (api *PublicAdminAPI) Datadir() string {
+	return api.node.DataDir()
+}
+// PublicWeb3API offers helper utils
+type PublicWeb3API struct {
+	stack *Node
+}
+
+// NewPublicWeb3API creates a new Web3Service instance
+func NewPublicWeb3API(stack *Node) *PublicWeb3API {
+	return &PublicWeb3API{stack}
+}
+
+// ClientVersion returns the node name
+func (s *PublicWeb3API) ClientVersion() string {
+
+    cfg, _ := config.GetHpbConfigInstance()
+	return cfg.Network.Name
+}
+
+// Sha3 applies the hpb sha3 implementation on the input.
+// It assumes the input is hex encoded.
+func (s *PublicWeb3API) Sha3(input hexutil.Bytes) hexutil.Bytes {
+	return crypto.Keccak256(input)
 }

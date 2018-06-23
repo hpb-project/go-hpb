@@ -16,6 +16,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/cmd/ghpb"
 	"github.com/hpb-project/go-hpb/network/rpc"
 )
 

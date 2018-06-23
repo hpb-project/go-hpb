@@ -27,8 +27,8 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/ghpb/protocol/downloader"
-	"github.com/hpb-project/go-hpb/protocol/filters"
+	"github.com/hpb-project/go-hpb/node/filters"
+	"github.com/hpb-project/go-hpb/synctrl"
 )
 
 type LesServer interface {
@@ -63,7 +63,7 @@ func (s *Node) APIs() []rpc.API {
 		}, {
 			Namespace: "hpb",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",

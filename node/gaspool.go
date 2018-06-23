@@ -16,7 +16,10 @@
 
 package node
 
-import "math/big"
+import (
+	"math/big"
+	"github.com/hpb-project/go-hpb/blockchain"
+)
 
 // GasPool tracks the amount of gas available during
 // execution of the transactions in a block.
@@ -35,7 +38,7 @@ func (gp *GasPool) AddGas(amount *big.Int) *GasPool {
 func (gp *GasPool) SubGas(amount *big.Int) error {
 	i := (*big.Int)(gp)
 	if i.Cmp(amount) < 0 {
-		return ErrGasLimitReached
+		return bc.ErrGasLimitReached
 	}
 	i.Sub(i, amount)
 	return nil
