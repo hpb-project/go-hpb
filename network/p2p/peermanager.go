@@ -169,9 +169,10 @@ func (prm *PeerManager)Start() error {
 }
 
 func (prm *PeerManager)Stop(){
+
 	prm.Close()
 
-	//prm.rpc.stopRPC()
+	prm.rpc.stopRPC()
 
 	prm.server.Stop()
 	prm.server = nil
