@@ -444,36 +444,47 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		cb(msg)
 		return nil
 	case msg.Code == GetBlockHeadersMsg:
-		return synctrl.HandleGetBlockHeadersMsg(p, msg)
+		synctrl.HandleGetBlockHeadersMsg(p, msg)
+		return nil
 
 	case msg.Code == BlockHeadersMsg:
+		synctrl.HandleBlockHeadersMsg(p, msg)
 		return nil
 
 	case msg.Code == GetBlockBodiesMsg:
+		synctrl.HandleGetBlockBodiesMsg(p, msg)
 		return nil
 
 	case msg.Code == BlockBodiesMsg:
+		synctrl.HandleBlockBodiesMsg(p, msg)
 		return nil
 
 	case msg.Code == GetNodeDataMsg:
+		synctrl.HandleGetNodeDataMsg(p, msg)
 		return nil
 
 	case msg.Code == NodeDataMsg:
+		synctrl.HandleNodeDataMsg(p, msg)
 		return nil
 
 	case msg.Code == GetReceiptsMsg:
+		synctrl.HandleGetReceiptsMsg(p, msg)
 		return nil
 
 	case msg.Code == ReceiptsMsg:
+		synctrl.HandleReceiptsMsg(p, msg)
 		return nil
 
 	case msg.Code == NewBlockHashesMsg:
+		synctrl.HandleNewBlockHashesMsg(p, msg)
 		return nil
 
 	case msg.Code == NewBlockMsg:
+		synctrl.HandleNewBlockMsg(p, msg)
 		return nil
 
 	case msg.Code == TxMsg:
+		synctrl.HandleTxMsg(p, msg)
 		return nil
 
 	case msg.Code == HpbTestMsg:
