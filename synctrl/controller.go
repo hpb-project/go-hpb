@@ -328,6 +328,10 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 	}
 }
 
+func (this *SynCtrl) CancelSyncer() {
+	this.syner.Cancel()
+}
+
 func (this *SynCtrl) Stop() {
 	log.Info("Stopping Hpb data sync")
 

@@ -32,7 +32,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/trie"
@@ -41,7 +40,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/hvm"
 )
 
 const defaultTraceTimeout = 5 * time.Second
@@ -426,7 +424,7 @@ func (t *timeoutError) Error() string {
 	return "Execution time exceeded"
 }
 
-// TraceTransaction returns the structured logs created during the execution of EVM
+/*// TraceTransaction returns the structured logs created during the execution of EVM
 // and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.Hash, config *TraceArgs) (interface{}, error) {
 	var tracer evm.Tracer
@@ -470,13 +468,13 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	// Run the transaction with tracing enabled.
 	vmenv := evm.NewEVM(context, statedb, api.config, evm.Config{Debug: true, Tracer: tracer})
 
-	ApplyMessage(bc *BlockChain, header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool)
-	ret, gas, failed, err := bc.ApplyMessage(vmenv, msg, new(bc.GasPool).AddGas(tx.Gas()))
+	block := bc.InstanceBlockChain()
+	ret, gas, failed, err := bc.ApplyMessage(block, nil, nil, nil, msg , nil)
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
 	switch tracer := tracer.(type) {
-	case *vm.StructLogger:
+	case *evm.StructLogger:
 		return &hpbapi.ExecutionResult{
 			Gas:         gas,
 			Failed:      failed,
@@ -488,22 +486,22 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	default:
 		panic(fmt.Sprintf("bad tracer type %T", tracer))
 	}
-}
-
+}*/
+/*
 // computeTxEnv returns the execution environment of a certain transaction.
-func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (core.Message, vm.Context, *state.StateDB, error) {
+func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (bc.Message, evm.Context, *state.StateDB, error) {
 	// Create the parent state.
 	block := api.hpb.BlockChain().GetBlockByHash(blockHash)
 	if block == nil {
-		return nil, vm.Context{}, nil, fmt.Errorf("block %x not found", blockHash)
+		return nil, evm.Context{}, nil, fmt.Errorf("block %x not found", blockHash)
 	}
 	parent := api.hpb.BlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1)
 	if parent == nil {
-		return nil, vm.Context{}, nil, fmt.Errorf("block parent %x not found", block.ParentHash())
+		return nil, evm.Context{}, nil, fmt.Errorf("block parent %x not found", block.ParentHash())
 	}
 	statedb, err := api.hpb.BlockChain().StateAt(parent.Root())
 	if err != nil {
-		return nil, vm.Context{}, nil, err
+		return nil, evm.Context{}, nil, err
 	}
 	txs := block.Transactions()
 
@@ -512,31 +510,31 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (co
 	for idx, tx := range txs {
 		// Assemble the transaction call message
 		msg, _ := tx.AsMessage(signer)
-		context := core.NewEVMContext(msg, block.Header(), api.hpb.BlockChain(), nil)
+		context := hvm.NewEVMContext(msg, block.Header(), api.hpb.BlockChain(), nil)
 		if idx == txIndex {
 			return msg, context, statedb, nil
 		}
 
-		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
-		gp := new(core.GasPool).AddGas(tx.Gas())
-		_, _, _, err := core.ApplyMessage(vmenv, msg, gp)
+		vmenv := evm.NewEVM(context, statedb, api.config, evm.Config{})
+		gp := new(bc.GasPool).AddGas(tx.Gas())
+		_, _, _, err := bc.ApplyMessage(vmenv, msg, gp)
 		if err != nil {
-			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
+			return nil, evm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}
 		statedb.DeleteSuicides()
 	}
-	return nil, vm.Context{}, nil, fmt.Errorf("tx index %d out of range for block %x", txIndex, blockHash)
+	return nil, evm.Context{}, nil, fmt.Errorf("tx index %d out of range for block %x", txIndex, blockHash)
 }
-
+*/
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	db := core.PreimageTable(api.hpb.ChainDb())
+	db := bc.PreimageTable(api.hpb.ChainDb())
 	return db.Get(hash.Bytes())
 }
 
 // GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]core.BadBlockArgs, error) {
+func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]bc.BadBlockArgs, error) {
 	return api.hpb.BlockChain().BadBlocks()
 }
 
@@ -552,7 +550,7 @@ type storageEntry struct {
 	Key   *common.Hash `json:"key"`
 	Value common.Hash  `json:"value"`
 }
-
+/*
 // StorageRangeAt returns the storage at the given block height and transaction index.
 func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
 	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex)
@@ -565,7 +563,7 @@ func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common
 	}
 	return storageRangeAt(st, keyStart, maxResult), nil
 }
-
+*/
 func storageRangeAt(st state.Trie, start []byte, maxResult int) StorageRangeResult {
 	it := trie.NewIterator(st.NodeIterator(start))
 	result := StorageRangeResult{Storage: storageMap{}}
