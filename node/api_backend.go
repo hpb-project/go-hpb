@@ -51,7 +51,7 @@ func (b *HpbApiBackend) CurrentBlock() *types.Block {
 }
 
 func (b *HpbApiBackend) SetHead(number uint64) {
-	b.hpb.protocolManager.downloader.Cancel()
+	b.hpb.Hpbsyncctr.
 	b.hpb.Hpbbc.SetHead(number)
 }
 
