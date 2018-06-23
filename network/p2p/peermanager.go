@@ -141,7 +141,7 @@ func (prm *PeerManager)Start() error {
 			Protocols: prm.hpb.Protocols(),
 		},
 	}
-	//prm.hpb.networkId = networkId
+	prm.hpb.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpb.Protocols())
 
 
