@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -81,7 +80,7 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	gpo.cacheLock.RUnlock()
 
 	head, _ := gpo.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
-	headHash := head.  head.Hash()
+	headHash := head.Hash()
 	if headHash == lastHead {
 		return lastPrice, nil
 	}

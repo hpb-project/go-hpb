@@ -387,10 +387,7 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogCon
 
 	structLogger := evm.NewStructLogger(logConfig)
 
-	config := evm.Config{
-		Debug:  true,
-		Tracer: structLogger,
-	}
+
 	if err := api.hpb.Hpbengine.VerifyHeader(blockchain, block.Header(), true); err != nil {
 		return false, structLogger.StructLogs(), err
 	}
@@ -399,7 +396,7 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogCon
 		return false, structLogger.StructLogs(), err
 	}
 
-	receipts, _, usedGas, err := processor.Process(block, statedb, config)
+	receipts, _, usedGas, err := processor.Process(block, statedb)
 	if err != nil {
 		return false, structLogger.StructLogs(), err
 	}

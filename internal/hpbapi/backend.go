@@ -26,11 +26,12 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -41,7 +42,7 @@ type Backend interface {
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() hpbdb.Database
-	EventMux() *event.TypeMux
+	EventMux() *sub.TypeMux
 	AccountManager() *accounts.Manager
 	// BlockChain API
 	SetHead(number uint64)
@@ -51,10 +52,10 @@ type Backend interface {
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
 	GetTd(blockHash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (*evm.EVM, func() error, error)
-	SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
-	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
-	SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription
+	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (*evm.EVM, func() error, error)
+	SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscription
+	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
+	SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) sub.Subscription
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error
@@ -63,7 +64,7 @@ type Backend interface {
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+	SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
 
 	ChainConfig() *config.ChainConfig
 	CurrentBlock() *types.Block

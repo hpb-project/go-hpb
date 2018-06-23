@@ -22,18 +22,17 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/protocol/downloader"
-	"github.com/hpb-project/go-hpb/core/event"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 // HpbApiBackend implements ethapi.Backend for full nodes
@@ -51,7 +50,7 @@ func (b *HpbApiBackend) CurrentBlock() *types.Block {
 }
 
 func (b *HpbApiBackend) SetHead(number uint64) {
-	b.hpb.Hpbsyncctr.
+	b.hpb.Hpbsyncctr.CancelSyncer()
 	b.hpb.Hpbbc.SetHead(number)
 }
 
@@ -116,23 +115,23 @@ func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *st
 	return evm.NewEVM(context, state, &b.hpb.Hpbconfig.BlockChain,vmConfig), vmError, nil
 }
 
-func (b *HpbApiBackend) SubscribeRemovedLogsEvent(ch chan<- bc.RemovedLogsEvent) event.Subscription {
+func (b *HpbApiBackend) SubscribeRemovedLogsEvent(ch chan<- bc.RemovedLogsEvent) sub.Subscription {
 	return b.hpb.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *HpbApiBackend) SubscribeChainEvent(ch chan<- bc.ChainEvent) event.Subscription {
+func (b *HpbApiBackend) SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscription {
 	return b.hpb.BlockChain().SubscribeChainEvent(ch)
 }
 
-func (b *HpbApiBackend) SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) event.Subscription {
+func (b *HpbApiBackend) SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription {
 	return b.hpb.BlockChain().SubscribeChainHeadEvent(ch)
 }
 
-func (b *HpbApiBackend) SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) event.Subscription {
+func (b *HpbApiBackend) SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) sub.Subscription {
 	return b.hpb.BlockChain().SubscribeChainSideEvent(ch)
 }
 
-func (b *HpbApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+func (b *HpbApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) sub.Subscription {
 	return b.hpb.BlockChain().SubscribeLogsEvent(ch)
 }
 
@@ -168,8 +167,8 @@ func (b *HpbApiBackend) TxPoolContent() (map[common.Address]types.Transactions, 
 	return b.hpb.TxPool().Content()
 }
 
-func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) event.Subscription {
-	return b.hpb.TxPool().SubscribeTxPreEvent(ch)
+func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
+	return b.hpb.TxPool().   .SubscribeTxPreEvent(ch)
 }
 
 func (b *HpbApiBackend) Downloader() *downloader.Downloader {
@@ -188,7 +187,7 @@ func (b *HpbApiBackend) ChainDb() hpbdb.Database {
 	return b.hpb.ChainDb()
 }
 
-func (b *HpbApiBackend) EventMux() *event.TypeMux {
+func (b *HpbApiBackend) EventMux() *sub.TypeMux {
 	return b.hpb.EventMux()
 }
 
