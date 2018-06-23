@@ -108,7 +108,13 @@ func PeerMgrInst() *PeerManager {
 	return INSTANCE.Load().(*PeerManager)
 }
 
-func (prm *PeerManager)Start(netCfg config.NetworkConfig, apis []rpc.API) error {
+func (prm *PeerManager)Start() error {
+
+	config, err :=config.GetHpbConfigInstance()
+	if err != nil {
+		log.Error("Peer manager get config error","error",err)
+		return err
+	}
 
 	if prm.hpb == nil {
 		return errIncomplete
@@ -116,22 +122,23 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig, apis []rpc.API) error 
 
 	prm.server = &Server{
 		Config: Config{
-			PrivateKey: netCfg.PrivateKey,
-			MaxPendingPeers: netCfg.MaxPendingPeers,
-			Name: netCfg.Name,
-			RoleType: netCfg.RoleType,
-			//BootstrapNodes: netCfg.,
-			//StaticNodes: netCfg.,
-			//TrustedNodes: netCfg.,
-			NetRestrict: netCfg.NetRestrict,
-			NodeDatabase: netCfg.NodeDatabase,
+			PrivateKey: config.Network.PrivateKey,
+			MaxPendingPeers: config.Network.MaxPendingPeers,
+			Name: config.Network.Name,
+			RoleType: config.Network.RoleType,
+			//BootstrapNodes: config.,
+			//StaticNodes: config.,
+			//TrustedNodes: config.,
+			NetRestrict: config.Network.NetRestrict,
+			NodeDatabase: config.Network.NodeDatabase,
+			ListenAddr: config.Network.ListenAddr,
+			NAT: config.Network.NAT,
+			Dialer: config.Network.Dialer,
+			NoDial: config.Network.NoDial,
+			EnableMsgEvents: config.Network.EnableMsgEvents,
+
+			NetworkId: config.Node.NetworkId,
 			Protocols: prm.hpb.Protocols(),
-			ListenAddr: netCfg.ListenAddr,
-			NAT: netCfg.NAT,
-			Dialer: netCfg.Dialer,
-			NoDial: netCfg.NoDial,
-			EnableMsgEvents: netCfg.EnableMsgEvents,
-			//NetworkId: netCfg.NetworkId,
 		},
 	}
 	//prm.hpb.networkId = networkId
@@ -144,18 +151,18 @@ func (prm *PeerManager)Start(netCfg config.NetworkConfig, apis []rpc.API) error 
 	}
 
 	prm.rpc    = &RpcMgr{
-		ipcEndpoint:  netCfg.IpcEndpoint,
-		httpEndpoint: netCfg.HttpEndpoint,
-		wsEndpoint:   netCfg.WsEndpoint,
+		ipcEndpoint:  config.Network.IpcEndpoint,
+		httpEndpoint: config.Network.HttpEndpoint,
+		wsEndpoint:   config.Network.WsEndpoint,
 
-		httpCors:     netCfg.HTTPCors,
-		httpModules:  netCfg.HTTPModules,
+		httpCors:     config.Network.HTTPCors,
+		httpModules:  config.Network.HTTPModules,
 
-		wsOrigins:    netCfg.WSOrigins,
-		wsModules:    netCfg.WSModules,
-		wsExposeAll:  netCfg.WSExposeAll,
+		wsOrigins:    config.Network.WSOrigins,
+		wsModules:    config.Network.WSModules,
+		wsExposeAll:  config.Network.WSExposeAll,
 	}
-	prm.rpc.startRPC(apis)
+	prm.rpc.startRPC(config.Node.RpcAPIs)
 
 	return nil
 
