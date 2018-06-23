@@ -391,7 +391,7 @@ func (this *Puller) loop() {
 					}
 					for _, hash := range hashes {
 						headerFetchMeter.Mark(1)
-						fetchHeader(hash) // Suboptimal, but protocol doesn't allow batch header retrievals
+						fetchHeader(p2p.PeerMgrInst().Peer(peer), hash) // Suboptimal, but protocol doesn't allow batch header retrievals
 					}
 				}()
 			}
@@ -422,7 +422,7 @@ func (this *Puller) loop() {
 					this.completingHook(hashes)
 				}
 				bodyFetchMeter.Mark(int64(len(hashes)))
-				go this.completing[hashes[0]].fetchBodies(hashes)
+				go this.completing[hashes[0]].fetchBodies(p2p.PeerMgrInst().Peer(peer), hashes)
 			}
 			// Schedule the next fetch if blocks are still pending
 			this.rescheduleComplete(completeTimer)
