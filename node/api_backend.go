@@ -33,6 +33,7 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/synctrl"
 )
 
 // HpbApiBackend implements ethapi.Backend for full nodes
@@ -50,7 +51,7 @@ func (b *HpbApiBackend) CurrentBlock() *types.Block {
 }
 
 func (b *HpbApiBackend) SetHead(number uint64) {
-	b.hpb.Hpbsyncctr.CancelSyncer()
+	b.hpb.Hpbsyncctr.Syncer().Cancel()
 	b.hpb.Hpbbc.SetHead(number)
 }
 
@@ -168,11 +169,12 @@ func (b *HpbApiBackend) TxPoolContent() (map[common.Address]types.Transactions, 
 }
 
 func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
-	return b.hpb.TxPool().   .SubscribeTxPreEvent(ch)
+	return nil
+	//return b.hpb.TxPool().SubscribeTxPreEvent(ch) //TODO
 }
 
-func (b *HpbApiBackend) Downloader() *downloader.Downloader {
-	return b.hpb.Downloader()
+func (b *HpbApiBackend) Downloader() *synctrl.Syncer  {
+	return b.hpb.Hpbsyncctr.Syncer()
 }
 
 func (b *HpbApiBackend) ProtocolVersion() int {

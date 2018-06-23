@@ -38,11 +38,11 @@ import (
 // 基于用户的输入产生genesis
 func (p *prometh) makeGenesis() {
 	// Construct a default genesis block
-	genesis := &core.Genesis{
+	genesis := &bc.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
 		GasLimit:   params.GenesisGasLimit.Uint64(),
 		Difficulty: big.NewInt(1048576),
-		Alloc:      make(core.GenesisAlloc),
+		Alloc:      make(bc.GenesisAlloc),
 		Config: &params.ChainConfig{
 		},
 	}
@@ -141,7 +141,7 @@ func (p *prometh) makeGenesis() {
 	for {
 		// Read the address of the account to fund
 		if address := p.readAddress(); address != nil {
-			genesis.Alloc[*address] = core.GenesisAccount{
+			genesis.Alloc[*address] = bc.GenesisAccount{
 				Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
 			}
 			continue
@@ -151,7 +151,7 @@ func (p *prometh) makeGenesis() {
 
 	// Add a batch of precompile balances to avoid them getting deleted
 	//for i := int64(0); i < 256; i++ {
-	//	genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+	//	genesis.Alloc[common.BigToAddress(big.NewInt(i))] = bc.GenesisAccount{Balance: big.NewInt(1)}
 	//}
 	fmt.Println()
 

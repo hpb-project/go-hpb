@@ -174,7 +174,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	defer file.Close()
 
-	genesis := new(core.Genesis)
+	genesis := new(bc.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
@@ -185,7 +185,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		_, hash, err := core.SetupGenesisBlock(chaindb, genesis)
+		_, hash, err := bc.SetupGenesisBlock(chaindb, genesis)
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
@@ -212,7 +212,7 @@ func initRand(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		werr := core.WriteRandom(chaindb, randomStr)
+		werr := bc.WriteRandom(chaindb, randomStr)
 		
 		if werr != nil {
 			utils.Fatalf("Failed to random string: %v", werr)
@@ -369,7 +369,7 @@ func copyDb(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	hc, err := core.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
+	hc, err := bc.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
 	if err != nil {
 		return err
 	}

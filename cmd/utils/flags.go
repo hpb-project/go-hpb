@@ -179,12 +179,12 @@ var (
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
-		Value: core.DefaultTxPoolConfig.Journal,
+		Value: bc.DefaultTxPoolConfig.Journal,
 	}
 	TxPoolRejournalFlag = cli.DurationFlag{
 		Name:  "txpool.rejournal",
 		Usage: "Time interval to regenerate the local transaction journal",
-		Value: core.DefaultTxPoolConfig.Rejournal,
+		Value: bc.DefaultTxPoolConfig.Rejournal,
 	}
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
@@ -869,9 +869,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.Node.NetworkId = 3
 		}
-		cfg.Node.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.Node.Genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Node.Genesis = core.DevGenesisBlock()
+		cfg.Node.Genesis = bc.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.Node.GasPrice = new(big.Int)
 		}
@@ -997,9 +997,9 @@ func SetHpbConfig(ctx *cli.Context, stack *node.Node, cfg *hpb.Config) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 3
 		}
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.Genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Genesis = core.DevGenesisBlock()
+		cfg.Genesis = bc.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
 		}
@@ -1073,13 +1073,13 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) hpbdb.Database {
 	return chainDb
 }
 
-func MakeGenesis(ctx *cli.Context) *core.Genesis {
-	var genesis *core.Genesis
+func MakeGenesis(ctx *cli.Context) *bc.Genesis {
+	var genesis *bc.Genesis
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = core.DefaultTestnetGenesisBlock()
+		genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		genesis = core.DevGenesisBlock()
+		genesis = bc.DevGenesisBlock()
 	}
 	return genesis
 }
@@ -1089,7 +1089,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
+	config, _, err := bc.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
@@ -1106,7 +1106,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 		//}
 	}
 	vmcfg := hvm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
+	chain, err = bc.NewBlockChain(chainDb, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}
