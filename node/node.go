@@ -48,11 +48,10 @@ import (
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
-
-	"github.com/go-hpb-backkup/blockchain/event"
 	"github.com/hpb-project/go-hpb/consensus/solo"
 )
 

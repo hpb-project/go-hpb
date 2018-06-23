@@ -28,7 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/ghpb/protocol/downloader"
-	"github.com/hpb-project/ghpb/protocol/filters"
+	"github.com/hpb-project/go-hpb/protocol/filters"
 )
 
 type LesServer interface {
