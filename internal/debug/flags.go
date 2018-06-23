@@ -24,10 +24,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/ghpb/common/log/term"
+	"github.com/hpb-project/go-hpb/common/log/term"
 )
 
 var (
