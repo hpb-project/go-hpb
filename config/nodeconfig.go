@@ -18,10 +18,13 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/cmd/ghpb"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/node/gasprice"
+	"github.com/hpb-project/go-hpb/synctrl"
 )
 
 
 var DefaultConfig = Nodeconfig{
+	SyncMode:    synctrl.FastSync,
 	DataDir:     DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:             1,
@@ -64,7 +67,7 @@ type Nodeconfig struct {
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  int
+	SyncMode  synctrl.SyncMode
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
@@ -82,7 +85,7 @@ type Nodeconfig struct {
 	GasPrice     *big.Int
 
 	// Gas Price Oracle options,HPB don't need dynamic gas price
-	//GPO gasprice.Config
+	GPO gasprice.Config
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool

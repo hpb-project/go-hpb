@@ -190,7 +190,7 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	hpbnode, cfg := MakeConfigNode(ctx)
+	hpbnode, _ := MakeConfigNode(ctx)
 	startNode(ctx, hpbnode)
 	hpbnode.Wait()
 	return nil

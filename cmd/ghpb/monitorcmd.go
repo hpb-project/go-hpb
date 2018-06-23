@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/node"
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/gizak/termui"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -35,7 +35,7 @@ import (
 var (
 	monitorCommandAttachFlag = cli.StringFlag{
 		Name:  "attach",
-		Value: node.DefaultIPCEndpoint(clientIdentifier),
+		Value: config.DefaultIPCEndpoint(clientIdentifier),
 		Usage: "API endpoint to attach to",
 	}
 	monitorCommandRowsFlag = cli.IntFlag{
