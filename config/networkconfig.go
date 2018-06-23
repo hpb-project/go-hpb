@@ -179,9 +179,9 @@ var defaultNetworkConfig = NetworkConfig{
 	ListenAddr:   ":30303",
 	MaxPeers:     50,
 	NAT:          nat.Any(),
-	ipcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
-	httpEndpoint: DefaultHTTPEndpoint(),
-	wsEndpoint:   DefaultWSEndpoint(),
+	IpcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
+	HttpEndpoint: DefaultHTTPEndpoint(),
+	WsEndpoint:   DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
