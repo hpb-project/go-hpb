@@ -179,9 +179,9 @@ var defaultNetworkConfig = NetworkConfig{
 	ListenAddr:   ":30303",
 	MaxPeers:     50,
 	NAT:          nat.Any(),
-	ipcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
-	httpEndpoint: DefaultHTTPEndpoint(),
-	wsEndpoint:   DefaultWSEndpoint(),
+	IpcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
+	HttpEndpoint: DefaultHTTPEndpoint(),
+	WsEndpoint:   DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
@@ -306,9 +306,13 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
-	httpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+
+	BootstrapNodes []*discover.Node
+
+
 
 
 }
