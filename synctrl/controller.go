@@ -19,6 +19,8 @@ package synctrl
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hpb-project/ghpb/core"
+	"github.com/hpb-project/ghpb/protocol/downloader"
 	"math"
 	"math/big"
 	"sync"
@@ -326,8 +328,8 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 	}
 }
 
-func (this *SynCtrl) CancelSyncer() {
-	this.syner.Cancel()
+func (this *SynCtrl) Syncer() *Syncer {
+	return this.syner
 }
 
 func (this *SynCtrl) Stop() {
