@@ -22,7 +22,7 @@ import (
 	"sort"
 	"fmt"
 	"encoding/json"
-	//"math/big"
+	"math/big"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/storage"
@@ -102,20 +102,22 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 
 
 // 投票池中添加
-func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs float64) bool {
+func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
 	//if !s.ValidVote(address) {
 	//	return false
 	//}
 	if old, ok := s.Tally[candAddress]; ok {
         old.VoteNumbers = old.VoteNumbers + 1
-        old.VoteIndexs = old.VoteIndexs + voteIndexs
-        old.VoteIndexs = old.VoteIndexs/float64(old.VoteNumbers)
+        old.VoteIndexs =  big.Int.Add(old.VoteIndexs, voteIndexs)
+        
+        
+        old.VotePercent = old.VoteIndexs/float64(old.VoteNumbers)
         old.CandAddress = candAddress
 	} else {
 		s.Tally[candAddress] = Tally{
 			VoteNumbers: 1,
-			VoteIndexs: voteIndexs,
-			VotePercent: voteIndexs,
+			VoteIndexs: float64(0),
+			VotePercent: float64(0),
 			CandAddress: candAddress,
 		}
 	}

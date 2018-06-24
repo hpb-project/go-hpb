@@ -48,8 +48,9 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
-	//ExtraHash  []byte              `json:"extraHash"`
-	VoteIndex  float64              `json:"voteIndex"`
+	//ExtraHash  []byte            `json:"extraHash"`
+	VoteIndex  uint64             `json:"voteIndex"`
+	CandAddress common.Address     `json:"candAddress"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
@@ -244,14 +245,14 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
-		//ExtraHash:  g.ExtraHash,
 		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
 		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
 		Difficulty: g.Difficulty,
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		//CoinbaseHash:   g.CoinbaseHash,
-		VoteIndex:  g.VoteIndex,
+		VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
+		CandAddress: g.CandAddress,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {

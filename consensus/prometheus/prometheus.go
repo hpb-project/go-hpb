@@ -118,7 +118,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
-	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			//if snap.ValidVote(address, true) {
 			header.CandAddress = caddress // 设置地址
 			//header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
-			header.VoteIndex = cadWinner.VoteIndex   // 设置最新的计算结果
+			header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 			//}
 			log.Info("#########################################TESE", cadWinner.Address)
@@ -210,7 +210,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, nil)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil)
 	//
 	if err != nil {
 		return nil, err
@@ -290,10 +290,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	return block.WithSeal(header), nil
 }
 
-
-
-
-
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
 func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
@@ -303,8 +299,6 @@ func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
 	c.signer = signer
 	c.signFn = signFn
 }
-
-
 
 // 获取社区选举的快照
 func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
@@ -343,12 +337,10 @@ func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, 
 	return nil,nil
 }
 
-
 // 从社区选举中的投票中去获取
 func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapshots.ComNodeSnap, error) {
 
 		//开始读取智能合约
-		// 
 		//
 		str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
@@ -371,115 +363,6 @@ func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapsho
 		log.Trace("Stored genesis voting ComNodeSnap to disk")
 		return comNodeSnap,nil
 }
-
-// 从数据库和缓存中获取数据
-func (c *Prometheus) getDataFromCacheAndDb(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
-		
-		if s, ok := c.recents.Get(hash); ok {
-			snapcache := s.(*snapshots.HpbNodeSnap)
-			return snapcache, nil
-		}else{
-			// 从数据库中获取
-			if snapdb, err := snapshots.LoadHistorysnap(c.config, c.signatures, c.db, hash); err == nil {
-				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				return snapdb, err
-			}
-		}
-		return nil, nil
-}
-
-//将数据存入到缓存和数据库中
-func (c *Prometheus) storeDataToCacheAndDb(db hpbdb.Database,snap *snapshots.HpbNodeSnap) error {
-		// 存入到缓存中
-		c.recents.Add(snap.Hash, snap)
-		// 存入数据库
-		err := snap.Store(db)
-		return err
-}
-
-
-func (c *Prometheus) genGenesisSnap(chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
-
-		genesis := chain.GetHeaderByNumber(0)
-		if err := c.VerifyHeader(chain, genesis, false); err != nil {
-			return nil, err
-		}
-		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-		for i := 0; i < len(signers); i++ {
-			log.Info("miner initialization", "i:",i)
-			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
-		}
-		snap := snapshots.NewHistorysnap(c.config, c.signatures, 0, genesis.Hash(), signers)
-		// 存入缓存和数据库中
-		if err := c.storeDataToCacheAndDb(c.db, snap); err != nil {
-			return nil, err
-		}
-		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
-		return snap, nil
-}
-
-
-// 获取快照
-func (c *Prometheus) getHpbNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
-
-	var (
-		headers []*types.Header
-		snap    *snapshots.HpbNodeSnap
-	)
-	
-	// 首次要创建
-	if number == 0 {
-		if snapg,err := c.genGenesisSnap(chain); err == nil{
-			return snapg, err
-		}
-	}
-	
-	//前十轮不会进行投票，前10轮采用区块0时候的数据
-	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < checkpointInterval * 10){
-		genesis := chain.GetHeaderByNumber(0)
-		hash := genesis.Hash()
-		// 从缓存中获取
-		if snapcd, err := c.getDataFromCacheAndDb(hash); err == nil {
-			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-			return snapcd, err
-		}else{
-			if snapg,err := c.genGenesisSnap(chain); err == nil{
-				return snapg, err
-			}
-		}
-	}
-	
-	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
-	// 开始计算最后一次的确认区块
-	latestCheckPointNumber :=  uint64(math.Floor(float64(number/checkpointInterval)-3))*checkpointInterval
-	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
-
-	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
-	latestCheckPointHash := header.Hash()
-	
-	if snapcd, err := c.getDataFromCacheAndDb(latestCheckPointHash); err == nil {
-			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-			return snapcd, err
-	}else{
-		// 开始获取之前的所有header
-		for number := latestCheckPointNumber - 3 * checkpointInterval; number < latestCheckPointNumber; number++{
-			header := chain.GetHeaderByNumber(number)
-			if header == nil {
-				headers = append(headers, header)
-			}
-		}
-		
-		if snapa, err := snapshots.CalculateHpbSnap(headers,chain); err == nil {
-			if err := c.storeDataToCacheAndDb(c.db, snap); err != nil {
-				return nil, err
-			}
-			return snapa, err
-		}
-	}
-	return nil, nil
-}
-
 
 // 从当前的签名中，返回追溯到签名者
 func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
@@ -597,7 +480,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrInvalidTimestamp
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, parents)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
@@ -642,7 +525,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := c.getHpbNodeSnap(chain, number-1, header.ParentHash, parents)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, parents)
 
 	if err != nil {
 		return err
@@ -693,8 +576,6 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
-
-
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
 // controlling the signerHash voting.
