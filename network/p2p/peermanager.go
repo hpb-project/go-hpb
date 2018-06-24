@@ -284,6 +284,14 @@ func (prm *PeerManager) Close() {
 	prm.closed = true
 }
 
+func (api *PeerManager) Peers() []*PeerInfo {
+	return nil
+}
+
+func (api *PeerManager) NodeInfo() *NodeInfo {
+	return nil
+}
+
 ////////////////////////////////////////////////////////
 
 //HPB 协议
