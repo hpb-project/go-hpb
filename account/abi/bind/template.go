@@ -16,7 +16,7 @@
 
 package bind
 
-import "github.com/hpb-project/ghpb/account/abi"
+import "github.com/hpb-project/go-hpb/account/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
