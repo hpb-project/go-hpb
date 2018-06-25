@@ -190,8 +190,6 @@ func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*Hp
 		
 	}
 	
-	
-	
 	sort.Float64s(keys)
 		
 	for i := 0; i < len(keys)-1; i++ {
