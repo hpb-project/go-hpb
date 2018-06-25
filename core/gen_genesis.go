@@ -20,7 +20,8 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
 		//ExtraHash  hexutil.Bytes                          	   `json:"extraHash"`
-		VoteIndex  math.HexOrDecimal64                    	   `json:"voteIndex"`
+		CandAddress common.Address 							   `json:"candAddress" `
+	    VoteIndex  math.HexOrDecimal64       				   `json:"voteIndex"      ` 
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    common.Hash                                 `json:"mixHash"`
@@ -35,12 +36,13 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
-	//enc.ExtraHash = g.ExtraHash
-	enc.VoteIndex = math.HexOrDecimal64(g.VoteIndex)
 	enc.GasLimit = math.HexOrDecimal64(g.GasLimit)
 	enc.Difficulty = (*math.HexOrDecimal256)(g.Difficulty)
 	enc.Mixhash = g.Mixhash
 	enc.Coinbase = g.Coinbase
+	enc.VoteIndex = math.HexOrDecimal64(g.VoteIndex)
+	enc.CandAddress = g.CandAddress
+	
 	if g.Alloc != nil {
 		enc.Alloc = make(map[common.UnprefixedAddress]GenesisAccount, len(g.Alloc))
 		for k, v := range g.Alloc {
@@ -61,6 +63,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
 		//ExtraHash  hexutil.Bytes                               `json:"extraHash"`
 		VoteIndex  *math.HexOrDecimal64                        `json:"voteIndex"`
+		CandAddress   *common.Address                           `json:"candAddress"`
 		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    *common.Hash                                `json:"mixHash"`
@@ -89,9 +92,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	//if dec.ExtraHash != nil {
 	//	g.ExtraHash = dec.ExtraHash
 	//}
-	if dec.VoteIndex != nil {
-		g.VoteIndex = float64(*dec.VoteIndex)
-	}
+	//if dec.VoteIndex != nil {
+	//	g.VoteIndex = float64(0)
+	//}
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for Genesis")
 	}

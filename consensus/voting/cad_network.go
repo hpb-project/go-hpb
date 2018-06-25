@@ -18,13 +18,13 @@
 package voting
 
 import (
-	"math"
-	"strconv"
-	"math/rand"
-    "fmt"
+	//"math"
+	//"strconv"
+	//"math/rand"
+   // "fmt"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/consensus"
-
+   // "math/big"
 	"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/storage"
 )
@@ -35,11 +35,12 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
 		type CadWinners []*snapshots.CadWinner
-		cadWinners := []*snapshots.CadWinner{} 
+		//cadWinners := []*snapshots.CadWinner{} 
 		
-		cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
+		//cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
+		/*
 		for i := 0; i < 10; i++ {
 			
 			//加权算法
@@ -55,29 +56,30 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 				cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,VoteIndex})
 			}
 		}
-		
+		*/
 		// 先获取长度，然后进行随机获取
-		lnlen := int(math.Log2(float64(len(cadWinners))))
+		//lnlen := int(math.Log2(float64(len(cadWinners))))
 		
-		var lastCadWinners []*snapshots.CadWinner
+		//var lastCadWinners []*snapshots.CadWinner
 		
-		for i := 0 ; i < lnlen; i++{
-			lastCadWinners = append(lastCadWinners,cadWinners[rand.Intn(len(cadWinners)-1)])
-		}
+		//for i := 0 ; i < lnlen; i++{
+			//lastCadWinners = append(lastCadWinners,cadWinners[rand.Intn(len(cadWinners)-1)])
+		//}
 		
 		//开始进行排序获取最大值
-		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",float64(10)}
-		voteIndexTemp := float64(0)
+		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",uint64(10)}
+		//voteIndexTemp := float64(0)
 		
+		/*
 		for _, lastCadWinner := range lastCadWinners {
 	        if(lastCadWinner.VoteIndex > voteIndexTemp){
 	        	  voteIndexTemp = lastCadWinner.VoteIndex
 	        	  lastCadWinnerToChain = lastCadWinner //返回最优的
 	        }
 	    }
-		
-		fmt.Println("len:", voteIndexTemp)
-		fmt.Println("len:", lastCadWinnerToChain.VoteIndex)
+		*/
+		//fmt.Println("len:", voteIndexTemp)
+		//fmt.Println("len:", lastCadWinnerToChain.VoteIndex)
 		return lastCadWinnerToChain,nil
 }
 

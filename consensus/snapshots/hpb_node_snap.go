@@ -22,7 +22,7 @@ import (
 	"sort"
 	"fmt"
 	"encoding/json"
-	//"math/big"
+	"math/big"
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/types"
 	"github.com/hpb-project/ghpb/storage"
@@ -37,9 +37,9 @@ import (
 
 type Tally struct {
 	CandAddress    common.Address  `json:"candAddress"`     // 通过投票的个数
-	VoteNumbers    int  `json:"voteNumbers"`     // 通过投票的个数
-	VoteIndexs     float64   `json:"voteIndexs"`     // 通过投票的个数
-	VotePercent    float64  `json:"votePercent"`     // 通过投票的个数
+	VoteNumbers    *big.Int  `json:"voteNumbers"`     // 通过投票的个数
+	VoteIndexs     *big.Int   `json:"voteIndexs"`     // 通过投票的个数
+	VotePercent    *big.Int  `json:"votePercent"`     // 通过投票的个数
 }
 
 type HpbNodeSnap struct {
@@ -102,20 +102,21 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 
 
 // 投票池中添加
-func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs float64) bool {
+func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
 	//if !s.ValidVote(address) {
 	//	return false
 	//}
 	if old, ok := s.Tally[candAddress]; ok {
-        old.VoteNumbers = old.VoteNumbers + 1
-        old.VoteIndexs = old.VoteIndexs + voteIndexs
-        old.VoteIndexs = old.VoteIndexs/float64(old.VoteNumbers)
+        
+        old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1))
+        old.VoteIndexs.Add(old.VoteIndexs, voteIndexs)
+        old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers)
         old.CandAddress = candAddress
 	} else {
 		s.Tally[candAddress] = Tally{
-			VoteNumbers: 1,
-			VoteIndexs: voteIndexs,
-			VotePercent: voteIndexs,
+			VoteNumbers: big.NewInt(1),
+			VoteIndexs: big.NewInt(0),
+			VotePercent: big.NewInt(0),
 			CandAddress: candAddress,
 		}
 	}
@@ -183,13 +184,16 @@ func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*Hp
 	var keys []float64
 	var indexTally  map[float64]Tally
 	for _, v := range snap.Tally{
-		indexTally[v.VotePercent] = v;
-		keys = append(keys,v.VotePercent)
+		indexTally[float64(v.VotePercent.Uint64())] = v;
+		keys = append(keys,float64(v.VotePercent.Uint64()))
 		snap.Signers[v.CandAddress] = struct{}{}
+		
 	}
 	
-	sort.Float64s(keys)
 	
+	
+	sort.Float64s(keys)
+		
 	for i := 0; i < len(keys)-1; i++ {
 		fmt.Printf("#####%.f\n", i)
 	}
