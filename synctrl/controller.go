@@ -19,8 +19,6 @@ package synctrl
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/protocol/downloader"
 	"math"
 	"math/big"
 	"sync"
