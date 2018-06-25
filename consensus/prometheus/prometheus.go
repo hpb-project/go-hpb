@@ -267,7 +267,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
 			}
        }
-		
 		log.Info("Out-of-turn signing requested ++++++++++++++++++++++++++++++++++", "delay", common.PrettyDuration(delay))
 	}
 

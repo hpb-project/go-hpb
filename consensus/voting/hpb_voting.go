@@ -100,6 +100,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	return nil, nil
 }
 
+//生成初始化的区块
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *params.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 		genesis := chain.GetHeaderByNumber(0)
