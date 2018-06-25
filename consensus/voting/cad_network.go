@@ -37,11 +37,11 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		type CadWinners []*snapshots.CadWinner
 		cadWinners := []*snapshots.CadWinner{} 
 		
-		cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
+		//cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
 		
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 1000; i++ {
 			
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
@@ -49,12 +49,12 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 			VoteIndex := networkBandwidth + transactionNum
 			
 			strnum := strconv.Itoa(i)
-			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
+			//cadNodeMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
 			
 			//在候选列表中获取，如果候选列表中含有，在进行加入
-			if _,exists := cadNodeMap["192.168.2"+strnum]; exists == true{
+			//if _,exists := cadNodeMap["192.168.2"+strnum]; exists == true{
 				cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)})
-			}
+			//}
 		}
 		
 		// 先获取长度，然后进行随机获取

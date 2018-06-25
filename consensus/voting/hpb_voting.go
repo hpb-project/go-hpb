@@ -39,12 +39,14 @@ import (
 
 )
 
+const hpbNodeCheckpointInterval   = 5 // 社区投票间隔
+
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *params.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	var (
 		headers []*types.Header
-		snap    *snapshots.HpbNodeSnap
+		//snap    *snapshots.HpbNodeSnap
 	)
 	
 	// 首次要创建
@@ -56,15 +58,16 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < checkpointInterval * 10){
+	if(number < hpbNodeCheckpointInterval * 4){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
 		if snapcd, err := GetDataFromCacheAndDb(db, recents,signatures,config,hash); err == nil {
-			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
 		}else{
 			if snapg,err := GenGenesisSnap(db, recents,signatures ,config ,chain); err == nil{
+				log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form genesis snap", "number", number, "hash", hash)
 				return snapg, err
 			}
 		}
@@ -72,26 +75,31 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
 	// 开始计算最后一次的确认区块
-	latestCheckPointNumber :=  uint64(math.Floor(float64(number/checkpointInterval)-3))*checkpointInterval
-	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
+	latestCheckPointNumber :=  uint64(math.Floor(float64(number/hpbNodeCheckpointInterval))) * hpbNodeCheckpointInterval
+	log.Error("Current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
 
 	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
 	latestCheckPointHash := header.Hash()
 	
 	if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
-			log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
 	}else{
 		// 开始获取之前的所有header
-		for number := latestCheckPointNumber - 3 * checkpointInterval; number < latestCheckPointNumber; number++{
-			header := chain.GetHeaderByNumber(number)
-			if header == nil {
+		//for i := 1; i < 6; i++{
+		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
+
+			log.Info("Header:",strconv.FormatUint(i, 10))
+			
+			header := chain.GetHeaderByNumber(i)
+			if header != nil {
 				headers = append(headers, header)
 			}
 		}
 		
-		if snapa, err := snapshots.CalculateHpbSnap(headers,chain); err == nil {
-			if err := StoreDataToCacheAndDb(recents,db, snap); err != nil {
+		if snapa, err := snapshots.CalculateHpbSnap(signatures,config,headers,chain); err == nil {
+			log.Info("HPB_VOTING： starting calculate Hpb Snap", "number", number, "hash", hash)
+			if err := StoreDataToCacheAndDb(recents,db, snapa); err != nil {
 				return nil, err
 			}
 			return snapa, err

@@ -33,6 +33,9 @@ import (
 
 	//"strconv"
 	//"errors"
+	
+	"github.com/hpb-project/ghpb/common/log"
+	
 )
 
 type Tally struct {
@@ -107,12 +110,13 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	//	return false
 	//}
 	if old, ok := s.Tally[candAddress]; ok {
-        
+		log.Info("Add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
         old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1))
         old.VoteIndexs.Add(old.VoteIndexs, voteIndexs)
         old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers)
         old.CandAddress = candAddress
 	} else {
+		log.Info("First add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
 		s.Tally[candAddress] = Tally{
 			VoteNumbers: big.NewInt(1),
 			VoteIndexs: big.NewInt(0),
@@ -158,7 +162,7 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func  CalculateHpbSnap(signatures *lru.ARCCache,config *params.PrometheusConfig, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 	
 	// 如果头部为空，直接返回
@@ -173,7 +177,11 @@ func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*Hp
 		}
 	}
 	
-	snap := &HpbNodeSnap{}
+	signers := make([]common.Address,4)
+	
+	
+	snap := NewHistorysnap(config, signatures, 0, headers[len(headers)-1].Hash(), signers)
+	
 	snap.Tally = make(map[common.Address]Tally)
 	
 	//开始投票
@@ -182,18 +190,21 @@ func  CalculateHpbSnap(headers []*types.Header,chain consensus.ChainReader) (*Hp
 	}
 	
 	var keys []float64
-	var indexTally  map[float64]Tally
+	indexTally := make(map[float64]Tally,len(snap.Tally))
+	
 	for _, v := range snap.Tally{
 		indexTally[float64(v.VotePercent.Uint64())] = v;
 		keys = append(keys,float64(v.VotePercent.Uint64()))
-		snap.Signers[v.CandAddress] = struct{}{}
-		
 	}
 	
-	sort.Float64s(keys)
-		
-	for i := 0; i < len(keys)-1; i++ {
+	sort.Float64s(keys) //对结果今昔那个排序
+	
+	//设置config长度
+	for i := 0; i < 4; i++ {
 		fmt.Printf("#####%.f\n", i)
+		if cands, ok := indexTally[float64(i)]; ok {
+			snap.Signers[cands.CandAddress] = struct{}{}
+		}
 	}
 
 	//等待完善
