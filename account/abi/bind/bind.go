@@ -26,8 +26,8 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/hpb-project/ghpb/account/abi"
 	"golang.org/x/tools/imports"
+	"github.com/hpb-project/go-hpb/account/abi"
 )
 
 // Lang is a target programming language selector to generate bindings for.

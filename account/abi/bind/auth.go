@@ -22,10 +22,10 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/hpb-project/ghpb/account/keystore"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/account/keystore"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from

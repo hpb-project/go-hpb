@@ -20,8 +20,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hpb-project/ghpb/core/event"
 	"sync/atomic"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var INSTANCE = atomic.Value{}
@@ -30,11 +30,11 @@ var INSTANCE = atomic.Value{}
 // backends for signing transactions.
 type Manager struct {
 	store   Backend            // Index of backends currently registered
-	updater event.Subscription // Wallet update subscriptions for all backends
+	updater sub.Subscription // Wallet update subscriptions for all backends
 	updates chan WalletEvent   // Subscription sink for backend wallet changes
 	wallets []Wallet           // Cache of all wallets from all registered backends
 
-	feed event.Feed // Wallet feed notifying of arrivals/departures
+	feed sub.Feed // Wallet feed notifying of arrivals/departures
 
 	quit chan chan error
 	lock sync.RWMutex
@@ -157,7 +157,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
-func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
+func (am *Manager) Subscribe(sink chan<- WalletEvent) sub.Subscription {
 	return am.feed.Subscribe(sink)
 }
 

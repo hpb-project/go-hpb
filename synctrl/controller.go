@@ -19,8 +19,6 @@ package synctrl
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/protocol/downloader"
 	"math"
 	"math/big"
 	"sync"
@@ -35,11 +33,11 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
