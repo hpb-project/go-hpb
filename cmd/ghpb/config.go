@@ -71,8 +71,8 @@ func dumpConfig(ctx *cli.Context) error {
 
 func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	// Load defaults config
-	cfg ,err := config.GetHpbConfigInstance()
-	if err == nil{
+	cfg := config.New()
+	if cfg == nil{
 		log.Error("Get Hpb config fail, so exit")
 		os.Exit(1)
 	}
