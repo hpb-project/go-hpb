@@ -26,6 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"fmt"
 	"os"
+	"sync/atomic"
 )
 var HpbConfigIns *HpbConfig
 const (
@@ -105,8 +106,8 @@ const (
 	Einstein = 1e21
 	Douglas  = 1e42
 )
-
-
+// config instance
+var INSTANCE = atomic.Value{}
 
 type hpbStatsConfig struct {
 	URL string `toml:",omitempty"`
@@ -173,11 +174,11 @@ func loadConfig(file string, cfg *HpbConfig) error {
 	}
 	return err
 }
+func  New() (*HpbConfig) {
+	if INSTANCE.Load() != nil {
+		return INSTANCE.Load().(*HpbConfig)
+	}
 
-
-func GetHpbConfigInstance() (*HpbConfig,  error) {
-
-	//check hpbconfigIns
 	if HpbConfigIns == nil {
 		HpbConfigIns := &HpbConfig{
 			Node: 		defaultNodeConfig() ,
@@ -195,9 +196,19 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 			Gas:		DefaultGasConfig,
 		}
 		log.Info("Create New HpbConfig object")
-		return HpbConfigIns,nil
+		INSTANCE.Store(HpbConfigIns)
+		return HpbConfigIns
 	}
-	return HpbConfigIns, nil
+	INSTANCE.Store(HpbConfigIns)
+	return HpbConfigIns
+
+}
+func GetHpbConfigInstance() (*HpbConfig, error) {
+	if INSTANCE.Load() != nil {
+		return INSTANCE.Load().(*HpbConfig), nil
+	}
+	log.Warn("TxPool is nil, please init tx pool first.")
+	return nil, nil
 }
 
 
