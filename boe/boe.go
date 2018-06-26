@@ -27,8 +27,8 @@ import (
     "sync/atomic"
     "time"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 type BoeHandle struct {
