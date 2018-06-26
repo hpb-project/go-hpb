@@ -36,8 +36,7 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1),
-
-		Prometheus: PrometheusConfig{
+		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -47,8 +46,7 @@ var (
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(3),
-
-		Prometheus: PrometheusConfig{
+		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -58,8 +56,7 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	PrivatenetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1000),
-
-		Prometheus: PrometheusConfig{
+		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
 			Random: "0",
@@ -147,7 +144,7 @@ type ChainConfig struct {
 
 var DefaultBlockChainConfig = ChainConfig{
 	ChainId: MainnetChainConfig.ChainId,
-	Prometheus: DefaultPrometheusConfig,
+	Prometheus: &DefaultPrometheusConfig,
 }
 
 var (
