@@ -327,7 +327,7 @@ func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 
 	return &Prometheus{
-		config:     &conf,
+		config:     nil,
 		db:         db,
 		recents:    recents,
 		signatures: signatures,
