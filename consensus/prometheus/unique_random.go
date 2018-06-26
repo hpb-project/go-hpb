@@ -23,8 +23,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/consensus"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
 
 	//"os"
 	//"path/filepath"

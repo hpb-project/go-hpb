@@ -18,7 +18,7 @@
 package consensus
 
 import (
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/blockchain/state"

@@ -8,7 +8,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/types"
