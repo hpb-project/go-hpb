@@ -119,7 +119,7 @@ type SynCtrl struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	AcceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	txpool      *txpool.TxPool //todo xinqyu's
+	txpool      *txpool.TxPool
 	chaindb     hpbdb.Database
 	chainconfig *config.ChainConfig
 	maxPeers    int
@@ -150,8 +150,13 @@ func InstanceSynCtrl() *SynCtrl {
 	if nil == syncInstance {
 		reentryMux.Lock()
 		if nil == syncInstance {
-			// todo for merge
-			syncInstance, err = NewSynCtrl(hpbdb.GetChainConfig(), config.GetNetworkid, txpool.GetTxPool())
+
+			intan, err := config.GetHpbConfigInstance()
+			if err != nil {
+				return nil
+			}
+			// todo for rujia
+			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, intan.Node.NetworkId, txpool.GetTxPool(), nil, )
 			if err != nil {
 				syncInstance = nil
 			}
@@ -163,14 +168,14 @@ func InstanceSynCtrl() *SynCtrl {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool, /*todo txpool*/
+func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool,
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    new(sub.TypeMux),
 		txpool:      txpool,
 		chaindb:     chaindb,
 		chainconfig: config,
-		newPeerCh:   make(chan *p2p.Peer), //todo
+		newPeerCh:   make(chan *p2p.Peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -184,7 +189,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txp
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
-	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer) //todo removePeer
+	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer)
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
@@ -201,7 +206,7 @@ func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txp
 		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer) //todo removerPeer
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)
 
 	return synctrl, nil
 }
@@ -774,7 +779,7 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
-		return nil // todo : agone  break
+		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
