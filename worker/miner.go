@@ -29,13 +29,13 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	mux *event.TypeMux
+	mux *sub.TypeMux
 
 	worker *worker
 
@@ -47,7 +47,7 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(config *config.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
+func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		mux:      mux,
 		engine:   engine,
