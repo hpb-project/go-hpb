@@ -35,6 +35,7 @@ import (
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/event"
 )
 
@@ -94,13 +95,13 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *event.TypeMux
+	mux          *sub.TypeMux
 	txCh         chan event.TxPreEvent
-	txSub        event.Subscription
+	txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
-	chainHeadSub event.Subscription
+	chainHeadSub sub.Subscription
 	chainSideCh  chan bc.ChainSideEvent
-	chainSideSub event.Subscription
+	chainSideSub sub.Subscription
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
@@ -126,7 +127,7 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
+func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *sub.TypeMux) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
@@ -509,7 +510,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	return nil
 }
 
-func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, chain *bc.BlockChain, coinbase common.Address) {
+func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, chain *bc.BlockChain, coinbase common.Address) {
 	gp := new(hvm.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
