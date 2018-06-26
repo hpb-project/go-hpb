@@ -26,14 +26,13 @@ import (
     "unsafe"
     "sync/atomic"
     "time"
-
-    "github.com/hpb-project/go-hpb/routinue"
-    "github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 type BoeHandle struct {
-    boeEvent *routinue.Event
+    boeEvent *event.SyncEvent
     boeInit  bool
 }
 
@@ -51,14 +50,14 @@ type BoeId uint32
 
 
 const (
-    BoeEventBase routinue.EventType = iota+100
+    BoeEventBase event.EventType = iota+100
     BoeEventMax
 )
 
 var (
     boeRecoverPubTps         = int32(0)
     bcontinue                = false
-    boeHandle                = &BoeHandle{boeEvent:routinue.NewEvent(), boeInit:false}
+    boeHandle                = &BoeHandle{boeEvent:event.NewEvent(), boeInit:false}
 )
 
 func innerResetCounter() {
@@ -106,7 +105,7 @@ func (boe *BoeHandle) Release() (error) {
     return ErrInitFailed
 }
 
-func (boe *BoeHandle) SubscribeEvent(event routinue.EventType) (routinue.Subscriber,error) {
+func (boe *BoeHandle) SubscribeEvent(event event.EventType) (event.Subscriber,error) {
     if (event < BoeEventMax) && (event > BoeEventBase) {
         sub := boe.boeEvent.Subscribe(event)
         return sub, nil
