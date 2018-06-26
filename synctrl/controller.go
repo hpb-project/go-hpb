@@ -629,7 +629,7 @@ func HandleGetNodeDataMsg(p *p2p.Peer, msg p2p.Msg) error {
 		bytes int
 		data  [][]byte
 	)
-	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
+	for bytes < softResponseLimit && len(data) < MaxStateFetch {
 		// Retrieve the hash of the next state entry
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
@@ -672,7 +672,7 @@ func HandleGetReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
 		bytes    int
 		receipts []rlp.RawValue
 	)
-	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
+	for bytes < softResponseLimit && len(receipts) < MaxReceiptFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
@@ -680,7 +680,7 @@ func HandleGetReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested block's receipts, skipping if unknown to us
-		results := core.GetBlockReceipts(IntanceChainDB(), hash, core.GetBlockNumber(IntanceChainDB(), hash))
+		results := bc.GetBlockReceipts(IntanceChainDB(), hash, bc.GetBlockNumber(IntanceChainDB(), hash))
 		if results == nil {
 			if header := bc.InstanceBlockChain().GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
 				continue
