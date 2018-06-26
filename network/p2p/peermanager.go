@@ -25,7 +25,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/config"
@@ -296,12 +295,10 @@ func (api *PeerManager) NodeInfo() *NodeInfo {
 
 //HPB 协议
 type HpbProto struct {
-	networkId uint64
-	protos   []Protocol
-	callback map[uint64]func(interface{}) (bool)
-
+	networkId  uint64
+	protos     []Protocol
+	procFun    map[uint64]MsgCallback
 	//gs *gatherShards
-
 }
 
 const ProtoName        = "hpb"
@@ -313,6 +310,7 @@ var ProtocolMsgLengths = []uint64{ProtoMsgLength}
 const ProtoVersion100  uint   = 100
 const ProtoMsgLength   uint64 = 20
 
+type MsgCallback func(p *Peer, msg Msg) error
 
 type errCode int
 
@@ -328,14 +326,11 @@ const (
 	ErrSuspendedPeer
 )
 
-
-
-
-
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
 		networkId: 0,
 		protos:    make([]Protocol, 0, len(ProtocolVersions)),
+		procFun:   make(map[uint64]MsgCallback),
 		//gs:        &gatherShards{make(map[string]*blockShards)},
 	}
 
@@ -432,6 +427,9 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 }
 
+func (hp *HpbProto) regMsgCall(msg uint64,cb MsgCallback) {
+	hp.procFun[msg] = cb
+}
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (hp *HpbProto) handleMsg(p *Peer) error {
@@ -451,51 +449,74 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == StatusMsg:
-		cb := hp.callback[StatusMsg]
-		cb(msg)
+		if cb := hp.procFun[StatusMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 	case msg.Code == GetBlockHeadersMsg:
-		synctrl.HandleGetBlockHeadersMsg(p, msg)
+		if cb := hp.procFun[GetBlockHeadersMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == BlockHeadersMsg:
-		synctrl.HandleBlockHeadersMsg(p, msg)
+		if cb := hp.procFun[BlockHeadersMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == GetBlockBodiesMsg:
-		synctrl.HandleGetBlockBodiesMsg(p, msg)
+		if cb := hp.procFun[GetBlockBodiesMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == BlockBodiesMsg:
-		synctrl.HandleBlockBodiesMsg(p, msg)
+		if cb := hp.procFun[BlockBodiesMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == GetNodeDataMsg:
-		synctrl.HandleGetNodeDataMsg(p, msg)
+		if cb := hp.procFun[GetNodeDataMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == NodeDataMsg:
-		synctrl.HandleNodeDataMsg(p, msg)
+		if cb := hp.procFun[NodeDataMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == GetReceiptsMsg:
-		synctrl.HandleGetReceiptsMsg(p, msg)
+		if cb := hp.procFun[GetReceiptsMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == ReceiptsMsg:
-		synctrl.HandleReceiptsMsg(p, msg)
+		if cb := hp.procFun[ReceiptsMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == NewBlockHashesMsg:
-		synctrl.HandleNewBlockHashesMsg(p, msg)
+		if cb := hp.procFun[NewBlockHashesMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == NewBlockMsg:
-		synctrl.HandleNewBlockMsg(p, msg)
+		if cb := hp.procFun[NewBlockMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == TxMsg:
-		synctrl.HandleTxMsg(p, msg)
+		if cb := hp.procFun[TxMsg]; cb != nil{
+			cb(p,msg)
+		}
 		return nil
 
 	case msg.Code == HpbTestMsg:
