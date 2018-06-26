@@ -119,8 +119,9 @@ func InstanceBlockChain() (*BlockChain) {
 	if nil == bcInstance {
 		reentryMux.Lock()
 		if  nil == bcInstance {
+			intan, err := config.GetHpbConfigInstance()
 			// todo for merge
-			bcI, err := NewBlockChain(ChainDbInstance(), config.GetChainCfg, /*consensus.engine.InstanceEngine()*/nil)
+			bcI, err := NewBlockChain(nil, &intan.BlockChain, /*consensus.engine.InstanceEngine()*/nil)
 			if err != nil {
 				bcInstance = nil
 			}

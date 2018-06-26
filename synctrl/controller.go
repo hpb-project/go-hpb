@@ -156,7 +156,7 @@ func InstanceSynCtrl() *SynCtrl {
 				return nil
 			}
 			// todo for rujia
-			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, intan.Node.NetworkId, txpool.GetTxPool(), nil, )
+			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, intan.Node.NetworkId, txpool.GetTxPool(), nil, nil)
 			if err != nil {
 				syncInstance = nil
 			}
@@ -642,10 +642,11 @@ func HandleGetNodeDataMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested state entry, stopping if enough was found
-		if entry, err := IntanceChainDB().Get(hash.Bytes()); err == nil {
-			data = append(data, entry)
-			bytes += len(entry)
-		}
+		//todo for shanlin
+		//if entry, err := IntanceChainDB().Get(hash.Bytes()); err == nil {
+		//	data = append(data, entry)
+		//	bytes += len(entry)
+		//}
 	}
 	return sendNodeData(p, data)
 }
@@ -685,7 +686,8 @@ func HandleGetReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested block's receipts, skipping if unknown to us
-		results := bc.GetBlockReceipts(IntanceChainDB(), hash, bc.GetBlockNumber(IntanceChainDB(), hash))
+		// todo for shanlin
+		results := bc.GetBlockReceipts(/*IntanceChainDB()*/nil, hash, bc.GetBlockNumber(/*IntanceChainDB()*/nil, hash))
 		if results == nil {
 			if header := bc.InstanceBlockChain().GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
 				continue
