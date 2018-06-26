@@ -19,14 +19,8 @@ package config
 
 import (
 	"crypto/ecdsa"
-
-	/*
-
-		*/
-
 	"fmt"
 	"time"
-	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
@@ -280,7 +274,7 @@ type NetworkConfig struct {
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
-	Protocols []p2p.Protocol `toml:"-"`
+	//Protocols []p2p.Protocol `toml:"-"`
 
 	// If ListenAddr is set to a non-nil address, the server
 	// will listen for incoming connections.
@@ -297,7 +291,7 @@ type NetworkConfig struct {
 
 	// If Dialer is set to a non-nil value, the given Dialer
 	// is used to dial outbound peer connections.
-	Dialer p2p.NodeDialer `toml:"-"`
+	//Dialer p2p.NodeDialer `toml:"-"`
 
 	// If NoDial is true, the server will not dial any peers.
 	NoDial bool `toml:",omitempty"`
