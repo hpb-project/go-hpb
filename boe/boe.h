@@ -23,13 +23,13 @@
 typedef struct BoeErr{
     int ecode;
     char emsg[100];
-    uint8_t bfree;
+    unsigned char bfree;
 }BoeErr;
 
 BoeErr *BOE_OK;
 typedef int (*BoeUpgradeCallback)(int,char*);
-typedef int (*BoeRecoverPubCallback)(int,uint8_t*);
-typedef uint8_t TVersion;
+typedef int (*BoeRecoverPubCallback)(int,unsigned char*);
+typedef unsigned char TVersion;
 
 void boe_err_free(BoeErr *e);
 
@@ -41,16 +41,16 @@ BoeErr* boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu);
 BoeErr* boe_get_hw_version(TVersion *hw);
 BoeErr* boe_get_fw_version(TVersion *fw);
 BoeErr* boe_get_axu_version(TVersion *axu);
-BoeErr* boe_upgrade(uint8_t *image, int imagelen);
+BoeErr* boe_upgrade(unsigned char *image, int imagelen);
 BoeErr* boe_upgrade_abort(void);
 BoeErr* boe_reset(void);
-BoeErr* boe_set_boeid(uint32_t id);
-BoeErr* boe_set_bind_account(uint8_t *baccount);
-BoeErr* boe_get_random(uint32_t *val);
-BoeErr* boe_get_boeid(uint32_t *id);
-BoeErr* boe_get_bind_account(uint8_t *baccount);
-BoeErr* boe_hw_sign(char *p_data, uint8_t *sig);
-BoeErr* boe_get_s_random(uint8_t *hash, uint8_t *nexthash);
-BoeErr* boe_valid_sign(uint8_t *sig, uint8_t *pub);
+BoeErr* boe_set_boeid(unsigned int id);
+BoeErr* boe_set_bind_account(unsigned char *baccount);
+BoeErr* boe_get_random(unsigned int *val);
+BoeErr* boe_get_boeid(unsigned int *id);
+BoeErr* boe_get_bind_account(unsigned char *baccount);
+BoeErr* boe_hw_sign(char *p_data, unsigned char *sig);
+BoeErr* boe_get_s_random(unsigned char *hash, unsigned char *nexthash);
+BoeErr* boe_valid_sign(unsigned char *sig, unsigned char *pub);
 
 #endif  /*BOE_H*/
