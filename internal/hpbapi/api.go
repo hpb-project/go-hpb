@@ -39,8 +39,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/node"
-	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/blockchain"
 )
 
@@ -602,7 +600,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func() { cancel() }()
 
 	// Get a new instance of the EVM.
-	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
+	evm, _, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
+	//evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
 	if err != nil {
 		return nil, common.Big0, false, err
 	}
@@ -613,9 +612,10 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		evm.Cancel()
 	}()
 
+
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	gp := new(node.GasPool).AddGas(math.MaxBig256)
+	//gp := new(node.GasPool).AddGas(math.MaxBig256) //TODO
 
 	//blockchain := bc.InstanceBlockChain() //TODO
 	//header := bc. //TODO

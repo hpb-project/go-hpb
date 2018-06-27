@@ -55,10 +55,6 @@ func dumpConfig(ctx *cli.Context) error {
 	_, cfg := MakeConfigNode(ctx)
 	comment := ""
 
-	if cfg.Node.Genesis != nil {
-		cfg.Node.Genesis = nil
-		comment += "# Note: this config doesn't contain the genesis block.\n\n"
-	}
 
 	out, err := tomlSettings.Marshal(&cfg)
 	if err != nil {
@@ -78,6 +74,9 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	}
 	// Apply flags.
 	utils.SetNodeConfig(ctx, cfg)
+	//set cfg version
+	cfg.Node.Version = config.VersionWithCommit(GitCommit)
+
 	utils.SetTxPool(ctx, &cfg.TxPool)
 
 

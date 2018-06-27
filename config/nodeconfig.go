@@ -355,7 +355,6 @@ func homeDir() string {
 func defaultNodeConfig() Nodeconfig {
 	cfg := DefaultConfig
 	cfg.Name = clientIdentifier
-	cfg.Version = VersionWithCommit(main.GitCommit)
 	return cfg
 }
 

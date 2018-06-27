@@ -45,7 +45,6 @@ import (
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/node/db"
@@ -827,11 +826,11 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 	switch {
 	case ctx.GlobalIsSet(SyncModeFlag.Name):
-		cfg.Node.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*synctrl.SyncMode)
+		cfg.Node.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*config.SyncMode)
 	case ctx.GlobalBool(FastSyncFlag.Name):
-		cfg.Node.SyncMode = synctrl.FastSync
+		cfg.Node.SyncMode = config.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
-		cfg.Node.SyncMode = synctrl.LightSync
+		cfg.Node.SyncMode = config.LightSync
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
