@@ -87,11 +87,12 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	}else{
 		// 开始获取之前的所有header
 		//for i := 1; i < 6; i++{
+		//for i := uint64(1); i < uint64(6); i++{
 		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
 
 			log.Info("Header:",strconv.FormatUint(i, 10))
 			
-			header := chain.GetHeaderByNumber(i)
+			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
 				headers = append(headers, header)
 			}
@@ -139,7 +140,9 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 			// 从数据库中获取
 			if snapdb, err := snapshots.LoadHistorysnap(config, signatures, db, hash); err == nil {
 				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				return snapdb, err
+				return snapdb, nil
+			}else{
+				return nil, err
 			}
 		}
 		return nil, nil
