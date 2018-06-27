@@ -40,6 +40,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/node"
+	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/blockchain"
 )
 
@@ -615,11 +616,17 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(node.GasPool).AddGas(math.MaxBig256)
-	res, gas, failed, err := bc.ApplyMessage(evm, msg, gp)
+
+	//blockchain := bc.InstanceBlockChain() //TODO
+	//header := bc. //TODO
+	//TODO
+	/*res, gas, failed, err := bc.ApplyMessage(blockchain, evm, msg, gp)
 	if err := vmError(); err != nil {
 		return nil, common.Big0, false, err
-	}
-	return res, gas, failed, err
+	}*/
+	//TODO
+	//return res, gas, failed, err
+	return nil,gas,false,err
 }
 
 // Call executes the given transaction on the state for the given block number.
