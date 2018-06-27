@@ -33,7 +33,7 @@ type txsync struct {
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (this *SynCtrl) syncTransactions(p *p2p.Peer) {
 	var txs types.Transactions
-	pending, _ := this.txpool.Pending()//todo xinyu's
+	pending, _ := this.txpool.Pending()
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
@@ -52,7 +52,7 @@ func (this *SynCtrl) syncTransactions(p *p2p.Peer) {
 // the transactions in small packs to one peer at a time.
 func (this *SynCtrl) txsyncLoop() {
 	var (
-		pending = make(map[discover.NodeID]*txsync)//todo qinghua's peer
+		pending = make(map[discover.NodeID]*txsync)
 		sending = false               // whether a send is active
 		pack    = new(txsync)         // the pack that is being sent
 		done    = make(chan error, 1) // result of the send
@@ -71,7 +71,7 @@ func (this *SynCtrl) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.ID())//todo qinghua's peer
+			delete(pending, s.p.ID())
 		}
 		// Send the pack in the background.
 		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
@@ -96,7 +96,7 @@ func (this *SynCtrl) txsyncLoop() {
 	for {
 		select {
 		case s := <-this.txsyncCh:
-			pending[s.p.ID()] = s//todo qinghua's peer
+			pending[s.p.ID()] = s
 			if !sending {
 				send(s)
 			}
@@ -104,8 +104,8 @@ func (this *SynCtrl) txsyncLoop() {
 			sending = false
 			// Stop tracking peers that cause send failures.
 			if err != nil {
-				pack.p.Log().Debug("Transaction send failed", "err", err)//todo qinghua's peer
-				delete(pending, pack.p.ID())//todo qinghua's peer
+				pack.p.Log().Debug("Transaction send failed", "err", err)
+				delete(pending, pack.p.ID())
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {
