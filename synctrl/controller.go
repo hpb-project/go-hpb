@@ -37,6 +37,7 @@ import (
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
 )
 
@@ -642,11 +643,10 @@ func HandleGetNodeDataMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested state entry, stopping if enough was found
-		//todo for shanlin
-		//if entry, err := IntanceChainDB().Get(hash.Bytes()); err == nil {
-		//	data = append(data, entry)
-		//	bytes += len(entry)
-		//}
+		if entry, err := db.GetHpbDbInstance().Get(hash.Bytes()); err == nil {
+			data = append(data, entry)
+			bytes += len(entry)
+		}
 	}
 	return sendNodeData(p, data)
 }
@@ -686,8 +686,7 @@ func HandleGetReceiptsMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested block's receipts, skipping if unknown to us
-		// todo for shanlin
-		results := bc.GetBlockReceipts(/*IntanceChainDB()*/nil, hash, bc.GetBlockNumber(/*IntanceChainDB()*/nil, hash))
+		results := bc.GetBlockReceipts(db.GetHpbDbInstance(), hash, bc.GetBlockNumber(db.GetHpbDbInstance(), hash))
 		if results == nil {
 			if header := bc.InstanceBlockChain().GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
 				continue

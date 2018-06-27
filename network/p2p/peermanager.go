@@ -132,7 +132,7 @@ func (prm *PeerManager)Start() error {
 			NodeDatabase: config.Network.NodeDatabase,
 			ListenAddr: config.Network.ListenAddr,
 			NAT: config.Network.NAT,
-			Dialer: config.Network.Dialer,
+			Dialer: nil,
 			NoDial: config.Network.NoDial,
 			EnableMsgEvents: config.Network.EnableMsgEvents,
 
