@@ -18,7 +18,6 @@ package synctrl
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -57,60 +56,6 @@ var (
 	reentryMux   sync.Mutex
 	syncInstance *SynCtrl
 )
-
-// SyncMode represents the synchronisation mode of the downloader.
-type SyncMode int
-
-const (
-	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
-	FastSync                  // Quickly download the headers, full sync only at the chain head
-	LightSync                 // Download only the headers and terminate afterwards
-)
-
-func (mode SyncMode) IsValid() bool {
-	return mode >= FullSync && mode <= LightSync
-}
-
-// String implements the stringer interface.
-func (mode SyncMode) String() string {
-	switch mode {
-	case FullSync:
-		return "full"
-	case FastSync:
-		return "fast"
-	case LightSync:
-		return "light"
-	default:
-		return "unknown"
-	}
-}
-
-func (mode SyncMode) MarshalText() ([]byte, error) {
-	switch mode {
-	case FullSync:
-		return []byte("full"), nil
-	case FastSync:
-		return []byte("fast"), nil
-	case LightSync:
-		return []byte("light"), nil
-	default:
-		return nil, fmt.Errorf("unknown sync mode %d", mode)
-	}
-}
-
-func (mode *SyncMode) UnmarshalText(text []byte) error {
-	switch string(text) {
-	case "full":
-		*mode = FullSync
-	case "fast":
-		*mode = FastSync
-	case "light":
-		*mode = LightSync
-	default:
-		return fmt.Errorf(`unknown sync mode %q, want "full", "fast" or "light"`, text)
-	}
-	return nil
-}
 
 type DoneEvent struct{}
 type StartEvent struct{}
@@ -169,24 +114,24 @@ func InstanceSynCtrl() *SynCtrl {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(config *config.ChainConfig, mode SyncMode, networkId uint64, txpool *txpool.TxPool,
+func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, networkId uint64, txpool *txpool.TxPool,
 	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    new(sub.TypeMux),
 		txpool:      txpool,
 		chaindb:     chaindb,
-		chainconfig: config,
+		chainconfig: cfg,
 		newPeerCh:   make(chan *p2p.Peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
 	}
 
-	if mode == FastSync && bc.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
+	if mode == config.FastSync && bc.InstanceBlockChain().CurrentBlock().NumberU64() > 0 {
 		log.Warn("Blockchain not empty, fast sync disabled")
-		mode = FullSync
+		mode = config.FullSync
 	}
-	if mode == FastSync {
+	if mode == config.FastSync {
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
@@ -295,10 +240,10 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 		return
 	}
 	// Otherwise try to sync with the downloader
-	mode := FullSync
+	mode := config.FullSync
 	if atomic.LoadUint32(&this.fastSync) == 1 {
 		// Fast sync was explicitly requested, and explicitly granted
-		mode = FastSync
+		mode = config.FastSync
 	} else if currentBlock.NumberU64() == 0 && bc.InstanceBlockChain().CurrentFastBlock().NumberU64() > 0 {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.
@@ -306,7 +251,7 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 		// bad block) rolled back a fast sync node below the sync point. In this case
 		// however it's safe to reenable fast sync.
 		atomic.StoreUint32(&this.fastSync, 1)
-		mode = FastSync
+		mode = config.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
 	err := this.syner.Start(peer.GetID(), pHead, pTd, mode)
