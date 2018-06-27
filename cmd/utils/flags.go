@@ -48,6 +48,7 @@ import (
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -870,9 +871,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.Node.NetworkId = 3
 		}
-		cfg.Node.Genesis = bc.DefaultTestnetGenesisBlock()
+		//cfg.Node.Genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Node.Genesis = bc.DevGenesisBlock()
+		//cfg.Node.Genesis = bc.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.Node.GasPrice = new(big.Int)
 		}
@@ -956,7 +957,7 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) hpbdb.Database {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	chainDb, err := node.OpenDatabase(name, cache, handles)
+	chainDb, err := db.OpenDatabase(name, cache, handles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)
 	}

@@ -28,7 +28,6 @@ import (
 
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/common/console"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -41,6 +40,7 @@ import (
 	//"io/ioutil"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -180,7 +180,7 @@ func initGenesis(ctx *cli.Context) error {
 	// Open an initialise both full and light databases
 	//stack, _ := MakeConfigNode(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := node.OpenDatabase(name, 0, 0)
+		chaindb, err := db.OpenDatabase(name, 0, 0)
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
@@ -206,7 +206,7 @@ func initRand(ctx *cli.Context) error {
 	//stack, _ := MakeConfigNode(ctx)
 
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := node.OpenDatabase(name, 0, 0)
+		chaindb, err := db.OpenDatabase(name, 0, 0)
 	
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
