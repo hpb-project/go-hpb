@@ -615,7 +615,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(node.GasPool).AddGas(math.MaxBig256)
-	res, gas, failed, err := node.ApplyMessage(evm, msg, gp)
+	res, gas, failed, err := bc.ApplyMessage(evm, msg, gp)
 	if err := vmError(); err != nil {
 		return nil, common.Big0, false, err
 	}
