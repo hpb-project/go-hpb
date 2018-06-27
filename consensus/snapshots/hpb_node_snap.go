@@ -33,9 +33,7 @@ import (
 
 	//"strconv"
 	//"errors"
-	
 	"github.com/hpb-project/ghpb/common/log"
-	
 )
 
 type Tally struct {
@@ -119,8 +117,8 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 		log.Info("First add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
 		s.Tally[candAddress] = Tally{
 			VoteNumbers: big.NewInt(1),
-			VoteIndexs: big.NewInt(0),
-			VotePercent: big.NewInt(0),
+			VoteIndexs: voteIndexs,
+			VotePercent: voteIndexs,
 			CandAddress: candAddress,
 		}
 	}
@@ -179,7 +177,6 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *params.PrometheusConfig,
 	
 	signers := make([]common.Address,4)
 	
-	
 	snap := NewHistorysnap(config, signatures, 0, headers[len(headers)-1].Hash(), signers)
 	
 	snap.Tally = make(map[common.Address]Tally)
@@ -199,10 +196,12 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *params.PrometheusConfig,
 	
 	sort.Float64s(keys) //对结果今昔那个排序
 	
+	fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
+	
 	//设置config长度
 	for i := 0; i < 4; i++ {
-		fmt.Printf("#####%.f\n", i)
-		if cands, ok := indexTally[float64(i)]; ok {
+		fmt.Printf("#####%.f\n", keys[len(keys)-i-1])
+		if cands, ok := indexTally[keys[len(keys)-i-1]]; ok {
 			snap.Signers[cands.CandAddress] = struct{}{}
 		}
 	}

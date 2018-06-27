@@ -80,6 +80,8 @@ func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Hea
 
 // 获取候选节点信息
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]map[string]string, error) {
+	
+	/*
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
 	if header == nil {
@@ -95,7 +97,8 @@ func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]map[string]string,
 		  winner.NetworkId : winner.Address,
 		})
 	}
-	return winners, nil
+	*/
+	return nil, nil
 }
 
 // 获取候选社区选举节点信息

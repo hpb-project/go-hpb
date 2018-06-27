@@ -23,8 +23,8 @@ import (
 	//"math/rand"
 	"sync"
 	"time"
-	"math"
-	"strconv"
+	//"math"
+	//"strconv"
 
 	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
@@ -42,7 +42,7 @@ import (
 	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/ghpb/storage"
 	
-	"github.com/hpb-project/ghpb/consensus/snapshots"
+	//"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/consensus/voting"
 	
 )
@@ -189,7 +189,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	log.Info("HPB Prometheus Seal is starting")
 
-	// Sealing the genesis block is not supported
+	
 	number := header.Number.Uint64()
 	if number == 0 {
 		return nil, consensus.ErrUnknownBlock
@@ -198,20 +198,16 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if c.config.Period == 0 && len(block.Transactions()) == 0 {
 		return nil, consensus.ErrWaitTransactions
 	}
-	// Don't hold the signerHash fields for the entire sealing procedure
+	
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
-
-	//log.Info("Current seal random is" + header.Random)
-	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
 
 	log.Info("signer's address","signer", signer.Hex())
 
 	c.lock.RUnlock()
 
-	// Bail out if we're unauthorized to sign a block
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil)
-	//
+	
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +231,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 			}
 		}
 	}*/
-	// Sweet, the protocol permits us to sign the block, wait for our time
+	
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	// 比较难度值，确定是否为适合的时间
@@ -297,70 +293,6 @@ func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
 
 	c.signer = signer
 	c.signFn = signFn
-}
-
-// 获取社区选举的快照
-func (c *Prometheus) getComNodeSnap(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.ComNodeSnap, error) {
-	
-	//业务逻辑
-	var (
-	 //comNodeSnap    *snapshots.ComNodeSnap
-	 header  *types.Header
-	 latestCheckPointHash common.Hash
-	 //latestCheckPointNumber float64
-	)
-	
-	// 进来的请求恰好在投票检查点，此时重新计票
-	log.Error("current number:",strconv.FormatUint(number, 10))
-	if number%comCheckpointInterval == 0 {
-		if comNodeSnap, err0 := c.CalcuComNodeSnap(number, hash); err0 == nil {
-			return comNodeSnap,nil
-		}
-	}
-	
-	//不在投票点开始获取数据库中的内容
-	latestCheckPointNumber :=  uint64(math.Floor(float64(number/comCheckpointInterval)))*comCheckpointInterval
-	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
-
-	header = chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
-	latestCheckPointHash = header.Hash()
-	
-	if comNodeSnap, err := snapshots.LoadComNodeSnap(c.db, latestCheckPointHash); err == nil {
-		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", hash)
-		return comNodeSnap,nil
-	} else { //数据库中没有正常的获取，再次去统计
-		if comNodeSnap, err1 := c.CalcuComNodeSnap(number, hash); err1 == nil {
-			return comNodeSnap,nil
-		}
-	}
-	return nil,nil
-}
-
-// 从社区选举中的投票中去获取
-func (c *Prometheus) CalcuComNodeSnap(number uint64, hash common.Hash) (*snapshots.ComNodeSnap, error) {
-
-		//开始读取智能合约
-		//
-		str := strconv.FormatUint(number, 10)
-		// 模拟从外部获取		
-		type Winners []*snapshots.Winner
-		w1 := &snapshots.Winner{"192.168.2.14",str}
-		w2 := &snapshots.Winner{"192.168.2.12","17SPaMHq1EkWNVGZuxdoLbDZQ8P39LzKgm"}
-		w3 := &snapshots.Winner{"192.168.2.33","1Ljzw8EodRSLmtxPrFsQP9Ew94htgJ3xze"}
-		
-		allWinners := Winners([]*snapshots.Winner{w1, w2, w3}) 
-		
-		comNodeSnap := snapshots.NewComNodeSnap(number,hash,allWinners)
-
-        log.Info("get Com form outside************************************", comNodeSnap.Winners[0].NetworkId)
-		
-		// 存储到数据库中
-		if err := comNodeSnap.Store(c.db); err != nil {
-				log.Error("Stored Error")
-				return nil, err
-		}
-		log.Trace("Stored genesis voting ComNodeSnap to disk")
-		return comNodeSnap,nil
 }
 
 // 从当前的签名中，返回追溯到签名者
@@ -565,19 +497,17 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
-// Finalize implements consensus.Engine, ensuring no uncles are set, nor block
-// rewards given, and returns the final block.
+
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
-
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
-// APIs implements consensus.Engine, returning the user facing RPC API to allow
-// controlling the signerHash voting.
+
+// 返回的API
 func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "prometheus",
