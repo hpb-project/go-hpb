@@ -53,6 +53,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/consensus/solo"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 // Node is a container on which services can be registered.
@@ -150,7 +151,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//create all object
 	peermanager := p2p.PeerMgrInst()
 	hpbtxpool      := txpool.GetTxPool()
-	db, err      := CreateDB(&conf.Node, "chaindata")
+	db, err      := db.CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
 
 	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
@@ -409,33 +410,7 @@ func (n *Node) EventMux() *sub.TypeMux {
 }
 
 
-// OpenDatabase opens an existing database with the given name (or creates one
-// if no previous can be found) from within the node's data directory. If the
-// node is an ephemeral one, a memory database is returned.
-func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 
-	var cfg, _ = config.GetHpbConfigInstance()
-	if cfg.Node.DataDir == ""{
-		return hpbdb.NewMemDatabase()
-	}
-	db, err := hpbdb.NewLDBDatabase(cfg.Node.ResolvePath(name), cache, handles)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-// CreateDB creates the chain database.
-func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
-	db, err := OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
-	if err != nil {
-		return nil, err
-	}
-	if db, ok := db.(*hpbdb.LDBDatabase); ok {
-		db.Meter("hpb/db/chaindata/")
-	}
-	return db, nil
-}
 
 
 

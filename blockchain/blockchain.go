@@ -40,6 +40,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -120,8 +121,8 @@ func InstanceBlockChain() (*BlockChain) {
 		reentryMux.Lock()
 		if  nil == bcInstance {
 			intan, err := config.GetHpbConfigInstance()
-			// todo for merge
-			bcI, err := NewBlockChain(nil, &intan.BlockChain, /*consensus.engine.InstanceEngine()*/nil)
+			// todo for rujia
+			bcI, err := NewBlockChain(db.GetHpbDbInstance(), &intan.BlockChain, /*consensus.engine.InstanceEngine()*/nil)
 			if err != nil {
 				bcInstance = nil
 			}
