@@ -195,7 +195,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 		return errProVLowerBase
 	}
 
-	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", FullSync)
+	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", config.FullSync)
 	defer func(start time.Time) {
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
@@ -220,7 +220,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 
 	// Initiate the sync using a concurrent header and content retrieval algorithm
 	pivot := uint64(0)
-	this.syncer.sch.Prepare(origin+1, FullSync, pivot, latest)
+	this.syncer.sch.Prepare(origin+1, config.FullSync, pivot, latest)
 	if this.syncInitHook != nil {
 		this.syncInitHook(origin, height)
 	}

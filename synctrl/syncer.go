@@ -155,7 +155,7 @@ type syncStrategy interface {
 }
 
 type Syncer struct {
-	mode         SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
+	mode         config.SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
 	strategy     syncStrategy
 
 	mux     *sub.TypeMux // Event multiplexer to announce sync operation events
@@ -189,7 +189,7 @@ type Syncer struct {
 	quitCh   chan struct{} // Quit channel to signal termination
 }
 
-func NewSyncer(mode SyncMode, stateDb hpbdb.Database, mux *sub.TypeMux, lightchain LightChain,
+func NewSyncer(mode config.SyncMode, stateDb hpbdb.Database, mux *sub.TypeMux, lightchain LightChain,
 	dropPeer peerDropFn) *Syncer {
 	if lightchain == nil {
 		lightchain = bc.InstanceBlockChain()
@@ -210,11 +210,11 @@ func NewSyncer(mode SyncMode, stateDb hpbdb.Database, mux *sub.TypeMux, lightcha
 		trackStateReq:  make(chan *stateReq),
 	}
 	switch mode {
-	case FullSync:
+	case config.FullSync:
 		syn.strategy = newFullsync(syn)
-	case FastSync:
+	case config.FastSync:
 		syn.strategy = newFastsync(syn)
-	case LightSync:
+	case config.LightSync:
 		syn.strategy = newLightsync(syn)
 	default:
 		syn.strategy = nil
@@ -250,7 +250,7 @@ func (this *Syncer) Progress() hpbinter.SyncProgress {
 
 // Start tries to sync up our local block chain with a remote peer, both
 // adding various sanity checks as well as wrapping it with various log entries.
-func (this *Syncer) Start(id string, head common.Hash, td *big.Int, mode SyncMode) error {
+func (this *Syncer) Start(id string, head common.Hash, td *big.Int, mode config.SyncMode) error {
 	err := this.syn(id, head, td, mode)
 	switch err {
 	case nil:
@@ -271,7 +271,7 @@ func (this *Syncer) Start(id string, head common.Hash, td *big.Int, mode SyncMod
 // syn will select the peer and use it for synchronising. If an empty string is given
 // it will use the best peer possible and synchronize if it's TD is higher than our own. If any of the
 // checks fail an error will be returned. This method is synchronous
-func (this *Syncer) syn(id string, hash common.Hash, td *big.Int, mode SyncMode) error {
+func (this *Syncer) syn(id string, hash common.Hash, td *big.Int, mode config.SyncMode) error {
 	// Mock out the synchronisation if testing
 	if this.synchroniseMock != nil {
 		return this.synchroniseMock(id, hash)
@@ -292,7 +292,7 @@ func (this *Syncer) syn(id string, hash common.Hash, td *big.Int, mode SyncMode)
 
 	// Set the requested sync mode, unless it's forbidden
 	this.mode = mode
-	if this.mode == FastSync && atomic.LoadUint32(&this.fsPivotFails) >= fsCriticalTrials {
+	if this.mode == config.FastSync && atomic.LoadUint32(&this.fsPivotFails) >= fsCriticalTrials {
 		// stop the previous synchronization strategy
 		this.strategy.cancel()
 		this.strategy = newFullsync(this)
