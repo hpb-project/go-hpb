@@ -37,7 +37,7 @@ import (
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/node/db
+	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
 )
 
