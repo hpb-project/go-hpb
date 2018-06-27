@@ -18,25 +18,16 @@
 package voting
 
 import (
-	//"fmt"
-	//"math/rand"
 	"math"
 	"strconv"
-
 	"github.com/hpb-project/ghpb/common"
-	//"github.com/hpb-project/ghpb/common/hexutil"
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/types"
-
 	"github.com/hpb-project/ghpb/common/constant"
-	//"github.com/hpb-project/ghpb/common/crypto"
-	//"github.com/hpb-project/ghpb/common/crypto/sha3"
 	"github.com/hpb-project/ghpb/common/log"
-	//"github.com/hpb-project/ghpb/common/rlp"
 	"github.com/hpb-project/ghpb/storage"
 	"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hashicorp/golang-lru"
-
 )
 
 const hpbNodeCheckpointInterval   = 5 // 社区投票间隔
@@ -86,12 +77,8 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			return snapcd, err
 	}else{
 		// 开始获取之前的所有header
-		//for i := 1; i < 6; i++{
-		//for i := uint64(1); i < uint64(6); i++{
 		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
-
 			log.Info("Header:",strconv.FormatUint(i, 10))
-			
 			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
 				headers = append(headers, header)
