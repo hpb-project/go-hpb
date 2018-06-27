@@ -14,16 +14,22 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/node/gasprice"
-	"github.com/hpb-project/go-hpb/synctrl"
+
 )
 
+// SyncMode represents the synchronisation mode of the downloader.
+type SyncMode int
+const (
+	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
+	FastSync                  // Quickly download the headers, full sync only at the chain head
+	LightSync                 // Download only the headers and terminate afterwards
+)
 
 var DefaultConfig = Nodeconfig{
-	SyncMode:    synctrl.FastSync,
+	SyncMode:    FastSync,
 	DataDir:     DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:             1,
@@ -66,7 +72,7 @@ type Nodeconfig struct {
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  synctrl.SyncMode
+	SyncMode  SyncMode
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
