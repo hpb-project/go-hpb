@@ -74,6 +74,9 @@ type Node struct {
 	networkId		uint64
 	netRPCService   *hpbapi.PublicNetAPI
 
+	// The genesis block, which is inserted if the database is empty.
+	// If nil, the Hpb main net block is used.
+	//Genesis *bc.Genesis `toml:",omitempty"`
 
 	Hpbengine          consensus.Engine
 	accountManager  *accounts.Manager
@@ -149,7 +152,11 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbtxpool      := txpool.GetTxPool()
 	db, err      := CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
-	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, conf.Node.Genesis)
+
+	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
+	hpbgenesis := bc.DevGenesisBlock()
+	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
+
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
 	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, synctrl.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
@@ -218,7 +225,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 func (hpnode *Node) Start(conf  *config.HpbConfig) (error){
 
-	retval := hpnode.Hpbpeermanager.Start(conf.Network)
+	retval := hpnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
@@ -543,15 +550,15 @@ func (s *Node) StartMining(local bool) error {
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *Hpb) Protocols() []p2p.Protocol {
+/*func (s *Node) Protocols() []p2p.Protocol {
 	if s.lesServer == nil {
 		return s.protocolManager.SubProtocols
 	}
 	return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
 }
-
+*/
 
 // get all rpc api from modules
 func (n *Node) GetAPI() error{
-
+	return nil
 }
