@@ -28,7 +28,6 @@ import (
 	"github.com/hpb-project/ghpb/common/crypto/sha3"
 	"github.com/hpb-project/ghpb/common/rlp"
 
-
 )
 
 
