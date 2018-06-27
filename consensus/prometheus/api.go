@@ -112,7 +112,7 @@ func (api *API) GetPrivateRandom() (string) {
 	//if(rand ==""){
 		//rand = getUniqueRandom()
 	//}
-	return  getUniqueRandom(api.chain)
+	return ""
 }
 
 func (api *API) Proposals() map[common.Address]bool {
