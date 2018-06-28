@@ -17,7 +17,6 @@
 package worker
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sync"
@@ -127,15 +126,15 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *sub.TypeMux) *worker {
+func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, /*eth Backend,*/ mux *sub.TypeMux) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
 		mux:            mux,
-		txCh:           make(chan bc.TxPreEvent, txChanSize),
+		/*txCh:           make(chan bc.TxPreEvent, txChanSize),*/
 		chainHeadCh:    make(chan bc.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan bc.ChainSideEvent, chainSideChanSize),
-		chainDb:        hpbdb.ChainDbInstance(),
+		chainDb:        nil,//hpbdb.ChainDbInstance(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          bc.InstanceBlockChain(),
 		proc:           bc.InstanceBlockChain().Validator(),
@@ -267,6 +266,8 @@ func (self *worker) update() {
 			self.uncleMu.Unlock()
 
 		// Handle TxPreEvent
+
+		/*
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
@@ -278,6 +279,7 @@ func (self *worker) update() {
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.currentMu.Unlock()
 			}
+		*/
 
 		// System stopped
 		case <-self.txSub.Err():
@@ -528,8 +530,8 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+		if tx.Protected() {//&& !env.config.IsEIP155(env.header.Number) {
+			//log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
 
 			txs.Pop()
 			continue

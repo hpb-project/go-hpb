@@ -51,7 +51,7 @@ func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine) 
 	miner := &Miner{
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
+		worker:   newWorker(config, engine, common.Address{}, /*eth,*/ mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(bc.InstanceBlockChain(), engine))
