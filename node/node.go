@@ -159,7 +159,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
 
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, synctrl.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
