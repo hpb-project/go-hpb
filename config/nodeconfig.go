@@ -16,8 +16,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/node/gasprice"
-
+	//TODO: shanlin "github.com/hpb-project/go-hpb/node/gasprice"
 )
 
 // SyncMode represents the synchronisation mode of the downloader.
@@ -89,6 +88,15 @@ var DefaultConfig = Nodeconfig{
 	*/
 	MaxTrieCacheGen : uint16(120),
 }
+
+//TODO: shanlin
+type Config struct {
+	Blocks     int
+	Percentile int
+	Default    *big.Int `toml:",omitempty"`
+}
+
+
 type Nodeconfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
@@ -135,7 +143,8 @@ type Nodeconfig struct {
 	GasPrice     *big.Int
 
 	// Gas Price Oracle options,HPB don't need dynamic gas price
-	GPO gasprice.Config
+	//TODO: shanlin
+	GPO Config
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
