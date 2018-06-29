@@ -44,6 +44,7 @@ import (
 	
 	//"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/consensus/voting"
+	"github.com/ethereum/go-ethereum/core/state"
 	
 )
 
@@ -54,6 +55,7 @@ const (
 	wiggleTime = 500 * time.Millisecond // 延时单位
 	comCheckpointInterval   = 2 // 社区投票间隔
 	cadCheckpointInterval   = 2 // 社区投票间隔
+	//FrontierBlockReward  *big.Int = big.NewInt(5e+18)
 )
 
 // Prometheus protocol constants.
@@ -301,11 +303,39 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 }
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// No block rewards in PoA, so the state remains as is and uncles are dropped
+	
+	
+	calculateRewards(chain.Config(), state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
-	// Assemble and return the final block for sealing
+	// 返回最终的区块
 	return types.NewBlock(header, txs, nil, receipts), nil
+}
+
+// 计算奖励
+func calculateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+	// Select the correct block reward based on chain progression
+	blockReward := big.NewInt(5e+18)
+	
+	// 将来的接口，调整奖励，调整奖励与配置有关系
+	//if config(header.Number) {
+	//	blockReward = ByzantiumBlockReward
+	//}
+	
+	// Accumulate the rewards for the miner and any included uncles
+	reward := new(big.Int).Set(blockReward)
+	r := new(big.Int)
+	for _, uncle := range uncles {
+		r.Add(uncle.Number, big8)
+		r.Sub(r, header.Number)
+		r.Mul(r, blockReward)
+		r.Div(r, big8)
+		state.AddBalance(uncle.Coinbase, r)
+
+		r.Div(blockReward, big32)
+		reward.Add(reward, r)
+	}
+	state.AddBalance(header.Coinbase, reward)
 }
 
 

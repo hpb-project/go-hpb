@@ -18,42 +18,23 @@ package prometheus
 import (
 	"bytes"
 	"errors"
-	//"fmt"
 	"math/big"
-	//"math/rand"
-	//"sync"
 	"time"
-	//"math"
-	//"strconv"
-
-	//"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
-	//"github.com/hpb-project/ghpb/common/hexutil"
 	"github.com/hpb-project/ghpb/consensus"
-	//"github.com/hpb-project/ghpb/core/state"
 	"github.com/hpb-project/ghpb/core/types"
-
-	//"github.com/hashicorp/golang-lru"
-	//"github.com/hpb-project/ghpb/common/constant"
-	//"github.com/hpb-project/ghpb/common/crypto"
-	//"github.com/hpb-project/ghpb/common/crypto/sha3"
 	"github.com/hpb-project/ghpb/common/log"
-	//"github.com/hpb-project/ghpb/common/rlp"
-	//"github.com/hpb-project/ghpb/network/rpc"
-	//"github.com/hpb-project/ghpb/storage"
-	
-	//"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/consensus/voting"
 )
 
-// VerifyHeader checks whether a header conforms to the consensus rules.
+// 验证头部，对外调用接口
 func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return c.verifyHeader(chain, header, nil)
 }
 
-// VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers. The
-// method returns a quit channel to abort the operations and a results channel to
-// retrieve the async verifications (the order is that of the input slice).
+
+
+// 批量验证
 func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
@@ -72,10 +53,7 @@ func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types
 	return abort, results
 }
 
-// verifyHeader checks whether a header conforms to the consensus rules.The
-// caller may optionally pass in a batch of parents (ascending order) to avoid
-// looking those up from the database. This is useful for concurrently verifying
-// a batch of new headers.
+// 批量验证，为了避免，支持批量传入
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
@@ -221,7 +199,6 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if _, ok := snap.Signers[signer]; !ok {
 		return consensus.ErrUnauthorized
 	}
-
 	/*
 	for seen, recent := range snap.Recents {
 		if recent == signerHash {
