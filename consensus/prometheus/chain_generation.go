@@ -44,7 +44,6 @@ import (
 	
 	//"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/consensus/voting"
-	"github.com/ethereum/go-ethereum/core/state"
 	
 )
 
@@ -76,10 +75,8 @@ type Prometheus struct {
 	signatures *lru.ARCCache // 签名后的缓存
 
 	proposals map[common.Address]bool // 当前的proposals
-	//proposalsHash map[common.AddressHash]bool // 当前 proposals hash
 
 	signer     common.Address     // 签名的 Key
-	//signerHash common.AddressHash // 地址的hash
 	randomStr  string             // 产生的随机数
 	signFn     SignerFn           // 回调函数
 	lock       sync.RWMutex       // Protects the signerHash fields
@@ -305,7 +302,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	
 	
-	calculateRewards(chain.Config(), state, header, uncles) //系统奖励
+	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
 	// 返回最终的区块
@@ -313,17 +310,33 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 }
 
 // 计算奖励
-func calculateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) (error) {
 	// Select the correct block reward based on chain progression
 	blockReward := big.NewInt(5e+18)
 	
 	// 将来的接口，调整奖励，调整奖励与配置有关系
+	//config *params.ChainConfig
 	//if config(header.Number) {
 	//	blockReward = ByzantiumBlockReward
 	//}
 	
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
+	
+	number := header.Number.Uint64()
+	if number == 0 {
+		return consensus.ErrUnknownBlock
+	}
+	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil); err == nil{
+		// 奖励所有的高性能节点
+		for _, signer := range snap.GetHpbNodes() {
+			state.AddBalance(signer, reward)
+		}
+	}else{
+		return err
+	}
+	
+	/*
 	r := new(big.Int)
 	for _, uncle := range uncles {
 		r.Add(uncle.Number, big8)
@@ -335,7 +348,10 @@ func calculateRewards(config *params.ChainConfig, state *state.StateDB, header *
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
+	*/
 	state.AddBalance(header.Coinbase, reward)
+	
+	return nil
 }
 
 
