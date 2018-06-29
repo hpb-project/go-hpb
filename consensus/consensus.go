@@ -45,8 +45,6 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
-	
-	GetRandom() string
 
 }
 
