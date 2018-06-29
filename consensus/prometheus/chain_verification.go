@@ -210,7 +210,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 	*/
 	// Ensure that the difficulty corresponds to the turn-ness of the signerHash
-	inturn := snap.Inturn(header.Number.Uint64(), signer)
+	inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 		return consensus.ErrInvalidDifficulty
 	}

@@ -54,7 +54,6 @@ const (
 	wiggleTime = 500 * time.Millisecond // 延时单位
 	comCheckpointInterval   = 2 // 社区投票间隔
 	cadCheckpointInterval   = 2 // 社区投票间隔
-	//FrontierBlockReward  *big.Int = big.NewInt(5e+18)
 )
 
 // Prometheus protocol constants.
@@ -125,7 +124,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//在非投票点, 从网络中获取进行提案
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
-		// 从网络中获取一个
+		// 从网络中获取一个,最优秀的
 		if cadWinner,err := voting.GetBestCadNodeFromNetwork(c.db, chain, number-1, header.ParentHash); err == nil{
 			caddress := common.HexToAddress(cadWinner.Address)
 			//if snap.ValidVote(address, true) {
@@ -145,7 +144,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if snap.Inturn(header.Number.Uint64(), c.signer) {
+	if snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
 	

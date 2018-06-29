@@ -40,9 +40,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		//cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
-		
 		for i := 0; i < 1000; i++ {
-			
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)

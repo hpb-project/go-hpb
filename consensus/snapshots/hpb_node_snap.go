@@ -33,6 +33,7 @@ import (
 
 	//"strconv"
 	//"errors"
+	"math/rand"
 	"github.com/hpb-project/ghpb/common/log"
 )
 
@@ -126,12 +127,16 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 }
 
 // 判断当前的次序
-func (s *HpbNodeSnap) Inturn(number uint64, signer common.Address) bool {
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address) bool {
+	
+	// 实际开发中，从硬件中获取
+	rand := rand.Uint64()
+	
 	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
-	return (number % uint64(len(signers))) == uint64(offset)
+	return (rand % uint64(len(signers))) == uint64(offset)
 }
 
 // 判断当前的次序
