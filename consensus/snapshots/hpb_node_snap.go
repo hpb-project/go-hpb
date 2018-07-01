@@ -140,6 +140,15 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 }
 
 // 判断当前的次序
+func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {
+	
+	// 实际开发中，从硬件中获取
+	rand := rand.Uint64()
+	
+	return rand
+}
+
+// 判断当前的次序
 func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
 	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
