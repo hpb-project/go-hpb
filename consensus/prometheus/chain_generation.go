@@ -115,9 +115,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		c.lock.RLock()
 		// Get the best peer from the network
 		if cadWinner,err := voting.GetBestCadNodeFromNetwork(c.db, chain, number-1, header.ParentHash); err == nil{
-			caddress := common.HexToAddress(cadWinner.Address)
+			//caddress := common.HexToAddress(cadWinner.Address)
 			//if snap.ValidVote(address, true) {
-			header.CandAddress = caddress // 设置地址
+			header.CandAddress = cadWinner.Address // 设置地址
 			//header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)

@@ -42,19 +42,19 @@ import (
 type CadNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
-	CadWinners  []*CadWinner `json:"winners"`   // 当前的授权用户
+	CadWinners  []CadWinner `json:"winners"`   // 当前的授权用户
 }
 
 //定义结构体
 type CadWinner struct {
 	NetworkId     string `json:"networkid"`             // 获胜者的网络ID
-	Address       string `json:"address"`               // 获胜者的地址
+	Address       common.Address `json:"address"`               // 获胜者的地址
 	VoteIndex     uint64 `json:"voteIndex"`             // 获胜者的指标总和
 }
 
 // 创建对象
-func NewCadNodeSnap(number uint64, hash common.Hash,CadWinners  []*CadWinner) *CadNodeSnap {
-	cadNodeSnap := &CadNodeSnap{
+func NewCadNodeSnap(number uint64, hash common.Hash,CadWinners  []CadWinner) CadNodeSnap {
+	cadNodeSnap := CadNodeSnap{
 		Number:   number,
 		Hash:     hash,
 		CadWinners: CadWinners,

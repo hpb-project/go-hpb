@@ -64,8 +64,8 @@ participating.
 It expects the genesis file as argument.`,
 	}
 	
-	initrandomCommand = cli.Command{
-		Action:    utils.MigrateFlags(initRand),
+	initCadNodesCommand = cli.Command{
+		Action:    utils.MigrateFlags(initCadNodes),
 		Name:      "initrand",
 		Usage:     "Bootstrap and initialize a random string",
 		ArgsUsage: "<randomStr>",
@@ -194,15 +194,39 @@ func initGenesis(ctx *cli.Context) error {
 	return nil
 }
 
+type CadWinner struct {
+    NetworkId     string 
+	Address       common.Address
+	VoteIndex     uint64 
+}
 
-func initRand(ctx *cli.Context) error {
+//定义结构体
+type CadNodeSnap struct {
+	Number  uint64                      `json:"number"`  // 生成快照的时间点
+	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
+	CadWinners  []CadWinner `json:"winners"`   // 当前的授权用户
+}
+
+func initCadNodes(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
-	randomStr := ctx.Args().First()
-	if len(randomStr) == 0 {
-		utils.Fatalf("the lenth of randomStr must great than 0")
+	
+	genesisPath := ctx.Args().First()
+	if len(genesisPath) == 0 {
+		utils.Fatalf("Must supply path to genesis JSON file")
 	}
-
-	// Open an initialise both full and light databases
+	file, err := os.Open(genesisPath)
+	if err != nil {
+		utils.Fatalf("Failed to read genesis file: %v", err)
+	}
+	defer file.Close()
+	
+	
+	var cNodes []CadWinner
+	if err := json.NewDecoder(file).Decode(cNodes); err != nil {
+		utils.Fatalf("invalid genesis file: %v", err)
+	}
+	
+	//json.Unmarshal()
     
 	stack := makeFullNode(ctx)
 
@@ -212,29 +236,23 @@ func initRand(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		werr := core.WriteRandom(chaindb, randomStr)
+		
+		hash := core.GetCanonicalHash(chaindb, 0)
+		
+		cadNodeSnap := CadNodeSnap{Number: uint64(0), Hash: hash, CadWinners: cNodes}
+		
+		blob, err := json.Marshal(cadNodeSnap)
+		if err != nil {
+			return err
+		}
+		
+		werr := core.StoreCadNodes(chaindb,blob,hash)
 		
 		if werr != nil {
-			utils.Fatalf("Failed to random string: %v", werr)
+			utils.Fatalf("Failed to candidate nodes: %v", werr)
 		}
-		log.Info("Successfully wrote random string", "string", randomStr)
+		log.Info("Successfully wrote candidate nodes")
 	}
-	
-	/*
-	// 支持写入到随机数写入到文件的功能，为了提升效率，目前先写入到数据库
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-		log.Error("Failed to save random file", "err", err)
-    }
-    dir = dir +"\\randomData"
-    
-    fmt.Println(dir)
-		
-	if err := ioutil.WriteFile(dir, []byte(randomStr), 0644); err != nil {
-		log.Error("Failed to save genesis file", "err", err)
-	}
-	log.Info("Successfully wrote random string", "string", randomStr)
-	*/
 	
 	return nil
 }

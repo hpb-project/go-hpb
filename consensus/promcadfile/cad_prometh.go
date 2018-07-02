@@ -34,7 +34,7 @@ import (
 
 type config struct {
 	path      string        // File containing the configuration values
-	genesis   []CandidateNodes // Genesis block to cache for node deploys
+	genesis   []CadWinner // Genesis block to cache for node deploys
 }
 
 // 将数据写入到文件中
