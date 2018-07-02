@@ -31,7 +31,7 @@ import (
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/ghpb/consensus"
 
-	//"strconv"
+	"strconv"
 	//"errors"
 	"math/rand"
 	"github.com/hpb-project/ghpb/common/log"
@@ -141,11 +141,10 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 
 // 判断当前的次序
 func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {
-	
 	// 实际开发中，从硬件中获取
 	rand := rand.Uint64()
-	
-	return rand
+	str := strconv.FormatUint(rand, 10)
+	return str
 }
 
 // 判断当前的次序

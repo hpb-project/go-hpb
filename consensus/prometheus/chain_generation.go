@@ -137,6 +137,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.Difficulty = diffInTurn
 	}
 	
+	// set hardware random
+	header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
+	
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
