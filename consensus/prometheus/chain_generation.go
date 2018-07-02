@@ -302,7 +302,9 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 // 计算奖励
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) (error) {
 	// Select the correct block reward based on chain progression
-	blockReward := big.NewInt(5e+18)
+	hobBlockReward := big.NewInt(5e+18)
+	canBlockReward := big.NewInt(5e+18)
+
 	
 	// 将来的接口，调整奖励，调整奖励与配置有关系
 	//config *params.ChainConfig
@@ -311,17 +313,29 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	//}
 	
 	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
+	hpbReward := new(big.Int).Set(hobBlockReward)
+	canReward := new(big.Int).Set(canBlockReward)
 	
 	number := header.Number.Uint64()
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
 	
+	// reward on hpb nodes
 	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
-			state.AddBalance(signer, reward)
+			state.AddBalance(signer, hpbReward)
+		}
+	}else{
+		return err
+	}
+	
+	// reward on Cad nodes
+	if csnap, err :=  voting.GetCadNodeSnap(c.db,chain, number-1, header.ParentHash);err == nil{
+		
+		for _, csigner := range csnap.CadWinners {
+			state.AddBalance(csigner.Address, canReward)
 		}
 	}else{
 		return err
@@ -335,12 +349,11 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		r.Mul(r, blockReward)
 		r.Div(r, big8)
 		state.AddBalance(uncle.Coinbase, r)
-
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
 	}
 	*/
-	state.AddBalance(header.Coinbase, reward)
+	//state.AddBalance(header.Coinbase, reward)
 	
 	return nil
 }
