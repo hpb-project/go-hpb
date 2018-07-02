@@ -17,32 +17,21 @@ package prometheus
 
 import (
 	"bytes"
-	//"errors"
-	//"fmt"
 	"math/big"
-	//"math/rand"
 	"sync"
 	"time"
-	//"math"
-	//"strconv"
 
 	"github.com/hpb-project/ghpb/account"
 	"github.com/hpb-project/ghpb/common"
-	//"github.com/hpb-project/ghpb/common/hexutil"
 	"github.com/hpb-project/ghpb/consensus"
 	"github.com/hpb-project/ghpb/core/state"
 	"github.com/hpb-project/ghpb/core/types"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/ghpb/common/constant"
-	//"github.com/hpb-project/ghpb/common/crypto"
-	//"github.com/hpb-project/ghpb/common/crypto/sha3"
 	"github.com/hpb-project/ghpb/common/log"
-	//"github.com/hpb-project/ghpb/common/rlp"
 	"github.com/hpb-project/ghpb/network/rpc"
 	"github.com/hpb-project/ghpb/storage"
-	
-	//"github.com/hpb-project/ghpb/consensus/snapshots"
 	"github.com/hpb-project/ghpb/consensus/voting"
 	
 )
@@ -124,7 +113,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//在非投票点, 从网络中获取进行提案
 	if number%c.config.Epoch != 0 {
 		c.lock.RLock()
-		// 从网络中获取一个,最优秀的
+		// Get the best peer from the network
 		if cadWinner,err := voting.GetBestCadNodeFromNetwork(c.db, chain, number-1, header.ParentHash); err == nil{
 			caddress := common.HexToAddress(cadWinner.Address)
 			//if snap.ValidVote(address, true) {
@@ -147,6 +136,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
+	
+	// set hardware random
+	header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
 	
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -186,9 +178,9 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	header := block.Header()
 
 	log.Info("HPB Prometheus Seal is starting")
-
 	
 	number := header.Number.Uint64()
+	
 	if number == 0 {
 		return nil, consensus.ErrUnknownBlock
 	}
@@ -214,7 +206,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, consensus.ErrUnauthorized
 	}
 
-	//log.Info("Proposed the random number in current round:" + header.Random)
+	log.Info("Proposed the hardware random number in current round:" + header.HardwareRandom)
 
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序
@@ -300,7 +292,6 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	
-	
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -326,6 +317,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
+	
 	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
