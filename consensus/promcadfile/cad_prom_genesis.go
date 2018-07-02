@@ -25,7 +25,7 @@ import (
 )
 
 
-type CandidateNodes struct {
+type CadWinner struct {
     NetworkId     string 
 	Address       common.Address
 	VoteIndex     uint64 
@@ -39,7 +39,7 @@ func (p *prometh) makeGenesis() {
 	fmt.Println("Welcome to HPB consensus engine file maker")
 
 	var networkids []string
-    var cNodes []CandidateNodes
+    var cNodes []CadWinner
 	for {
 		if networkid := p.read(); networkid != "" {
 			networkids = append(networkids, networkid)
@@ -54,7 +54,7 @@ func (p *prometh) makeGenesis() {
 	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
 	for i := 0; i < len(networkids); i++{
 		if address := p.readAddress(); address != nil {
-			cNodes = append(cNodes,CandidateNodes{NetworkId: networkids[i], Address: *address,VoteIndex:uint64(0)})
+			cNodes = append(cNodes,CadWinner{NetworkId: networkids[i], Address: *address,VoteIndex:uint64(0)})
 			continue
 		}
 	}

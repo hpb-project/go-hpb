@@ -118,6 +118,10 @@ func WriteRandom(db hpbdb.Putter, rand string) error {
 	return nil
 }
 
+func StoreCadNodes(db hpbdb.Putter,blob []byte, Hash common.Hash) error {
+	return db.Put(append([]byte("codnodesnap-"), Hash[:]...), blob)
+}
+
 
 
 // missingNumber is returned by GetBlockNumber if no header with the
