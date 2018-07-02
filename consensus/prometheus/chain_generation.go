@@ -303,7 +303,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) (error) {
 	// Select the correct block reward based on chain progression
 	hobBlockReward := big.NewInt(5e+18)
-	canBlockReward := big.NewInt(5e+18)
+	//canBlockReward := big.NewInt(5e+18)
 
 	
 	// 将来的接口，调整奖励，调整奖励与配置有关系
@@ -314,7 +314,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	
 	// Accumulate the rewards for the miner and any included uncles
 	hpbReward := new(big.Int).Set(hobBlockReward)
-	canReward := new(big.Int).Set(canBlockReward)
+	//canReward := new(big.Int).Set(canBlockReward)
 	
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -332,6 +332,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}
 	
 	// reward on Cad nodes
+	/*
 	if csnap, err :=  voting.GetCadNodeSnap(c.db,chain, number-1, header.ParentHash);err == nil{
 		
 		for _, csigner := range csnap.CadWinners {
@@ -340,7 +341,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}else{
 		return err
 	}
-	
+	*/
 	/*
 	r := new(big.Int)
 	for _, uncle := range uncles {

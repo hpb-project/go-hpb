@@ -75,7 +75,7 @@ func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64
 	return nil,nil
 }
 
-// 从社区选举中的投票中去获取
+// Get snap in community by elections,
 func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
 
 		//开始读取智能合约

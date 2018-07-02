@@ -27,7 +27,6 @@ import (
 	"hash/fnv"
 	//"encoding/hex"
 
-
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core"
 	"github.com/hpb-project/ghpb/common/log"
