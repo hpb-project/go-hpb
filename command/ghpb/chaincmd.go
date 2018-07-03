@@ -64,11 +64,11 @@ participating.
 It expects the genesis file as argument.`,
 	}
 	
-	initCadNodesCommand = cli.Command{
+	initcadCommand = cli.Command{
 		Action:    utils.MigrateFlags(initCadNodes),
-		Name:      "initrand",
+		Name:      "initcad",
 		Usage:     "Bootstrap and initialize a random string",
-		ArgsUsage: "<randomStr>",
+		ArgsUsage: "<initcad>",
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.LightModeFlag,
@@ -222,7 +222,7 @@ func initCadNodes(ctx *cli.Context) error {
 	
 	
 	var cNodes []CadWinner
-	if err := json.NewDecoder(file).Decode(cNodes); err != nil {
+	if err := json.NewDecoder(file).Decode(&cNodes); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
 	
@@ -245,6 +245,8 @@ func initCadNodes(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		
+		fmt.Printf("%s", blob)
 		
 		werr := core.StoreCadNodes(chaindb,blob,hash)
 		

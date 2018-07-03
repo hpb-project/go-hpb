@@ -132,7 +132,7 @@ func init() {
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
-		initCadNodesCommand,
+		initcadCommand,
 		importCommand,
 		exportCommand,
 		copydbCommand,

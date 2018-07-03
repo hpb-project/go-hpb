@@ -40,6 +40,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		//cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
+		
 		for i := 0; i < 1000; i++ {
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
@@ -51,9 +52,9 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 			
 			//在候选列表中获取，如果候选列表中含有，在进行加入
 			//if _,exists := cadNodeMap["192.168.2"+strnum]; exists == true{
-			bigaddr, _ := new(big.Int).SetString("0xd3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
+			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
 		    address := common.BigToAddress(bigaddr)
-				cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,address,uint64(VoteIndex)})
+			cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,address,uint64(VoteIndex)})
 			//}
 		}
 		
@@ -67,7 +68,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		}
 		
 		//开始进行排序获取最大值
-		bigaddr, _ := new(big.Int).SetString("0xd3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
+		bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
 		address := common.BigToAddress(bigaddr)
 		
 		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33",address,uint64(0)}
