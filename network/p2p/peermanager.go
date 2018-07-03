@@ -31,6 +31,8 @@ import (
 	"net"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
+
+	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 var (
@@ -99,7 +101,9 @@ func PeerMgrInst() *PeerManager {
 		//Please init PeerManager
 		pm :=&PeerManager{
 			peers: make(map[string]*Peer),
-			hpb: NewProtos(),
+			server: &Server{},
+			rpc:    &RpcMgr{},
+			hpb:    NewProtos(),
 		}
 		INSTANCE.Store(pm)
 	}
@@ -143,6 +147,12 @@ func (prm *PeerManager)Start() error {
 	prm.hpb.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpb.Protocols())
 
+	// for test
+	//PrivateKey is not set by node
+	key, err := crypto.GenerateKey()
+	prm.server.PrivateKey = key
+	//
+
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -178,6 +188,11 @@ func (prm *PeerManager)Stop(){
 
 }
 
+
+
+func (prm *PeerManager)IpcSvr() *rpc.Server {
+	return prm.rpc.inprocHandler
+}
 
 // Register injects a new peer into the working set, or returns an error if the
 // peer is already known.
