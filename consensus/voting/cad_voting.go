@@ -18,8 +18,8 @@
 package voting
 
 import (
-	"math"
-	"strconv"
+	//"math"
+	//"strconv"
 	//"math/rand"
    // "fmt"
 	"github.com/hpb-project/ghpb/common"
@@ -48,6 +48,7 @@ func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64
 	 latestCadCheckPointHash common.Hash
 	)
 	
+	/*
 	// 进来的请求恰好在投票检查点，此时重新计票
 	log.Error("current number:",strconv.FormatUint(number, 10))
 	if number%cadCheckpointInterval == 0 {
@@ -62,12 +63,19 @@ func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64
 	log.Error("current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
 
 	header = chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
+	*/
+	number = uint64(0)
+	header = chain.GetHeaderByNumber(number)
 	latestCadCheckPointHash = header.Hash()
 	
+	log.Info("Prometheus： 0x0846911b8271e737c976ae5dd869e1d8fa389958cac48595f9914054a354e05f", "number", number, "hash", latestCadCheckPointHash)
+	
 	if cadNodeSnap, err := snapshots.LoadCadNodeSnap(db, latestCadCheckPointHash); err == nil {
-		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", hash)
+		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", latestCadCheckPointHash)
 		return cadNodeSnap,nil
-	} else { //数据库中没有正常的获取，再次去统计
+	} else {
+		log.Error("read failed:", err)
+		
 		if cadNodeSnap, err1 := CalcuCadNodeSnap(db,number, hash); err1 == nil {
 			return cadNodeSnap,nil
 		}
