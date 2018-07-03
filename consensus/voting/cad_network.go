@@ -55,7 +55,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 			//bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
 		    //address := common.BigToAddress(bigaddr)
 				cadWinners = append(cadWinners,&snapshots.CadWinner{cad.NetworkId,cad.Address,uint64(VoteIndex)})
-				fmt.Println("this is test:", i)
+				//fmt.Println("this is test:", i)
 			}
 		}
 		
@@ -94,12 +94,9 @@ func GetCadNodeMap(db hpbdb.Database,chain consensus.ChainReader, number uint64,
 
 	if cadNodeSnapformap, err  := GetCadNodeSnap(db, chain, number, hash); err == nil{
 		for _, cws := range cadNodeSnapformap.CadWinners {
-			fmt.Println("test: %s", cws.NetworkId)
 		    cadWinnerms[cws.NetworkId] = &snapshots.CadWinner{cws.NetworkId,cws.Address,cws.VoteIndex}
 		}
 	}
-	
-	fmt.Println("test len", len(cadWinnerms))
 
     return cadWinnerms,nil
 }

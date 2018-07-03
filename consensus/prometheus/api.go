@@ -79,27 +79,22 @@ func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Hea
 }
 
 // 获取候选节点信息
-func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]map[string]string, error) {
-	
-	/*
+func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]snapshots.CadWinner, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	comNodeSnap, err := api.prometheus.getComNodeSnap(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	cadNodeSnap, err := voting.GetCadNodeSnap(api.prometheus.db, api.chain, header.Number.Uint64(), header.ParentHash)
+	
 	if err != nil {
 		return nil, err
 	}
-	var winners = make([]map[string]string,len(comNodeSnap.Winners))
-	for _, winner := range comNodeSnap.Winners {
-		winners = append(winners,map[string] string {
-		  winner.NetworkId : winner.Address,
-		})
-	}
-	*/
-	return nil, nil
+	return cadNodeSnap.CadWinners, nil
 }
+
+
+
 
 // 获取候选社区选举节点信息
 func (api *API) GetCommunityNodes(number *rpc.BlockNumber) ([]common.Address, error) {
