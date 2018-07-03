@@ -31,7 +31,7 @@ import (
 	//"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/ghpb/common/log"
 	//"github.com/hpb-project/ghpb/consensus"
-
+    "github.com/hpb-project/ghpb/common/log"
 	//"strconv"
 	//"errors"
 )
@@ -64,12 +64,14 @@ func NewCadNodeSnap(number uint64, hash common.Hash,CadWinners  []CadWinner) Cad
 
 //加载快照，直接去数据库中读取
 func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) {
-	blob, err := db.Get(append([]byte("cadnodesnap-"), hash[:]...))
+	blob, err := db.Get(append([]byte("codnodesnap-"), hash[:]...))
 	if err != nil {
+		log.Error("Log Read Failed1:", err)
 		return nil, err
 	}
 	cadNodeSnap := new(CadNodeSnap)
 	if err := json.Unmarshal(blob, cadNodeSnap); err != nil {
+		log.Error("Log Read Failed2:", err)
 		return nil, err
 	}
 	return cadNodeSnap, nil

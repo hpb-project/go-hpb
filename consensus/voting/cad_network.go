@@ -19,7 +19,7 @@ package voting
 
 import (
 	"math"
-	"strconv"
+	//"strconv"
 	"math/rand"
     "fmt"
 	"github.com/hpb-project/ghpb/common"
@@ -37,7 +37,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		type CadWinners []*snapshots.CadWinner
 		cadWinners := []*snapshots.CadWinner{} 
 		
-		//cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
+		cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
 		
@@ -47,15 +47,16 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
 			
-			strnum := strconv.Itoa(i)
+			//strnum := strconv.Itoa(i)
 			//cadNodeMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
 			
 			//在候选列表中获取，如果候选列表中含有，在进行加入
-			//if _,exists := cadNodeMap["192.168.2"+strnum]; exists == true{
-			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
-		    address := common.BigToAddress(bigaddr)
-			cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,address,uint64(VoteIndex)})
-			//}
+			if cad,exists := cadNodeMap[string(i)]; exists == true{
+			//bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
+		    //address := common.BigToAddress(bigaddr)
+				cadWinners = append(cadWinners,&snapshots.CadWinner{cad.NetworkId,cad.Address,uint64(VoteIndex)})
+				fmt.Println("this is test:", i)
+			}
 		}
 		
 		// 先获取长度，然后进行随机获取
@@ -89,13 +90,16 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 
 func GetCadNodeMap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash) (map[string]*snapshots.CadWinner, error) {
 
-	cadNodeSnapformap,_  := GetCadNodeSnap(db, chain, number, hash)
-	
 	cadWinnerms := make(map[string]*snapshots.CadWinner)
-	
-	for _, cws := range cadNodeSnapformap.CadWinners {
-	    cadWinnerms[cws.NetworkId] = &snapshots.CadWinner{cws.NetworkId,cws.Address,cws.VoteIndex}
+
+	if cadNodeSnapformap, err  := GetCadNodeSnap(db, chain, number, hash); err == nil{
+		for _, cws := range cadNodeSnapformap.CadWinners {
+			fmt.Println("test: %s", cws.NetworkId)
+		    cadWinnerms[cws.NetworkId] = &snapshots.CadWinner{cws.NetworkId,cws.Address,cws.VoteIndex}
+		}
 	}
+	
+	fmt.Println("test len", len(cadWinnerms))
 
     return cadWinnerms,nil
 }
