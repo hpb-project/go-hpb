@@ -66,7 +66,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+		receipt, _, err := ApplyTransaction(p.config, nil, gp, statedb, header, tx, totalUsedGas)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -83,13 +83,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *hvm.GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+func ApplyTransaction(config *config.ChainConfig, author *common.Address, gp *hvm.GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, gas, failed, err := ApplyMessage(bc, header, statedb, author, msg, gp)
+	_, gas, failed, err := ApplyMessage(header, statedb, author, msg, gp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,8 +113,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 
 	// Set the receipt logs and create a bloom for filtering
 
-	//TODO change statdb return types
-	//receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	return receipt, gas, err

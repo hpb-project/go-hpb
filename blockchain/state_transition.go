@@ -66,12 +66,10 @@ type StateTransition struct {
 	native     bool
 	header     *types.Header
 	author     *common.Address
-	//TODO remove
-	blockChain *BlockChain
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, header *types.Header, author *common.Address, blockChain *BlockChain) *StateTransition {
+func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
 	nativeCall := msg.To() != nil && db.GetCodeSize(msg.From()) == 0
 	return &StateTransition{
 		gp:         gp,
@@ -84,7 +82,6 @@ func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, hea
 		native:     nativeCall,
 		header:     header,
 		author:     author,
-		blockChain: blockChain,
 	}
 }
 
@@ -95,9 +92,9 @@ func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, hea
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(bc *BlockChain, header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool) ([]byte, *big.Int, bool, error) {
+func ApplyMessage(header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(msg, gp, db, header, author, bc)
+	st := NewStateTransition(msg, gp, db, header, author)
 
 	if err := st.preCheck(); err != nil {
 		return nil, nil, false, err
@@ -217,7 +214,7 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 
 	var beneficiary common.Address
 	if st.author == nil {
-		beneficiary, _ = st.blockChain.Engine().Author(st.header) // Ignore error, we're past header validation
+		beneficiary, _ = InstanceBlockChain().Engine().Author(st.header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *st.author
 	}
@@ -231,7 +228,7 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionOnEVM() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 	// Create a new context to be used in the EVM environment
-	context := hvm.NewEVMContext(st.msg, st.header, st.blockChain, st.author)
+	context := hvm.NewEVMContext(st.msg, st.header, InstanceBlockChain(), st.author)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	ethereum_vm := evm.NewEVM(context, st.state, config.TestnetChainConfig, evm.Config{})

@@ -273,7 +273,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call hpb_project.Ca
 	// about the transaction and calling mechanisms.
 	//vmenv := evm.NewEVM(evmContext, statedb, b.config, evm.Config{})
 	gaspool := new(hvm.GasPool).AddGas(math.MaxBig256)
-	ret, gasUsed, failed, err := bc.ApplyMessage(b.blockchain,block.Header(),statedb,nil,msg,gaspool)
+	ret, gasUsed, failed, err := bc.ApplyMessage(block.Header(),statedb,nil,msg,gaspool)
 	return ret, gasUsed, failed, err
 }
 

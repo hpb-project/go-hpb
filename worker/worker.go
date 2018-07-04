@@ -460,7 +460,7 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
+	work.commitTransactions(self.mux, txs, self.coinbase)
 
 	// compute uncles for the new block.
 	var (
@@ -512,7 +512,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	return nil
 }
 
-func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, chain *bc.BlockChain, coinbase common.Address) {
+func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address) {
 	gp := new(hvm.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
@@ -539,7 +539,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, chain, coinbase, gp)
+		err, logs := env.commitTransaction(tx, coinbase, gp)
 		switch err {
 		case bc.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -590,10 +590,10 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 	}
 }
 
-func (env *Work) commitTransaction(tx *types.Transaction, chain *bc.BlockChain, coinbase common.Address, gp *hvm.GasPool) (error, []*types.Log) {
+func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Address, gp *hvm.GasPool) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := bc.ApplyTransaction(env.config, chain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+	receipt, _, err := bc.ApplyTransaction(env.config, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return err, nil
