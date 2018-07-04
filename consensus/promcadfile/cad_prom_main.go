@@ -21,15 +21,13 @@ import (
 	"math/rand"
 	"os"
 	"time"
-
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
-// main is just a boring entry point to set up the CLI app.
 func main() {
 	app := cli.NewApp()
-	app.Name = "promfile"
+	app.Name = "promcadfile"
 	app.Usage = "assemble and maintain private Hpb networks"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -48,7 +46,7 @@ func main() {
 		rand.Seed(time.Now().UnixNano())
 
 		// Start the prometh and relinquish control
-		makePrometh(c.String("network")).run()
+		makeCadPrometh(c.String("network")).run()
 		return nil
 	}
 	app.Run(os.Args)

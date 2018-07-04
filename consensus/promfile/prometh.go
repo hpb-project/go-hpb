@@ -29,9 +29,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/core"
+	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -39,7 +39,7 @@ import (
 // between sessions.
 type config struct {
 	path      string        // File containing the configuration values
-	genesis   *bc.Genesis // Genesis block to cache for node deploys
+	genesis   *core.Genesis // Genesis block to cache for node deploys
 	bootFull  []string      // Bootnodes to always connect to by full nodes
 	bootLight []string      // Bootnodes to always connect to by light nodes
 	ethstats  string

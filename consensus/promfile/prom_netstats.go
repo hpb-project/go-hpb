@@ -22,8 +22,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/core"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -135,7 +135,7 @@ func (w *prometh) networkStats(tips bool) {
 	}
 	// If a genesis block was found, load it into our configs
 	if protips.genesis != "" && w.conf.genesis == nil {
-		genesis := new(bc.Genesis)
+		genesis := new(core.Genesis)
 		if err := json.Unmarshal([]byte(protips.genesis), genesis); err != nil {
 			log.Error("Failed to parse remote genesis", "err", err)
 		} else {

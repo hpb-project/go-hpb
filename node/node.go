@@ -52,7 +52,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
-	"github.com/hpb-project/go-hpb/consensus/solo"
 	"github.com/hpb-project/go-hpb/node/db"
 )
 
@@ -109,11 +108,10 @@ type Node struct {
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
 func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
 	if &chainConfig.Prometheus == nil {
 		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
 	}
-	return solo.New()
+	return prometheus.New(config, db)
 }
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){

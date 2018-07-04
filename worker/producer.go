@@ -36,7 +36,7 @@ type CpuAgent struct {
 	chain  consensus.ChainReader
 	engine consensus.Engine
 
-	isMining int32 // isMining indicates whether the agent is currently mining
+	isMining int32 // 正在挖矿
 }
 
 func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent {
@@ -54,7 +54,7 @@ func (self *CpuAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
 
 func (self *CpuAgent) Stop() {
 	if !atomic.CompareAndSwapInt32(&self.isMining, 1, 0) {
-		return // agent already stopped
+		return // producer already stopped
 	}
 	self.stop <- struct{}{}
 done:
@@ -70,7 +70,7 @@ done:
 
 func (self *CpuAgent) Start() {
 	if !atomic.CompareAndSwapInt32(&self.isMining, 0, 1) {
-		return // agent already started
+		return // producer already started
 	}
 	go self.update()
 }
@@ -87,6 +87,7 @@ out:
 			self.quitCurrentOp = make(chan struct{})
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
+			
 		case <-self.stop:
 			self.mu.Lock()
 			if self.quitCurrentOp != nil {
@@ -100,8 +101,8 @@ out:
 }
 
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
-	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
-		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
+	if result, err := self.engine.GenBlockWithSig(self.chain, work.Block, stop); result != nil {
+		log.Info("Successfully sealed new block", "number -> ", result.Number(), "hash -> ", result.Hash(),"difficulty -> ",result.Difficulty())
 		self.returnCh <- &Result{work, result}
 	} else {
 		if err != nil {
@@ -109,8 +110,4 @@ func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
 		}
 		self.returnCh <- nil
 	}
-}
-
-func (self *CpuAgent) GetHashRate() int64 {
-	return 0
 }

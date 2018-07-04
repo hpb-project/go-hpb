@@ -29,7 +29,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )

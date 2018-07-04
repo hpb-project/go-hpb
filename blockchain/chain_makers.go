@@ -216,7 +216,7 @@ func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	db, _ := hpbdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, config.TestnetChainConfig, solo.New())
+	blockchain, _ := NewBlockChain(db, config.TestnetChainConfig, prometheus.New())
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

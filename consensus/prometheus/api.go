@@ -17,11 +17,14 @@
 package prometheus
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/consensus/voting"
+
 )
 
 type API struct {
@@ -29,46 +32,74 @@ type API struct {
 	prometheus *Prometheus
 }
 
-func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*Historysnap, error) {
-	// Retrieve the requested block number (or current if none requested)
+// 获取最新的的快照
+func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap, error) {
 	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return its snapshot
+	header = api.GetLatestBlockHeader(number)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
-	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetHistorysnapAtHash(hash common.Hash) (*Historysnap, error) {
+func (api *API) GetHistorysnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
-	return api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	//return api.prometheus.getHpbNodeSnaps(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.AddressHash, error) {
+func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
+	// 获取到最新的header
+	
 	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return the signers from its snapshot
+	header = api.GetLatestBlockHeader(number)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
-	snap, err := api.prometheus.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
-	return snap.signers(), nil
+	return snap.GetHpbNodes(), nil
+}
+
+//跟根据区块号，获取最新的区块头
+func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header){
+	//var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	return header
+}
+
+// 获取候选节点信息
+func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]snapshots.CadWinner, error) {
+	var header *types.Header
+	header = api.GetLatestBlockHeader(number)
+	if header == nil {
+		return nil, consensus.ErrUnknownBlock
+	}
+	cadNodeSnap, err := voting.GetCadNodeSnap(api.prometheus.db, api.chain, header.Number.Uint64(), header.ParentHash)
+	
+	if err != nil {
+		return nil, err
+	}
+	return cadNodeSnap.CadWinners, nil
+}
+
+
+
+
+// 获取候选社区选举节点信息
+func (api *API) GetCommunityNodes(number *rpc.BlockNumber) ([]common.Address, error) {
+	//获取社区选举结果
+	return nil, nil
 }
 
 func (api *API) GetPrivateRandom() (string) {	
@@ -76,17 +107,16 @@ func (api *API) GetPrivateRandom() (string) {
 	//if(rand ==""){
 		//rand = getUniqueRandom()
 	//}
-	
-	return  getUniqueRandom(api.chain)
+	return ""
 }
 
-func (api *API) Proposals() map[common.AddressHash]bool {
+func (api *API) Proposals() map[common.Address]bool {
 	api.prometheus.lock.RLock()
 	defer api.prometheus.lock.RUnlock()
 
-	proposals := make(map[common.AddressHash]bool)
-	for addressHash, auth := range api.prometheus.proposals {
-		proposals[addressHash] = auth
+	proposals := make(map[common.Address]bool)
+	for address, auth := range api.prometheus.proposals {
+		proposals[address] = auth
 	}
 	return proposals
 }
@@ -94,18 +124,15 @@ func (api *API) Proposals() map[common.AddressHash]bool {
 func (api *API) Propose(address common.Address, confRand string, auth bool) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-   
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
-	
-	fmt.Printf("addressHash%s",addressHash.String())
-
-	api.prometheus.proposals[addressHash] = auth
+    //address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
+	//fmt.Printf("address%s",address.String())
+	api.prometheus.proposals[address] = auth
 }
 
 // 改变作废的方式
 func (api *API) Discard(address common.Address,  confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-    addressHash :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
-	delete(api.prometheus.proposals, addressHash)
+    //address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
+	delete(api.prometheus.proposals, address)
 }
