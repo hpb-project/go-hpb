@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // WaitMined waits for tx to be mined on the blockchain.

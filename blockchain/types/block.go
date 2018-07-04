@@ -28,7 +28,6 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
@@ -68,24 +67,24 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Hpb blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	ParentHash   common.Hash        `json:"parentHash"       gencodec:"required"`
+	UncleHash    common.Hash        `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase     common.Address     `json:"miner"            gencodec:"required"`
 	CoinbaseHash common.AddressHash `json:"minerHash"   gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
-	ExtraHash   []byte         `json:"extraHash"        gencodec:"required"`
-	Random      string         `json:"random"           gencodec:""`
+	Root         common.Hash        `json:"stateRoot"        gencodec:"required"`
+	TxHash       common.Hash        `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash  common.Hash        `json:"receiptsRoot"     gencodec:"required"`
+	Bloom        Bloom              `json:"logsBloom"        gencodec:"required"`
+	Difficulty   *big.Int           `json:"difficulty"       gencodec:"required"`
+	Number       *big.Int           `json:"number"           gencodec:"required"`
+	GasLimit     *big.Int           `json:"gasLimit"         gencodec:"required"`
+	GasUsed      *big.Int           `json:"gasUsed"          gencodec:"required"`
+	Time         *big.Int           `json:"timestamp"        gencodec:"required"`
+	Extra        []byte             `json:"extraData"        gencodec:"required"`
+	MixDigest    common.Hash        `json:"mixHash"          gencodec:"required"`
+	Nonce        BlockNonce         `json:"nonce"            gencodec:"required"`
+	ExtraHash    []byte             `json:"extraHash"        gencodec:"required"`
+	Random       string             `json:"random"           gencodec:""`
 }
 
 // field type overrides for gencodec
@@ -124,13 +123,6 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
-func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
-}
-
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions and uncles) together.
 type Body struct {
@@ -148,7 +140,7 @@ type Block struct {
 	hash atomic.Value
 	size atomic.Value
 
-	// Td is used by package bc to store the total difficulty
+	// Td is used by package core to store the total difficulty
 	// of the chain up to and including the block.
 	td *big.Int
 
@@ -197,6 +189,7 @@ type storageblock struct {
 func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header), td: new(big.Int)}
 
+	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
 		b.header.TxHash = EmptyRootHash
 	} else {
@@ -289,6 +282,8 @@ func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+// TODO: copies
+
 func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
 
@@ -336,13 +331,6 @@ func (b *Block) Size() common.StorageSize {
 	rlp.Encode(&c, b)
 	b.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
-}
-
-type writeCounter common.StorageSize
-
-func (c *writeCounter) Write(b []byte) (int, error) {
-	*c += writeCounter(len(b))
-	return len(b), nil
 }
 
 func CalcUncleHash(uncles []*Header) common.Hash {

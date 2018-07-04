@@ -19,18 +19,21 @@ package synctrl
 import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/rand"
 )
 
 type txsync struct {
-	p   *peer //todo qinghua's peer
+	p   *p2p.Peer
 	txs []*types.Transaction
 }
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
-func (this *SynCtrl) syncTransactions(p *peer) {//todo qinghua's peer
+func (this *SynCtrl) syncTransactions(p *p2p.Peer) {
 	var txs types.Transactions
-	pending, _ := this.txpool.Pending()//todo xinyu's
+	pending, _ := this.txpool.Pending()
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
@@ -49,7 +52,7 @@ func (this *SynCtrl) syncTransactions(p *peer) {//todo qinghua's peer
 // the transactions in small packs to one peer at a time.
 func (this *SynCtrl) txsyncLoop() {
 	var (
-		pending = make(map[discover.NodeID]*txsync)//todo qinghua's peer
+		pending = make(map[discover.NodeID]*txsync)
 		sending = false               // whether a send is active
 		pack    = new(txsync)         // the pack that is being sent
 		done    = make(chan error, 1) // result of the send
@@ -68,12 +71,12 @@ func (this *SynCtrl) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.ID())//todo qinghua's peer
+			delete(pending, s.p.ID())
 		}
 		// Send the pack in the background.
-		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)//todo qinghua's peer
+		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
-		go func() { done <- pack.p.SendTransactions(pack.txs) }()//todo qinghua's peer
+		go func() { done <- sendTransactions(pack.p, pack.txs) }()
 	}
 
 	// pick chooses the next pending sync.
@@ -93,7 +96,7 @@ func (this *SynCtrl) txsyncLoop() {
 	for {
 		select {
 		case s := <-this.txsyncCh:
-			pending[s.p.ID()] = s//todo qinghua's peer
+			pending[s.p.ID()] = s
 			if !sending {
 				send(s)
 			}
@@ -101,8 +104,8 @@ func (this *SynCtrl) txsyncLoop() {
 			sending = false
 			// Stop tracking peers that cause send failures.
 			if err != nil {
-				pack.p.Log().Debug("Transaction send failed", "err", err)//todo qinghua's peer
-				delete(pending, pack.p.ID())//todo qinghua's peer
+				pack.p.Log().Debug("Transaction send failed", "err", err)
+				delete(pending, pack.p.ID())
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {
@@ -114,15 +117,58 @@ func (this *SynCtrl) txsyncLoop() {
 	}
 }
 
-func (this *SynCtrl) txBroadcastLoop() {
+func (this *SynCtrl) txRoutingLoop() {
 	for {
 		select {
 		case event := <-this.txCh:
-			this.broadcastTx(event.Tx.Hash(), event.Tx)
+			this.routingTx(event.Tx.Hash(), event.Tx)
 
 			// Err() channel will be closed when unsubscribing.
 		case <-this.txSub.Err():
 			return
 		}
 	}
+}
+
+// routingTx will propagate a transaction to peers by type which are not known to
+// already have the given transaction.
+func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
+	// Broadcast transaction to a batch of peers not knowing about it
+	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
+	for _, peer := range peers {
+		switch peer.LocalType() {
+		case discover.PreNode:
+			switch peer.RemoteType() {
+			case discover.PreNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			default:
+				break
+			}
+			break
+		case discover.HpNode:
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			default:
+				break
+			}
+			break
+		default:
+			break
+		}
+	}
+
+	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+
+func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
+	for _, tx := range txs {
+		peer.KnownTxsAdd(tx.Hash())
+	}
+	return peer.SendData(p2p.TxMsg, txs)
 }

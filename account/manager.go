@@ -17,22 +17,24 @@
 package accounts
 
 import (
-	"reflect"
 	"sort"
 	"sync"
 
-	"github.com/hpb-project/ghpb/core/event"
+	"sync/atomic"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
+
+var INSTANCE = atomic.Value{}
 
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
 type Manager struct {
-	backends map[reflect.Type][]Backend // Index of backends currently registered
-	updaters []event.Subscription       // Wallet update subscriptions for all backends
-	updates  chan WalletEvent           // Subscription sink for backend wallet changes
-	wallets  []Wallet                   // Cache of all wallets from all registered backends
+	store   Backend            // Index of backends currently registered
+	updater sub.Subscription // Wallet update subscriptions for all backends
+	updates chan WalletEvent   // Subscription sink for backend wallet changes
+	wallets []Wallet           // Cache of all wallets from all registered backends
 
-	feed event.Feed // Wallet feed notifying of arrivals/departures
+	feed sub.Feed // Wallet feed notifying of arrivals/departures
 
 	quit chan chan error
 	lock sync.RWMutex
@@ -40,33 +42,25 @@ type Manager struct {
 
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
-func NewManager(backends ...Backend) *Manager {
+func NewManager(back Backend) *Manager {
+	if INSTANCE.Load() != nil {
+		return GetManager()
+	}
 	// Subscribe to wallet notifications from all backends
-	updates := make(chan WalletEvent, 4*len(backends))
+	updates := make(chan WalletEvent, 4)
 
-	subs := make([]event.Subscription, len(backends))
-	for i, backend := range backends {
-		subs[i] = backend.Subscribe(updates)
-	}
-	// Retrieve the initial list of wallets from the backends and sort by URL
-	var wallets []Wallet
-	for _, backend := range backends {
-		wallets = merge(wallets, backend.Wallets()...)
-	}
+	sub := back.Subscribe(updates)
+
 	// Assemble the account manager and return
 	am := &Manager{
-		backends: make(map[reflect.Type][]Backend),
-		updaters: subs,
-		updates:  updates,
-		wallets:  wallets,
-		quit:     make(chan chan error),
-	}
-	for _, backend := range backends {
-		kind := reflect.TypeOf(backend)
-		am.backends[kind] = append(am.backends[kind], backend)
+		store:   back,
+		updater: sub,
+		updates: updates,
+		wallets: back.Wallets(),
+		quit:    make(chan chan error),
 	}
 	go am.update()
-
+	INSTANCE.Store(am)
 	return am
 }
 
@@ -83,10 +77,8 @@ func (am *Manager) update() {
 	// Close all subscriptions when the manager terminates
 	defer func() {
 		am.lock.Lock()
-		for _, sub := range am.updaters {
-			sub.Unsubscribe()
-		}
-		am.updaters = nil
+		am.updater.Unsubscribe()
+		am.updater = nil
 		am.lock.Unlock()
 	}()
 
@@ -117,8 +109,8 @@ func (am *Manager) update() {
 }
 
 // Backends retrieves the backend(s) with the given type from the account manager.
-func (am *Manager) Backends(kind reflect.Type) []Backend {
-	return am.backends[kind]
+func (am *Manager) KeyStore() Backend {
+	return am.store
 }
 
 // Wallets returns all signer accounts registered under this account manager.
@@ -165,7 +157,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
-func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
+func (am *Manager) Subscribe(sink chan<- WalletEvent) sub.Subscription {
 	return am.feed.Subscribe(sink)
 }
 
@@ -197,4 +189,16 @@ func drop(slice []Wallet, wallets ...Wallet) []Wallet {
 		slice = append(slice[:n], slice[n+1:]...)
 	}
 	return slice
+}
+
+func GetManager() *Manager {
+	if INSTANCE.Load() == nil {
+		//am,_,err := makeAccountManager(false,"",node.DefaultDataDir())
+		//if err != nil {
+		//	return nil
+		//}
+		//INSTANCE.Store(am)
+		return nil
+	}
+	return INSTANCE.Load().(*Manager)
 }

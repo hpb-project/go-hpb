@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/account/keystore"
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/console"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/common/console"
 )
 
 var (
@@ -193,7 +193,7 @@ nodes.
 )
 
 func accountList(ctx *cli.Context) error {
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -291,10 +291,10 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 	account, err := ks.NewAccount(password)
 	if err != nil {
 		utils.Fatalf("Failed to create account: %v", err)
@@ -309,8 +309,8 @@ func accountUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
 		utils.Fatalf("No accounts specified to update")
 	}
-	stack, _ := makeConfigNode(ctx)
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	stack, _ := MakeConfigNode(ctx)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 
 	for _, addr := range ctx.Args() {
 		account, oldPassword := unlockAccount(ctx, ks, addr, 0, nil)
@@ -332,10 +332,10 @@ func importWallet(ctx *cli.Context) error {
 		utils.Fatalf("Could not read wallet file: %v", err)
 	}
 
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	passphrase := getPassPhrase("", false, 0, utils.MakePasswordList(ctx))
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 	acct, err := ks.ImportPreSaleKey(keyJson, passphrase)
 	if err != nil {
 		utils.Fatalf("%v", err)
@@ -353,10 +353,10 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 	acct, err := ks.ImportECDSA(key, passphrase)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)

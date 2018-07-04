@@ -21,9 +21,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/ghpb/interface"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/interface"
 )
 
 var (

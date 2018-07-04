@@ -23,22 +23,28 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/hpb-project/ghpb/event"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 
-
+// message of control
 const (
+	baseMsgVersion       = 0x01
+
 	handshakeMsg = 0x00
 	discMsg      = 0x01
 	pingMsg      = 0x02
 	pongMsg      = 0x03
+	baseMsgMax   = 0x0F
 )
+
+// message of hpb protocol
 const (
-	hpbMsg             = 0x10
+	HpbMsgBegin        = 0x10
 	StatusMsg          = 0x11
+
 	NewBlockHashesMsg  = 0x12
 	TxMsg              = 0x13
 	GetBlockHeadersMsg = 0x14
@@ -50,7 +56,15 @@ const (
 	NodeDataMsg        = 0x1a
 	GetReceiptsMsg     = 0x1b
 	ReceiptsMsg        = 0x1c
+
+
+	HpbTestMsg         = 0x20
+	HpbTestMsgResp     = 0x21
+	//ShardHeadMsg       = 0x28
+	//ShardPieceMsg      = 0x29
 )
+
+
 
 // Msg defines the structure of a p2p message.
 //
@@ -119,15 +133,6 @@ func Send(w MsgWriter, msgcode uint64, data interface{}) error {
 	return w.WriteMsg(Msg{Code: msgcode, Size: uint32(size), Payload: r})
 }
 
-// SendItems writes an RLP with the given code and data elements.
-// For a call such as:
-//
-//    SendItems(w, code, e1, e2, e3)
-//
-// the message payload will be an RLP list containing the items:
-//
-//    [e1, e2, e3]
-//
 func SendItems(w MsgWriter, msgcode uint64, elems ...interface{}) error {
 	return Send(w, msgcode, elems)
 }
@@ -169,14 +174,14 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 type msgEventer struct {
 	MsgReadWriter
 
-	feed     *event.Feed
+	feed     *event.SyncEvent
 	peerID   discover.NodeID
 	Protocol string
 }
 
 // newMsgEventer returns a msgEventer which sends message events to the given
 // feed
-func newMsgEventer(rw MsgReadWriter, feed *event.Feed, peerID discover.NodeID, proto string) *msgEventer {
+func newMsgEventer(rw MsgReadWriter, feed *event.SyncEvent, peerID discover.NodeID, proto string) *msgEventer {
 	return &msgEventer{
 		MsgReadWriter: rw,
 		feed:          feed,
@@ -192,13 +197,14 @@ func (self *msgEventer) ReadMsg() (Msg, error) {
 	if err != nil {
 		return msg, err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgRecv,
+	self.feed.Notify(PeerEventMsgRecv,&PeerEvent{
+		Type:     PeerEventMsgRecv,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,
 		MsgCode:  &msg.Code,
 		MsgSize:  &msg.Size,
 	})
+
 	return msg, nil
 }
 
@@ -209,8 +215,8 @@ func (self *msgEventer) WriteMsg(msg Msg) error {
 	if err != nil {
 		return err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgSend,
+	self.feed.Notify(PeerEventMsgSend,&PeerEvent{
+		Type:     PeerEventMsgSend,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,
 		MsgCode:  &msg.Code,

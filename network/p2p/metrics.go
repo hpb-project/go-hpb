@@ -21,7 +21,7 @@ package p2p
 import (
 	"net"
 
-	"github.com/hpb-project/ghpb/metrics"
+	"github.com/hpb-project/go-hpb/common/metrics"
 )
 
 var (

@@ -19,14 +19,15 @@ package bc
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain/event"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
@@ -102,51 +103,14 @@ func NewChainIndexer(chainDb, indexDb hpbdb.Database, backend ChainIndexerBacken
 // Start creates a goroutine to feed chain head events into the indexer for
 // cascading background processing. Children do not need to be started, they
 // are notified about new events by their parents.
-func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) event.Subscription) {
+func (c *ChainIndexer) Start(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) sub.Subscription) {
 	go c.eventLoop(currentHeader, chainEventer)
-}
-
-// Close tears down all goroutines belonging to the indexer and returns any error
-// that might have occurred internally.
-func (c *ChainIndexer) Close() error {
-	var errs []error
-
-	// Tear down the primary update loop
-	errc := make(chan error)
-	c.quit <- errc
-	if err := <-errc; err != nil {
-		errs = append(errs, err)
-	}
-	// If needed, tear down the secondary event loop
-	if atomic.LoadUint32(&c.active) != 0 {
-		c.quit <- errc
-		if err := <-errc; err != nil {
-			errs = append(errs, err)
-		}
-	}
-	// Close all children
-	for _, child := range c.children {
-		if err := child.Close(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	// Return any failures
-	switch {
-	case len(errs) == 0:
-		return nil
-
-	case len(errs) == 1:
-		return errs[0]
-
-	default:
-		return fmt.Errorf("%v", errs)
-	}
 }
 
 // eventLoop is a secondary - optional - event loop of the indexer which is only
 // started for the outermost indexer to push chain head events into a processing
 // queue.
-func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) event.Subscription) {
+func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func(ch chan<- ChainEvent) sub.Subscription) {
 	// Mark the chain indexer as active, requiring an additional teardown
 	atomic.StoreUint32(&c.active, 1)
 
@@ -183,6 +147,43 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, chainEventer func(
 
 			prevHeader, prevHash = header, header.Hash()
 		}
+	}
+}
+
+// Close tears down all goroutines belonging to the indexer and returns any error
+// that might have occurred internally.
+func (c *ChainIndexer) Close() error {
+	var errs []error
+
+	// Tear down the primary update loop
+	errc := make(chan error)
+	c.quit <- errc
+	if err := <-errc; err != nil {
+		errs = append(errs, err)
+	}
+	// If needed, tear down the secondary event loop
+	if atomic.LoadUint32(&c.active) != 0 {
+		c.quit <- errc
+		if err := <-errc; err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// Close all children
+	for _, child := range c.children {
+		if err := child.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// Return any failures
+	switch {
+	case len(errs) == 0:
+		return nil
+
+	case len(errs) == 1:
+		return errs[0]
+
+	default:
+		return fmt.Errorf("%v", errs)
 	}
 }
 

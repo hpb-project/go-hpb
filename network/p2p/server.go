@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/mclock"
-	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/network/p2p/nat"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/mclock"
+	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 const (
@@ -57,91 +57,23 @@ var errServerStopped = errors.New("server stopped")
 
 // Config holds Server options.
 type Config struct {
-	// This field must be set to a valid secp256k1 private key.
-	PrivateKey *ecdsa.PrivateKey `toml:"-"`
-
-	// MaxPeers is the maximum number of peers that can be
-	// connected. It must be greater than zero.
-	//MaxPeers int
-
-	// MaxPendingPeers is the maximum number of peers that can be pending in the
-	// handshake phase, counted separately for inbound and outbound connections.
-	// Zero defaults to preset values.
+	PrivateKey      *ecdsa.PrivateKey `toml:"-"`
 	MaxPendingPeers int `toml:",omitempty"`
-
-	// NoDiscovery can be used to disable the peer discovery mechanism.
-	// Disabling is useful for protocol debugging (manual topology).
-	//NoDiscovery bool
-
-	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
-	// protocol should be started or not.
-	//DiscoveryV5 bool `toml:",omitempty"`
-
-	// Listener address for the V5 discovery protocol UDP traffic.
-	//DiscoveryV5Addr string `toml:",omitempty"`
-
-	// Name sets the node name of this server.
-	// Use common.MakeName to create a name that follows existing conventions.
-	Name string `toml:"-"`
-
-	// RoleType sets the node type of this server.
-	// One of hpnode,prenode,access,light.
-	RoleType string
-
-	// BootstrapNodes are used to establish connectivity
-	// with the rest of the network.
-	BootstrapNodes []*discover.Node
-
-	// BootstrapNodesV5 are used to establish connectivity
-	// with the rest of the network using the V5 discovery
-	// protocol.
-	//BootstrapNodesV5 []*discv5.Node `toml:",omitempty"`
-
-	// Static nodes are used as pre-configured connections which are always
-	// maintained and re-connected on disconnects.
-	StaticNodes []*discover.Node
-
-	// Trusted nodes are used as pre-configured connections which are always
-	// allowed to connect, even above the peer limit.
-	TrustedNodes []*discover.Node
-
-	// Connectivity can be restricted to certain IP networks.
-	// If this option is set to a non-nil value, only hosts which match one of the
-	// IP networks contained in the list are considered.
-	NetRestrict *netutil.Netlist `toml:",omitempty"`
-
-	// NodeDatabase is the path to the database containing the previously seen
-	// live nodes in the network.
-	NodeDatabase string `toml:",omitempty"`
-
-	// Protocols should contain the protocols supported
-	// by the server. Matching protocols are launched for
-	// each peer.
-	Protocols []Protocol `toml:"-"`
-
-	// If ListenAddr is set to a non-nil address, the server
-	// will listen for incoming connections.
-	//
-	// If the port is zero, the operating system will pick a port. The
-	// ListenAddr field will be updated with the actual address when
-	// the server is started.
-	ListenAddr string
-
-	// If set to a non-nil value, the given NAT port mapper
-	// is used to make the listening port available to the
-	// Internet.
-	NAT nat.Interface `toml:",omitempty"`
-
-	// If Dialer is set to a non-nil value, the given Dialer
-	// is used to dial outbound peer connections.
-	Dialer NodeDialer `toml:"-"`
-
-	// If NoDial is true, the server will not dial any peers.
-	NoDial bool `toml:",omitempty"`
-
-	// If EnableMsgEvents is set then the server will emit PeerEvents
-	// whenever a message is sent to or received from a peer
+	Name            string `toml:"-"`
+	RoleType        string
+	BootstrapNodes  []*discover.Node
+	StaticNodes     []*discover.Node
+	TrustedNodes    []*discover.Node
+	NetRestrict     *netutil.Netlist `toml:",omitempty"`
+	NodeDatabase    string `toml:",omitempty"`
+	Protocols       []Protocol `toml:"-"`
+	ListenAddr      string
+	NAT             nat.Interface `toml:",omitempty"`
+	Dialer          NodeDialer `toml:"-"`
+	NoDial          bool `toml:",omitempty"`
 	EnableMsgEvents bool
+
+	NetworkId       uint64
 }
 
 // Server manages all peer connections.
@@ -152,7 +84,7 @@ type Server struct {
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
 	newTransport func(net.Conn) transport
-	newPeerHook  func(*Peer)
+	newPeerHook  func(*PeerBase)
 
 	lock    sync.Mutex // protects running
 	running bool
@@ -175,13 +107,14 @@ type Server struct {
 	delpeer       chan peerDrop
 	loopWG        sync.WaitGroup // loop, listenLoop
 
-	peerFeed      event.Feed
+	//peerFeed      event.Feed
+	peerEvent    *event.SyncEvent
 }
 
-type peerOpFunc func(map[discover.NodeID]*Peer)
+type peerOpFunc func(map[discover.NodeID]*PeerBase)
 
 type peerDrop struct {
-	*Peer
+	*PeerBase
 	err       error
 	requested bool // true if signaled by the peer
 }
@@ -205,7 +138,6 @@ type conn struct {
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
-	version  string       // valid after the protocol handshake
 }
 
 type transport interface {
@@ -256,13 +188,13 @@ func (c *conn) is(f connFlag) bool {
 }
 
 // Peers returns all connected peers.
-func (srv *Server) Peers() []*Peer {
-	var ps []*Peer
+func (srv *Server) Peers() []*PeerBase {
+	var ps []*PeerBase
 	select {
 	// Note: We'd love to put this function into a variable but
 	// that seems to cause a weird compiler error in some
 	// environments.
-	case srv.peerOp <- func(peers map[discover.NodeID]*Peer) {
+	case srv.peerOp <- func(peers map[discover.NodeID]*PeerBase) {
 		for _, p := range peers {
 			ps = append(ps, p)
 		}
@@ -277,7 +209,7 @@ func (srv *Server) Peers() []*Peer {
 func (srv *Server) PeerCount() int {
 	var count int
 	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) { count = len(ps) }:
+	case srv.peerOp <- func(ps map[discover.NodeID]*PeerBase) { count = len(ps) }:
 		<-srv.peerOpDone
 	case <-srv.quit:
 	}
@@ -303,8 +235,8 @@ func (srv *Server) RemovePeer(node *discover.Node) {
 }
 
 // SubscribePeers subscribes the given channel to peer events
-func (srv *Server) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
-	return srv.peerFeed.Subscribe(ch)
+func (srv *Server) SubscribeEvents(et event.EventType) event.Subscriber {
+	return srv.peerEvent.Subscribe(et)
 }
 
 // Self returns the local node's endpoint information.
@@ -366,10 +298,10 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	log.Info("Starting P2P networking")
 
-	//hpbProto ,err := NewHpbProtos()
+	hpbProto := NewProtos()
 	//log.Info("Hpb protocol","Hpb",hpbProto.Protocols())
 
-	//copy(srv.Protocols, hpbProto.Protocols())
+	copy(srv.Protocols, hpbProto.Protocols())
 	//log.Info("Server","protocol",srv.Protocols)
 
 	// static fields
@@ -390,9 +322,10 @@ func (srv *Server) Start() (err error) {
 	srv.removestatic = make(chan *discover.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
+	srv.peerEvent = event.NewEvent()
 
 	// node table
-	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.LightNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
+	ntab, err := discover.ListenUDP(srv.PrivateKey, discover.InitNode, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 	if err != nil {
 		return err
 	}
@@ -405,7 +338,7 @@ func (srv *Server) Start() (err error) {
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
+	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -417,8 +350,8 @@ func (srv *Server) Start() (err error) {
 			return err
 		}
 	}
-	if srv.NoDial && srv.ListenAddr == "" {
-		log.Warn("P2P server will be useless, neither dialing nor listening")
+	if srv.ListenAddr == "" {
+		log.Warn("P2P server will be useless, no listening")
 	}
 
 
@@ -451,7 +384,7 @@ func (srv *Server) startListening() error {
 }
 
 type dialer interface {
-	newTasks(running int, peers map[discover.NodeID]*Peer, now time.Time) []task
+	newTasks(running int, peers map[discover.NodeID]*PeerBase, now time.Time) []task
 	taskDone(task, time.Time)
 	addStatic(*discover.Node)
 	removeStatic(*discover.Node)
@@ -460,7 +393,7 @@ type dialer interface {
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
-		peers        = make(map[discover.NodeID]*Peer)
+		peers        = make(map[discover.NodeID]*PeerBase)
 		trusted      = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
 		taskdone     = make(chan task, maxActiveDialTasks)
 		runningTasks []task
@@ -556,11 +489,11 @@ running:
 			err := srv.protoHandshakeChecks(peers, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
-				p := newPeer(c, srv.Protocols[0])
+				p := newPeerBase(c, srv.Protocols[0])
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {
-					p.events = &srv.peerFeed
+					p.events = srv.peerEvent
 				}
 				name := truncateName(c.name)
 				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
@@ -606,7 +539,7 @@ running:
 	}
 }
 
-func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
+func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
 		return DiscUselessPeer
@@ -616,7 +549,7 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn
 	return srv.encHandshakeChecks(peers, c)
 }
 
-func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
+func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	switch {
 	/*
 	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
@@ -645,9 +578,7 @@ func (srv *Server) listenLoop() {
 	// active inbound connections that are lingering pre-handshake.
 	// If all slots are taken, no further connections are accepted.
 	tokens := maxAcceptConns
-	if srv.MaxPendingPeers > 0 {
-		tokens = srv.MaxPendingPeers
-	}
+
 	slots := make(chan struct{}, tokens)
 	for i := 0; i < tokens; i++ {
 		slots <- struct{}{}
@@ -775,29 +706,30 @@ func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
 // runPeer runs in its own goroutine for each peer.
 // it waits until the Peer logic returns and removes
 // the peer.
-func (srv *Server) runPeer(p *Peer) {
+func (srv *Server) runPeer(p *PeerBase) {
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
 
 	// broadcast peer add
-	srv.peerFeed.Send(&PeerEvent{
-		Type: PeerEventTypeAdd,
+	srv.peerEvent.Notify(PeerEventAdd,&PeerEvent{
+		Type: PeerEventAdd,
 		Peer: p.ID(),
-	})
+		})
 
 	// run the protocol
 	remoteRequested, err := p.run()
 
 	// broadcast peer drop
-	srv.peerFeed.Send(&PeerEvent{
-		Type:  PeerEventTypeDrop,
+	srv.peerEvent.Notify(PeerEventDrop,&PeerEvent{
+		Type:  PeerEventDrop,
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
 
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
+	log.Info("stop peer","ID",p.ID(),"err",err)
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 

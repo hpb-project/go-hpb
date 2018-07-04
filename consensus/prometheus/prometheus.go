@@ -24,22 +24,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/hexutil"
-	"github.com/hpb-project/ghpb/consensus"
-	"github.com/hpb-project/ghpb/core/state"
-	"github.com/hpb-project/ghpb/core/types"
+	//"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/crypto/sha3"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/rlp"
-	"github.com/hpb-project/ghpb/network/rpc"
-	"github.com/hpb-project/ghpb/storage"
-	
+	//"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/rpc"
+	//"github.com/hpb-project/go-hpb/blockchain/storage"
+
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -310,7 +314,7 @@ type Prometheus struct {
 }
 
 // 新创建
-func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
+func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 	conf := *config
 
@@ -323,7 +327,7 @@ func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 
 	return &Prometheus{
-		config:     &conf,
+		config:     nil,
 		db:         db,
 		recents:    recents,
 		signatures: signatures,

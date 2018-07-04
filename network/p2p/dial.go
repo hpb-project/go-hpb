@@ -23,9 +23,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 const (
@@ -67,7 +67,7 @@ type dialstate struct {
 type discoverTable interface {
 	Self() *discover.Node
 	Close()
-	ReadAllNodes()[]*discover.Node
+	FindNodes()[]*discover.Node
 }
 
 // the dial history remembers recent dials.
@@ -122,9 +122,12 @@ func (s *dialstate) addStatic(n *discover.Node) {
 
 func (s *dialstate) removeStatic(n *discover.Node) {
 	delete(s.static, n.ID)
+	// This removes a previous dial timestamp so that application
+	// can force a server to reconnect with chosen peer immediately.
+	s.hist.remove(n.ID)
 }
 
-func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now time.Time) []task {
+func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, now time.Time) []task {
 	if s.start == (time.Time{}) {
 		s.start = now
 	}
@@ -157,15 +160,15 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		}
 	}
 
-	nodes := s.ntab.ReadAllNodes()
+	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
 			log.Info("add one node to dial task","Node",n.String())
 		}
 	}
 
-	if nRunning == 0 && len(newtasks) == 0 && s.hist.Len() > 0 {
-		t := &waitExpireTask{s.hist.min().exp.Sub(now)}
+	if nRunning == 0 && len(newtasks) == 0 {
+		t := &waitExpireTask{time.Second}
 		newtasks = append(newtasks, t)
 	}
 
@@ -180,7 +183,7 @@ var (
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
 
-func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
+func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*PeerBase) error {
 	_, dialing := s.dialing[n.ID]
 	switch {
 	case dialing:
@@ -243,6 +246,15 @@ func (h dialHistory) min() pastDial {
 }
 func (h *dialHistory) add(id discover.NodeID, exp time.Time) {
 	heap.Push(h, pastDial{id, exp})
+}
+func (h *dialHistory) remove(id discover.NodeID) bool {
+	for i, v := range *h {
+		if v.id == id {
+			heap.Remove(h, i)
+			return true
+		}
+	}
+	return false
 }
 func (h dialHistory) contains(id discover.NodeID) bool {
 	for _, v := range h {

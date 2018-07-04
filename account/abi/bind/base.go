@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hpb-project/ghpb/interface"
-	"github.com/hpb-project/ghpb/account/abi"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/account/abi"
+	"github.com/hpb-project/go-hpb/interface"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to
@@ -215,7 +216,8 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	if opts.Signer == nil {
 		return nil, errors.New("no signer to authorize the transaction with")
 	}
-	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+	//fixme BOE ChainId
+	signedTx, err := opts.Signer(types.NewBoeSigner(config.DefaultBlockChainConfig.ChainId), opts.From, rawTx)
 	if err != nil {
 		return nil, err
 	}

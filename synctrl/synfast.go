@@ -19,17 +19,18 @@ package synctrl
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/log"
-	"github.com/rcrowley/go-metrics"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/rcrowley/go-metrics"
 )
 
 type fastSync struct {
@@ -196,7 +197,7 @@ func (this *fastSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 		return errProVLowerBase
 	}
 
-	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", FastSync)
+	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", config.FastSync)
 	defer func(start time.Time) {
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
@@ -243,7 +244,7 @@ func (this *fastSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 		}
 	}
 	log.Debug("Fast syncing until pivot block", "pivot", pivot)
-	this.syncer.sch.Prepare(origin+1, FastSync, pivot, latest)
+	this.syncer.sch.Prepare(origin+1, config.FastSync, pivot, latest)
 	if this.syncInitHook != nil {
 		this.syncInitHook(origin, height)
 	}

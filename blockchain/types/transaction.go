@@ -24,10 +24,13 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"encoding/json"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -39,19 +42,23 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	if V.Sign() != 0 && isProtectedV(V) {
-		return NewEIP155Signer(deriveChainId(V))
-	} else {
-		return HomesteadSigner{}
-	}
+	return NewBoeSigner(deriveChainId(V))
+	//TODO transaction can be unprotected ?
+	//if V.Sign() != 0 && isProtectedV(V) {
+	//	return NewBoeSigner(deriveChainId(V))
+	//} else {
+	//	//return HomesteadSigner{}
+	//
+	//}
 }
 
 type Transaction struct {
 	data txdata
 	// caches
-	hash atomic.Value
-	size atomic.Value
-	from atomic.Value
+	hash    atomic.Value
+	size    atomic.Value
+	from    atomic.Value
+	fromP2P bool
 }
 
 type txdata struct {
@@ -153,6 +160,119 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
+// IntrinsicGas computes the 'intrinsic gas' for a message
+// with the given data.
+//
+// TODO convert to uint64
+func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
+	igas := new(big.Int)
+	if contractCreation {
+		igas.SetUint64(config.TxGasContractCreation)
+	} else {
+		igas.SetUint64(config.TxGas)
+	}
+	if len(data) > 0 {
+		var nz int64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		m := big.NewInt(nz)
+		m.Mul(m, new(big.Int).SetUint64(config.TxDataNonZeroGas))
+		igas.Add(igas, m)
+		m.SetInt64(int64(len(data)) - nz)
+		m.Mul(m, new(big.Int).SetUint64(config.TxDataZeroGas))
+		igas.Add(igas, m)
+	}
+	return igas
+}
+
+func (t txdata) MarshalJSON() ([]byte, error) {
+	type txdata struct {
+		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
+		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
+		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
+		V            *hexutil.Big    `json:"v" gencodec:"required"`
+		R            *hexutil.Big    `json:"r" gencodec:"required"`
+		S            *hexutil.Big    `json:"s" gencodec:"required"`
+		Hash         *common.Hash    `json:"hash" rlp:"-"`
+	}
+	var enc txdata
+	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
+	enc.Price = (*hexutil.Big)(t.Price)
+	enc.GasLimit = (*hexutil.Big)(t.GasLimit)
+	enc.Recipient = t.Recipient
+	enc.Amount = (*hexutil.Big)(t.Amount)
+	enc.Payload = t.Payload
+	enc.V = (*hexutil.Big)(t.V)
+	enc.R = (*hexutil.Big)(t.R)
+	enc.S = (*hexutil.Big)(t.S)
+	enc.Hash = t.Hash
+	return json.Marshal(&enc)
+}
+
+func (t *txdata) UnmarshalJSON(input []byte) error {
+	type txdata struct {
+		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
+		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
+		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
+		V            *hexutil.Big    `json:"v" gencodec:"required"`
+		R            *hexutil.Big    `json:"r" gencodec:"required"`
+		S            *hexutil.Big    `json:"s" gencodec:"required"`
+		Hash         *common.Hash    `json:"hash" rlp:"-"`
+	}
+	var dec txdata
+	if err := json.Unmarshal(input, &dec); err != nil {
+		return err
+	}
+	if dec.AccountNonce == nil {
+		return errors.New("missing required field 'nonce' for txdata")
+	}
+	t.AccountNonce = uint64(*dec.AccountNonce)
+	if dec.Price == nil {
+		return errors.New("missing required field 'gasPrice' for txdata")
+	}
+	t.Price = (*big.Int)(dec.Price)
+	if dec.GasLimit == nil {
+		return errors.New("missing required field 'gas' for txdata")
+	}
+	t.GasLimit = (*big.Int)(dec.GasLimit)
+	if dec.Recipient != nil {
+		t.Recipient = dec.Recipient
+	}
+	if dec.Amount == nil {
+		return errors.New("missing required field 'value' for txdata")
+	}
+	t.Amount = (*big.Int)(dec.Amount)
+	if dec.Payload == nil {
+		return errors.New("missing required field 'input' for txdata")
+	}
+	t.Payload = dec.Payload
+	if dec.V == nil {
+		return errors.New("missing required field 'v' for txdata")
+	}
+	t.V = (*big.Int)(dec.V)
+	if dec.R == nil {
+		return errors.New("missing required field 'r' for txdata")
+	}
+	t.R = (*big.Int)(dec.R)
+	if dec.S == nil {
+		return errors.New("missing required field 's' for txdata")
+	}
+	t.S = (*big.Int)(dec.S)
+	if dec.Hash != nil {
+		t.Hash = dec.Hash
+	}
+	return nil
+}
+
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
@@ -187,6 +307,11 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
+//TODO for test use
+func (tx *Transaction) SetFrom(from common.Address) { tx.from.Store(from) }
+func (tx *Transaction) SetFromP2P(fromP2P bool)     { tx.fromP2P = fromP2P }
+func (tx *Transaction) IsFromP2P() bool             { return tx.fromP2P }
+
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
@@ -198,6 +323,13 @@ func (tx *Transaction) To() *common.Address {
 	}
 }
 
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
+
 // Hash hashes the RLP encoding of tx.
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {
@@ -207,6 +339,13 @@ func (tx *Transaction) Hash() common.Hash {
 	v := rlpHash(tx)
 	tx.hash.Store(v)
 	return v
+}
+
+type writeCounter common.StorageSize
+
+func (c *writeCounter) Write(b []byte) (int, error) {
+	*c += writeCounter(len(b))
+	return len(b), nil
 }
 
 func (tx *Transaction) Size() common.StorageSize {
@@ -247,6 +386,10 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(len(r.Bytes()))
+	fmt.Println(len(s.Bytes()))
+
+
 	cpy := &Transaction{data: tx.data}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 	return cpy, nil

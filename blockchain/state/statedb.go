@@ -267,6 +267,16 @@ func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
+// AddBatchBalance is a batch version of AddBalance
+func (self *StateDB) AddBatchBalance(addrRwd map[common.Address]*big.Int) {
+	for addr, amount := range addrRwd {
+		stateObject := self.GetOrNewStateObject(addr)
+		if stateObject != nil {
+			stateObject.AddBalance(amount)
+		}
+	}
+}
+
 // SubBalance subtracts amount from the account associated with addr
 func (self *StateDB) SubBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)

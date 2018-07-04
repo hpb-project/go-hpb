@@ -23,11 +23,12 @@ import (
 	"errors"
 
 	"github.com/naoina/toml"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"fmt"
 	"os"
+	"sync/atomic"
 )
-var HpbconfigIns *HpbConfig
+var HpbConfigIns *HpbConfig
 const (
 	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	DatadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
@@ -105,10 +106,8 @@ const (
 	Einstein = 1e21
 	Douglas  = 1e42
 )
-
-const (
-	clientIdentifier = "ghpb" // Client identifier to advertise over the network
-)
+// config instance
+var INSTANCE = atomic.Value{}
 
 type hpbStatsConfig struct {
 	URL string `toml:",omitempty"`
@@ -175,13 +174,13 @@ func loadConfig(file string, cfg *HpbConfig) error {
 	}
 	return err
 }
+func  New() (*HpbConfig) {
+	if INSTANCE.Load() != nil {
+		return INSTANCE.Load().(*HpbConfig)
+	}
 
-
-func GetHpbConfigInstance() (*HpbConfig,  error) {
-
-	//check hpbconfigIns
-	if HpbconfigIns == nil {
-		HpbconfigIns := &HpbConfig{
+	if HpbConfigIns == nil {
+		HpbConfigIns := &HpbConfig{
 			Node: 		defaultNodeConfig() ,
 			// Configuration of peer-to-peer networking.
 			Network:	DefaultNetworkConfig(),
@@ -197,8 +196,19 @@ func GetHpbConfigInstance() (*HpbConfig,  error) {
 			Gas:		DefaultGasConfig,
 		}
 		log.Info("Create New HpbConfig object")
+		INSTANCE.Store(HpbConfigIns)
+		return HpbConfigIns
 	}
-	return HpbconfigIns, nil
+	INSTANCE.Store(HpbConfigIns)
+	return HpbConfigIns
+
+}
+func GetHpbConfigInstance() (*HpbConfig, error) {
+	if INSTANCE.Load() != nil {
+		return INSTANCE.Load().(*HpbConfig), nil
+	}
+	log.Warn("TxPool is nil, please init tx pool first.")
+	return nil, nil
 }
 
 

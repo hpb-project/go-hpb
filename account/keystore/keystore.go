@@ -31,12 +31,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/core/event"
-	
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var (
@@ -62,8 +61,8 @@ type KeyStore struct {
 	unlocked map[common.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets     []accounts.Wallet       // Wallet wrappers around the individual key files
-	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
-	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
+	updateFeed  sub.Feed              // Event feed to notify wallet additions/removals
+	updateScope sub.SubscriptionScope // Subscription scope tracking current live listeners
 	updating    bool                    // Whether the event notification loop is running
 
 	mu sync.RWMutex
@@ -175,7 +174,7 @@ func (ks *KeyStore) refreshWallets() {
 
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of keystore wallets.
-func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
+func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) sub.Subscription {
 	// We need the mutex to reliably start/stop the update loop
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
@@ -278,9 +277,11 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+		return types.SignTx(tx, types.NewBoeSigner(chainID), unlockedKey.PrivateKey)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
+	// error when chainId is nil.
+	panic("chainId is nil")
+	//return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -306,9 +307,10 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
+		return types.SignTx(tx, types.NewBoeSigner(chainID), key.PrivateKey)
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
+	// error when chainId is nil.
+	panic("chainId is nil")
 }
 
 // Unlock unlocks the given account indefinitely.
@@ -405,7 +407,7 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	
+
 	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
 	if err != nil {
 		return accounts.Account{}, err

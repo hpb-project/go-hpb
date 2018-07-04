@@ -19,6 +19,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"os"
 	"runtime"
 	"strconv"
@@ -26,23 +29,21 @@ import (
 	"time"
 
 
-	"github.com/hpb-project/ghpb/command/utils"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/console"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/core/state"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/protocol/downloader"
-	"github.com/hpb-project/ghpb/storage"
-	"github.com/hpb-project/ghpb/core/event"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/common/trie"
+	"github.com/hpb-project/go-hpb/cmd/utils"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/console"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
 	
 	//"path/filepath"
 	//"io/ioutil"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -174,18 +175,18 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	defer file.Close()
 
-	genesis := new(core.Genesis)
+	genesis := new(bc.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
 	// Open an initialise both full and light databases
-	stack := makeFullNode(ctx)
+	//stack, _ := MakeConfigNode(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := stack.OpenDatabase(name, 0, 0)
+		chaindb, err := db.OpenDatabase(name, 0, 0)
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		_, hash, err := core.SetupGenesisBlock(chaindb, genesis)
+		_, hash, err := bc.SetupGenesisBlock(chaindb, genesis)
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
@@ -204,15 +205,15 @@ func initRand(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
     
-	stack := makeFullNode(ctx)
+	//stack, _ := MakeConfigNode(ctx)
 
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		chaindb, err := stack.OpenDatabase(name, 0, 0)
+		chaindb, err := db.OpenDatabase(name, 0, 0)
 	
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		werr := core.WriteRandom(chaindb, randomStr)
+		werr := bc.WriteRandom(chaindb, randomStr)
 		
 		if werr != nil {
 			utils.Fatalf("Failed to random string: %v", werr)
@@ -243,7 +244,7 @@ func importChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-	stack := makeFullNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	chain, chainDb := utils.MakeChain(ctx, stack)
 	defer chainDb.Close()
 
@@ -324,7 +325,7 @@ func exportChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-	stack := makeFullNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	chain, _ := utils.MakeChain(ctx, stack)
 	start := time.Now()
 
@@ -358,33 +359,33 @@ func copyDb(ctx *cli.Context) error {
 		utils.Fatalf("Source chaindata directory path argument missing")
 	}
 	// Initialize a new chain for the running node to sync into
-	stack := makeFullNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	chain, chainDb := utils.MakeChain(ctx, stack)
 
-	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*downloader.SyncMode)
-	dl := downloader.New(syncmode, chainDb, new(event.TypeMux), chain, nil, nil)
+	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*config.SyncMode)
+	syer := synctrl.NewSyncer(syncmode, chainDb, new(sub.TypeMux), chain, nil)
 
 	// Create a source peer to satisfy downloader requests from
 	db, err := hpbdb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
 	if err != nil {
 		return err
 	}
-	hc, err := core.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
+	hc, err := bc.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
 	if err != nil {
 		return err
 	}
-	peer := downloader.NewFakePeer("local", db, hc, dl)
-	if err = dl.RegisterPeer("local", params.ProtocolV111, peer); err != nil {
+	peer := synctrl.NewFakePeer("local", db, hc, syer)
+	if err = syer.RegisterPeer("local", config.ProtocolV111, peer); err != nil {
 		return err
 	}
 	// Synchronise with the simulated peer
 	start := time.Now()
 
 	currentHeader := hc.CurrentHeader()
-	if err = dl.Synchronise("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncmode); err != nil {
+	if err = syer.Start("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncmode); err != nil {
 		return err
 	}
-	for dl.Synchronising() {
+	for syer.Synchronising() {
 		time.Sleep(10 * time.Millisecond)
 	}
 	fmt.Printf("Database copy done in %v\n", time.Since(start))
@@ -401,7 +402,7 @@ func copyDb(ctx *cli.Context) error {
 }
 
 func removeDB(ctx *cli.Context) error {
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		// Ensure the database exists in the first place
@@ -430,7 +431,7 @@ func removeDB(ctx *cli.Context) error {
 }
 
 func dump(ctx *cli.Context) error {
-	stack := makeFullNode(ctx)
+	stack, _ := MakeConfigNode(ctx)
 	chain, chainDb := utils.MakeChain(ctx, stack)
 	for _, arg := range ctx.Args() {
 		var block *types.Block

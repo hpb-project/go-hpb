@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/event"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var testSigData = make([]byte, 32)
@@ -234,7 +234,7 @@ func TestWalletNotifierLifecycle(t *testing.T) {
 	// Subscribe to the wallet feed and ensure the updater boots up
 	updates := make(chan accounts.WalletEvent)
 
-	subs := make([]event.Subscription, 2)
+	subs := make([]sub.Subscription, 2)
 	for i := 0; i < len(subs); i++ {
 		// Create a new subscription
 		subs[i] = ks.Subscribe(updates)
@@ -379,9 +379,9 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	new := NewPlaintextKeyStore
+	newF := NewPlaintextKeyStore
 	if encrypted {
-		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
+		newF = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
-	return d, new(d)
+	return d, newF(d)
 }

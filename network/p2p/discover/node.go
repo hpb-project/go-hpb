@@ -30,9 +30,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/crypto/secp256k1"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/secp256k1"
 )
 
 const NodeIDBits   = 512
@@ -41,7 +41,7 @@ const RandNonceSize = 32
 // 节点类型
 type NodeType  uint8
 const(
-	LightNode  NodeType = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型
+	InitNode   NodeType  = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型
 
 	AuthNode   NodeType = 0x30  //普通节点 经过认证的节点
 	PreNode    NodeType = 0x31  //候选节点
@@ -52,8 +52,8 @@ const(
 
 func (nt NodeType)ToString() string {
 	switch nt {
-	case LightNode:
-		return "LightNode"
+	case InitNode:
+		return "InitNode"
 	case AuthNode:
 		return "AuthNode"
 	case PreNode:
@@ -185,7 +185,7 @@ func ParseNode(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, LightNode,nil, 0, 0), nil
+		return NewNode(id, InitNode,nil, 0, 0), nil
 	}
 	return parseComplete(rawurl)
 }
@@ -234,7 +234,7 @@ func parseComplete(rawurl string) (*Node, error) {
 			return nil, errors.New("invalid discport in query")
 		}
 	}
-	return NewNode(id, LightNode,ip, uint16(udpPort), uint16(tcpPort)), nil
+	return NewNode(id, InitNode,ip, uint16(udpPort), uint16(tcpPort)), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.

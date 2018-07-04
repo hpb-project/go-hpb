@@ -24,22 +24,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/ghpb/account"
-	"github.com/hpb-project/ghpb/account/keystore"
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/common/hexutil"
-	"github.com/hpb-project/ghpb/common/math"
-	"github.com/hpb-project/ghpb/core"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/ghpb/network/p2p"
-	"github.com/hpb-project/ghpb/common/constant"
-	"github.com/hpb-project/ghpb/common/rlp"
-	"github.com/hpb-project/ghpb/network/rpc"
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/common/math"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/go-hpb/blockchain"
 )
 
 const (
@@ -280,7 +280,7 @@ func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) 
 
 // fetchKeystore retrives the encrypted keystore from the account manager.
 func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
-	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	return am.KeyStore().(*keystore.KeyStore)
 }
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
@@ -559,7 +559,7 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
-func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, bool, error) {
+func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg evm.Config) ([]byte, *big.Int, bool, error) {
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
@@ -600,7 +600,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func() { cancel() }()
 
 	// Get a new instance of the EVM.
-	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
+	evm, _, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
+	//evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
 	if err != nil {
 		return nil, common.Big0, false, err
 	}
@@ -611,20 +612,27 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		evm.Cancel()
 	}()
 
+
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	gp := new(core.GasPool).AddGas(math.MaxBig256)
-	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
+	//gp := new(node.GasPool).AddGas(math.MaxBig256) //TODO
+
+	//blockchain := bc.InstanceBlockChain() //TODO
+	//header := bc. //TODO
+	//TODO
+	/*res, gas, failed, err := bc.ApplyMessage(blockchain, evm, msg, gp)
 	if err := vmError(); err != nil {
 		return nil, common.Big0, false, err
-	}
-	return res, gas, failed, err
+	}*/
+	//TODO
+	//return res, gas, failed, err
+	return nil,gas,false,err
 }
 
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, err := s.doCall(ctx, args, blockNr, vm.Config{DisableGasMetering: true})
+	result, _, _, err := s.doCall(ctx, args, blockNr, evm.Config{DisableGasMetering: true})
 	return (hexutil.Bytes)(result), err
 }
 
@@ -650,7 +658,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 		mid := (hi + lo) / 2
 		(*big.Int)(&args.Gas).SetUint64(mid)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{})
+		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, evm.Config{})
 
 		// If the transaction became invalid or execution failed, raise the gas limit
 		if err != nil || failed {
@@ -688,7 +696,7 @@ type StructLogRes struct {
 }
 
 // formatLogs formats EVM returned structured logs for json output
-func FormatLogs(structLogs []vm.StructLog) []StructLogRes {
+func FormatLogs(structLogs []evm.StructLog) []StructLogRes {
 	formattedStructLogs := make([]StructLogRes, len(structLogs))
 	for index, trace := range structLogs {
 		formattedStructLogs[index] = StructLogRes{
@@ -796,9 +804,9 @@ type RPCTransaction struct {
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
-	var signer types.Signer = types.FrontierSigner{}
+	var signer types.Signer = types.BoeSigner{}
 	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
+		signer = types.NewBoeSigner(tx.ChainId())
 	}
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
@@ -932,7 +940,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 // GetTransactionByHash returns the transaction for the given hash
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) *RPCTransaction {
 	// Try to return an already finalized transaction
-	if tx, blockHash, blockNumber, index := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
+	if tx, blockHash, blockNumber, index := bc.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 		return newRPCTransaction(tx, blockHash, blockNumber, index)
 	}
 	// No finalized transaction, try to retrieve it from the pool
@@ -948,7 +956,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 	var tx *types.Transaction
 
 	// Retrieve a finalized transaction, or a pooled otherwise
-	if tx, _, _, _ = core.GetTransaction(s.b.ChainDb(), hash); tx == nil {
+	if tx, _, _, _ = bc.GetTransaction(s.b.ChainDb(), hash); tx == nil {
 		if tx = s.b.GetPoolTransaction(hash); tx == nil {
 			// Transaction not found anywhere, abort
 			return nil, nil
@@ -960,15 +968,15 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
-	tx, blockHash, blockNumber, index := core.GetTransaction(s.b.ChainDb(), hash)
+	tx, blockHash, blockNumber, index := bc.GetTransaction(s.b.ChainDb(), hash)
 	if tx == nil {
 		return nil, nil
 	}
-	receipt, _, _, _ := core.GetReceipt(s.b.ChainDb(), hash) // Old receipts don't have the lookup data available
+	receipt, _, _, _ := bc.GetReceipt(s.b.ChainDb(), hash) // Old receipts don't have the lookup data available
 
-	var signer types.Signer = types.FrontierSigner{}
+	var signer types.Signer = types.BoeSigner{}
 	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
+		signer = types.NewBoeSigner(tx.ChainId())
 	}
 	from, _ := types.Sender(signer, tx)
 
@@ -1068,7 +1076,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		return common.Hash{}, err
 	}
 	if tx.To() == nil {
-		signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
+		signer := types.MakeSigner(b.ChainConfig())
 		from, err := types.Sender(signer, tx)
 		if err != nil {
 			return common.Hash{}, err
@@ -1191,9 +1199,9 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 
 	transactions := make([]*RPCTransaction, 0, len(pending))
 	for _, tx := range pending {
-		var signer types.Signer = types.HomesteadSigner{}
+		var signer types.Signer = types.BoeSigner{}
 		if tx.Protected() {
-			signer = types.NewEIP155Signer(tx.ChainId())
+			signer = types.NewBoeSigner(tx.ChainId())
 		}
 		from, _ := types.Sender(signer, tx)
 		if _, err := s.b.AccountManager().Find(accounts.Account{Address: from}); err == nil {
@@ -1219,9 +1227,9 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	}
 
 	for _, p := range pending {
-		var signer types.Signer = types.HomesteadSigner{}
+		var signer types.Signer = types.BoeSigner{}
 		if p.Protected() {
-			signer = types.NewEIP155Signer(p.ChainId())
+			signer = types.NewBoeSigner(p.ChainId())
 		}
 		wantSigHash := signer.Hash(matchTx)
 

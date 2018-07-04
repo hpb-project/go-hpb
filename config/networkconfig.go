@@ -19,27 +19,15 @@ package config
 
 import (
 	"crypto/ecdsa"
-
-	/*
-		"github.com/hpb-project/ghpb/account"
-		"github.com/hpb-project/ghpb/account/keystore"
-		"github.com/hpb-project/ghpb/common"
-		"github.com/hpb-project/ghpb/common/crypto"
-		"github.com/hpb-project/ghpb/common/log"
-		"github.com/hpb-project/ghpb/network/p2p"
-		"github.com/hpb-project/ghpb/network/p2p/discover"
-		"math/big"
-		"time"
-		*/
-
-	"runtime"
-	"strings"
-	"path/filepath"
-	"os"
 	"fmt"
 	"time"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+
+	"strings"
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -49,6 +37,9 @@ const (
 	DefaultWSPort   = 8546        // Default TCP port for the websocket RPC server
 )
 
+const (
+	clientIdentifier = "ghpb" // Client identifier to advertise over the network
+)
 const (
 	// BloomBitsBlocks is the number of blocks a single bloom bit section vector
 	// contains.
@@ -166,7 +157,7 @@ const(
 //节点数据库相关
 
 var (
-	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
+	nodeDBNilNodeID      = discover.NodeID{}       // Special node ID to use as a nil element.
 	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
 
@@ -175,26 +166,25 @@ var (
 
 var defaultNetworkConfig = NetworkConfig{
 
-	HTTPPort:    DefaultHTTPPort,
-	HTTPModules: []string{"net", "web3"},
-	WSPort:      DefaultWSPort,
-	WSModules:   []string{"net", "web3"},
-	ListenAddr:      ":30303",
-	MaxPeers:        50,
-	NAT:             nat.Any(),
-
-
-	IPCPath:   "ghpb.ipc",
-
-
+	HTTPPort:     DefaultHTTPPort,
+	HTTPModules:  []string{"net", "web3"},
+	WSPort:       DefaultWSPort,
+	WSModules:    []string{"net", "web3"},
+	ListenAddr:   ":30303",
+	MaxPeers:     50,
+	NAT:          nat.Any(),
+	IpcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
+	HttpEndpoint: DefaultHTTPEndpoint(),
+	WsEndpoint:   DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
 	// Hpb Foundation Go Bootnodes
-	"hnode://d9db1338cccee56d310a908fcb77b953d8bcc68e2ea62956b6397e1d6c81ff72fcc4cb7939ddf3f65cf26030d357212c4d0e1daebb7971d1386da26bf1f85e64&1@47.91.73.94:30301",
-	"hnode://5c643c86d7cccae0f25916aae34a2ee076634a8123088b34b01390f68e3d71126a5fc16161c24b00d7ca05e38f6e85c556325b6dbe399564556d87aa6f08643e&1@47.75.51.144:30301",
-	"hnode://63c43fc19bca6770a602eaca3669e131ac38d07b3e40f119cc094af24eca9a98d3d9ad9ef0981f3878b0334a51b59f36bb1ecf3671a483dd5f6261df549c8aa6&1@47.91.47.79:30301",
-	"hnode://af6568c2913a99401fa567182a39f89bad7a0a273d2d7ba5a4ec1d02ad9c790c3be3f17ac92da84c5a9ed604cb7d44482783c85792d587f2bfc42b1dccd3d7e5&1@47.92.26.84:30301",
+	"hnode://386c0573c4cb9b10544e4b62f467006dcddaffb3d50af8fecb50895b744b0391fcd3d49f2db9d2d8f85142fa3b59142df19aede2066ba2a55da5e9e7c195cf3a@127.0.0.1:30101",
+	//"hnode://d9db1338cccee56d310a908fcb77b953d8bcc68e2ea62956b6397e1d6c81ff72fcc4cb7939ddf3f65cf26030d357212c4d0e1daebb7971d1386da26bf1f85e64&1@47.91.73.94:30301",
+	//"hnode://5c643c86d7cccae0f25916aae34a2ee076634a8123088b34b01390f68e3d71126a5fc16161c24b00d7ca05e38f6e85c556325b6dbe399564556d87aa6f08643e&1@47.75.51.144:30301",
+	//"hnode://63c43fc19bca6770a602eaca3669e131ac38d07b3e40f119cc094af24eca9a98d3d9ad9ef0981f3878b0334a51b59f36bb1ecf3671a483dd5f6261df549c8aa6&1@47.91.47.79:30301",
+	//"hnode://af6568c2913a99401fa567182a39f89bad7a0a273d2d7ba5a4ec1d02ad9c790c3be3f17ac92da84c5a9ed604cb7d44482783c85792d587f2bfc42b1dccd3d7e5&1@47.92.26.84:30301",
 }
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the
@@ -285,7 +275,7 @@ type NetworkConfig struct {
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
-	Protocols []Protocol `toml:"-"`
+	//Protocols []p2p.Protocol `toml:"-"`
 
 	// If ListenAddr is set to a non-nil address, the server
 	// will listen for incoming connections.
@@ -302,7 +292,7 @@ type NetworkConfig struct {
 
 	// If Dialer is set to a non-nil value, the given Dialer
 	// is used to dial outbound peer connections.
-	Dialer NodeDialer `toml:"-"`
+	//Dialer p2p.NodeDialer `toml:"-"`
 
 	// If NoDial is true, the server will not dial any peers.
 	NoDial bool `toml:",omitempty"`
@@ -311,40 +301,20 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	// IPCPath is the requested location to place the IPC endpoint. If the path is
-	// a simple file name, it is placed inside the data directory (or on the root
-	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
-	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `toml:",omitempty"`
+	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+
+	BootstrapNodes []*discover.Node
+
+
+
+
 }
 
 
-// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
-// account the set data folders as well as the designated platform we're currently
-// running on.
-func (c *networkConfig) IPCEndpoint() string {
-	// Short circuit if IPC has not been enabled
-	if c.IPCPath == "" {
-		return ""
-	}
-	// On windows we can only use plain top-level pipes
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
-			return c.IPCPath
-		}
-		return `\\.\pipe\` + c.IPCPath
-	}
-	// Resolve names into the data directory full paths otherwise
-	if filepath.Base(c.IPCPath) == c.IPCPath {
-		if c.DataDir == "" {
-			return filepath.Join(os.TempDir(), c.IPCPath)
-		}
-		return filepath.Join(c.DataDir, c.IPCPath)
-	}
-	return c.IPCPath
-}
 
-func DefaultNetworkConfig() networkConfig{
+func DefaultNetworkConfig() NetworkConfig{
 	cfg:= defaultNetworkConfig
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
@@ -352,21 +322,11 @@ func DefaultNetworkConfig() networkConfig{
 
 	return cfg
 }
-// DefaultIPCEndpoint returns the IPC path used by default.
-func DefaultIPCEndpoint(clientIdentifier string) string {
-	if clientIdentifier == "" {
-		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if clientIdentifier == "" {
-			panic("empty executable name")
-		}
-	}
-	config := &networkConfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
-	return config.IPCEndpoint()
-}
+
 
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
 // and port parameters.
-func (c *networkConfig) HTTPEndpoint() string {
+func (c *NetworkConfig) HTTPEndpoint() string {
 	if c.HTTPHost == "" {
 		return ""
 	}
@@ -375,13 +335,24 @@ func (c *networkConfig) HTTPEndpoint() string {
 
 // DefaultHTTPEndpoint returns the HTTP endpoint used by default.
 func DefaultHTTPEndpoint() string {
-	config := &networkConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
+	config := &NetworkConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
 	return config.HTTPEndpoint()
 }
 
+// DefaultIPCEndpoint returns the IPC path used by default.
+func DefaultIPCEndpoint(clientIdentifier string) string {
+	if clientIdentifier == "" {
+		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if clientIdentifier == "" {
+			panic("empty executable name")
+		}
+	}
+	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
+	return config.IPCEndpoint()
+}
 // WSEndpoint resolves an websocket endpoint based on the configured host interface
 // and port parameters.
-func (c *Config) WSEndpoint() string {
+func (c *NetworkConfig) WSEndpoint() string {
 	if c.WSHost == "" {
 		return ""
 	}
@@ -390,7 +361,7 @@ func (c *Config) WSEndpoint() string {
 
 // DefaultWSEndpoint returns the websocket endpoint used by default.
 func DefaultWSEndpoint() string {
-	config := &networkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
+	config := &NetworkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
 

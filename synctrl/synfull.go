@@ -18,17 +18,18 @@ package synctrl
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/log"
-	"github.com/rcrowley/go-metrics"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/rcrowley/go-metrics"
 )
 
 type fullSync struct {
@@ -194,7 +195,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 		return errProVLowerBase
 	}
 
-	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", FullSync)
+	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", config.FullSync)
 	defer func(start time.Time) {
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
@@ -219,7 +220,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 
 	// Initiate the sync using a concurrent header and content retrieval algorithm
 	pivot := uint64(0)
-	this.syncer.sch.Prepare(origin+1, FullSync, pivot, latest)
+	this.syncer.sch.Prepare(origin+1, config.FullSync, pivot, latest)
 	if this.syncInitHook != nil {
 		this.syncInitHook(origin, height)
 	}
@@ -1007,7 +1008,7 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 // deliver injects a new batch of data received from a remote node.
 func (this *fullSync) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
 	// Update the delivery metrics for both good and failed deliveries
-	inMeter.Mark(int64(packet.Items()))
+		inMeter.Mark(int64(packet.Items()))
 	defer func() {
 		if err != nil {
 			dropMeter.Mark(int64(packet.Items()))

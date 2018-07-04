@@ -14,18 +14,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package config
 
 import "time"
 
-
-
 type TxPoolConfiguration struct {
+
 	NoLocals  bool          // Whether local transaction handling should be disabled
 	Journal   string        // Journal of local transactions to survive node restarts
 	Rejournal time.Duration // Time interval to regenerate the local transaction journal
-
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
 
@@ -37,19 +34,14 @@ type TxPoolConfiguration struct {
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 }
 
-
 var DefaultTxPoolConfig = TxPoolConfiguration{
-	Journal:   "transactions.rlp",
-	Rejournal: time.Hour,
-
 	PriceLimit: 1,
 	PriceBump:  10,
 
 	AccountSlots: 10000,
-	GlobalSlots:  100000,
+	GlobalSlots:  1000000,
 	AccountQueue: 20000,
-	GlobalQueue:  200000,
+	GlobalQueue:  2000000,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime: 3 * time.Minute,
 }
-

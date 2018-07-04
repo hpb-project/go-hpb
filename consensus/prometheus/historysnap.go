@@ -23,14 +23,14 @@ import (
 	//"fmt"
 	"encoding/json"
 	
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/storage"
-	"github.com/hpb-project/ghpb/common/constant"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/ghpb/common/log"
 	 
-	"github.com/hpb-project/ghpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus"
 
 	//"strconv"
 

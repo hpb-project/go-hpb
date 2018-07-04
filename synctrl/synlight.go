@@ -18,15 +18,16 @@ package synctrl
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/log"
-	"github.com/rcrowley/go-metrics"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/rcrowley/go-metrics"
 )
 
 type lightSync struct {
@@ -192,7 +193,7 @@ func (this *lightSync) syncWithPeer(id string, p *peerConnection, hash common.Ha
 		return errProVLowerBase
 	}
 
-	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", LightSync)
+	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", config.LightSync)
 	defer func(start time.Time) {
 		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
@@ -218,7 +219,7 @@ func (this *lightSync) syncWithPeer(id string, p *peerConnection, hash common.Ha
 	// Initiate the sync using a concurrent header and content retrieval algorithm
 	pivot := uint64(0)
 	pivot = height
-	this.syncer.sch.Prepare(origin+1, LightSync, pivot, latest)
+	this.syncer.sch.Prepare(origin+1, config.LightSync, pivot, latest)
 	if this.syncInitHook != nil {
 		this.syncInitHook(origin, height)
 	}

@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // toGoSliceType parses the input and casts it to the proper slice defined by the ABI

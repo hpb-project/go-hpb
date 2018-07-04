@@ -30,7 +30,13 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		ParentHash common.Hash                                 `json:"parentHash"`
 	}
 	var enc Genesis
-	enc.Config = g.Config
+	//TODO: jiali
+	//enc.Config = g.Config
+	enc.Config.ChainId = g.Config.ChainId
+	enc.Config.Prometheus.Epoch = g.Config.Prometheus.Epoch
+	enc.Config.Prometheus.Period = g.Config.Prometheus.Period
+	enc.Config.Prometheus.Random = g.Config.Prometheus.Random
+
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
@@ -72,7 +78,12 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	if dec.Config != nil {
-		g.Config = dec.Config
+		//TODO: jiali
+		//g.Config = dec.Config
+		g.Config.ChainId = dec.Config.ChainId
+		g.Config.Prometheus.Epoch = dec.Config.Prometheus.Epoch
+		g.Config.Prometheus.Period = dec.Config.Prometheus.Period
+		g.Config.Prometheus.Random = dec.Config.Prometheus.Random
 	}
 	if dec.Nonce != nil {
 		g.Nonce = uint64(*dec.Nonce)

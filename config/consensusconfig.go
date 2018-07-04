@@ -17,7 +17,7 @@
 
 package config
 
-var DefaultPrometheusConfig = &PrometheusConfig {
+var DefaultPrometheusConfig = PrometheusConfig {
 	Period:    15,
 	Epoch:	   30000,
 	Random:     "0",

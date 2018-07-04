@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/common/crypto/sha3"
-	"github.com/hpb-project/ghpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
 
 func init() {

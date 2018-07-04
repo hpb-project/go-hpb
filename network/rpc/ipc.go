@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // CreateIPCListener creates an listener, on Unix platforms this is a unix socket, on

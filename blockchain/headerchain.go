@@ -29,9 +29,9 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/log"
 )
 
 const (
@@ -41,7 +41,7 @@ const (
 )
 
 // HeaderChain implements the basic block header chain logic that is shared by
-// core.BlockChain and light.LightChain. It is not usable in itself, only as
+// bc.BlockChain and light.LightChain. It is not usable in itself, only as
 // a part of either structure.
 // It is not thread safe either, the encapsulating chain structures should do
 // the necessary mutex locking/unlocking.
@@ -92,7 +92,7 @@ func NewHeaderChain(chainDb hpbdb.Database, config *config.ChainConfig, engine c
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
 	if hc.genesisHeader == nil {
-		return nil, ErrNoGenesis
+		return nil, errNoGenesis
 	}
 
 	hc.currentHeader = hc.genesisHeader

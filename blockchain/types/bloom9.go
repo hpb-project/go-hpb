@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/hexutil"
 )
 
 type bytesBacked interface {

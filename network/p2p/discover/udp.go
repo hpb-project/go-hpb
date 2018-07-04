@@ -26,11 +26,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/crypto"
-	"github.com/hpb-project/ghpb/log"
-	"github.com/hpb-project/ghpb/network/p2p/nat"
-	"github.com/hpb-project/ghpb/network/p2p/netutil"
-	"github.com/hpb-project/ghpb/common/rlp"
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
 const Version = 0x01
@@ -67,8 +67,8 @@ const (
 	pingPacket
 	pongPacket
 	pengPacket
-	findnodePacket
-	neighborsPacket
+	//findnodePacket
+	//neighborsPacket
 	getnodesPacket
 	nodeslistPacket
 
@@ -107,12 +107,12 @@ type (
 	}
 
 	// findnode is a query for nodes close to the given target.
-	findnode struct {
-		Target     NodeID // doesn't need to be an actual public key
-		Expiration uint64
-		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
-	}
+	//findnode struct {
+	//	Target     NodeID // doesn't need to be an actual public key
+	//	Expiration uint64
+	//	// Ignore additional fields (for forward compatibility).
+	//	Rest []rlp.RawValue `rlp:"tail"`
+	//}
 
 	// reply to findnode
 	neighbors struct {
@@ -305,7 +305,7 @@ func (t *udp) close() {
 func (t *udp) waitping(from NodeID) error {
 	return <-t.pending(from, pingPacket, func(interface{}) bool { return true })
 }
-
+/*
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.
 func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node, error) {
@@ -331,7 +331,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node
 	err := <-errc
 	return nodes, err
 }
-
+*/
 // pending adds a reply callback to the pending reply queue.
 // see the documentation of type pending for a detailed explanation.
 func (t *udp) pending(id NodeID, ptype byte, callback func(interface{}) bool) <-chan error {
@@ -570,10 +570,10 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 		req = new(pong)
 	case pengPacket:
 		req = new(peng)
-	case findnodePacket:
-		req = new(findnode)
-	case neighborsPacket:
-		req = new(neighbors)
+	//case findnodePacket:
+	//	req = new(findnode)
+	//case neighborsPacket:
+	//	req = new(neighbors)
 	case getnodesPacket:
 		req = new(getnodes)
 	case nodeslistPacket:
@@ -585,7 +585,7 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	err = s.Decode(req)
 	return req, fromID, hash, err
 }
-
+/*
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -634,6 +634,8 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
+*/
+
 
 func expired(ts uint64) bool {
 	return time.Unix(int64(ts), 0).Before(time.Now())
@@ -873,7 +875,6 @@ func (t *udp) pingto(toid NodeID, toaddr *net.UDPAddr, tcpPort uint16, nonce []b
 
 	return nil
 }
-
 
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.

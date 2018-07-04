@@ -18,13 +18,15 @@ package synctrl
 
 import (
 	"errors"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/log"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math/rand"
 	"time"
+
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 
@@ -46,10 +48,10 @@ var (
 type blockRetrievalFn func(common.Hash) *types.Block
 
 // headerRequesterFn is a callback type for sending a header retrieval request.
-type headerRequesterFn func(common.Hash) error
+type headerRequesterFn func(*p2p.Peer, common.Hash) error
 
 // bodyRequesterFn is a callback type for sending a body retrieval request.
-type bodyRequesterFn func([]common.Hash) error
+type bodyRequesterFn func(*p2p.Peer, []common.Hash) error
 
 // headerVerifierFn is a callback type to verify a block's header for fast propagation.
 type headerVerifierFn func(header *types.Header) error
@@ -389,7 +391,7 @@ func (this *Puller) loop() {
 					}
 					for _, hash := range hashes {
 						headerFetchMeter.Mark(1)
-						fetchHeader(hash) // Suboptimal, but protocol doesn't allow batch header retrievals
+						fetchHeader(p2p.PeerMgrInst().Peer(peer), hash) // Suboptimal, but protocol doesn't allow batch header retrievals
 					}
 				}()
 			}
@@ -420,7 +422,7 @@ func (this *Puller) loop() {
 					this.completingHook(hashes)
 				}
 				bodyFetchMeter.Mark(int64(len(hashes)))
-				go this.completing[hashes[0]].fetchBodies(hashes)
+				go this.completing[hashes[0]].fetchBodies(p2p.PeerMgrInst().Peer(peer), hashes)
 			}
 			// Schedule the next fetch if blocks are still pending
 			this.rescheduleComplete(completeTimer)

@@ -18,10 +18,10 @@
 package accounts
 
 import (
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/types"
-	"github.com/hpb-project/ghpb/core/event"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 // Account represents an Hpb account located at a specific location defined
@@ -126,7 +126,7 @@ type Backend interface {
 
 	// Subscribe creates an async subscription to receive notifications when the
 	// backend detects the arrival or departure of a wallet.
-	Subscribe(sink chan<- WalletEvent) event.Subscription
+	Subscribe(sink chan<- WalletEvent) sub.Subscription
 }
 
 // WalletEventType represents the different event types that can be fired by

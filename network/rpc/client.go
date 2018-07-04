@@ -32,7 +32,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hpb-project/ghpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 var (

@@ -27,7 +27,8 @@ import (
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
@@ -61,7 +62,7 @@ type fetchResult struct {
 
 // queue represents hashes that are either need fetching or are being fetched
 type scheduler struct {
-	mode          SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
+	mode          config.SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
 	fastSyncPivot uint64   // Block number where the fast sync pivots into archive synchronisation mode
 
 	headerHead common.Hash // Hash of the last queued header to verify order
@@ -121,7 +122,7 @@ func (this *scheduler) Reset() {
 	defer this.lock.Unlock()
 
 	this.closed = false
-	this.mode = FullSync
+	this.mode = config.FullSync
 	this.fastSyncPivot = 0
 
 	this.headerHead = common.Hash{}
@@ -323,7 +324,7 @@ func (this *scheduler) Schedule(headers []*types.Header, from uint64) []*types.H
 		this.blockTaskPool[hash] = header
 		this.blockTaskQueue.Push(header, -float32(header.Number.Uint64()))
 
-		if this.mode == FastSync && header.Number.Uint64() <= this.fastSyncPivot {
+		if this.mode == config.FastSync && header.Number.Uint64() <= this.fastSyncPivot {
 			// Fast phase of the fast sync, retrieve receipts too
 			this.receiptTaskPool[hash] = header
 			this.receiptTaskQueue.Push(header, -float32(header.Number.Uint64()))
@@ -378,7 +379,7 @@ func (this *scheduler) countProcessableItems() int {
 		// resultCache has space for fsHeaderForceVerify items. Not
 		// doing this could leave us unable to download the required
 		// amount of headers.
-		if this.mode == FastSync && result.Header.Number.Uint64() == this.fastSyncPivot {
+		if this.mode == config.FastSync && result.Header.Number.Uint64() == this.fastSyncPivot {
 			for j := 0; j < fsHeaderForceVerify; j++ {
 				if i+j+1 >= len(this.resultCache) || this.resultCache[i+j+1] == nil {
 					return i
@@ -493,7 +494,7 @@ func (this *scheduler) reserveHeaders(p *peerConnection, count int, taskPool map
 		}
 		if this.resultCache[index] == nil {
 			components := 1
-			if this.mode == FastSync && header.Number.Uint64() <= this.fastSyncPivot {
+			if this.mode == config.FastSync && header.Number.Uint64() <= this.fastSyncPivot {
 				components = 2
 			}
 			this.resultCache[index] = &fetchResult{
@@ -860,7 +861,7 @@ func (this *scheduler) deliver(id string, taskPool map[common.Hash]*types.Header
 
 // Prepare configures the result cache to allow accepting and caching inbound
 // fetch results.
-func (this *scheduler) Prepare(offset uint64, mode SyncMode, pivot uint64, head *types.Header) {
+func (this *scheduler) Prepare(offset uint64, mode config.SyncMode, pivot uint64, head *types.Header) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 

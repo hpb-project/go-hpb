@@ -21,7 +21,6 @@ import (
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It
@@ -44,5 +43,5 @@ type Validator interface {
 // of gas used in the process and return an error if any of the internal rules
 // failed.
 type Processor interface {
-	Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, *big.Int, error)
+	Process(block *types.Block, statedb *state.StateDB) (types.Receipts, []*types.Log, *big.Int, error)
 }

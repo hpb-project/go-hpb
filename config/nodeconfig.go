@@ -8,21 +8,72 @@ import (
 	"strings"
 	"path/filepath"
 	"crypto/ecdsa"
-	"io/ioutil"
 	"os/user"
 
 
-	"github.com/hpb-project/go-hpb/synctrl/"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/log"
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/cmd/ghpb"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	//TODO: shanlin "github.com/hpb-project/go-hpb/node/gasprice"
 )
 
+// SyncMode represents the synchronisation mode of the downloader.
+type SyncMode int
+const (
+	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
+	FastSync                  // Quickly download the headers, full sync only at the chain head
+	LightSync                 // Download only the headers and terminate afterwards
+)
+
+func (mode SyncMode) IsValid() bool {
+	return mode >= FullSync && mode <= LightSync
+}
+
+// String implements the stringer interface.
+func (mode SyncMode) String() string {
+	switch mode {
+	case FullSync:
+		return "full"
+	case FastSync:
+		return "fast"
+	case LightSync:
+		return "light"
+	default:
+		return "unknown"
+	}
+}
+
+func (mode SyncMode) MarshalText() ([]byte, error) {
+	switch mode {
+	case FullSync:
+		return []byte("full"), nil
+	case FastSync:
+		return []byte("fast"), nil
+	case LightSync:
+		return []byte("light"), nil
+	default:
+		return nil, fmt.Errorf("unknown sync mode %d", mode)
+	}
+}
+
+func (mode *SyncMode) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "full":
+		*mode = FullSync
+	case "fast":
+		*mode = FastSync
+	case "light":
+		*mode = LightSync
+	default:
+		return fmt.Errorf(`unknown sync mode %q, want "full", "fast" or "light"`, text)
+	}
+	return nil
+}
 
 var DefaultConfig = Nodeconfig{
+	SyncMode:    FastSync,
 	DataDir:     DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:             1,
@@ -37,6 +88,15 @@ var DefaultConfig = Nodeconfig{
 	*/
 	MaxTrieCacheGen : uint16(120),
 }
+
+//TODO: shanlin
+type Config struct {
+	Blocks     int
+	Percentile int
+	Default    *big.Int `toml:",omitempty"`
+}
+
+
 type Nodeconfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of ghpb is "ghpb". If no
@@ -61,11 +121,11 @@ type Nodeconfig struct {
 
 	// The genesis block, which is inserted if the database is empty.
 	// If nil, the Hpb main net block is used.
-	Genesis *core.Genesis `toml:",omitempty"`
+	//Genesis *bc.Genesis `toml:",omitempty"`
 
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
+	SyncMode  SyncMode
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LHS requests
@@ -83,7 +143,8 @@ type Nodeconfig struct {
 	GasPrice     *big.Int
 
 	// Gas Price Oracle options,HPB don't need dynamic gas price
-	//GPO gasprice.Config
+	//TODO: shanlin
+	GPO Config
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
@@ -108,6 +169,17 @@ type Nodeconfig struct {
 
 	MaxTrieCacheGen  uint16
 
+	// This field must be set to a valid secp256k1 private key.
+	PrivateKey *ecdsa.PrivateKey `toml:"-"`
+
+	// IPCPath is the requested location to place the IPC endpoint. If the path is
+	// a simple file name, it is placed inside the data directory (or on the root
+	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
+	// relative), then that specific path is enforced. An empty path disables IPC.
+	IPCPath string `toml:",omitempty"`
+
+	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
+
 
 }
 
@@ -127,9 +199,8 @@ func (c *Nodeconfig) NodeDB() string {
 	if c.DataDir == "" {
 		return "" // ephemeral
 	}
-	return c.resolvePath(datadirNodeDatabase)
+	return c.ResolvePath(DatadirNodeDatabase)
 }
-
 // NodeName returns the devp2p node identifier.
 func (c *Nodeconfig) NodeName() string {
 	name := c.name()
@@ -159,6 +230,17 @@ func (c *Nodeconfig) name() string {
 	return c.Name
 }
 
+func (c *Nodeconfig) StringName() string {
+	if c.Name == "" {
+		progname := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+		if progname == "" {
+			panic("empty executable name, set Config.Name")
+		}
+		return progname
+	}
+	return c.Name
+}
+
 // These resources are resolved differently for "geth" instances.
 var isOldGethResource = map[string]bool{
 	"chaindata":          true,
@@ -168,30 +250,8 @@ var isOldGethResource = map[string]bool{
 	"trusted-nodes.json": true,
 }
 
-// resolvePath resolves path in the instance directory.
-func (c *Nodeconfig) resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	if c.DataDir == "" {
-		return ""
-	}
-	// Backwards-compatibility: ensure that data directory files created
-	// by geth 1.4 are used if they exist.
-	if c.name() == "ghpb" && isOldGethResource[path] {
-		oldpath := ""
-		if c.Name == "ghpb" {
-			oldpath = filepath.Join(c.DataDir, path)
-		}
-		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
-			return oldpath
-		}
-	}
-	return filepath.Join(c.instanceDir(), path)
-}
 
-func (c *Nodeconfig) instanceDir() string {
+func (c *Nodeconfig) InstanceDir() string {
 	if c.DataDir == "" {
 		return ""
 	}
@@ -203,8 +263,8 @@ func (c *Nodeconfig) instanceDir() string {
 // data folder. If no key can be found, a new one is generated.
 func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 	// Use any specifically configured key.
-	if c.P2P.PrivateKey != nil {
-		return c.P2P.PrivateKey
+	if c.PrivateKey != nil {
+		return c.PrivateKey
 	}
 	// Generate ephemeral key if no datadir is being used.
 	if c.DataDir == "" {
@@ -215,7 +275,7 @@ func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 		return key
 	}
 
-	keyfile := c.resolvePath(datadirPrivateKey)
+	keyfile := c.ResolvePath(DatadirPrivateKey)
 	if key, err := crypto.LoadECDSA(keyfile); err == nil {
 		return key
 	}
@@ -229,22 +289,13 @@ func (c *Nodeconfig) NodeKey() *ecdsa.PrivateKey {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 		return key
 	}
-	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
+	keyfile = filepath.Join(instanceDir, DatadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
 	return key
 }
 
-// StaticNodes returns a list of node hnode URLs configured as static nodes.
-func (c *Nodeconfig) StaticNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirStaticNodes))
-}
-
-// TrustedNodes returns a list of node hnode URLs configured as trusted nodes.
-func (c *Nodeconfig) TrustedNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirTrustedNodes))
-}
 
 // parsePersistentNodes parses a list of discovery node URLs loaded from a .json
 // file from within the data directory.
@@ -313,8 +364,65 @@ func homeDir() string {
 func defaultNodeConfig() Nodeconfig {
 	cfg := DefaultConfig
 	cfg.Name = clientIdentifier
-	cfg.Version = VersionWithCommit(main.GitCommit)
 	return cfg
 }
 
 
+
+// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
+// account the set data folders as well as the designated platform we're currently
+// running on.
+func (c *Nodeconfig) IPCEndpoint() string {
+	// Short circuit if IPC has not been enabled
+	if c.IPCPath == "" {
+		return ""
+	}
+	// On windows we can only use plain top-level pipes
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
+			return c.IPCPath
+		}
+		return `\\.\pipe\` + c.IPCPath
+	}
+	// Resolve names into the data directory full paths otherwise
+	if filepath.Base(c.IPCPath) == c.IPCPath {
+		if c.DataDir == "" {
+			return filepath.Join(os.TempDir(), c.IPCPath)
+		}
+		return filepath.Join(c.DataDir, c.IPCPath)
+	}
+	return c.IPCPath
+}
+
+
+
+func (c *Nodeconfig) instanceDir() string {
+	if c.DataDir == "" {
+		return ""
+	}
+	return filepath.Join(c.DataDir, c.name())
+}
+
+
+// resolvePath resolves path in the instance directory.
+func (c *Nodeconfig) ResolvePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	if c.DataDir == "" {
+		return ""
+	}
+	// Backwards-compatibility: ensure that data directory files created
+	// by geth 1.4 are used if they exist.
+	if c.name() == "ghpb" && isOldGethResource[path] {
+		oldpath := ""
+		if c.Name == "ghpb" {
+			oldpath = filepath.Join(c.DataDir, path)
+		}
+		if oldpath != "" && common.FileExist(oldpath) {
+			// TODO: print warning
+			return oldpath
+		}
+	}
+	return filepath.Join(c.instanceDir(), path)
+}

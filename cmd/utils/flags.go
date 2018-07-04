@@ -31,20 +31,23 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/consensus/prometheus"
-	"github.com/hpb-project/go-hpb/vm"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/node"
-	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"github.com/hpb-project/go-hpb/config"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/go-hpb/common/metrics"
-	"github.com/hpb-project/go-hpb/synccontroller/downloader"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/node/gasprice"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -104,7 +107,7 @@ var (
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
-		Value: DirectoryString{node.DefaultDataDir()},
+		Value: DirectoryString{config.DefaultDataDir()},
 	}
 	KeyStoreDirFlag = DirectoryFlag{
 		Name:  "keystore",
@@ -117,7 +120,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: hpb.DefaultConfig.NetworkId,
+		Value:  config.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -148,7 +151,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = hpb.DefaultConfig.SyncMode
+	defaultSyncMode = config.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -177,47 +180,47 @@ var (
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
-		Value: core.DefaultTxPoolConfig.Journal,
+		Value: config.DefaultTxPoolConfig.Journal,
 	}
 	TxPoolRejournalFlag = cli.DurationFlag{
 		Name:  "txpool.rejournal",
 		Usage: "Time interval to regenerate the local transaction journal",
-		Value: core.DefaultTxPoolConfig.Rejournal,
+		Value: config.DefaultTxPoolConfig.Rejournal,
 	}
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: hpb.DefaultConfig.TxPool.PriceLimit,
+		Value: config.DefaultTxPoolConfig.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: hpb.DefaultConfig.TxPool.PriceBump,
+		Value: config.DefaultTxPoolConfig.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: hpb.DefaultConfig.TxPool.AccountSlots,
+		Value: config.DefaultTxPoolConfig.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: hpb.DefaultConfig.TxPool.GlobalSlots,
+		Value: config.DefaultTxPoolConfig.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: hpb.DefaultConfig.TxPool.AccountQueue,
+		Value: config.DefaultTxPoolConfig.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: hpb.DefaultConfig.TxPool.GlobalQueue,
+		Value: config.DefaultTxPoolConfig.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: hpb.DefaultConfig.TxPool.Lifetime,
+		Value: config.DefaultTxPoolConfig.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -253,7 +256,7 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: hpb.DefaultConfig.GasPrice,
+		Value: config.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -300,12 +303,12 @@ var (
 	RPCListenAddrFlag = cli.StringFlag{
 		Name:  "rpcaddr",
 		Usage: "HTTP-RPC server listening interface",
-		Value: node.DefaultHTTPHost,
+		Value: config.DefaultHTTPHost,
 	}
 	RPCPortFlag = cli.IntFlag{
 		Name:  "rpcport",
 		Usage: "HTTP-RPC server listening port",
-		Value: node.DefaultHTTPPort,
+		Value: config.DefaultHTTPPort,
 	}
 	RPCCORSDomainFlag = cli.StringFlag{
 		Name:  "rpccorsdomain",
@@ -332,12 +335,12 @@ var (
 	WSListenAddrFlag = cli.StringFlag{
 		Name:  "wsaddr",
 		Usage: "WS-RPC server listening interface",
-		Value: node.DefaultWSHost,
+		Value: config.DefaultWSHost,
 	}
 	WSPortFlag = cli.IntFlag{
 		Name:  "wsport",
 		Usage: "WS-RPC server listening port",
-		Value: node.DefaultWSPort,
+		Value: config.DefaultWSPort,
 	}
 	WSApiFlag = cli.StringFlag{
 		Name:  "wsapi",
@@ -431,12 +434,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: hpb.DefaultConfig.GPO.Blocks,
+		Value: config.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: hpb.DefaultConfig.GPO.Percentile,
+		Value: config.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -493,7 +496,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *config.Nodeconfig) {
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodes(ctx *cli.Context, cfg *config.NetworkConfig) {
-	urls := cfg.MainnetBootnodes
+	urls := config.MainnetBootnodes
 	switch {
 	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV4Flag.Name):
 		if ctx.GlobalIsSet(BootnodesV4Flag.Name) {
@@ -502,7 +505,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *config.NetworkConfig) {
 			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
-		urls = cfg.TestnetBootnodes
+		urls = config.TestnetBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -584,7 +587,7 @@ func splitAndTrim(input string) []string {
 
 // setHTTP creates the HTTP RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
-func setHTTP(ctx *cli.Context, cfg *node.Config) {
+func setHTTP(ctx *cli.Context, cfg *config.NetworkConfig) {
 	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
 		cfg.HTTPHost = "127.0.0.1"
 		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
@@ -605,7 +608,7 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 
 // setWS creates the WebSocket RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
-func setWS(ctx *cli.Context, cfg *node.Config) {
+func setWS(ctx *cli.Context, cfg *config.NetworkConfig) {
 	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.WSHost == "" {
 		cfg.WSHost = "127.0.0.1"
 		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {
@@ -626,7 +629,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
-func setIPC(ctx *cli.Context, cfg *config.NetworkConfig) {
+func setIPC(ctx *cli.Context, cfg *config.Nodeconfig) {
 	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
@@ -673,7 +676,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setHpberbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setHpberbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *hpb.Config) {
+func setHpberbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *config.Nodeconfig) {
 	if ctx.GlobalIsSet(HpberbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(HpberbaseFlag.Name))
 		if err != nil {
@@ -712,11 +715,11 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	setNodeKey(ctx, cfg.Network)
-	setNAT(ctx, cfg.Network)
-	setListenAddress(ctx, cfg.Network)
+	setNodeKey(ctx, &cfg.Network)
+	setNAT(ctx, &cfg.Network)
+	setListenAddress(ctx, &cfg.Network)
 	//setDiscoveryV5Address(ctx, cfg)
-	setBootstrapNodes(ctx, cfg.Network)
+	setBootstrapNodes(ctx, &cfg.Network)
 	//setBootstrapNodesV5(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
@@ -753,12 +756,12 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
-		cfg.Network.IPCPath = ""
+		cfg.Node.IPCPath = ""
 	case ctx.GlobalIsSet(IPCPathFlag.Name):
-		cfg.Network.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
+		cfg.Node.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
 	}
 	//config HTTPHost
-	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
+	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.Network.HTTPHost == "" {
 		cfg.Network.HTTPHost = "127.0.0.1"
 		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
 			cfg.Network.HTTPHost = ctx.GlobalString(RPCListenAddrFlag.Name)
@@ -776,10 +779,10 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Network.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
 	}
 
-	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.WSHost == "" {
-		cfg.WSHost = "127.0.0.1"
+	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.Network.WSHost == "" {
+		cfg.Network.WSHost = "127.0.0.1"
 		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {
-			cfg.WSHost = ctx.GlobalString(WSListenAddrFlag.Name)
+			cfg.Network.WSHost = ctx.GlobalString(WSListenAddrFlag.Name)
 		}
 	}
 	//config WSPort
@@ -795,10 +798,15 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 }
 
+//set nodeconfig API
+func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
+	cfg.RpcAPIs = node.APIs()
+}
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	SetNetWorkConfig(ctx, cfg)
-	setNodeUserIdent(ctx, cfg)
+	setNodeUserIdent(ctx, &cfg.Node)
 
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
@@ -806,7 +814,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Node.DataDir = filepath.Join(os.TempDir(), "hpb_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.Node.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+		cfg.Node.DataDir = filepath.Join(config.DefaultDataDir(), "testnet")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -818,11 +826,11 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 	switch {
 	case ctx.GlobalIsSet(SyncModeFlag.Name):
-		cfg.Node.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+		cfg.Node.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*config.SyncMode)
 	case ctx.GlobalBool(FastSyncFlag.Name):
-		cfg.Node.SyncMode = downloader.FastSync
+		cfg.Node.SyncMode = config.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
-		cfg.Node.SyncMode = downloader.LightSync
+		cfg.Node.SyncMode = config.LightSync
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
@@ -862,9 +870,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.Node.NetworkId = 3
 		}
-		cfg.Node.Genesis = core.DefaultTestnetGenesisBlock()
+		//cfg.Node.Genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Node.Genesis = core.DevGenesisBlock()
+		//cfg.Node.Genesis = bc.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.Node.GasPrice = new(big.Int)
 		}
@@ -930,118 +938,7 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 	}
 }
 
-// SetHpbConfig applies eth-related command line flags to the config.
-func SetHpbConfig(ctx *cli.Context, stack *node.Node, cfg *hpb.Config) {
-	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, RinkebyFlag)
-	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
-	/* is account manager needed
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setHpberbase(ctx, ks, cfg)
-	*/
-	// HPB don't need dynamic gas price
-	//setGPO(ctx, &cfg.GPO)
-	SetTxPool(ctx, )
-
-	switch {
-	case ctx.GlobalIsSet(SyncModeFlag.Name):
-		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
-	case ctx.GlobalBool(FastSyncFlag.Name):
-		cfg.SyncMode = downloader.FastSync
-	case ctx.GlobalBool(LightModeFlag.Name):
-		cfg.SyncMode = downloader.LightSync
-	}
-	if ctx.GlobalIsSet(LightServFlag.Name) {
-		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightPeersFlag.Name) {
-		cfg.LightPeers = ctx.GlobalInt(LightPeersFlag.Name)
-	}
-	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
-	}
-
-	if ctx.GlobalIsSet(CacheFlag.Name) {
-		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name)
-	}
-	cfg.DatabaseHandles = makeDatabaseHandles()
-
-	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
-		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
-	}
-	if ctx.GlobalIsSet(DocRootFlag.Name) {
-		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
-	}
-	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
-		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
-	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
-	}
-	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
-		// TODO(fjl): force-enable this in --dev mode
-		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
-	}
-
-	// Override any default configs for hard coded networks.
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Genesis = core.DevGenesisBlock()
-		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = new(big.Int)
-		}
-	}
-
-	// TODO(fjl): move trie cache generations into config
-	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
-		state.MaxTrieCacheGen = uint16(gen)
-	}
-}
-
-// RegisterHpbService adds an Hpb client to the stack.
-func RegisterHpbService(stack *node.Node, cfg *hpb.Config) {
-	var err error
-	if cfg.SyncMode == downloader.LightSync {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return lhs.New(ctx, cfg)
-		})
-	} else {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := hpb.New(ctx, cfg)
-			if fullNode != nil && cfg.LightServ > 0 {
-				ls, _ := lhs.NewLesServer(fullNode, cfg)
-				fullNode.AddLesServer(ls)
-			}
-			return fullNode, err
-		})
-	}
-	if err != nil {
-		Fatalf("Failed to register the Hpb service: %v", err)
-	}
-}
-
-// RegisterHpbStatsService configures the HPB Stats daemon and adds it to
-// th egiven node.
-func RegisterHpbStatsService(stack *node.Node, url string) {
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both eth and lhs services
-		var hpbServ *hpb.Hpb
-		ctx.Service(&hpbServ)
-
-		var lesServ *lhs.LightHpb
-		ctx.Service(&lesServ)
-
-		return hpbstats.New(url, hpbServ, lesServ)
-	}); err != nil {
-		Fatalf("Failed to register the Hpb Stats service: %v", err)
-	}
-}
 
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
@@ -1059,36 +956,36 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) hpbdb.Database {
 	if ctx.GlobalBool(LightModeFlag.Name) {
 		name = "lightchaindata"
 	}
-	chainDb, err := stack.OpenDatabase(name, cache, handles)
+	chainDb, err := db.OpenDatabase(name, cache, handles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)
 	}
 	return chainDb
 }
 
-func MakeGenesis(ctx *cli.Context) *core.Genesis {
-	var genesis *core.Genesis
+func MakeGenesis(ctx *cli.Context) *bc.Genesis {
+	var genesis *bc.Genesis
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = core.DefaultTestnetGenesisBlock()
+		genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		genesis = core.DevGenesisBlock()
+		genesis = bc.DevGenesisBlock()
 	}
 	return genesis
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb hpbdb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainDb hpbdb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
+	cfg, _, err := bc.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Prometheus != nil {
-		engine = prometheus.New(config.Prometheus, chainDb)
+	if cfg.Prometheus != nil {
+		engine = prometheus.New(cfg.Prometheus, chainDb)
 	} else {
 		//engine = hpbhash.NewFaker()
 		//if !ctx.GlobalBool(FakePoWFlag.Name) {
@@ -1098,8 +995,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		//	)
 		//}
 	}
-	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
+
+	chain, err = bc.NewBlockChain(chainDb, cfg, engine)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

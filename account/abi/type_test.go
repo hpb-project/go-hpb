@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hpb-project/ghpb/common"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // typeWithoutStringer is a alias for the Type type which simply doesn't implement

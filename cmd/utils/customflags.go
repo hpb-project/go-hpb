@@ -27,7 +27,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/hpb-project/ghpb/common/math"
+	"github.com/hpb-project/go-hpb/common/math"
 	"gopkg.in/urfave/cli.v1"
 )
 
