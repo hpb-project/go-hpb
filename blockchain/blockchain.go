@@ -47,7 +47,7 @@ var (
 	reentryMux sync.Mutex
 	bcInstance *BlockChain
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
-	ErrNoGenesis = errors.New("Genesis not found in chain")
+	errNoGenesis = errors.New("Genesis is not found in the chain.")
 )
 
 const (
@@ -166,7 +166,7 @@ func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine co
 	}
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
-		return nil, ErrNoGenesis
+		return nil, errNoGenesis
 	}
 	if err := bc.loadLastState(); err != nil {
 		return nil, err
