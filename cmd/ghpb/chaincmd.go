@@ -19,6 +19,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"os"
 	"runtime"
 	"strconv"
@@ -111,8 +114,7 @@ Optional second and third arguments control the first and
 last block to write. In this mode, the file will be appended
 if already existing.`,
 	}
-	//TODO
-	/*copydbCommand = cli.Command{
+	copydbCommand = cli.Command{
 		Action:    utils.MigrateFlags(copyDb),
 		Name:      "copydb",
 		Usage:     "Create a local chain from a target chaindata folder",
@@ -128,7 +130,7 @@ if already existing.`,
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
 The first argument must be the directory containing the blockchain to download from`,
-	}*/ //TODO
+	}
 	removedbCommand = cli.Command{
 		Action:    utils.MigrateFlags(removeDB),
 		Name:      "removedb",
@@ -350,7 +352,7 @@ func exportChain(ctx *cli.Context) error {
 	fmt.Printf("Export done in %v", time.Since(start))
 	return nil
 }
-/*//TODO
+
 func copyDb(ctx *cli.Context) error {
 	// Ensure we have a source chain directory to copy
 	if len(ctx.Args()) != 1 {
@@ -360,8 +362,8 @@ func copyDb(ctx *cli.Context) error {
 	stack, _ := MakeConfigNode(ctx)
 	chain, chainDb := utils.MakeChain(ctx, stack)
 
-	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*synctrl.SyncMode)
-	dl := synctrl.New(syncmode, chainDb, new(sub.TypeMux), chain, nil, nil)
+	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*config.SyncMode)
+	syer := synctrl.NewSyncer(syncmode, chainDb, new(sub.TypeMux), chain, nil)
 
 	// Create a source peer to satisfy downloader requests from
 	db, err := hpbdb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
@@ -372,18 +374,18 @@ func copyDb(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	peer := synctrl.NewFakePeer("local", db, hc, dl)
-	if err = dl.RegisterPeer("local", params.ProtocolV111, peer); err != nil {
+	peer := synctrl.NewFakePeer("local", db, hc, syer)
+	if err = syer.RegisterPeer("local", config.ProtocolV111, peer); err != nil {
 		return err
 	}
 	// Synchronise with the simulated peer
 	start := time.Now()
 
 	currentHeader := hc.CurrentHeader()
-	if err = dl.Synchronise("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncmode); err != nil {
+	if err = syer.Start("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncmode); err != nil {
 		return err
 	}
-	for dl.Synchronising() {
+	for syer.Synchronising() {
 		time.Sleep(10 * time.Millisecond)
 	}
 	fmt.Printf("Database copy done in %v\n", time.Since(start))
@@ -398,7 +400,7 @@ func copyDb(ctx *cli.Context) error {
 
 	return nil
 }
-*///TODO
+
 func removeDB(ctx *cli.Context) error {
 	stack, _ := MakeConfigNode(ctx)
 

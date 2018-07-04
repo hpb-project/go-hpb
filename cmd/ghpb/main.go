@@ -135,7 +135,7 @@ func init() {
 		initrandomCommand,
 		importCommand,
 		exportCommand,
-		//copydbCommand, //TODO
+		copydbCommand,
 		removedbCommand,
 		dumpCommand,
 		// See monitorcmd.go:
