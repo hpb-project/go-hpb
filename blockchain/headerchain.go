@@ -92,7 +92,7 @@ func NewHeaderChain(chainDb hpbdb.Database, config *config.ChainConfig, engine c
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
 	if hc.genesisHeader == nil {
-		return nil, ErrNoGenesis
+		return nil, errNoGenesis
 	}
 
 	hc.currentHeader = hc.genesisHeader
