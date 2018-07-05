@@ -160,6 +160,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
 
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
+	hpbtxpool   := txpool.GetTxPool()
 	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
 	block			:= bc.InstanceBlockChain()
@@ -171,7 +172,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
 		Hpbsyncctr:		   syncctr,
-		Hpbtxpool:		   txpool.GetTxPool(),
+		Hpbtxpool:		   hpbtxpool,
 		Hpbbc:			   block,
 		//boe
 
