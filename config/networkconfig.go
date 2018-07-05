@@ -18,7 +18,6 @@
 package config
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"time"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
@@ -237,8 +236,7 @@ type NetworkConfig struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
-	// This field must be set to a valid secp256k1 private key.
-	PrivateKey *ecdsa.PrivateKey `toml:"-"`
+
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.
 	MaxPeers int

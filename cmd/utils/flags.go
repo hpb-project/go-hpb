@@ -463,7 +463,7 @@ func MakeDataDir(ctx *cli.Context) string {
 // setNodeKey creates a node key from set command line flags, either loading it
 // from a file or as a specified hex value. If neither flags were provided, this
 // method returns nil and an emphemeral key is to be generated.
-func setNodeKey(ctx *cli.Context, cfg *config.NetworkConfig) {
+func setNodeKey(ctx *cli.Context, cfg *config.Nodeconfig) {
 	var (
 		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
 		file = ctx.GlobalString(NodeKeyFileFlag.Name)
@@ -715,12 +715,12 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	setNodeKey(ctx, &cfg.Network)
+	setNodeKey(ctx, &cfg.Node)
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
-	//setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, &cfg.Network)
-	//setBootstrapNodesV5(ctx, cfg)
+	setHTTP(ctx, &cfg.Network)
+	setWS(ctx, &cfg.Network)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.Network.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -805,9 +805,13 @@ func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
 
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+
+	setIPC(ctx, &cfg.Node)
 	SetNetWorkConfig(ctx, cfg)
 	setNodeUserIdent(ctx, &cfg.Node)
 
+
+	//cfg.Node.PrivateKey = NodeKey（）
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.Node.DataDir = ctx.GlobalString(DataDirFlag.Name)
