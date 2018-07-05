@@ -64,6 +64,6 @@ func GetHpbDbInstance() (*hpbdb.LDBDatabase) {
 	if DBINSTANCE.Load() != nil {
 		return DBINSTANCE.Load().(*hpbdb.LDBDatabase)
 	}
-	log.Warn("TxPool is nil, please init tx pool first.")
+	log.Warn("LDBDatabase is nil, please init tx pool first.")
 	return nil
 }

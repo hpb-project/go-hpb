@@ -207,7 +207,7 @@ func GetHpbConfigInstance() (*HpbConfig, error) {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig), nil
 	}
-	log.Warn("TxPool is nil, please init tx pool first.")
+	log.Warn("HpbConfig is nil, please init tx pool first.")
 	return nil, nil
 }
 
