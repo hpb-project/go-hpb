@@ -150,7 +150,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
-	hpbtxpool      := txpool.GetTxPool()
+
+
 	db, err      := db.CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
 
@@ -165,7 +166,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 
-
+	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 	hpbnode := &Node{
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
@@ -208,7 +209,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
 
-	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
+
 
 
 	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
