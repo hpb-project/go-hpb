@@ -125,7 +125,7 @@ func (prm *PeerManager)Start() error {
 
 	prm.server = &Server{
 		Config: Config{
-			PrivateKey: config.Network.PrivateKey,
+			PrivateKey: config.Node.PrivateKey,
 			MaxPendingPeers: config.Network.MaxPendingPeers,
 			Name: config.Network.Name,
 			RoleType: config.Network.RoleType,
