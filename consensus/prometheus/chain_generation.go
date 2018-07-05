@@ -28,7 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
@@ -56,7 +56,7 @@ var (
 
 // Prometheus 的主体结构
 type Prometheus struct {
-	config *params.PrometheusConfig // Consensus 共识配置
+	config *config.PrometheusConfig // Consensus 共识配置
 	db     hpbdb.Database           // 数据库
 
 	recents    *lru.ARCCache // 最近的签名
@@ -71,7 +71,7 @@ type Prometheus struct {
 }
 
 // 新创建,在backend中调用
-func New(config *params.PrometheusConfig, db hpbdb.Database) *Prometheus {
+func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 	conf := *config
 

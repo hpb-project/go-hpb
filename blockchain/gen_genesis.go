@@ -10,16 +10,16 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 func (g Genesis) MarshalJSON() ([]byte, error) {
 	type Genesis struct {
-		Config     *params.ChainConfig                         `json:"config"`
+		Config     *config.ChainConfig                         `json:"config"`
 		Nonce      math.HexOrDecimal64                         `json:"nonce"`
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
-		ExtraHash  hexutil.Bytes                          	   `json:"extraHash"`
+		//ExtraHash  hexutil.Bytes                          	   `json:"extraHash"`
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    common.Hash                                 `json:"mixHash"`
@@ -40,7 +40,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
-	enc.ExtraHash = g.ExtraHash
+	//enc.ExtraHash = g.ExtraHash
 	enc.GasLimit = math.HexOrDecimal64(g.GasLimit)
 	enc.Difficulty = (*math.HexOrDecimal256)(g.Difficulty)
 	enc.Mixhash = g.Mixhash
@@ -59,7 +59,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 
 func (g *Genesis) UnmarshalJSON(input []byte) error {
 	type Genesis struct {
-		Config     *params.ChainConfig                         `json:"config"`
+		Config     *config.ChainConfig                         `json:"config"`
 		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
@@ -94,9 +94,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.ExtraData != nil {
 		g.ExtraData = dec.ExtraData
 	}
-	if dec.ExtraHash != nil {
-		g.ExtraHash = dec.ExtraHash
-	}
+	//if dec.ExtraHash != nil {
+	//	g.ExtraHash = dec.ExtraHash
+	//}
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for Genesis")
 	}

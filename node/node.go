@@ -111,8 +111,9 @@ func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainCo
 	if &chainConfig.Prometheus == nil {
 		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
 	}
-	return prometheus.New(config, db)
+	return prometheus.New(chainConfig.Prometheus, db)
 }
+
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){
 

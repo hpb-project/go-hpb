@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
@@ -33,7 +33,7 @@ import (
 const hpbNodeCheckpointInterval   = 5 // 社区投票间隔
 
 
-func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *params.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	var (
 		headers []*types.Header
@@ -97,7 +97,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 }
 
 //生成初始化的区块
-func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *params.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
+func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 		genesis := chain.GetHeaderByNumber(0)
 		/*if err := c.VerifyHeader(chain, genesis, false); err != nil {
@@ -118,7 +118,7 @@ func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 }
 
 // 从数据库和缓存中获取数据
-func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *params.PrometheusConfig, hash common.Hash) (*snapshots.HpbNodeSnap, error) {
+func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, hash common.Hash) (*snapshots.HpbNodeSnap, error) {
 		
 		if s, ok := recents.Get(hash); ok {
 			snapcache := s.(*snapshots.HpbNodeSnap)

@@ -26,7 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hashicorp/golang-lru"
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -45,7 +45,7 @@ type Tally struct {
 }
 
 type HpbNodeSnap struct {
-	config   *params.PrometheusConfig 
+	config   *config.PrometheusConfig 
 	sigcache *lru.ARCCache       
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
@@ -55,7 +55,7 @@ type HpbNodeSnap struct {
 }
 
 // 为创世块使用
-func NewHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signersHash []common.Address) *HpbNodeSnap {
+func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signersHash []common.Address) *HpbNodeSnap {
 	snap := &HpbNodeSnap{
 		config:   config,
 		sigcache: sigcache,
@@ -72,7 +72,7 @@ func NewHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, num
 }
 
 //加载快照，直接去数据库中读取
-func LoadHistorysnap(config *params.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*HpbNodeSnap, error) {
+func LoadHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, db hpbdb.Database, hash common.Hash) (*HpbNodeSnap, error) {
 	blob, err := db.Get(append([]byte("prometheus-"), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func  CalculateHpbSnap(signatures *lru.ARCCache,config *params.PrometheusConfig, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 	
 	// 如果头部为空，直接返回

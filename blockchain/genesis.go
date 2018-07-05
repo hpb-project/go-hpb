@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package bc
 
 import (
 	"bytes"
@@ -44,7 +44,7 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
-	Config     *params.ChainConfig `json:"config"`
+	Config     *config.ChainConfig `json:"config"`
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
@@ -152,12 +152,12 @@ func (e *GenesisMismatchError) Error() string {
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
-// error is a *params.ConfigCompatError and the new, unwritten config is returned.
+// error is a *config.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.PrivatenetChainConfig, common.Hash{}, errGenesisNoConfig
+		return config.PrivatenetChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -196,7 +196,7 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*params.ChainConfig
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && stored != params.MainnetGenesisHash {
+	if genesis == nil && stored != config.MainnetGenesisHash {
 		return storedcfg, stored, nil
 	}
 
@@ -213,16 +213,16 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*params.ChainConfig
 	return newcfg, stored, WriteChainConfig(db, stored, newcfg)
 }
 
-func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
+func (g *Genesis) configOrDefault(ghash common.Hash) *config.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
-	case ghash == params.MainnetGenesisHash:
-		return params.MainnetChainConfig
-	case ghash == params.TestnetGenesisHash:
-		return params.TestnetChainConfig
+	case ghash == config.MainnetGenesisHash:
+		return config.MainnetChainConfig
+	case ghash == config.TestnetGenesisHash:
+		return config.TestnetChainConfig
 	default:
-		return params.PrivatenetChainConfig
+		return config.PrivatenetChainConfig
 	}
 }
 
@@ -256,10 +256,10 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Root:       root,
 	}
 	if g.GasLimit == 0 {
-		head.GasLimit = params.GenesisGasLimit
+		head.GasLimit = config.GenesisGasLimit
 	}
 	if g.Difficulty == nil {
-		head.Difficulty = params.GenesisDifficulty
+		head.Difficulty = config.GenesisDifficulty
 	}
 	return types.NewBlock(head, nil, nil, nil), statedb
 }
@@ -293,9 +293,9 @@ func (g *Genesis) Commit(db hpbdb.Database) (*types.Block, error) {
 		return nil, err
 	}
 	config := g.Config
-	if config == nil {
-		config = params.PrivatenetChainConfig
-	}
+	//if config == nil {
+	//	config = config.PrivatenetChainConfig
+	//}
 	return block, WriteChainConfig(db, block.Hash(), config)
 }
 
@@ -318,7 +318,7 @@ func GenesisBlockForTesting(db hpbdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Hpb main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.MainnetChainConfig,
+		Config:     config.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
@@ -330,7 +330,7 @@ func DefaultGenesisBlock() *Genesis {
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.TestnetChainConfig,
+		Config:     config.TestnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
@@ -343,7 +343,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DevGenesisBlock returns the 'geth --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.PrivatenetChainConfig,
+		Config:     config.PrivatenetChainConfig,
 		Nonce:      42,
 		GasLimit:   4712388,
 		Difficulty: big.NewInt(131072),

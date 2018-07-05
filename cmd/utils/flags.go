@@ -984,17 +984,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if cfg.Prometheus != nil {
-		engine = prometheus.New(cfg.Prometheus, chainDb)
-	} else {
-		//engine = hpbhash.NewFaker()
-		//if !ctx.GlobalBool(FakePoWFlag.Name) {
-		//	engine = hpbhash.New(
-		//		stack.ResolvePath(hpb.DefaultConfig.HpbhashCacheDir), hpb.DefaultConfig.HpbhashCachesInMem, hpb.DefaultConfig.HpbhashCachesOnDisk,
-		//		stack.ResolvePath(hpb.DefaultConfig.HpbhashDatasetDir), hpb.DefaultConfig.HpbhashDatasetsInMem, hpb.DefaultConfig.HpbhashDatasetsOnDisk,
-		//	)
-		//}
-	}
+	
+	engine = prometheus.New(cfg.Prometheus, chainDb)
 
 	chain, err = bc.NewBlockChain(chainDb, cfg, engine)
 	if err != nil {
