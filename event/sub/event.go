@@ -36,6 +36,7 @@ type TypeMuxEvent struct {
 //
 // The zero value is ready to use.
 //
+// Deprecated: use Feed
 type TypeMux struct {
 	mutex   sync.RWMutex
 	subm    map[reflect.Type][]*TypeMuxSubscription

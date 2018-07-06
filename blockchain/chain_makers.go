@@ -25,7 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/consensus/solo"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/hvm"
 )
 
@@ -216,7 +216,7 @@ func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	db, _ := hpbdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, config.TestnetChainConfig, solo.New())
+	blockchain, _ := NewBlockChain(db, config.TestnetChainConfig, prometheus.New(nil,nil))
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

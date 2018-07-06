@@ -226,14 +226,3 @@ func GetHpbConfigInstance() (*HpbConfig, error) {
 	INSTANCE.Store(HpbConfigIns)
 	return INSTANCE.Load().(*HpbConfig), nil
 }
-
-
-
-
-
-
-
-
-
-
-

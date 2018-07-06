@@ -463,7 +463,7 @@ func MakeDataDir(ctx *cli.Context) string {
 // setNodeKey creates a node key from set command line flags, either loading it
 // from a file or as a specified hex value. If neither flags were provided, this
 // method returns nil and an emphemeral key is to be generated.
-func setNodeKey(ctx *cli.Context, cfg *config.Nodeconfig) {
+func setNodeKey(ctx *cli.Context, cfg *config.NetworkConfig) {
 	var (
 		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
 		file = ctx.GlobalString(NodeKeyFileFlag.Name)
@@ -715,12 +715,12 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	setNodeKey(ctx, &cfg.Node)
+	setNodeKey(ctx, &cfg.Network)
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
+	//setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, &cfg.Network)
-	setHTTP(ctx, &cfg.Network)
-	setWS(ctx, &cfg.Network)
+	//setBootstrapNodesV5(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.Network.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -805,13 +805,9 @@ func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
 
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-
-	setIPC(ctx, &cfg.Node)
 	SetNetWorkConfig(ctx, cfg)
 	setNodeUserIdent(ctx, &cfg.Node)
 
-
-	//cfg.Node.PrivateKey = NodeKey（）
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.Node.DataDir = ctx.GlobalString(DataDirFlag.Name)
@@ -988,17 +984,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if cfg.Prometheus != nil {
-		engine = prometheus.New(cfg.Prometheus, chainDb)
-	} else {
-		//engine = hpbhash.NewFaker()
-		//if !ctx.GlobalBool(FakePoWFlag.Name) {
-		//	engine = hpbhash.New(
-		//		stack.ResolvePath(hpb.DefaultConfig.HpbhashCacheDir), hpb.DefaultConfig.HpbhashCachesInMem, hpb.DefaultConfig.HpbhashCachesOnDisk,
-		//		stack.ResolvePath(hpb.DefaultConfig.HpbhashDatasetDir), hpb.DefaultConfig.HpbhashDatasetsInMem, hpb.DefaultConfig.HpbhashDatasetsOnDisk,
-		//	)
-		//}
-	}
+	
+	engine = prometheus.New(cfg.Prometheus, chainDb)
 
 	chain, err = bc.NewBlockChain(chainDb, cfg, engine)
 	if err != nil {

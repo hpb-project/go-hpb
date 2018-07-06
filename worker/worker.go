@@ -52,12 +52,11 @@ const (
 )
 
 // Agent can register themself with the worker
-type Agent interface {
+type Producer interface {
 	Work() chan<- *Work
 	SetReturnCh(chan<- *Result)
 	Stop()
 	Start()
-	GetHashRate() int64
 }
 
 // Work is the workers current environment and holds
@@ -103,7 +102,7 @@ type worker struct {
 	chainSideSub sub.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}
+	producers map[Producer]struct{}
 	recv   chan *Result
 
 	chain   *bc.BlockChain
@@ -140,7 +139,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		proc:           bc.InstanceBlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
-		agents:         make(map[Agent]struct{}),
+		producers:         make(map[Producer]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
@@ -157,15 +156,17 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	// Subscribe events for blockchain
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-	go worker.update()
-
-	go worker.wait()
-	worker.commitNewWork()
+	//对以上事件的监听
+	go worker.eventListener()
+	
+	go worker.handlerSelfMinedBlock()
+	
+	worker.startNewMinerRound()
 
 	return worker
 }
 
-func (self *worker) setEtherbase(addr common.Address) {
+func (self *worker) setHpberbase(addr common.Address) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr
@@ -214,8 +215,8 @@ func (self *worker) start() {
 	atomic.StoreInt32(&self.mining, 1)
 
 	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
+	for producer := range self.producers {
+		producer.Start()
 	}
 }
 
@@ -225,29 +226,31 @@ func (self *worker) stop() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
+		for producer := range self.producers {
+			producer.Stop()
 		}
 	}
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.atWork, 0)
 }
 
-func (self *worker) register(agent Agent) {
+func (self *worker) register(producer Producer) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
+	self.producers[producer] = struct{}{}
+	producer.SetReturnCh(self.recv)
 }
 
-func (self *worker) unregister(agent Agent) {
+func (self *worker) unregister(producer Producer) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	delete(self.agents, agent)
-	agent.Stop()
+	delete(self.producers, producer)
+	producer.Stop()
 }
 
-func (self *worker) update() {
+func (self *worker) eventListener() {
+	
+	/*
 	defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
@@ -257,7 +260,7 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			self.commitNewWork()
+			self.startNewMinerRound()
 
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -282,17 +285,18 @@ func (self *worker) update() {
 		*/
 
 		// System stopped
-		case <-self.txSub.Err():
-			return
-		case <-self.chainHeadSub.Err():
-			return
-		case <-self.chainSideSub.Err():
-			return
-		}
-	}
+		//case <-self.txSub.Err():
+	//		return
+	//	case <-self.chainHeadSub.Err():
+	//		return
+	//	case <-self.chainSideSub.Err():
+	//		return
+	//	}
+//	}
+
 }
 
-func (self *worker) wait() {
+func (self *worker) handlerSelfMinedBlock() {
 	for {
 		mustCommitNewWork := true
 		for result := range self.recv {
@@ -340,7 +344,7 @@ func (self *worker) wait() {
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
-				self.commitNewWork()
+				self.startNewMinerRound()
 			}
 		}
 	}
@@ -351,9 +355,9 @@ func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
-	for agent := range self.agents {
+	for producer := range self.producers {
 		atomic.AddInt32(&self.atWork, 1)
-		if ch := agent.Work(); ch != nil {
+		if ch := producer.Work(); ch != nil {
 			ch <- work
 		}
 	}
@@ -391,7 +395,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) commitNewWork() {
+func (self *worker) startNewMinerRound() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -426,24 +430,11 @@ func (self *worker) commitNewWork() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-	if err := self.engine.Prepare(self.chain, header); err != nil {
+	if err := self.engine.PrepareBlockHeader(self.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
-	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	//if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
-	//	// Check whether the block is among the fork extra-override range
-	//	limit := new(big.Int).Add(daoBlock, config.DAOForkExtraRange)
-	//	if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
-	//		// Depending whether we support or oppose the fork, override differently
-	//		if self.config.DAOForkSupport {
-	//			header.Extra = common.CopyBytes(config.DAOForkBlockExtra)
-	//		} else if bytes.Equal(header.Extra, config.DAOForkBlockExtra) {
-	//			header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
-	//		}
-	//	}
-	//}
-	// Could potentially happen if starting to mine in an odd state.
+	
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)

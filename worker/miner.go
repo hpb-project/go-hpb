@@ -94,7 +94,7 @@ out:
 
 func (self *Miner) Start(coinbase common.Address) {
 	atomic.StoreInt32(&self.shouldStart, 1)
-	self.worker.setEtherbase(coinbase)
+	self.worker.setHpberbase(coinbase)
 	self.coinbase = coinbase
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
@@ -105,7 +105,7 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
-	self.worker.commitNewWork()
+	self.worker.startNewMinerRound()
 }
 
 func (self *Miner) Stop() {
@@ -114,23 +114,19 @@ func (self *Miner) Stop() {
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
 
-func (self *Miner) Register(agent Agent) {
+func (self *Miner) Register(producer Producer) {
 	if self.Mining() {
-		agent.Start()
+		producer.Start()
 	}
-	self.worker.register(agent)
+	self.worker.register(producer)
 }
 
-func (self *Miner) Unregister(agent Agent) {
-	self.worker.unregister(agent)
+func (self *Miner) Unregister(producer Producer) {
+	self.worker.unregister(producer)
 }
 
 func (self *Miner) Mining() bool {
 	return atomic.LoadInt32(&self.mining) > 0
-}
-
-func (self *Miner) HashRate() (tot int64) {
-	return
 }
 
 func (self *Miner) SetExtra(extra []byte) error {
@@ -155,7 +151,7 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-func (self *Miner) SetEtherbase(addr common.Address) {
+func (self *Miner) SetHpberbase(addr common.Address) {
 	self.coinbase = addr
-	self.worker.setEtherbase(addr)
+	self.worker.setHpberbase(addr)
 }
