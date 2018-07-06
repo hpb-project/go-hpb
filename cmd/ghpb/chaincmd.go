@@ -65,11 +65,11 @@ participating.
 It expects the genesis file as argument.`,
 	}
 	
-	initrandomCommand = cli.Command{
-		Action:    utils.MigrateFlags(initRand),
-		Name:      "initrand",
+	initcadCommand = cli.Command{
+		Action:    utils.MigrateFlags(initCadNodes),
+		Name:      "initcad",
 		Usage:     "Bootstrap and initialize a random string",
-		ArgsUsage: "<randomStr>",
+		ArgsUsage: "<initcad>",
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.LightModeFlag,
@@ -181,12 +181,16 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	// Open an initialise both full and light databases
 	//stack, _ := MakeConfigNode(ctx)
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+	MakeConfigNode(ctx)
+	for _, name := range []string{"chaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
+		
 		_, hash, err := bc.SetupGenesisBlock(chaindb, genesis)
+		
+		
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
@@ -196,7 +200,7 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 
-func initRand(ctx *cli.Context) error {
+func initCadNodes(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	randomStr := ctx.Args().First()
 	if len(randomStr) == 0 {
@@ -206,8 +210,8 @@ func initRand(ctx *cli.Context) error {
 	// Open an initialise both full and light databases
     
 	//stack, _ := MakeConfigNode(ctx)
-
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+    MakeConfigNode(ctx)
+	for _, name := range []string{"chaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
 	
 		if err != nil {
@@ -404,7 +408,7 @@ func copyDb(ctx *cli.Context) error {
 func removeDB(ctx *cli.Context) error {
 	stack, _ := MakeConfigNode(ctx)
 
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+	for _, name := range []string{"chaindata"} {
 		// Ensure the database exists in the first place
 		logger := log.New("database", name)
 

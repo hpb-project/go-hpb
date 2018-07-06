@@ -91,6 +91,6 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	}
 
 	//set node rpc api
-	utils.SetNodeAPI(&cfg.Node, stack)
+	//utils.SetNodeAPI(&cfg.Node, stack)
 	return stack, cfg
 }

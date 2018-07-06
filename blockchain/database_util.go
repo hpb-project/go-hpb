@@ -632,6 +632,7 @@ func WriteBlockChainVersion(db hpbdb.Putter, vsn int) {
 func WriteChainConfig(db hpbdb.Putter, hash common.Hash, cfg *config.ChainConfig) error {
 	// short circuit and ignore if nil config. GetChainConfig
 	// will return a default.
+	
 	if cfg == nil {
 		return nil
 	}

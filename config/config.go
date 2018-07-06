@@ -207,17 +207,22 @@ func GetHpbConfigInstance() (*HpbConfig, error) {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig), nil
 	}
-	log.Warn("TxPool is nil, please init tx pool first.")
-	return nil, nil
+	HpbConfigIns := &HpbConfig{
+		Node: 		defaultNodeConfig() ,
+		// Configuration of peer-to-peer networking.
+		Network:	DefaultNetworkConfig(),
+
+		//configuration of txpool
+		TxPool:		DefaultTxPoolConfig,
+
+		//configuration of blockchain
+		BlockChain: DefaultBlockChainConfig,
+		//configuration of consensus
+		Prometheus: DefaultPrometheusConfig,
+
+		Gas:		DefaultGasConfig,
+	}
+	log.Info("Create New HpbConfig object")
+	INSTANCE.Store(HpbConfigIns)
+	return INSTANCE.Load().(*HpbConfig), nil
 }
-
-
-
-
-
-
-
-
-
-
-

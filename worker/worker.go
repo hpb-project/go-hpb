@@ -249,6 +249,8 @@ func (self *worker) unregister(producer Producer) {
 }
 
 func (self *worker) eventListener() {
+	
+	/*
 	defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
@@ -283,14 +285,15 @@ func (self *worker) eventListener() {
 		*/
 
 		// System stopped
-		case <-self.txSub.Err():
-			return
-		case <-self.chainHeadSub.Err():
-			return
-		case <-self.chainSideSub.Err():
-			return
-		}
-	}
+		//case <-self.txSub.Err():
+	//		return
+	//	case <-self.chainHeadSub.Err():
+	//		return
+	//	case <-self.chainSideSub.Err():
+	//		return
+	//	}
+//	}
+
 }
 
 func (self *worker) handlerSelfMinedBlock() {

@@ -48,18 +48,14 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
-	//ExtraHash  []byte            `json:"extraHash"`
 	VoteIndex  uint64             `json:"voteIndex"`
 	CandAddress common.Address     `json:"candAddress"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
-	//CoinbaseHash   common.AddressHash      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
-	// These fields are used for consensus tests. Please don't use them
-	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
@@ -94,7 +90,6 @@ type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
-	//ExtraHash  hexutil.Bytes
 	VoteIndex  math.HexOrDecimal64
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
@@ -162,22 +157,35 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig
 
 	// Just commit the new block if there is no stored genesis block.
 	stored := GetCanonicalHash(db, 0)
+	
+	log.Info("we are here","hash", stored)
+	
 	if (stored == common.Hash{}) {
+		    log.Info("we are here 11")
+
 		if genesis == nil {
 			log.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
+			log.Info("we are here 22")
+			
 		} else {
+			log.Info("we are here 33")
 			log.Info("Writing custom genesis block")
 		}
+		log.Info("we are here 44")
 		block, err := genesis.Commit(db)
+		log.Info("we are here 55")
 		return genesis.Config, block.Hash(), err
 	}
+	
+	log.Info("we are here 66")
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
 		block, _ := genesis.ToBlock()
 		hash := block.Hash()
 		if hash != stored {
+			log.Info("we are here 77")
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
 	}
@@ -292,11 +300,12 @@ func (g *Genesis) Commit(db hpbdb.Database) (*types.Block, error) {
 	if err := WriteHeadHeaderHash(db, block.Hash()); err != nil {
 		return nil, err
 	}
-	config := g.Config
-	//if config == nil {
-	//	config = config.PrivatenetChainConfig
-	//}
-	return block, WriteChainConfig(db, block.Hash(), config)
+	configtemp := g.Config
+	if configtemp == nil {
+		configtemp = config.PrivatenetChainConfig
+	}
+	
+	return block, WriteChainConfig(db, block.Hash(), configtemp)
 }
 
 // MustCommit writes the genesis block and state to db, panicking on error.
