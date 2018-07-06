@@ -11,10 +11,10 @@ fi
 workspace="$PWD/build/workspace"
 root="$PWD"
 hpbdir="$workspace/src/github.com/hpb-project"
-if [ ! -L "$hpbdir/ghpb" ]; then
+if [ ! -L "$hpbdir/go-hpb" ]; then
     mkdir -p "$hpbdir"
     cd "$hpbdir"
-    ln -s ../../../../../. ghpb
+    ln -s ../../../../../. go-hpb
     cd "$root"
 fi
 
@@ -23,8 +23,8 @@ GOPATH="$workspace"
 export GOPATH
 
 # Run the command inside the workspace.
-cd "$hpbdir/ghpb"
-PWD="$hpbdir/ghpb"
+cd "$hpbdir/go-hpb"
+PWD="$hpbdir/go-hpb"
 
 # Launch the arguments with the configured environment.
 exec "$@"
