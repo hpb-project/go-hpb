@@ -11,8 +11,8 @@
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
-geth:
-	build/env.sh go run build/ci.go install ./cmd/geth
+ghpb:
+	build/env.sh go run build/ci.go install ./cmd/ghpb
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
