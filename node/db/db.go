@@ -32,6 +32,10 @@ var DBINSTANCE = atomic.Value{}
 
 // CreateDB creates the chain database.
 func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
+
+	if DBINSTANCE.Load() != nil {
+		return DBINSTANCE.Load().(*hpbdb.LDBDatabase),nil
+	}
 	db, err := OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
@@ -48,6 +52,10 @@ func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
 // node is an ephemeral one, a memory database is returned.
 func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 
+	if DBINSTANCE.Load() != nil {
+		return DBINSTANCE.Load().(*hpbdb.LDBDatabase),nil
+	}
+
 	var cfg, _ = config.GetHpbConfigInstance()
 	if cfg.Node.DataDir == ""{
 		return hpbdb.NewMemDatabase()
@@ -56,6 +64,7 @@ func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 	if err != nil {
 		return nil, err
 	}
+	DBINSTANCE.Store(db)
 
 	return db, nil
 }
