@@ -205,7 +205,7 @@ func initRand(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
     
-	stack, _ := MakeConfigNode(ctx)
+	MakeConfigNode(ctx)
 
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
