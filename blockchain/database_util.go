@@ -102,6 +102,10 @@ func GetCanonicalHash(db DatabaseReader, number uint64) common.Hash {
 	return common.BytesToHash(data)
 }
 
+func StoreCadNodes(db hpbdb.Putter,blob []byte, Hash common.Hash) error {
+	return db.Put(append([]byte("codnodesnap-"), Hash[:]...), blob)
+}
+
 // GetRandom
 func GetRandom(db DatabaseReader) string {
 	data, _ := db.Get(randomPrefix)
