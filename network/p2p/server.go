@@ -298,11 +298,6 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	log.Info("Starting P2P networking")
 
-	hpbProto := NewProtos()
-	//log.Info("Hpb protocol","Hpb",hpbProto.Protocols())
-
-	copy(srv.Protocols, hpbProto.Protocols())
-	//log.Info("Server","protocol",srv.Protocols)
 
 	// static fields
 	if srv.PrivateKey == nil {
