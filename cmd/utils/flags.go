@@ -463,7 +463,7 @@ func MakeDataDir(ctx *cli.Context) string {
 // setNodeKey creates a node key from set command line flags, either loading it
 // from a file or as a specified hex value. If neither flags were provided, this
 // method returns nil and an emphemeral key is to be generated.
-func setNodeKey(ctx *cli.Context, cfg *config.NetworkConfig) {
+func setNodeKey(ctx *cli.Context, cfg *config.Nodeconfig) {
 	var (
 		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
 		file = ctx.GlobalString(NodeKeyFileFlag.Name)
@@ -715,7 +715,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	setNodeKey(ctx, &cfg.Network)
+	setNodeKey(ctx, &cfg.Node)
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
 	//setDiscoveryV5Address(ctx, cfg)
