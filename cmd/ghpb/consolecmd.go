@@ -26,7 +26,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 var (
@@ -77,7 +76,7 @@ func localConsole(ctx *cli.Context) error {
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
-	client, err := node.Attach(p2p.PeerMgrInst().IpcHandle())
+	client, err := node.Attach()
 	if err != nil {
 		utils.Fatalf("Failed to attach to the inproc ghpb: %v", err)
 	}
@@ -163,7 +162,7 @@ func ephemeralConsole(ctx *cli.Context) error {
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
-	client, err := node.Attach(p2p.PeerMgrInst().IpcHandle())
+	client, err := node.Attach()
 	if err != nil {
 		utils.Fatalf("Failed to attach to the inproc ghpb: %v", err)
 	}
