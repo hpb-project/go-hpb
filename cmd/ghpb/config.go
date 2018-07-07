@@ -65,7 +65,7 @@ func dumpConfig(ctx *cli.Context) error {
 	return nil
 }
 
-func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
+func MakeConfigNode(ctx *cli.Context) (*config.HpbConfig) {
 	// Load defaults config
 	cfg := config.New()
 	if cfg == nil{
@@ -84,13 +84,6 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, *config.HpbConfig) {
 	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
 	cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
 	}
-	//create node object
-	stack, err := node.New(cfg)
-	if err != nil {
-		utils.Fatalf("Failed to create the protocol stack: %v", err)
-	}
 
-	//set node rpc api
-	//utils.SetNodeAPI(&cfg.Node, stack)
-	return stack, cfg
+	return cfg
 }

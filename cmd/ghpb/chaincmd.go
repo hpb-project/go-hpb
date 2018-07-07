@@ -248,7 +248,12 @@ func importChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	chain, chainDb := utils.MakeChain(ctx, stack)
 	defer chainDb.Close()
 
@@ -285,9 +290,9 @@ func importChain(ctx *cli.Context) error {
 	fmt.Printf("Import done in %v.\n\n", time.Since(start))
 
 	// Output pre-compaction stats mostly to see the import trashing
-	db := chainDb.(*hpbdb.LDBDatabase)
+	importChaindb := chainDb.(*hpbdb.LDBDatabase)
 
-	stats, err := db.LDB().GetProperty("leveldb.stats")
+	stats, err := importChaindb.LDB().GetProperty("leveldb.stats")
 	if err != nil {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
@@ -311,12 +316,12 @@ func importChain(ctx *cli.Context) error {
 	// Compact the entire database to more accurately measure disk io and print the stats
 	start = time.Now()
 	fmt.Println("Compacting entire database...")
-	if err = db.LDB().CompactRange(util.Range{}); err != nil {
+	if err = importChaindb.LDB().CompactRange(util.Range{}); err != nil {
 		utils.Fatalf("Compaction failed: %v", err)
 	}
 	fmt.Printf("Compaction done in %v.\n\n", time.Since(start))
 
-	stats, err = db.LDB().GetProperty("leveldb.stats")
+	stats, err = importChaindb.LDB().GetProperty("leveldb.stats")
 	if err != nil {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
@@ -329,7 +334,12 @@ func exportChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, nodeerror := createNode(cfg)
+	if nodeerror != nil {
+		utils.Fatalf("Failed to create node")
+		return nodeerror
+	}
 	chain, _ := utils.MakeChain(ctx, stack)
 	start := time.Now()
 
@@ -363,22 +373,28 @@ func copyDb(ctx *cli.Context) error {
 		utils.Fatalf("Source chaindata directory path argument missing")
 	}
 	// Initialize a new chain for the running node to sync into
-	stack, _ := MakeConfigNode(ctx)
+	conf := MakeConfigNode(ctx)
+
+	stack, nodeerror := createNode(conf)
+	if nodeerror != nil {
+		utils.Fatalf("Failed to create node")
+		return nodeerror
+	}
 	chain, chainDb := utils.MakeChain(ctx, stack)
 
 	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*config.SyncMode)
 	syer := synctrl.NewSyncer(syncmode, chainDb, new(sub.TypeMux), chain, nil)
 
 	// Create a source peer to satisfy downloader requests from
-	db, err := hpbdb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
+	copydb, err := hpbdb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
 	if err != nil {
 		return err
 	}
-	hc, err := bc.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
+	hc, err := bc.NewHeaderChain(copydb, chain.Config(), chain.Engine(), func() bool { return false })
 	if err != nil {
 		return err
 	}
-	peer := synctrl.NewFakePeer("local", db, hc, syer)
+	peer := synctrl.NewFakePeer("local", copydb, hc, syer)
 	if err = syer.RegisterPeer("local", config.ProtocolV111, peer); err != nil {
 		return err
 	}
@@ -406,7 +422,14 @@ func copyDb(ctx *cli.Context) error {
 }
 
 func removeDB(ctx *cli.Context) error {
-	stack, _ := MakeConfigNode(ctx)
+	// Initialize a new chain for the running node to sync into
+	conf := MakeConfigNode(ctx)
+
+	stack, nodeerror := createNode(conf)
+	if nodeerror != nil {
+		utils.Fatalf("Failed to create node")
+		return nodeerror
+	}
 
 	for _, name := range []string{"chaindata"} {
 		// Ensure the database exists in the first place
@@ -435,7 +458,14 @@ func removeDB(ctx *cli.Context) error {
 }
 
 func dump(ctx *cli.Context) error {
-	stack, _ := MakeConfigNode(ctx)
+	// Initialize a new chain for the running node to sync into
+	conf := MakeConfigNode(ctx)
+
+	stack, nodeerror := createNode(conf)
+	if nodeerror != nil {
+		utils.Fatalf("Failed to create node")
+		return nodeerror
+	}
 	chain, chainDb := utils.MakeChain(ctx, stack)
 	for _, arg := range ctx.Args() {
 		var block *types.Block
@@ -449,11 +479,11 @@ func dump(ctx *cli.Context) error {
 			fmt.Println("{}")
 			utils.Fatalf("block not found")
 		} else {
-			state, err := state.New(block.Root(), state.NewDatabase(chainDb))
+			statevar, err := state.New(block.Root(), state.NewDatabase(chainDb))
 			if err != nil {
 				utils.Fatalf("could not create new state: %v", err)
 			}
-			fmt.Printf("%s\n", state.Dump())
+			fmt.Printf("%s\n", statevar.Dump())
 		}
 	}
 	chainDb.Close()
