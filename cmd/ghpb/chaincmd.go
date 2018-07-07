@@ -28,7 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
@@ -44,6 +43,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/node/db"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
 
 var (
@@ -225,23 +225,57 @@ func initCadNodes(ctx *cli.Context) error {
 		log.Info("Successfully wrote random string", "string", randomStr)
 	}
 	
-	/*
-	// 支持写入到随机数写入到文件的功能，为了提升效率，目前先写入到数据库
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-		log.Error("Failed to save random file", "err", err)
-    }
-    dir = dir +"\\randomData"
-    
-    fmt.Println(dir)
-		
-	if err := ioutil.WriteFile(dir, []byte(randomStr), 0644); err != nil {
-		log.Error("Failed to save genesis file", "err", err)
+	
+	// Make sure we have a valid genesis JSON
+	
+	genesisPath := ctx.Args().First()
+	if len(genesisPath) == 0 {
+		utils.Fatalf("Must supply path to genesis JSON file")
 	}
-	log.Info("Successfully wrote random string", "string", randomStr)
-	*/
+	file, err := os.Open(genesisPath)
+	if err != nil {
+		utils.Fatalf("Failed to read genesis file: %v", err)
+	}
+	defer file.Close()
+	
+	
+	var cNodes []snapshots.CadWinner
+	if err := json.NewDecoder(file).Decode(&cNodes); err != nil {
+		utils.Fatalf("invalid genesis file: %v", err)
+	}
+	
+	//json.Unmarshal()
+    
+	MakeConfigNode(ctx)
+
+	for _, name := range []string{"chaindata", "lightchaindata"} {
+		chaindb, err := db.OpenDatabase(name, 0, 0)
+	
+		if err != nil {
+			utils.Fatalf("Failed to open database: %v", err)
+		}
+		
+		hash := bc.GetCanonicalHash(chaindb, 0)
+		
+		cadNodeSnap := snapshots.CadNodeSnap{Number: uint64(0), Hash: hash, CadWinners: cNodes}
+		
+		blob, err := json.Marshal(cadNodeSnap)
+		if err != nil {
+			return err
+		}
+		
+		fmt.Printf("%s", blob)
+		
+		werr := bc.StoreCadNodes(chaindb,blob,hash)
+		
+		if werr != nil {
+			utils.Fatalf("Failed to candidate nodes: %v", werr)
+		}
+		log.Info("Successfully wrote candidate nodes")
+	}
 	
 	return nil
+	
 }
 
 func importChain(ctx *cli.Context) error {
