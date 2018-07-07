@@ -122,3 +122,14 @@ func discReasonForError(err error) DiscReason {
 	}
 	return DiscSubprotocolError
 }
+
+
+/////////////////////////////////////////
+//dial
+var (
+	errSelf             = errors.New("is self")
+	errAlreadyDialing   = errors.New("already dialing")
+	errAlreadyConnected = errors.New("already connected")
+	errRecentlyDialed   = errors.New("recently dialed")
+	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
+)

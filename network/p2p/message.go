@@ -37,6 +37,8 @@ const (
 	discMsg      = 0x01
 	pingMsg      = 0x02
 	pongMsg      = 0x03
+	nodereqMsg   = 0x04
+	noderesMsg   = 0x05
 	baseMsgMax   = 0x0F
 )
 

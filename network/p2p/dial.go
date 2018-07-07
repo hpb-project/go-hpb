@@ -18,7 +18,6 @@ package p2p
 
 import (
 	"container/heap"
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -68,6 +67,10 @@ type discoverTable interface {
 	Self() *discover.Node
 	Close()
 	FindNodes()[]*discover.Node
+
+    AddNode(node *discover.Node)
+	RemoveNode(nid discover.NodeID)
+	HasNode(nid discover.NodeID) bool
 }
 
 // the dial history remembers recent dials.
@@ -163,7 +166,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
-			log.Info("add one node to dial task","Node",n.String())
+			log.Debug("add one node to dial task","Node",n.String())
 		}
 	}
 
@@ -174,14 +177,6 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 
 	return newtasks
 }
-
-var (
-	errSelf             = errors.New("is self")
-	errAlreadyDialing   = errors.New("already dialing")
-	errAlreadyConnected = errors.New("already connected")
-	errRecentlyDialed   = errors.New("recently dialed")
-	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
-)
 
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*PeerBase) error {
 	_, dialing := s.dialing[n.ID]
@@ -219,7 +214,7 @@ func (t *dialTask) Do(srv *Server) {
 
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
-	fd, err := srv.Dialer.Dial(dest)
+	fd, err := srv.dialer.Dial(dest)
 	if err != nil {
 		log.Trace("Dial error", "task", t, "err", err)
 		return false

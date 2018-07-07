@@ -35,7 +35,8 @@ const (
 
 	snappyProtocolVersion = 5
 
-	pingInterval = 15 * time.Second
+	pingInterval    = 15 * time.Second
+	nodereqInterval = 15 * time.Second
 )
 
 // protoHandshake is the RLP structure of the protocol handshake.
@@ -45,6 +46,7 @@ type protoHandshake struct {
 	Caps       []Cap
 	ListenPort uint64
 	ID         discover.NodeID
+	End        *discover.EndPoint
 
 	// Ignore additional fields (for forward compatibility).
 	Rest []rlp.RawValue `rlp:"tail"`
@@ -63,7 +65,6 @@ const (
 // PeerEvent is an event emitted when peers are either added or dropped from
 // a p2p.Server or when a message is sent or received on a peer connection
 type PeerEvent struct {
-	//Type     PeerEventType   `json:"type"`
 	Type     event.EventType    `json:"type"`
 	Peer     discover.NodeID    `json:"peer"`
 	Error    string             `json:"error,omitempty"`
@@ -92,9 +93,11 @@ type PeerBase struct {
 	////////////////////////////////////////////////////
 	localType  discover.NodeType  //本端节点类型
 	remoteType discover.NodeType  //远端验证后节点类型
+
+	ntab      discoverTable
 }
 
-func newPeerBase(conn *conn, proto Protocol) *PeerBase {
+func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 	//protomap := matchProtocols(protocols, conn.caps, conn)
 	protorw := &protoRW{Protocol: proto,in: make(chan Msg), w: conn}
 	p := &PeerBase{
@@ -105,6 +108,7 @@ func newPeerBase(conn *conn, proto Protocol) *PeerBase {
 		protoErr: make(chan error, 1+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
 		log:      log.New("id", conn.id, "conn", conn.flags),
+		ntab:     ntb,
 	}
 	return p
 }
@@ -218,18 +222,26 @@ loop:
 }
 
 func (p *PeerBase) pingLoop() {
-	ping := time.NewTimer(pingInterval)
+	pingTime := time.NewTimer(pingInterval)
+	nodeTime := time.NewTimer(nodereqInterval)
 	defer p.wg.Done()
-	defer ping.Stop()
+	defer pingTime.Stop()
+	defer nodeTime.Stop()
 	for {
 		select {
-		case <-ping.C:
+		case <-pingTime.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
 				return
 			}
-			SendItems(p.rw, HpbTestMsg)
-			ping.Reset(pingInterval)
+			//SendItems(p.rw, HpbTestMsg)
+			pingTime.Reset(pingInterval)
+		case <-nodeTime.C:
+			if err := SendItems(p.rw, nodereqMsg); err != nil {
+				p.protoErr <- err
+				return
+			}
+			nodeTime.Reset(nodereqInterval)
 		case <-p.closed:
 			return
 		}
@@ -260,6 +272,12 @@ func (p *PeerBase) handle(msg Msg) error {
 		go SendItems(p.rw, pongMsg)
 	case msg.Code == pongMsg:
 
+	case msg.Code == nodereqMsg:
+		msg.Discard()
+		go SendNodes(p)
+	case msg.Code == noderesMsg:
+		go ProcNodes(msg)
+
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
 		// This is the last message. We don't need to discard or
@@ -282,6 +300,17 @@ func (p *PeerBase) handle(msg Msg) error {
 	}
 	return nil
 }
+
+func SendNodes(p *PeerBase) error {
+	//p.ntab
+	return Send(p.rw, noderesMsg, nil)
+}
+
+func ProcNodes(msg Msg) error {
+
+	return nil
+}
+
 
 func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 	n := 0
@@ -388,7 +417,7 @@ func (p *PeerBase) Info() *PeerInfo {
 		Caps:      caps,
 		Protocols: make(map[string]interface{}),
 	}
-	info.Network.LocalAddress = p.LocalAddr().String()
+	info.Network.LocalAddress  = p.LocalAddr().String()
 	info.Network.RemoteAddress = p.RemoteAddr().String()
 
 	// Gather all the running protocol infos
