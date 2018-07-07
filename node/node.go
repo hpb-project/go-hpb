@@ -141,24 +141,24 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
-	//am, _, err := makeAccountManager(&conf.Node)
-	//if err != nil {
-	//	return nil, err
-	//}
+	am, _, err := makeAccountManager(&conf.Node)
+	if err != nil {
+		return nil, err
+	}
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
-	//hpbtxpool      := txpool.GetTxPool()
+	hpbtxpool      := txpool.GetTxPool()
 	db, _      := db.CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
 
 	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
-	//hpbgenesis := bc.DevGenesisBlock()
-	//chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
+	hpbgenesis := bc.DevGenesisBlock()
+	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
 
-	//engine      := CreateConsensusEngine(conf, chainConfig, db)
-	//syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
+	engine      := CreateConsensusEngine(conf, chainConfig, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
@@ -168,7 +168,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode := &Node{
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
-		//Hpbsyncctr:		   syncctr,
+		Hpbsyncctr:		   syncctr,
 		Hpbtxpool:		   txpool.GetTxPool(),
 		Hpbbc:			   block,
 		//boe
@@ -177,8 +177,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		networkId:		   conf.Node.NetworkId,
 
 		eventMux:          eventmux,
-		//accountManager:	   am,
-		//Hpbengine:		   engine,
+		accountManager:	   am,
+		Hpbengine:		   engine,
 
 		gasPrice:       conf.Node.GasPrice,
 		hpberbase:      conf.Node.Hpberbase,
@@ -194,23 +194,23 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}
 		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
 	}
-	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &hpbnode.Hpbconfig.BlockChain, hpbnode.Hpbengine)
-	//if err != nil {
-	//	return nil, err
-	//}
+	hpbnode.Hpbbc, err = bc.NewBlockChain(db, &hpbnode.Hpbconfig.BlockChain, hpbnode.Hpbengine)
+	if err != nil {
+		return nil, err
+	}
 	// Rewind the chain in case of an incompatible config upgrade.
-	//if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
-	//	log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-	//	hpbnode.Hpbbc.SetHead(compat.RewindTo)
-		//bc.WriteChainConfig(db, genesisHash, chainConfig)
-	//}
-	//hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+	if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
+		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		hpbnode.Hpbbc.SetHead(compat.RewindTo)
+		bc.WriteChainConfig(db, genesisHash, chainConfig)
+	}
+	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
 
 	//hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
 
 
-	//hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
+	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
 /*
 	hpb.ApiBackend = &HpbApiBackend{hpb, nil}

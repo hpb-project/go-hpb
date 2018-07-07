@@ -35,6 +35,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -190,12 +191,31 @@ func main() {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func ghpb(ctx *cli.Context) error {
-	hpbnode, _ := MakeConfigNode(ctx)
+	conf := MakeConfigNode(ctx)
+	hpbnode, err := createNode(conf)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	startNode(ctx, hpbnode)
 	hpbnode.Wait()
 	return nil
 }
 
+//create node object
+func createNode(conf  *config.HpbConfig) (* node.Node, error) {
+	//create node object
+	stack, err := node.New(conf)
+	if err != nil {
+		utils.Fatalf("Failed to create node: %v", err)
+		return nil, err
+	}
+
+	//set node rpc api
+	//utils.SetNodeAPI(&cfg.Node, stack)
+	return stack, nil
+
+}
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
