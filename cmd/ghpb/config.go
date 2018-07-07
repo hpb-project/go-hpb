@@ -7,7 +7,6 @@ import (
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
 	"io"
 	"github.com/naoina/toml"
@@ -52,7 +51,7 @@ var tomlSettings = toml.Config{
 
 // dumpConfig is the dumpconfig command.
 func dumpConfig(ctx *cli.Context) error {
-	_, cfg := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
 	comment := ""
 
 

@@ -71,7 +71,12 @@ The JavaScript VM exposes a node admin interface as well as the Ðapp`,
 // same time.
 func localConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
-	node, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	node, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	startNode(ctx, node)
 	defer node.Stop()
 
@@ -157,7 +162,12 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 // everything down.
 func ephemeralConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
-	node, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	node, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	startNode(ctx, node)
 	defer node.Stop()
 

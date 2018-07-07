@@ -164,6 +164,9 @@ Use "hpb dump 0" to dump the genesis block.`,
 // initGenesis will initialise the given JSON format genesis file and writes it as
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
 func initGenesis(ctx *cli.Context) error {
+	// Open an initialise both full and light databases
+	//stack, _ := MakeConfigNode(ctx)
+	MakeConfigNode(ctx)
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
@@ -171,6 +174,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	file, err := os.Open(genesisPath)
 	if err != nil {
+		log.Warn("genesis path is %s", genesisPath)
 		utils.Fatalf("Failed to read genesis file: %v", err)
 	}
 	defer file.Close()
@@ -179,9 +183,7 @@ func initGenesis(ctx *cli.Context) error {
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
-	// Open an initialise both full and light databases
-	//stack, _ := MakeConfigNode(ctx)
-	MakeConfigNode(ctx)
+
 	for _, name := range []string{"chaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
 		if err != nil {

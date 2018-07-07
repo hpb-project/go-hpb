@@ -193,7 +193,12 @@ nodes.
 )
 
 func accountList(ctx *cli.Context) error {
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	var index int
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -291,7 +296,12 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
@@ -309,7 +319,12 @@ func accountUpdate(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
 		utils.Fatalf("No accounts specified to update")
 	}
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
 
 	for _, addr := range ctx.Args() {
@@ -332,7 +347,12 @@ func importWallet(ctx *cli.Context) error {
 		utils.Fatalf("Could not read wallet file: %v", err)
 	}
 
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	passphrase := getPassPhrase("", false, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
@@ -353,7 +373,12 @@ func accountImport(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}
-	stack, _ := MakeConfigNode(ctx)
+	cfg := MakeConfigNode(ctx)
+	stack, err := createNode(cfg)
+	if err != nil {
+		utils.Fatalf("Failed to create node")
+		return err
+	}
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
