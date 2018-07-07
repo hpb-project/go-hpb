@@ -91,7 +91,7 @@ func (s *Node) APIs() []rpc.API {
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   s.netRPCService,
+			Service:   hpbapi.NewPublicNetAPI(p2p.PeerMgrInst().P2pSvr(),s.networkId),//s.netRPCService,
 			Public:    true,
 		},
 	}...)
