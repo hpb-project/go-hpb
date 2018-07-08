@@ -55,8 +55,7 @@ func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine) 
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(bc.InstanceBlockChain(), engine))
-	go miner.update()
-
+	//go miner.update()
 	return miner
 }
 
@@ -93,6 +92,9 @@ out:
 }
 
 func (self *Miner) Start(coinbase common.Address) {
+	// 
+	go self.update()
+	
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.worker.setHpberbase(coinbase)
 	self.coinbase = coinbase

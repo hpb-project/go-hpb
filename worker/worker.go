@@ -150,7 +150,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 			case event.TxPreEvent:
 				worker.txCh <- msg
 			}
-		})
+	})
 	event.Subscribe(txPreReceiver, event.TxPreTopic)
 	//worker.txSub = txpool.GetTxPool().SubscribeTxPreEvent(worker.txCh)
 	// Subscribe events for blockchain
