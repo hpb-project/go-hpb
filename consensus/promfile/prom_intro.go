@@ -32,7 +32,7 @@ import (
 func makePrometh(network string) *prometh {
 	return &prometh{
 		network: network,
-		conf: config{
+		conf: pconfig{
 			Servers: make(map[string][]byte),
 		},
 		servers:  make(map[string]*sshClient),

@@ -28,21 +28,21 @@ import (
 	//"encoding/hex"
 
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/core"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 
 // 基于用户的输入产生genesis
 func (p *prometh) makeGenesis() {
 	// Construct a default genesis block
-	genesis := &core.Genesis{
+	genesis := &bc.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
-		GasLimit:   params.GenesisGasLimit.Uint64(),
+		GasLimit:   config.GenesisGasLimit.Uint64(),
 		Difficulty: big.NewInt(1048576),
-		Alloc:      make(core.GenesisAlloc),
-		Config: &params.ChainConfig{
+		Alloc:      make(bc.GenesisAlloc),
+		Config: &config.ChainConfig{
 		},
 	}
 	// Figure out which consensus engine to choose
@@ -52,7 +52,7 @@ func (p *prometh) makeGenesis() {
 	//choice := p.read()
 
 	genesis.Difficulty = big.NewInt(1)
-	genesis.Config.Prometheus = &params.PrometheusConfig{
+	genesis.Config.Prometheus = &config.PrometheusConfig{
 		Period: 15,
 		Epoch:  30000,
 		//Random: "0",
@@ -147,7 +147,7 @@ func (p *prometh) makeGenesis() {
 	for {
 		// Read the address of the account to fund
 		if address := p.readAddress(); address != nil {
-			genesis.Alloc[*address] = core.GenesisAccount{
+			genesis.Alloc[*address] = bc.GenesisAccount{
 				Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
 			}
 			continue

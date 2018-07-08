@@ -38,7 +38,7 @@ func makeCadPrometh(network string) *prometh {
 // setting up a new or managing an existing HPB private network.
 func (p *prometh) run() {
 	fmt.Println("+-----------------------------------------------------------+")
-	fmt.Println("| Welcome to prometh, your HPB private network manager |")
+	fmt.Println("| Welcome to prometh cadfile, your HPB private network manager |")
 	fmt.Println("|                                                           |")
 	fmt.Println("| This tool lets you create a new HPB network down to  |")
 	fmt.Println("| the genesis block, bootnodes, miners and ethstats servers |")

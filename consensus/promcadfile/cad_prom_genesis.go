@@ -37,7 +37,8 @@ func (p *prometh) makeGenesis() {
 	
 	fmt.Println()
 	fmt.Println("Welcome to HPB consensus engine file maker")
-
+    fmt.Println("Please input the networkid one by one")
+    
 	var networkids []string
     var cNodes []CadWinner
 	for {
@@ -51,7 +52,7 @@ func (p *prometh) makeGenesis() {
 	}
 
 	fmt.Println()
-	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
+	fmt.Println("Please input the corresponding address, the same order with above networkid")
 	for i := 0; i < len(networkids); i++{
 		if address := p.readAddress(); address != nil {
 			cNodes = append(cNodes,CadWinner{NetworkId: networkids[i], Address: *address,VoteIndex:uint64(0)})

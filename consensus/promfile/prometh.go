@@ -30,16 +30,16 @@ import (
 	"strings"
 
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/core"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 // config contains all the configurations needed by prometh that should be saved
 // between sessions.
-type config struct {
+type pconfig struct {
 	path      string        // File containing the configuration values
-	genesis   *core.Genesis // Genesis block to cache for node deploys
+	genesis   *bc.Genesis // Genesis block to cache for node deploys
 	bootFull  []string      // Bootnodes to always connect to by full nodes
 	bootLight []string      // Bootnodes to always connect to by light nodes
 	ethstats  string
@@ -47,7 +47,7 @@ type config struct {
 }
 
 // 返回按照字母顺序的服务器
-func (c config) servers() []string {
+func (c pconfig) servers() []string {
 	servers := make([]string, 0, len(c.Servers))
 	for server := range c.Servers {
 		servers = append(servers, server)
@@ -57,7 +57,7 @@ func (c config) servers() []string {
 }
 
 // 将数据写入到文件中
-func (c config) flush() {
+func (c pconfig) flush() {
 	os.MkdirAll(filepath.Dir(c.path), 0755)
 
 	out, _ := json.MarshalIndent(c, "", "  ")
@@ -69,7 +69,7 @@ func (c config) flush() {
 // prometh 结构体
 type prometh struct {
 	network string // Network name to manage
-	conf    config // Configurations from previous runs
+	conf    pconfig // Configurations from previous runs
 
 	servers  map[string]*sshClient // SSH connections to servers to administer
 	services map[string][]string   // Hpb services known to be running on servers
