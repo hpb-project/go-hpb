@@ -204,31 +204,6 @@ func initGenesis(ctx *cli.Context) error {
 
 func initCadNodes(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
-	randomStr := ctx.Args().First()
-	if len(randomStr) == 0 {
-		utils.Fatalf("the lenth of randomStr must great than 0")
-	}
-
-	// Open an initialise both full and light databases
-    
-	//stack, _ := MakeConfigNode(ctx)
-    MakeConfigNode(ctx)
-	for _, name := range []string{"chaindata"} {
-		chaindb, err := db.OpenDatabase(name, 0, 0)
-	
-		if err != nil {
-			utils.Fatalf("Failed to open database: %v", err)
-		}
-		werr := bc.WriteRandom(chaindb, randomStr)
-		
-		if werr != nil {
-			utils.Fatalf("Failed to random string: %v", werr)
-		}
-		log.Info("Successfully wrote random string", "string", randomStr)
-	}
-	
-	
-	// Make sure we have a valid genesis JSON
 	
 	genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
@@ -240,17 +215,14 @@ func initCadNodes(ctx *cli.Context) error {
 	}
 	defer file.Close()
 	
-	
 	var cNodes []snapshots.CadWinner
 	if err := json.NewDecoder(file).Decode(&cNodes); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
-	
-	//json.Unmarshal()
     
 	MakeConfigNode(ctx)
 
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+	for _, name := range []string{"chaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
 	
 		if err != nil {
