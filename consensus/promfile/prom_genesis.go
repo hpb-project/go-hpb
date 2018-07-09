@@ -55,7 +55,6 @@ func (p *prometh) makeGenesis() {
 	genesis.Config.Prometheus = &config.PrometheusConfig{
 		Period: 15,
 		Epoch:  30000,
-		//Random: "0",
 	}
 	fmt.Println()
 	fmt.Println("How many seconds should blocks take? (default = 15)")

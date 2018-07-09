@@ -39,7 +39,6 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Config.ChainId = g.Config.ChainId
 	enc.Config.Prometheus.Epoch = g.Config.Prometheus.Epoch
 	enc.Config.Prometheus.Period = g.Config.Prometheus.Period
-	enc.Config.Prometheus.Random = g.Config.Prometheus.Random
 
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
@@ -90,10 +89,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	}
 	if dec.Config != nil {
 		g.Config = dec.Config
-		//g.Config.ChainId = dec.Config.ChainId
-		//g.Config.Prometheus.Epoch = dec.Config.Prometheus.Epoch
-		//g.Config.Prometheus.Period = dec.Config.Prometheus.Period
-		//g.Config.Prometheus.Random = dec.Config.Prometheus.Random
+		g.Config.ChainId = dec.Config.ChainId
+		g.Config.Prometheus.Epoch = dec.Config.Prometheus.Epoch
+		g.Config.Prometheus.Period = dec.Config.Prometheus.Period
 	}
 	if dec.Nonce != nil {
 		g.Nonce = uint64(*dec.Nonce)

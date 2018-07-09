@@ -20,13 +20,11 @@ package config
 var DefaultPrometheusConfig = PrometheusConfig {
 	Period:    15,
 	Epoch:	   30000,
-	Random:     "0",
 }
 
 type PrometheusConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	Random string `json:"random"` // 新增加的random字段
 }
 
 // PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.

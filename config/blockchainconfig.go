@@ -37,7 +37,6 @@ var (
 		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
-			Random: "0",
 		},
 	}
 
@@ -47,7 +46,6 @@ var (
 		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
-			Random: "0",
 		},
 	}
 
@@ -57,7 +55,6 @@ var (
 		Prometheus: &PrometheusConfig{
 			Period: 15,
 			Epoch:  30000,
-			Random: "0",
 		},
 	}
 )
@@ -136,7 +133,6 @@ var (
 )
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
-
 	Prometheus *PrometheusConfig `json:"prometheus,omitempty"`
 }
 
