@@ -90,7 +90,7 @@ var (
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
 		utils.NetrestrictFlag,
-		utils.FileFlag,
+		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,

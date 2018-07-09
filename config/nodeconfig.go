@@ -271,13 +271,16 @@ func (c *Nodeconfig) NodeKey() error {
 		key, err := crypto.GenerateKey()
 		if err != nil {
 			log.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
+
 		}
+		c.PrivateKey = key
 		return err
 	}
 
 	keyfile := c.ResolvePath(DatadirPrivateKey)
 	if key, err := crypto.LoadECDSA(keyfile); err == nil {
-		return err
+		c.PrivateKey = key
+		return nil
 	}
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateKey()
@@ -287,12 +290,14 @@ func (c *Nodeconfig) NodeKey() error {
 	instanceDir := filepath.Join(c.DataDir, c.name())
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+		c.PrivateKey = key
 		return err
 	}
 	keyfile = filepath.Join(instanceDir, DatadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
+	c.PrivateKey = key
 	return nil
 }
 
