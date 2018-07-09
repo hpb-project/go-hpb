@@ -149,7 +149,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
-	hpbtxpool      := txpool.GetTxPool()
+
+
 	db, _      := db.CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
 
@@ -158,18 +159,21 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
 
 	engine      := CreateConsensusEngine(conf, chainConfig, db)
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
+
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
+	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
+	hpbtxpool      := txpool.GetTxPool()
 
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
 
 	hpbnode := &Node{
 		Hpbconfig:         conf,
 		Hpbpeermanager:    peermanager,
 		Hpbsyncctr:		   syncctr,
-		Hpbtxpool:		   txpool.GetTxPool(),
+		Hpbtxpool:		   hpbtxpool,
 		Hpbbc:			   block,
 		//boe
 
