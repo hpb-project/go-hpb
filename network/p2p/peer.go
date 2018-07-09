@@ -36,7 +36,7 @@ const (
 	snappyProtocolVersion = 5
 
 	pingInterval    = 15 * time.Second
-	nodereqInterval = 15 * time.Second
+	nodereqInterval = 10 * time.Second
 )
 
 // protoHandshake is the RLP structure of the protocol handshake.
@@ -234,9 +234,12 @@ func (p *PeerBase) pingLoop() {
 				p.protoErr <- err
 				return
 			}
-			//SendItems(p.rw, HpbTestMsg)
 			pingTime.Reset(pingInterval)
 		case <-nodeTime.C:
+			if p.localType == discover.BootNode {
+				return
+			}
+
 			if err := SendItems(p.rw, nodereqMsg); err != nil {
 				p.protoErr <- err
 				return
@@ -270,14 +273,6 @@ func (p *PeerBase) handle(msg Msg) error {
 	case msg.Code == pingMsg:
 		msg.Discard()
 		go SendItems(p.rw, pongMsg)
-	case msg.Code == pongMsg:
-
-	case msg.Code == nodereqMsg:
-		msg.Discard()
-		go SendNodes(p)
-	case msg.Code == noderesMsg:
-		go ProcNodes(msg)
-
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
 		// This is the last message. We don't need to discard or
@@ -286,11 +281,10 @@ func (p *PeerBase) handle(msg Msg) error {
 		return reason[0]
 	case msg.Code < baseMsgMax:
 		// ignore other base protocol messages
-		log.Error("Peer handle massage do not matched","Msg",msg.String())
+		//log.Error("Peer handle massage do not matched","Msg",msg.String())
 		return msg.Discard()
 	default:
 		proto := p.running
-
 		select {
 		case proto.in <- msg:
 			return nil
@@ -300,17 +294,6 @@ func (p *PeerBase) handle(msg Msg) error {
 	}
 	return nil
 }
-
-func SendNodes(p *PeerBase) error {
-	//p.ntab
-	return Send(p.rw, noderesMsg, nil)
-}
-
-func ProcNodes(msg Msg) error {
-
-	return nil
-}
-
 
 func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 	n := 0

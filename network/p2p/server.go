@@ -480,6 +480,7 @@ running:
 					p.events = srv.peerEvent
 				}
 				name := truncateName(c.name)
+				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
 					if n.ID == p.ID() {

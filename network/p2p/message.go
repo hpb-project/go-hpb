@@ -32,13 +32,10 @@ import (
 // message of control
 const (
 	baseMsgVersion       = 0x01
-
 	handshakeMsg = 0x00
 	discMsg      = 0x01
 	pingMsg      = 0x02
 	pongMsg      = 0x03
-	nodereqMsg   = 0x04
-	noderesMsg   = 0x05
 	baseMsgMax   = 0x0F
 )
 
@@ -60,8 +57,10 @@ const (
 	ReceiptsMsg        = 0x1c
 
 
-	HpbTestMsg         = 0x20
-	HpbTestMsgResp     = 0x21
+	nodereqMsg         = 0x20
+	noderesMsg         = 0x21
+	HpbTestMsg         = 0x22
+	HpbTestMsgResp     = 0x23
 	//ShardHeadMsg       = 0x28
 	//ShardPieceMsg      = 0x29
 )

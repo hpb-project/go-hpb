@@ -77,6 +77,7 @@ const (
 	ErrNetworkIdMismatch
 	ErrGenesisBlockMismatch
 	ErrNoStatusMsg
+	ErrExtraStatusMsg
 )
 
 func NewProtos() *HpbProto {
@@ -185,26 +186,28 @@ func (hp *HpbProto) regMsgCall(msg uint64,cb MsgCallback) {
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (hp *HpbProto) handleMsg(p *Peer) error {
-	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
 	}
-	//log.Trace("HpbProto handle massage","Msg",msg.String())
+	log.Info("Protocol handle massage","Msg",msg.String())
+	defer msg.Discard()
 
 	if msg.Size > ProtoMaxMsg {
 		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtoMaxMsg)
 	}
 
-	defer msg.Discard()
-
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == StatusMsg:
-		if cb := hp.procFun[StatusMsg]; cb != nil{
-			cb(p,msg)
-		}
+		return ErrResp(ErrExtraStatusMsg, "uncontrolled status message")
+	case msg.Code == nodereqMsg:
+		go SendNodes(p,msg)
 		return nil
+	case msg.Code == noderesMsg:
+		go ProcNodes(p,msg)
+		return nil
+
 	case msg.Code == GetBlockHeadersMsg:
 		if cb := hp.procFun[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
@@ -303,6 +306,21 @@ func (hp *HpbProto) removePeer(id string) {
 		peer.Disconnect(DiscUselessPeer)
 	}
 }
+
+
+
+func SendNodes(p *Peer,msg Msg) error {
+	p.log.Info("SendNodes")
+	//p.ntab
+	//return Send(p.rw, noderesMsg, nil)
+	return nil
+}
+
+func ProcNodes(p *Peer, msg Msg) error {
+	p.log.Info("ProcNodes")
+	return nil
+}
+
 
 ////////////////////////////////////////////////////////
 
