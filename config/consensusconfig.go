@@ -30,5 +30,5 @@ type PrometheusConfig struct {
 // PrometheusConfig is the consensus engine configs for proof-of-authority based sealing.
 // String implements the stringer interface, returning the consensus engine details.
 func (c *PrometheusConfig) String() string {
-	return "prometheus"
+	return "prometheusConfig"
 }
