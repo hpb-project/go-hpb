@@ -715,12 +715,13 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-	setNodeKey(ctx, &cfg.Node)
+
+
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
-	//setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, &cfg.Network)
-	//setBootstrapNodesV5(ctx, cfg)
+	setHTTP(ctx, &cfg.Network)
+	setWS(ctx, &cfg.Network)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.Network.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
@@ -805,8 +806,13 @@ func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
 
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+
 	SetNetWorkConfig(ctx, cfg)
 	setNodeUserIdent(ctx, &cfg.Node)
+
+	setIPC(ctx, &cfg.Node)
+	setNodeKey(ctx, &cfg.Node)
+	cfg.Node.NodeKey()
 
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
