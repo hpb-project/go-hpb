@@ -48,17 +48,17 @@ type Genesis struct {
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
-	VoteIndex  uint64             `json:"voteIndex"`
-	CandAddress common.Address     `json:"candAddress"`
+	//VoteIndex  uint64              `json:"voteIndex"`
+	
+	//CandAddress common.Address     `json:"candAddress"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-
-	Number     uint64      `json:"number"`
-	GasUsed    uint64      `json:"gasUsed"`
-	ParentHash common.Hash `json:"parentHash"`
+	Number     uint64              `json:"number"`
+	GasUsed    uint64              `json:"gasUsed"`
+	ParentHash common.Hash         `json:"parentHash"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -90,7 +90,7 @@ type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
-	VoteIndex  math.HexOrDecimal64
+	//VoteIndex  math.HexOrDecimal64
 	GasLimit   math.HexOrDecimal64
 	GasUsed    math.HexOrDecimal64
 	Number     math.HexOrDecimal64
@@ -137,19 +137,7 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database already contains an incompatible genesis block (have %x, new %x)", e.Stored[:8], e.New[:8])
 }
 
-// SetupGenesisBlock writes or updates the genesis block in db.
-// The block that will be used is:
-//
-//                          genesis == nil       genesis != nil
-//                       +------------------------------------------
-//     db has no genesis |  main-net default  |  genesis
-//     db has genesis    |  from DB           |  genesis (if compatible)
-//
-// The stored chain configuration will be updated if it is compatible (i.e. does not
-// specify a fork block below the local head block). In case of a conflict, the
-// error is a *config.ConfigCompatError and the new, unwritten config is returned.
-//
-// The returned chain configuration is never nil.
+
 func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return config.PrivatenetChainConfig, common.Hash{}, errGenesisNoConfig
@@ -259,8 +247,8 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		//CoinbaseHash:   g.CoinbaseHash,
-		VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
-		CandAddress: g.CandAddress,
+		//VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
+		//CandAddress: g.CandAddress,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {

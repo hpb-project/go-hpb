@@ -19,19 +19,23 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Nonce      math.HexOrDecimal64                         `json:"nonce"`
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
-		//ExtraHash  hexutil.Bytes                          	   `json:"extraHash"`
+		//VoteIndex  math.HexOrDecimal64                         `json:"voteIndex"`
+		
+		//CandAddress common.Address                             `json:"candAddress"`
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    common.Hash                                 `json:"mixHash"`
 		Coinbase   common.Address                              `json:"coinbase"`
+		
 		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
 		Number     math.HexOrDecimal64                         `json:"number"`
 		GasUsed    math.HexOrDecimal64                         `json:"gasUsed"`
 		ParentHash common.Hash                                 `json:"parentHash"`
 	}
+	
+	
 	var enc Genesis
-	//TODO: jiali
-	//enc.Config = g.Config
+	
 	enc.Config.ChainId = g.Config.ChainId
 	enc.Config.Prometheus.Epoch = g.Config.Prometheus.Epoch
 	enc.Config.Prometheus.Period = g.Config.Prometheus.Period
@@ -40,11 +44,15 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Nonce = math.HexOrDecimal64(g.Nonce)
 	enc.Timestamp = math.HexOrDecimal64(g.Timestamp)
 	enc.ExtraData = g.ExtraData
-	//enc.ExtraHash = g.ExtraHash
+   // enc.CandAddress = g.CandAddress
+    
+	//enc.VoteIndex = math.HexOrDecimal64(g.VoteIndex)
 	enc.GasLimit = math.HexOrDecimal64(g.GasLimit)
 	enc.Difficulty = (*math.HexOrDecimal256)(g.Difficulty)
 	enc.Mixhash = g.Mixhash
 	enc.Coinbase = g.Coinbase
+	
+	
 	if g.Alloc != nil {
 		enc.Alloc = make(map[common.UnprefixedAddress]GenesisAccount, len(g.Alloc))
 		for k, v := range g.Alloc {
@@ -63,11 +71,14 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
 		ExtraData  hexutil.Bytes                               `json:"extraData"`
-		ExtraHash  hexutil.Bytes                               `json:"extraHash"`
+		//VoteIndex  *math.HexOrDecimal64                        `json:"voteIndex"`
+		
+		//CandAddress *common.Address                            `json:"candAddress"`
 		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    *common.Hash                                `json:"mixHash"`
 		Coinbase   *common.Address                             `json:"coinbase"`
+		
 		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
 		Number     *math.HexOrDecimal64                        `json:"number"`
 		GasUsed    *math.HexOrDecimal64                        `json:"gasUsed"`
@@ -90,12 +101,13 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.Timestamp != nil {
 		g.Timestamp = uint64(*dec.Timestamp)
 	}
+	//if dec.VoteIndex != nil {
+	//	g.VoteIndex = uint64(*dec.VoteIndex)
+	//}
 	if dec.ExtraData != nil {
 		g.ExtraData = dec.ExtraData
 	}
-	//if dec.ExtraHash != nil {
-	//	g.ExtraHash = dec.ExtraHash
-	//}
+	
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for Genesis")
 	}
@@ -110,6 +122,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	if dec.Coinbase != nil {
 		g.Coinbase = *dec.Coinbase
 	}
+	//if dec.CandAddress != nil {
+	//	g.CandAddress = *dec.CandAddress
+	//}
 	if dec.Alloc == nil {
 		return errors.New("missing required field 'alloc' for Genesis")
 	}

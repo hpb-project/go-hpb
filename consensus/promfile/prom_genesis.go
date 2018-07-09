@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"math/rand"
 	"time"
-	"hash/fnv"
 	//"encoding/hex"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -36,8 +35,9 @@ import (
 
 // 基于用户的输入产生genesis
 func (p *prometh) makeGenesis() {
-	// Construct a default genesis block
+	
 	genesis := &bc.Genesis{
+		//VoteIndex:  uint64(0),
 		Timestamp:  uint64(time.Now().Unix()),
 		GasLimit:   config.GenesisGasLimit.Uint64(),
 		Difficulty: big.NewInt(1048576),
@@ -74,19 +74,13 @@ func (p *prometh) makeGenesis() {
 	for {
 		if address := p.readAddress(); address != nil {
 			signers = append(signers, *address)
+			//genesis.CandAddress = *address
 			continue
 		}
 		if len(signers) > 0 {
 			break
 		}
 	}
-
-	/*
-	if address := p.readAddress(); address != nil {
-		signers = append(signers, *address)
-	}
-	*/
-
 
 	// Sort the signers and embed into the extra-data section
 	for i := 0; i < len(signers); i++ {
@@ -102,46 +96,7 @@ func (p *prometh) makeGenesis() {
 	for i, signer := range signers {
 		copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 	}
-
-    /*
-	fmt.Println()
-	fmt.Println("please input random number")
-	//var signersHash []common.AddressHash
-
-	//randStr := p.read();
-
-  
-	var randStrs []string
-
-	for {
-		if randStr := p.read(); randStr != "" {
-			randStrs = append(randStrs, randStr)
-			continue
-		}
-		if len(randStrs) > 0 {
-			break
-		}
-	}
-
-	genesis.Config.Prometheus.Random = randStrs[0]
-
-    
    
-	address_hashes := make([]common.AddressHash, (len(signers)/common.AddressLength)*common.AddressHashLength)
-
-	for i, signer := range signers {
-		fmt.Println("randStrs: %s", randStrs[len(signers)-i-1],"signer:",signer.Hex())
-		address_hashes = append(address_hashes, common.BytesToAddressHash(p.fnv_hash([]byte(signer.Str() + randStrs[len(signers)-i-1]))))
-	}
-
-	genesis.ExtraHash = make([]byte, 32 + len(address_hashes) * common.AddressHashLength + 65)
-
-    
-	for i, address_hash := range address_hashes {
-		copy(genesis.ExtraHash[32+ i*common.AddressHashLength:], address_hash[:])
-	}
-	
-	*/
 	fmt.Println()
 	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
 	for {
@@ -154,14 +109,7 @@ func (p *prometh) makeGenesis() {
 		}
 		break
 	}
-
-	// Add a batch of precompile balances to avoid them getting deleted
-	//for i := int64(0); i < 256; i++ {
-	//	genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
-	//}
-	fmt.Println()
-
-	// Query the user for some custom extras
+	
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainId = new(big.Int).SetUint64(uint64(p.readDefaultInt(rand.Intn(65536))))
@@ -175,29 +123,9 @@ func (p *prometh) makeGenesis() {
 	}
 	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
 
-	// All done, store the genesis and flush to disk
-
 	p.conf.genesis = genesis
 }
 
-
-// Fowler–Noll–Vo is a non-cryptographic hash function created by Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo.
-//The basis of the FNV hash algorithm was taken from an idea sent as reviewer comments to the
-//IEEE POSIX P1003.2 committee by Glenn Fowler and Phong Vo in 1991. In a subsequent ballot round,
-//Landon Curt Noll improved on their algorithm. In an email message to Landon,
-//they named it the Fowler/Noll/Vo or FNV hash.
-// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-func (p *prometh) fnv_hash(data ...[]byte) []byte {
-	d := fnv.New32()
-	for _, b := range data {
-		d.Write(b)
-	}
-	return d.Sum(nil)
-	//return hex.EncodeToString(d.Sum(nil))
-}
-
-// manageGenesis permits the modification of chain configuration parameters in
-// a genesis config and the export of the entire genesis spec.
 func (p *prometh) manageGenesis() {
 	// Figure out whether to modify or export the genesis
 	fmt.Println()
@@ -206,16 +134,11 @@ func (p *prometh) manageGenesis() {
 	choice := p.read()
 	switch {
 	case choice == "1":
-		// Save whatever genesis configuration we currently have
 		fmt.Println()
 		fmt.Printf("Which file to save the genesis into? (default = %s.json)\n", p.network)
-
-		//fmt.Printf("%s", p.conf.genesis)
-
 		out, _ := json.MarshalIndent(p.conf.genesis, "", "  ")
 
 		//fmt.Printf("%s", out)
-
 		if err := ioutil.WriteFile(p.readDefaultString(fmt.Sprintf("%s.json", p.network)), out, 0644); err != nil {
 			log.Error("Failed to save genesis file", "err", err)
 		}
