@@ -184,11 +184,6 @@ type Nodeconfig struct {
 }
 
 
-func (err *ConfigCompatError) Error() string {
-	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
-}
-
-
 
 
 
