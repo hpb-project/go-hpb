@@ -72,7 +72,7 @@ func MakeConfigNode(ctx *cli.Context) (*config.HpbConfig) {
 		os.Exit(1)
 	}
 	// Apply flags.
-	utils.SetNodeConfig(ctx, cfg)
+	utils.SetConfig(ctx, cfg)
 	//set cfg version
 	cfg.Node.Version = config.VersionWithCommit(GitCommit)
 

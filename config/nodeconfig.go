@@ -182,13 +182,6 @@ type Nodeconfig struct {
 
 
 }
-
-
-
-
-
-
-
 // NodeDB returns the path to the discovery node database.
 func (c *Nodeconfig) NodeDB() string {
 	if c.DataDir == "" {

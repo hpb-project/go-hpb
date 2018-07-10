@@ -305,9 +305,6 @@ type NetworkConfig struct {
 
 	BootstrapNodes []*discover.Node
 
-
-
-
 }
 
 
@@ -317,6 +314,7 @@ func DefaultNetworkConfig() NetworkConfig{
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
 	cfg.WSModules = append(cfg.WSModules, "hpb")
+
 
 	return cfg
 }
@@ -362,5 +360,13 @@ func DefaultWSEndpoint() string {
 	config := &NetworkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
+
+
+
+
+
+
+
+
 
 

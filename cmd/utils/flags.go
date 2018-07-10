@@ -484,6 +484,7 @@ func setNodeKey(ctx *cli.Context, cfg *config.Nodeconfig) {
 		}
 		cfg.PrivateKey = key
 	}
+
 }
 
 // setNodeUserIdent creates the user identifier from CLI flags.
@@ -808,12 +809,15 @@ func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
 	cfg.RpcAPIs = node.APIs()
 }
 
+func SetConfig(ctx *cli.Context, cfg *config.HpbConfig) {
+
+	SetNodeConfig(ctx, cfg)
+	SetNetWorkConfig(ctx, cfg)
+}
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
-	SetNetWorkConfig(ctx, cfg)
 	setNodeUserIdent(ctx, &cfg.Node)
-
 	setIPC(ctx, &cfg.Node)
 	setNodeKey(ctx, &cfg.Node)
 	cfg.Node.NodeKey()
@@ -891,6 +895,15 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		cfg.Node.MaxTrieCacheGen = uint16(gen)
+	}
+
+	if cfg.Node.DataDir != "" {
+		absdatadir, err := filepath.Abs(cfg.Node.DataDir)
+		if err != nil {
+			log.Warn("error:failed DataDir abs")
+			return
+		}
+		cfg.Node.DataDir = absdatadir
 	}
 }
 
