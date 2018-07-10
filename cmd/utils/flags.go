@@ -797,6 +797,10 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Network.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
 
+	cfg.Network.WsEndpoint  = cfg.Network.WSEndpoint()
+	cfg.Network.IpcEndpoint = cfg.Node.IPCEndpoint()
+	cfg.Network.HttpEndpoint    = cfg.Network.HTTPEndpoint()
+
 }
 
 //set nodeconfig API
