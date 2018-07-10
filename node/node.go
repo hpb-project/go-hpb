@@ -220,13 +220,13 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
-/*
-	hpb.ApiBackend = &HpbApiBackend{hpb, nil}
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpb.ApiBackend, gpoParams)*/
+
+	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
+	//gpoParams := config.GPO
+	//if gpoParams.Default == nil {
+	//	gpoParams.Default = config.GasPrice
+	//}
+	//hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpb.ApiBackend, gpoParams)
 
 	return hpbnode, nil
 }

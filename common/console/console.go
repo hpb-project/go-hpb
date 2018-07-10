@@ -260,7 +260,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 // Welcome show summary of current Geth instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
-	// Print some generic Geth metadata
+	// Print some generic HPB metadata
 	fmt.Fprintf(c.printer, "Welcome to the GHPB JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
