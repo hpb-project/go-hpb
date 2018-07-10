@@ -95,6 +95,7 @@ type PeerBase struct {
 	remoteType discover.NodeType  //远端验证后节点类型
 
 	ntab      discoverTable
+
 }
 
 func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
@@ -240,7 +241,7 @@ func (p *PeerBase) pingLoop() {
 				return
 			}
 
-			if err := SendItems(p.rw, nodereqMsg); err != nil {
+			if err := SendItems(p.rw, ReqNodesMsg); err != nil {
 				p.protoErr <- err
 				return
 			}

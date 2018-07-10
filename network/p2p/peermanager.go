@@ -29,6 +29,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"path/filepath"
 )
 
 var (
@@ -49,15 +50,6 @@ type HpbPeerInfo struct {
 	Version    uint     `json:"version"`    // Hpb protocol version negotiated
 	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
 	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
-}
-
-// statusData is the network packet for the status message.
-type statusData struct {
-	ProtocolVersion uint32
-	NetworkId       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
 }
 
 type Peer struct {
@@ -392,6 +384,16 @@ func (p *Peer) SendData(msgCode uint64, data interface{}) error {
 	return Send(p.rw, msgCode, data)
 }
 
+
+// statusData is the network packet for the status message.
+type statusData struct {
+	ProtocolVersion uint32
+	NetworkId       uint64
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	GenesisBlock    common.Hash
+}
+
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
@@ -400,6 +402,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
+		p.log.Trace("handshake send","NetworkId",network,"TD",td,"CurrentBlock",head,"GenesisBlock",genesis)
 		errc <- Send(p.rw, StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,
@@ -410,7 +413,9 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 	}()
 	go func() {
 		errc <- p.readStatus(network, &status, genesis)
+		p.log.Trace("handshake read","NetworkId",status.NetworkId,"TD",status.TD,"CurrentBlock",status.CurrentBlock,"GenesisBlock",status.GenesisBlock)
 	}()
+
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
 	for i := 0; i < 2; i++ {
@@ -424,6 +429,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 		}
 	}
 	p.td, p.head = status.TD, status.CurrentBlock
+	p.log.Trace("handshake over","td",p.td,"head", p.head)
 	return nil
 }
 
@@ -435,9 +441,7 @@ func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Has
 	if msg.Code != StatusMsg {
 		return ErrResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
 	}
-	//if msg.Size > ProtocolMaxMsgSize {
-	//	return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-	//}
+
 	// Decode the handshake and make sure everything matches
 	if err := msg.Decode(&status); err != nil {
 		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
@@ -451,6 +455,7 @@ func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Has
 	if uint(status.ProtocolVersion) != p.version {
 		return ErrResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
 	}
+
 	return nil
 }
 
@@ -460,3 +465,5 @@ func (p *Peer) String() string {
 		fmt.Sprintf("hpb/%2d", p.version),
 	)
 }
+
+

@@ -135,6 +135,23 @@ func (tab *Table) FindNodes()(buf []*Node) {
 	return buf
 }
 
+func (tab *Table) Bondall(nodes []*Node) int{
+
+	boned := tab.bondall(nodes)
+
+	if len(boned) == 0 {
+		log.Info("No nodes bond")
+		return 0
+	}
+
+	for _, n := range boned {
+		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID)) }}
+		log.Info("Found node in database", "id", n.ID, "addr", n.addr(), "age", age)
+	}
+
+	return len(boned)
+}
+
 func (tab *Table) AddNode(node *Node)  {
 	tab.lock.Lock()
 	defer tab.lock.Unlock()
@@ -286,7 +303,6 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
 		go func(n *Node) {
-			//log.Info("bondall","Node",n.String())
 			nn, _ := tab.bond(false, n.ID, n.addr(), uint16(n.TCP))
 			rc <- nn
 		}(nodes[i])

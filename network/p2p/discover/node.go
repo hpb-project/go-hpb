@@ -88,6 +88,29 @@ type EndPoint struct {
 	TCP  uint16 // for RLPx protocol
 }
 
+
+// getnodes is a query for nodes
+type NodeReq struct {
+	Version    uint
+	Expiration uint64
+}
+
+
+// reply to getnodes
+type NodeRes struct {
+	Version    uint
+	Nodes      []RpcNode
+	Expiration uint64
+}
+
+
+type RpcNode struct {
+	IP  net.IP // len 4 for IPv4 or 16 for IPv6
+	UDP uint16 // for discovery protocol
+	TCP uint16 // for RLPx protocol
+	ID  NodeID
+}
+
 type ExtData struct {
 	Loacation  uint8   // 节点地理位置信息
 }

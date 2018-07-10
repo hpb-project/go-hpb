@@ -81,27 +81,6 @@ type (
 		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
 	}
 
-	// getnodes is a query for nodes
-	nodereq struct {
-		Version    uint
-		Expiration uint64
-	}
-
-	// reply to getnodes
-	noderes struct {
-		Version    uint
-		Nodes      []rpcNode
-		Expiration uint64
-	}
-
-
-	rpcNode struct {
-		IP  net.IP // len 4 for IPv4 or 16 for IPv6
-		UDP uint16 // for discovery protocol
-		TCP uint16 // for RLPx protocol
-		ID  NodeID
-	}
-
 )
 
 func makeEndpoint(addr *net.UDPAddr, tcpPort uint16) EndPoint {
@@ -112,7 +91,7 @@ func makeEndpoint(addr *net.UDPAddr, tcpPort uint16) EndPoint {
 	return EndPoint{IP: ip, UDP: uint16(addr.Port), TCP: tcpPort}
 }
 
-func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
+func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn RpcNode) (*Node, error) {
 	if rn.UDP <= 1024 {
 		return nil, errors.New("low port")
 	}
@@ -127,8 +106,8 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
 	return n, err
 }
 
-func nodeToRPC(n *Node) rpcNode {
-	return rpcNode{ID: n.ID, IP: n.IP, UDP: n.UDP, TCP: n.TCP}
+func NodeToRPC(n *Node) RpcNode {
+	return RpcNode{ID: n.ID, IP: n.IP, UDP: n.UDP, TCP: n.TCP}
 }
 
 type packet interface {
@@ -469,9 +448,9 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	case pongPacket:
 		req = new(pong)
 	case nodereqPacket:
-		req = new(nodereq)
+		req = new(NodeReq)
 	case noderesPacket:
-		req = new(noderes)
+		req = new(NodeRes)
 	default:
 		return nil, fromID, hash, fmt.Errorf("unknown type: %d", ptype)
 	}
@@ -518,7 +497,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 func (req *pong) name() string { return "PONG" }
 
 
-func (req *nodereq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *NodeReq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -536,7 +515,7 @@ func (req *nodereq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 		return errUnknownNode
 	}
 
-	p := noderes{Version:Version, Expiration: uint64(time.Now().Add(expiration).Unix())}
+	p := NodeRes{Version:Version, Expiration: uint64(time.Now().Add(expiration).Unix())}
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.
 	for _, b := range t.buckets {
@@ -550,7 +529,7 @@ func (req *nodereq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 				log.Error("CheckRelayIP Error")
 				continue
 			}
-			p.Nodes = append(p.Nodes, nodeToRPC(n))
+			p.Nodes = append(p.Nodes, NodeToRPC(n))
 		}
 	}
 
@@ -562,9 +541,9 @@ func (req *nodereq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 
 	return nil
 }
-func (req *nodereq) name() string { return "NODEREQ" }
+func (req *NodeReq) name() string { return "NODEREQ" }
 
-func (req *noderes) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *NodeRes) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -574,7 +553,7 @@ func (req *noderes) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 	}
 	return nil
 }
-func (req *noderes) name() string { return "NODERES" }
+func (req *NodeRes) name() string { return "NODERES" }
 
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
@@ -597,7 +576,7 @@ func (t *udp) waitping(from NodeID) error {
 func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 	nodes := make([]*Node, 0, bucketSize)
 	errRes := t.pending(toid, noderesPacket, func(r interface{}) bool {
-		reply := r.(*noderes)
+		reply := r.(*NodeRes)
 		for _, rn := range reply.Nodes {
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
@@ -609,7 +588,7 @@ func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 		return true
 	})
 
-	t.send(toaddr, nodereqPacket, &nodereq{
+	t.send(toaddr, nodereqPacket, &NodeReq{
 		Version:    Version,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})

@@ -67,6 +67,7 @@ type discoverTable interface {
 	Self() *discover.Node
 	Close()
 	FindNodes()[]*discover.Node
+	Bondall(nodes []*discover.Node) int
 
     AddNode(node *discover.Node)
 	RemoveNode(nid discover.NodeID)

@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"time"
 )
 
 // Protocol represents a P2P subprotocol implementation.
@@ -159,6 +160,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return err
 	}
 
+
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
@@ -190,7 +192,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	if err != nil {
 		return err
 	}
-	log.Info("Protocol handle massage","Msg",msg.String())
+	log.Trace("Protocol handle massage","Msg",msg.String())
 	defer msg.Discard()
 
 	if msg.Size > ProtoMaxMsg {
@@ -201,11 +203,12 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	switch {
 	case msg.Code == StatusMsg:
 		return ErrResp(ErrExtraStatusMsg, "uncontrolled status message")
-	case msg.Code == nodereqMsg:
-		go SendNodes(p,msg)
+
+	case msg.Code == ReqNodesMsg:
+		HandleReqNodesMsg(p,msg)
 		return nil
-	case msg.Code == noderesMsg:
-		go ProcNodes(p,msg)
+	case msg.Code == ResNodesMsg:
+		HandleResNodesMsg(p,msg)
 		return nil
 
 	case msg.Code == GetBlockHeadersMsg:
@@ -307,20 +310,46 @@ func (hp *HpbProto) removePeer(id string) {
 	}
 }
 
+type nodeRes struct {
+	Version    uint64
+	Nodes      []*discover.Node
+}
 
+func HandleReqNodesMsg(p *Peer, msg Msg) error {
+	nodes := p.ntab.FindNodes()
+	resp := nodeRes{Version:0x01,Nodes:nodes}
 
-func SendNodes(p *Peer,msg Msg) error {
-	p.log.Info("SendNodes")
-	//p.ntab
-	//return Send(p.rw, noderesMsg, nil)
+	// Send in a new thread
+	errc := make(chan error, 1)
+	go func() {
+		errc <- Send(p.rw, ResNodesMsg, &resp)
+	}()
+	timeout := time.NewTimer(time.Second)
+	defer timeout.Stop()
+	select {
+	case err := <-errc:
+		if err != nil {
+			return err
+		}
+	case <-timeout.C:
+		p.log.Error("Send node to remote timeout")
+	}
+
 	return nil
 }
 
-func ProcNodes(p *Peer, msg Msg) error {
-	p.log.Info("ProcNodes")
+func HandleResNodesMsg(p *Peer, msg Msg) error {
+	var request nodeRes
+	if err := msg.Decode(&request); err != nil {
+		log.Error("Received nodes from remote","msg", msg, "error", err)
+		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	log.Trace("Received nodes from remote","request", request)
+
+	go p.ntab.Bondall(request.Nodes)
+
 	return nil
 }
-
 
 ////////////////////////////////////////////////////////
 
