@@ -168,6 +168,19 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
+
+	if !conf.Node.SkipBcVersionCheck {
+		bcVersion := bc.GetBlockChainVersion(db)
+		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
+		}
+		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
+	}
+	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
+	if err != nil {
+		return nil, err
+	}
+	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 	hpbtxpool      := txpool.GetTxPool()
 
 	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
@@ -194,17 +207,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
 
-	if !conf.Node.SkipBcVersionCheck {
-		bcVersion := bc.GetBlockChainVersion(db)
-		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
-		}
-		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
-	}
-	hpbnode.Hpbbc, err = bc.NewBlockChain(db, &hpbnode.Hpbconfig.BlockChain, hpbnode.Hpbengine)
-	if err != nil {
-		return nil, err
-	}
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -213,7 +216,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
-	hpbnode.Hpbtxpool = txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
+
 
 	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
@@ -360,7 +363,7 @@ func (n *Node) Restart() error {
 }
 
 // Attach creates an RPC client attached to an in-process API handler.
-func (n *Node) Attach() (*rpc.Client, error) {
+func (n *Node) Attach(ipc *rpc.Server) (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
