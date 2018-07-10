@@ -79,7 +79,7 @@ type Node struct {
 	//Genesis *bc.Genesis `toml:",omitempty"`
 
 	Hpbengine          consensus.Engine
-	accountManager  *accounts.Manager
+	//accountManager  *accounts.Manager
 	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
 
@@ -142,6 +142,9 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
 	am, _, err := makeAccountManager(&conf.Node)
+	if am == nil {
+		log.Warn("-----am is nil")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +184,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		networkId:		   conf.Node.NetworkId,
 
 		eventMux:          eventmux,
-		accountManager:	   am,
+		accman:	   am,
 		Hpbengine:		   engine,
 
 		gasPrice:       conf.Node.GasPrice,
@@ -274,7 +277,6 @@ func makeAccountManager(conf  *config.Nodeconfig) (*accounts.Manager, string, er
 	if err := os.MkdirAll(keydir, 0700); err != nil {
 		return nil, "", err
 	}
-
 	return accounts.NewManager(keystore.NewKeyStore(keydir, scryptN, scryptP)), ephemeral, nil
 }
 
@@ -504,7 +506,7 @@ func (s *Node) StartMining(local bool) error {
 		return fmt.Errorf("hpberbase missing: %v", err)
 	}
 	if prometheus, ok := s.Hpbengine.(*prometheus.Prometheus); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		wallet, err := s.accman.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
 			log.Error("Hpberbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)

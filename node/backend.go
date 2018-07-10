@@ -101,7 +101,7 @@ func (s *Node) StopMining()         { s.Stop() }
 func (s *Node) IsMining() bool      { return s.worker.Mining() }
 func (s *Node) Miner() *worker.Miner { return s.worker }
 
-func (s *Node) APIAccountManager() *accounts.Manager  { return s.accountManager }
+func (s *Node) APIAccountManager() *accounts.Manager  { return s.accman }
 func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
 func (s *Node) TxPool() *txpool.TxPool               { return s.Hpbtxpool }
 //func (s *Node) EventMux() *event.T       		   { return s.eventMux }
