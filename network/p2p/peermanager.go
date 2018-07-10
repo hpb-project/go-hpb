@@ -138,7 +138,7 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 
-	log.Info("para form config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
+	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
 	prm.rpcmgr    = &RpcMgr{
 		ipcEndpoint:  config.Network.IpcEndpoint,
 		httpEndpoint: config.Network.HttpEndpoint,
