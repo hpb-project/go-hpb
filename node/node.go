@@ -366,7 +366,10 @@ func (n *Node) Restart() error {
 func (n *Node) Attach(ipc *rpc.Server) (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
-
+	if ipc == nil {
+		return nil, ErrNodeStopped
+	}
+	n.inprocHandler = ipc
 	return rpc.DialInProc(n.inprocHandler), nil
 }
 
