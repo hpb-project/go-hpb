@@ -29,7 +29,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"path/filepath"
 )
 
 var (
@@ -130,11 +129,16 @@ func (prm *PeerManager)Start() error {
 	//prm.server.PrivateKey = config.Node.NodeKey()
 	//
 
+	if prm.server.PrivateKey == nil {
+		log.Error("PrivateKey is nil")
+	}
+
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
 		return err
 	}
 
+	log.Info("para form config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
 	prm.rpcmgr    = &RpcMgr{
 		ipcEndpoint:  config.Network.IpcEndpoint,
 		httpEndpoint: config.Network.HttpEndpoint,
