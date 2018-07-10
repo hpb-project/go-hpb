@@ -26,6 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 var (
@@ -81,31 +82,31 @@ func localConsole(ctx *cli.Context) error {
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
-	client, err := node.Attach()
+	client, err := node.Attach(p2p.PeerMgrInst().IpcHandle())
 	if err != nil {
 		utils.Fatalf("Failed to attach to the inproc ghpb: %v", err)
 	}
-	config := console.Config{
+	configvar := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
 		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
 
-	console, err := console.New(config)
+	consolevar, err := console.New(configvar)
 	if err != nil {
 		utils.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
-	defer console.Stop(false)
+	defer consolevar.Stop(false)
 
 	// If only a short execution was requested, evaluate and return
 	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
-		console.Evaluate(script)
+		consolevar.Evaluate(script)
 		return nil
 	}
 	// Otherwise print the welcome screen and enter interactive mode
-	console.Welcome()
-	console.Interactive()
+	consolevar.Welcome()
+	consolevar.Interactive()
 
 	return nil
 }
@@ -118,27 +119,27 @@ func remoteConsole(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Unable to attach to remote ghpb: %v", err)
 	}
-	config := console.Config{
+	configvar := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
 		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
 
-	console, err := console.New(config)
+	consolevar, err := console.New(configvar)
 	if err != nil {
 		utils.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
-	defer console.Stop(false)
+	defer consolevar.Stop(false)
 
 	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
-		console.Evaluate(script)
+		consolevar.Evaluate(script)
 		return nil
 	}
 
 	// Otherwise print the welcome screen and enter interactive mode
-	console.Welcome()
-	console.Interactive()
+	consolevar.Welcome()
+	consolevar.Interactive()
 
 	return nil
 }
@@ -172,26 +173,26 @@ func ephemeralConsole(ctx *cli.Context) error {
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
-	client, err := node.Attach()
+	client, err := node.Attach(p2p.PeerMgrInst().IpcHandle())
 	if err != nil {
 		utils.Fatalf("Failed to attach to the inproc ghpb: %v", err)
 	}
-	config := console.Config{
+	configvar := console.Config{
 		DataDir: utils.MakeDataDir(ctx),
 		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
 		Client:  client,
 		Preload: utils.MakeConsolePreloads(ctx),
 	}
 
-	console, err := console.New(config)
+	consolevar, err := console.New(configvar)
 	if err != nil {
 		utils.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
-	defer console.Stop(false)
+	defer consolevar.Stop(false)
 
 	// Evaluate each of the specified JavaScript files
 	for _, file := range ctx.Args() {
-		if err = console.Execute(file); err != nil {
+		if err = consolevar.Execute(file); err != nil {
 			utils.Fatalf("Failed to execute %s: %v", file, err)
 		}
 	}
@@ -203,7 +204,7 @@ func ephemeralConsole(ctx *cli.Context) error {
 		<-abort
 		os.Exit(0)
 	}()
-	console.Stop(true)
+	consolevar.Stop(true)
 
 	return nil
 }
