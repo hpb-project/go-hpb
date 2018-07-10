@@ -123,9 +123,10 @@ func (this *SynCtrl) txRoutingLoop() {
 		case event := <-this.txCh:
 			this.routingTx(event.Tx.Hash(), event.Tx)
 
-			// Err() channel will be closed when unsubscribing.
-		case <-this.txSub.Err():
-			return
+		// Err() channel will be closed when unsubscribing.
+		// todo by xjl
+		//case <-this.txSub.Err():
+		//	return
 		}
 	}
 }

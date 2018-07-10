@@ -170,6 +170,8 @@ func (this *SynCtrl) Start() {
 			}
 		})
 	event.Subscribe(txPreReceiver, event.TxPreTopic)
+	//this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xjl
+
 	go this.txRoutingLoop()
 
 	// broadcast mined blocks
