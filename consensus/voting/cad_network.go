@@ -27,6 +27,7 @@ import (
     "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 
@@ -40,6 +41,13 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
+		peers := p2p.PeerMgrInst().PeersAll()
+		
+		fmt.Println("length:", len(peers))
+		
+		for _, peer := range peers {
+			fmt.Println("this is test:", peer.TxsRate())
+		}
 		
 		for i := 0; i < 1000; i++ {
 			//加权算法
@@ -58,6 +66,7 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 				//fmt.Println("this is test:", i)
 			}
 		}
+		
 		
 		// 先获取长度，然后进行随机获取
 		lnlen := int(math.Log2(float64(len(cadWinners))))
