@@ -14,12 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// Package discover implements the Node Discovery Protocol.
-//
-// The Node Discovery protocol provides a way to find RLPx nodes that
-// can be connected to. It uses a Kademlia-like protocol to maintain a
-// distributed database of the IDs and endpoints of all listening
-// nodes.
 package discover
 
 import (
@@ -34,9 +28,9 @@ import (
 )
 
 const (
-	bucketSize = 500 // Kademlia bucket size
+	bucketSize = 500
 	hashBits   = len(common.Hash{}) * 8
-	nBuckets   = hashBits + 1 // Number of buckets
+	nBuckets   = hashBits + 1
 	maxBonding = 5
 	autoRefreshMin = time.Second *60
 )
@@ -186,9 +180,6 @@ func (tab *Table) Close() {
 	}
 }
 
-// SetFallbackNodes sets the initial points of contact. These nodes
-// are used to connect to the network if the table is empty and there
-// are no known nodes in the database.
 func (tab *Table) SetFallbackNodes(nodes []*Node) error {
 	for _, n := range nodes {
 		if err := n.validateComplete(); err != nil {
@@ -315,22 +306,6 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	return result
 }
 
-// bond ensures the local node has a bond with the given remote node.
-// It also attempts to insert the node into the table if bonding succeeds.
-// The caller must not hold tab.mutex.
-//
-// A bond is must be established before sending findnode requests.
-// Both sides must have completed a ping/pong exchange for a bond to
-// exist. The total number of active bonding processes is limited in
-// order to restrain network use.
-//
-// bond is meant to operate idempotently in that bonding with a remote
-// node which still remembers a previously established bond will work.
-// The remote node will simply not send a ping back, causing waitping
-// to time out.
-//
-// If pinged is true, the remote node has just pinged us and one half
-// of the process can be skipped.
 func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) (*Node, error) {
 	if id == tab.self.ID {
 		return nil, errors.New("is self")

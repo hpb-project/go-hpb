@@ -37,10 +37,10 @@ import (
 
 const NodeIDBits    = 512
 
-// 节点类型
+
 type NodeType  uint8
 const(
-	InitNode   NodeType  = 0x10
+	InitNode   NodeType = 0x10
 	PreNode    NodeType = 0x31
 	HpNode     NodeType = 0x60
 	BootNode   NodeType = 0xA0
@@ -112,7 +112,7 @@ type RpcNode struct {
 }
 
 type ExtData struct {
-	Loacation  uint8   // 节点地理位置信息
+	Loacation  uint8
 }
 
 // NewNode creates a new node. It is mostly meant to be used for
