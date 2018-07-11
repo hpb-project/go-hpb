@@ -19,28 +19,34 @@ package voting
 
 import (
 	"math"
-	//"strconv"
+	"strconv"
 	"math/rand"
     "fmt"
+    "reflect"
+    "errors"
+    
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
+	//"github.com/hpb-project/go-hpb/consensus"
     "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 
 // 从网络中获取最优化的
-func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadWinner, error) {
+func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap) (*snapshots.CadWinner, error) {
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
 		type CadWinners []*snapshots.CadWinner
 		cadWinners := []*snapshots.CadWinner{} 
 		
-		cadNodeMap,_ := GetCadNodeMap(db,chain,number, hash)
+		hpbAddresses := snap.GetHpbNodes()
+		
+		//cadNodeMap,_ := GetHpbNodeSnap(db,chain,number, hash)
 		
 		// 模拟从peer中获取
+		// all nodes = Candidate node + HPB node
 		peers := p2p.PeerMgrInst().PeersAll()
 		
 		fmt.Println("length:", len(peers))
@@ -55,16 +61,24 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
 			
-			//strnum := strconv.Itoa(i)
+			strnum := strconv.Itoa(i)
 			//cadNodeMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
 			
 			//在候选列表中获取，如果候选列表中含有，在进行加入
-			if cad,exists := cadNodeMap[string(i)]; exists == true{
-			//bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
-		    //address := common.BigToAddress(bigaddr)
-				cadWinners = append(cadWinners,&snapshots.CadWinner{cad.NetworkId,cad.Address,uint64(VoteIndex)})
-				//fmt.Println("this is test:", i)
+			//if cad,exists := cadNodeMap[string(i)]; exists == true{
+			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
+			bigaddr1, _ := new(big.Int).SetString("3ee4f38f985b4c1b658dadcac9f8fb946b4b0708", 16)
+
+		    address := common.BigToAddress(bigaddr)
+		    address1 := common.BigToAddress(bigaddr1)
+
+			//fmt.Println("this is test:", i)
+			//}
+			
+			if ok, err := Contain(address, hpbAddresses); !ok && err == nil {
+				cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,address1,uint64(VoteIndex)})
 			}
+			
 		}
 		
 		
@@ -97,6 +111,25 @@ func GetBestCadNodeFromNetwork(db hpbdb.Database, chain consensus.ChainReader, n
 		return lastCadWinnerToChain,nil
 }
 
+func Contain(obj interface{}, target interface{}) (bool, error) {
+    targetValue := reflect.ValueOf(target)
+    switch reflect.TypeOf(target).Kind() {
+    case reflect.Slice, reflect.Array:
+        for i := 0; i < targetValue.Len(); i++ {
+            if targetValue.Index(i).Interface() == obj {
+                return true, nil
+            }
+        }
+    case reflect.Map:
+        if targetValue.MapIndex(reflect.ValueOf(obj)).IsValid() {
+            return true, nil
+        }
+    }
+
+    return false, errors.New("not in array")
+}
+
+/*
 func GetCadNodeMap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash) (map[string]*snapshots.CadWinner, error) {
 
 	cadWinnerms := make(map[string]*snapshots.CadWinner)
@@ -109,5 +142,6 @@ func GetCadNodeMap(db hpbdb.Database,chain consensus.ChainReader, number uint64,
 
     return cadWinnerms,nil
 }
+*/
 
 

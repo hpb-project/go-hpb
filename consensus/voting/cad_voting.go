@@ -68,7 +68,7 @@ func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64
 	header = chain.GetHeaderByNumber(number)
 	latestCadCheckPointHash = header.Hash()
 	
-	log.Info("Prometheus： 0x0846911b8271e737c976ae5dd869e1d8fa389958cac48595f9914054a354e05f", "number", number, "hash", latestCadCheckPointHash)
+	//log.Info("Prometheus： 0x0846911b8271e737c976ae5dd869e1d8fa389958cac48595f9914054a354e05f", "number", number, "hash", latestCadCheckPointHash)
 	
 	if cadNodeSnap, err := snapshots.LoadCadNodeSnap(db, latestCadCheckPointHash); err == nil {
 		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", latestCadCheckPointHash)
