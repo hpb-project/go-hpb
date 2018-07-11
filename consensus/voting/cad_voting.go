@@ -113,7 +113,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcaff", 16)
 		    address := common.BigToAddress(bigaddr)
 			//if ok, _ := Contain(address, hpbAddresses); !ok {
-			cadWinners = append(cadWinners,snapshots.CadWinner{"192.168.2"+strnum,address,uint64(VoteIndex)})
+			cadWinners = append(cadWinners,snapshots.CadWinner{"192.168.2."+strnum,address,uint64(VoteIndex)})
 			//}
 		}
 		

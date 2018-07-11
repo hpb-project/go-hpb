@@ -33,7 +33,7 @@ type API struct {
 }
 
 // 获取最新的的快照
-func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap, error) {
+func (api *API) GetHpbNodeSnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
 	if header == nil {
@@ -42,13 +42,13 @@ func (api *API) GetHistorysnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap,
 	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetHistorysnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
-	header := api.chain.GetHeaderByHash(hash)
+func (api *API) GetCandidateNodeSnap(number *rpc.BlockNumber) (*snapshots.CadNodeSnap, error) {
+	var header *types.Header
+	header = api.GetLatestBlockHeader(number)
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	//return api.prometheus.getHpbNodeSnaps(api.chain, header.Number.Uint64(), header.Hash(), nil)
-	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return voting.GetCadNodeSnap(api.prometheus.db, api.chain, header.Number.Uint64(), header.ParentHash)
 }
 
 func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
@@ -67,16 +67,6 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.GetHpbNodes(), nil
 }
 
-//跟根据区块号，获取最新的区块头
-func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header){
-	//var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	return header
-}
 
 // 获取候选节点信息
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]snapshots.CadWinner, error) {
@@ -94,21 +84,26 @@ func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]snapshots.CadWinne
 }
 
 
-
-
-// 获取候选社区选举节点信息
-func (api *API) GetCommunityNodes(number *rpc.BlockNumber) ([]common.Address, error) {
-	//获取社区选举结果
-	return nil, nil
+func (api *API) GetHpbNodeSnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, error) {
+	header := api.chain.GetHeaderByHash(hash)
+	if header == nil {
+		return nil, consensus.ErrUnknownBlock
+	}
+	//return api.prometheus.getHpbNodeSnaps(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents,api.prometheus.signatures,api.prometheus.config,api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-func (api *API) GetPrivateRandom() (string) {	
-	//rand := api.chain.GetRandom()
-	//if(rand ==""){
-		//rand = getUniqueRandom()
-	//}
-	return ""
+//跟根据区块号，获取最新的区块头
+func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header){
+	//var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	return header
 }
+
 
 func (api *API) Proposals() map[common.Address]bool {
 	api.prometheus.lock.RLock()
