@@ -213,7 +213,7 @@ func createNode(conf  *config.HpbConfig) (* node.Node, error) {
 	}
 
 	//set node rpc api
-   utils.SetNodeAPI(&conf.Node, stack) 
+   //utils.SetNodeAPI(&conf.Node, stack) 
 	return stack, nil
 }
 // startNode boots up the system node and all registered protocols, after which

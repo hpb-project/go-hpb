@@ -25,7 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/consensus/prometheus"
+	//"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/hvm"
 )
 
@@ -210,6 +210,7 @@ func makeHeader(config *config.ChainConfig, parent *types.Block, state *state.St
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.
+/*
 func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	// Initialize a fresh chain with only a genesis block
 	gspec := new(Genesis)
@@ -232,6 +233,8 @@ func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	_, err := blockchain.InsertHeaderChain(headers, 1)
 	return db, blockchain, err
 }
+*/
+
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
 func makeHeaderChain(parent *types.Header, n int, db hpbdb.Database, seed int) []*types.Header {

@@ -29,6 +29,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"path/filepath"
 )
 
 var (
@@ -52,13 +53,13 @@ type HpbPeerInfo struct {
 }
 
 type Peer struct {
-	id string
-
 	*PeerBase
 	rw MsgReadWriter
 
-	version  uint         // Protocol version negotiated
-	txsRate  uint
+	id        string
+	version   uint
+	txsRate   uint
+	bandwidth float32
 
 	head common.Hash
 	td   *big.Int
@@ -139,10 +140,18 @@ func (prm *PeerManager)Start() error {
 	}
 
 	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
+
+	absdatadir, _ := filepath.Abs(config.Node.DataDir)
+	config.Node.DataDir = absdatadir
+	config.Node.IPCPath = "ghpb.ipc"
+	ipcEndpoint:=  config.Node.IPCEndpoint()
+	httpEndpoint:= ""
+	wsEndpoint  := ""
+
 	prm.rpcmgr    = &RpcMgr{
-		ipcEndpoint:  config.Network.IpcEndpoint,
-		httpEndpoint: config.Network.HttpEndpoint,
-		wsEndpoint:   config.Network.WsEndpoint,
+		ipcEndpoint:  ipcEndpoint,
+		httpEndpoint: httpEndpoint,
+		wsEndpoint:   wsEndpoint,
 
 		httpCors:     config.Network.HTTPCors,
 		httpModules:  config.Network.HTTPModules,
@@ -151,14 +160,6 @@ func (prm *PeerManager)Start() error {
 		wsModules:    config.Network.WSModules,
 		wsExposeAll:  config.Network.WSExposeAll,
 	}
-
-	//for-test boot
-	//if prm.server.localType == discover.BootNode{
-	//	prm.rpcmgr.ipcEndpoint  = "/home/hpb/.hpb/boot.ipc"
-	//	prm.rpcmgr.httpEndpoint = "localhost:28001"
-	//	prm.rpcmgr.wsEndpoint   = "localhost:28002"
-	//}
-
 
 	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
 
@@ -218,6 +219,17 @@ func (prm *PeerManager) Peer(id string) *Peer {
 	defer prm.lock.RUnlock()
 
 	return prm.peers[id]
+}
+
+func (prm *PeerManager) PeersAll() []*Peer {
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	list := make([]*Peer, 0, len(prm.peers))
+	for _, p := range prm.peers {
+		list = append(list, p)
+	}
+	return list
 }
 
 // Len returns if the current number of peers in the set.
@@ -318,6 +330,7 @@ func (p *Peer) Info() *HpbPeerInfo {
 		Head:       hash.Hex(),
 	}
 }
+
 func (p *Peer) GetID() string {
 	return  p.id
 }
@@ -352,6 +365,22 @@ func (p *Peer) SetTxsRate(txs uint) {
 	defer p.lock.Unlock()
 	p.txsRate = txs
 }
+
+
+func (p *Peer) Bandwidth() float32 {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.bandwidth
+}
+
+func (p *Peer) SetBandwidth(bw float32) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.bandwidth = bw
+}
+
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
 	for p.knownBlocks.Size() >= maxKnownBlocks {

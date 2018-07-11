@@ -59,7 +59,7 @@ const (
 
 // RPC packet types
 const (
-	resvPacket         = iota// zero is 'reserved'
+	resvPacket         = iota
 	pingPacket
 	pongPacket
 	nodereqPacket
@@ -77,8 +77,8 @@ type (
 	// pong is the reply to ping.
 	pong struct {
 		From, To   EndPoint
-		ReplyTok   []byte // This contains the hash of the ping packet.
-		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
+		ReplyTok   []byte
+		Expiration uint64
 	}
 
 )
@@ -129,30 +129,21 @@ type udp struct {
 	priv        *ecdsa.PrivateKey
 	ourEndpoint EndPoint
 
-	addpending chan *pending
-	gotreply   chan reply
+	addpending  chan *pending
+	gotreply    chan reply
 
-	closing chan struct{}
-	nat     nat.Interface
+	closing     chan struct{}
+	nat         nat.Interface
 
 	*Table
 }
 
-// pending represents a pending reply.
-//
-// some implementations of the protocol wish to send more than one
-// reply packet to findnode. in general, any neighbors packet cannot
-// be matched up with a specific findnode packet.
-//
-// our implementation handles this by storing a callback function for
-// each pending reply. incoming packets from a node are dispatched
-// to all the callback functions for that node.
 type pending struct {
-	// these fields must match in the reply.
+
 	from  NodeID
 	ptype byte
 
-	// time when the request must complete
+
 	deadline time.Time
 
 	// callback is called when a matching reply arrives. if it returns
@@ -504,24 +495,14 @@ func (req *NodeReq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 
 	node := t.db.node(fromID)
 	if node == nil {
-		// No bond exists, we don't process the packet. This prevents
-		// an attack vector where the discovery protocol could be used
-		// to amplify traffic in a DDOS attack. A malicious actor
-		// would send a findnode request with the IP address and UDP
-		// port of the target as the source address. The recipient of
-		// the findnode packet would then send a neighbors packet
-		// (which is a much bigger packet than findnode) to the victim.
-		//log.Error("No bond exists, don't process the packet")
 		return errUnknownNode
 	}
 
 	p := NodeRes{Version:Version, Expiration: uint64(time.Now().Add(expiration).Unix())}
-	// Send neighbors in chunks with at most maxNeighbors per packet
-	// to stay below the 1280 byte limit.
+
 	for _, b := range t.buckets {
 		for _, n := range b.entries {
 			if n.ID == fromID {
-				//log.Debug("")
 				continue
 			}
 
@@ -555,7 +536,7 @@ func (req *NodeRes) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 }
 func (req *NodeRes) name() string { return "NODERES" }
 
-// ping sends a ping message to the given node and waits for a reply.
+
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	// TODO: maybe check for ReplyTo field in callback to measure RTT
 	errc := t.pending(toid, pongPacket, func(interface{}) bool { return true })
@@ -580,7 +561,7 @@ func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 		for _, rn := range reply.Nodes {
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
-				log.Info("Invalid node received", "ip", rn.IP, "addr", toaddr, "err", err)
+				log.Debug("Invalid node received", "ip", rn.IP, "addr", toaddr, "err", err)
 				continue
 			}
 			nodes = append(nodes, n)
@@ -592,7 +573,7 @@ func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 		Version:    Version,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	log.Debug("Send get nodes message","ToID",toid,"Addr",toaddr.String())
+	log.Trace("Send get nodes message","ToID",toid,"Addr",toaddr.String())
 
 	err := <-errRes
 	log.Debug("Get nodes list form boot node","NodesCount",len(nodes))
