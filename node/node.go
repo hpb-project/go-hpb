@@ -142,9 +142,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
 	am, _, err := makeAccountManager(&conf.Node)
-	if am == nil {
-		log.Warn("-----am is nil")
-	}
 	if err != nil {
 		return nil, err
 	}

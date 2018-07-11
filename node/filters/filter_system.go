@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -399,8 +400,8 @@ func (es *EventSystem) eventLoop() {
 		index = make(filterIndex)
 		subs   = es.mux.Subscribe(bc.PendingLogsEvent{})
 		// Subscribe TxPreEvent form txpool
-		txCh  = make(chan bc.TxPreEvent, txChanSize)
-		txSub = es.backend.SubscribeTxPreEvent(txCh)
+	//	txCh  = make(chan bc.TxPreEvent, txChanSize) //TODO fix
+	//	txSub = es.backend.SubscribeTxPreEvent(txCh) //TODO fix
 		// Subscribe RemovedLogsEvent
 		rmLogsCh  = make(chan bc.RemovedLogsEvent, rmLogsChanSize)
 		rmLogsSub = es.backend.SubscribeRemovedLogsEvent(rmLogsCh)
@@ -411,19 +412,20 @@ func (es *EventSystem) eventLoop() {
 		chainEvCh  = make(chan bc.ChainEvent, chainEvChanSize)
 		chainEvSub = es.backend.SubscribeChainEvent(chainEvCh)
 	)
-
+	log.Info("------------------1")
 	// Unsubscribe all events
 	defer subs.Unsubscribe()
-	defer txSub.Unsubscribe()
+	//defer txSub.Unsubscribe() //TODO fix
 	defer rmLogsSub.Unsubscribe()
 	defer logsSub.Unsubscribe()
 	defer chainEvSub.Unsubscribe()
-
+	log.Info("------------------2")
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
 		index[i] = make(map[rpc.ID]*subscription)
 	}
 
 	for {
+		log.Info("------------------3")
 		select {
 		case ev, active := <-subs.Chan():
 			if !active { // system stopped
@@ -432,8 +434,8 @@ func (es *EventSystem) eventLoop() {
 			es.broadcast(index, ev)
 
 		// Handle subscribed events
-		case ev := <-txCh:
-			es.broadcast(index, ev)
+		//case ev := <-txCh: //TODO fix
+		//	es.broadcast(index, ev) //TODO fix
 		case ev := <-rmLogsCh:
 			es.broadcast(index, ev)
 		case ev := <-logsCh:
@@ -461,8 +463,8 @@ func (es *EventSystem) eventLoop() {
 			close(f.err)
 
 		// System stopped
-		case <-txSub.Err():
-			return
+		//case <-txSub.Err(): //TODO fix
+		//	return //TODO fix
 		case <-rmLogsSub.Err():
 			return
 		case <-logsSub.Err():
@@ -470,5 +472,6 @@ func (es *EventSystem) eventLoop() {
 		case <-chainEvSub.Err():
 			return
 		}
+		log.Info("------------------4")
 	}
 }
