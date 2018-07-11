@@ -140,13 +140,13 @@ func (tab *Table) Bondall(nodes []*Node) int{
 	boned := tab.bondall(nodes)
 
 	if len(boned) == 0 {
-		log.Info("No nodes bond")
+		log.Trace("No nodes bond")
 		return 0
 	}
 
 	for _, n := range boned {
 		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID)) }}
-		log.Info("Found node in database", "id", n.ID, "addr", n.addr(), "age", age)
+		log.Trace("Found node in database", "id", n.ID, "addr", n.addr(), "age", age)
 	}
 
 	return len(boned)
@@ -344,7 +344,7 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	var result error
 	age := time.Since(tab.db.lastPong(id))
 	if node == nil || fails > 0 || age > nodeDBNodeExpiration {
-		log.Info("Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
+		log.Debug("Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
 		tab.bondmu.Lock()
 		w := tab.bonding[id]
