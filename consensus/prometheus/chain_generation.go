@@ -105,8 +105,15 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
+    // get hpb node snap
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, nil)
 	if err != nil {
+		return err
+	}
+	
+	// get andidate node snap
+	csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number-1, header.ParentHash)
+	if cerr != nil {
 		return err
 	}
 	
@@ -115,11 +122,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		c.lock.RLock()
 		
 		// Get the best peer from the network
-		if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap); err == nil{
+		if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil{
 			//caddress := common.HexToAddress(cadWinner.Address)
 			//if snap.ValidVote(address, true) {
 			header.CandAddress = cadWinner.Address // 设置地址
-			//header.VoteIndex = big.NewInt(int64(cadWinner.VoteIndex))   // 设置最新的计算结果
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 			//}

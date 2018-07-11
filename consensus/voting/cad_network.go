@@ -19,85 +19,53 @@ package voting
 
 import (
 	"math"
-	"strconv"
+	//"strconv"
 	"math/rand"
     "fmt"
     "reflect"
     "errors"
     
-	"github.com/hpb-project/go-hpb/common"
+	//"github.com/hpb-project/go-hpb/common"
 	//"github.com/hpb-project/go-hpb/consensus"
-    "math/big"
+   // "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/network/p2p"
+	//"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 
 // 从网络中获取最优化的
-func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap) (*snapshots.CadWinner, error) {
+func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadNodeSnap) (*snapshots.CadWinner, error) {
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
-		type CadWinners []*snapshots.CadWinner
-		cadWinners := []*snapshots.CadWinner{} 
+		//type CadWinners []*snapshots.CadWinner
+		bestCadWinners := []*snapshots.CadWinner{} 
 		
 		hpbAddresses := snap.GetHpbNodes()
+		cadWinners := csnap.CadWinners		
 		
-		//cadNodeMap,_ := GetHpbNodeSnap(db,chain,number, hash)
-		
-		// 模拟从peer中获取
-		// all nodes = Candidate node + HPB node
-		peers := p2p.PeerMgrInst().PeersAll()
-		
-		fmt.Println("length:", len(peers))
-		
-		for _, peer := range peers {
-			fmt.Println("this is test:", peer.TxsRate())
-		}
-		
-		for i := 0; i < 1000; i++ {
-			//加权算法
-			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
-			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
-			VoteIndex := networkBandwidth + transactionNum
-			
-			strnum := strconv.Itoa(i)
-			//cadNodeMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
-			
-			//在候选列表中获取，如果候选列表中含有，在进行加入
-			//if cad,exists := cadNodeMap[string(i)]; exists == true{
-			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
-			bigaddr1, _ := new(big.Int).SetString("3ee4f38f985b4c1b658dadcac9f8fb946b4b0708", 16)
-
-		    address := common.BigToAddress(bigaddr)
-		    address1 := common.BigToAddress(bigaddr1)
-
-			//fmt.Println("this is test:", i)
-			//}
-			
-			if ok, err := Contain(address, hpbAddresses); !ok && err == nil {
-				cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,address1,uint64(VoteIndex)})
+		for _, cadWinner := range cadWinners {
+			if ok, _ := Contain(cadWinner.Address, hpbAddresses); !ok {
+				bestCadWinners = append(bestCadWinners,&snapshots.CadWinner{cadWinner.NetworkId,cadWinner.Address,cadWinner.VoteIndex})
 			}
-			
 		}
-		
 		
 		// 先获取长度，然后进行随机获取
-		lnlen := int(math.Log2(float64(len(cadWinners))))
+		lnlen := int(math.Log2(float64(len(bestCadWinners))))
 		
 		var lastCadWinners []*snapshots.CadWinner
 		
 		for i := 0 ; i < lnlen; i++{
-			lastCadWinners = append(lastCadWinners,cadWinners[rand.Intn(len(cadWinners)-1)])
+			lastCadWinners = append(lastCadWinners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
 		}
 		
 		//开始进行排序获取最大值
-		bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
-		address := common.BigToAddress(bigaddr)
+		//bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
+		//address := common.BigToAddress(bigaddr)
+		//lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33",address,uint64(0)}
 		
-		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33",address,uint64(0)}
+		var lastCadWinnerToChain *snapshots.CadWinner
 		voteIndexTemp := uint64(0)
-		
 		
 		for _, lastCadWinner := range lastCadWinners {
 	        if(lastCadWinner.VoteIndex > voteIndexTemp){
@@ -105,9 +73,8 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap) (*snapshots.CadWinne
 	        	  lastCadWinnerToChain = lastCadWinner //返回最优的
 	        }
 	    }
-		
 		//fmt.Println("len:", voteIndexTemp)
-		fmt.Println("len:", lastCadWinnerToChain.VoteIndex)
+		fmt.Println("Best VoteIndex:", lastCadWinnerToChain.VoteIndex)
 		return lastCadWinnerToChain,nil
 }
 

@@ -53,8 +53,8 @@ type CadWinner struct {
 }
 
 // 创建对象
-func NewCadNodeSnap(number uint64, hash common.Hash,CadWinners  []CadWinner) CadNodeSnap {
-	cadNodeSnap := CadNodeSnap{
+func NewCadNodeSnap(number uint64, hash common.Hash, CadWinners []CadWinner) *CadNodeSnap {
+	cadNodeSnap := &CadNodeSnap{
 		Number:   number,
 		Hash:     hash,
 		CadWinners: CadWinners,

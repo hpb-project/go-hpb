@@ -19,16 +19,18 @@ package voting
 
 import (
 	//"math"
-	//"strconv"
-	//"math/rand"
-   // "fmt"
+	"math/big"
+	"strconv"
+	"math/rand"
+    "fmt"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/blockchain/types"
+	//"github.com/hpb-project/go-hpb/blockchain/types"
 
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 const (
@@ -43,10 +45,10 @@ const (
 func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
 	
 	//业务逻辑
-	var (
-	 header  *types.Header
-	 latestCadCheckPointHash common.Hash
-	)
+	//var (
+	// header  *types.Header
+	// latestCadCheckPointHash common.Hash
+	//)
 	
 	/*
 	// 进来的请求恰好在投票检查点，此时重新计票
@@ -64,90 +66,57 @@ func GetCadNodeSnap(db hpbdb.Database,chain consensus.ChainReader, number uint64
 
 	header = chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
 	*/
-	number = uint64(0)
-	header = chain.GetHeaderByNumber(number)
-	latestCadCheckPointHash = header.Hash()
+	//number = uint64(0)
+	//header = chain.GetHeaderByNumber(number)
+	//latestCadCheckPointHash = header.Hash()
 	
 	//log.Info("Prometheus： 0x0846911b8271e737c976ae5dd869e1d8fa389958cac48595f9914054a354e05f", "number", number, "hash", latestCadCheckPointHash)
 	
-	if cadNodeSnap, err := snapshots.LoadCadNodeSnap(db, latestCadCheckPointHash); err == nil {
-		log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", latestCadCheckPointHash)
-		return cadNodeSnap,nil
-	} else {
-		log.Error("read failed:", err)
+	//if cadNodeSnap, err := snapshots.LoadCadNodeSnap(db, latestCadCheckPointHash); err == nil {
+	//	log.Info("Prometheus： Loaded voting comNodeSnap form disk", "number", number, "hash", latestCadCheckPointHash)
+	//	return cadNodeSnap,nil
+	//} else {
+	//	log.Error("read failed:", err)
 		
 		if cadNodeSnap, err1 := CalcuCadNodeSnap(db,number, hash); err1 == nil {
 			return cadNodeSnap,nil
 		}
-	}
+	//}
 	return nil,nil
 }
 
 // Get snap in community by elections,
 func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
 
-		//开始读取智能合约
-		// 
-		//
-		//str := strconv.FormatUint(number, 10)
-		// 模拟从外部获取		
-		//type CadWinners []*snapshots.CadWinner
-		//w1 := &snapshots.CadWinner{"192.168.2.14","0xfa7b9770ca4cb04296cac84f37736d4041251cdf",uint64(10)}
-		//w2 := &snapshots.CadWinner{"192.168.2.12","0x058fee5c36a11fc9be56b2a5b2c40372c983c4a2",uint64(10)}
-		//w3 := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",uint64(10)}
 		
-		//cadWinners := CadWinners([]*snapshots.CadWinner{w1, w2, w3}) 
-		//cadWinners := []*snapshots.CadWinner{} 
-		//var cadWinners [10]*snapshots.CadWinner{} 
-		//从peers中获取
+		cadWinners := []snapshots.CadWinner{} 
+		
+		//cadNodeMap,_ := GetHpbNodeSnap(db,chain,number, hash)
+		// all nodes = Candidate node + HPB node
+		peers := p2p.PeerMgrInst().PeersAll()
+		
+		fmt.Println("length:", len(peers))
+		
+		for _, peer := range peers {
+			fmt.Println("this is test:", peer.TxsRate())
+		}
+				
 		// 模拟从peer中获取
-		
-		//cadWinners := make([]*snapshots.CadWinner,10)
-		
-		
-		/* 使用 make 函数 */
-		//CadWinnerMap := make(map[uint64]*snapshots.CadWinner)
-		
-		// 模拟从peer中获取
-		/*
-		for i := 0; i < 10; i++ {
-			
+		for i := 0; i < 150; i++ {
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
-			
 			strnum := strconv.Itoa(i)
-			//CadWinnerMap[uint64(VoteIndex)] = &snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,uint64(VoteIndex)}
-		    cadWinners = append(cadWinners,&snapshots.CadWinner{"192.168.2"+strnum,"0xd3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum,VoteIndex})
-		}
-		*/
-		/*
-		// 先获取长度，然后进行随机获取
-		lnlen := int(math.Log2(float64(len(cadWinners))))
-		
-		var lastCadWinners []*snapshots.CadWinner
-		
-		for i := 0 ; i < lnlen; i++{
-			lastCadWinners = append(lastCadWinners,cadWinners[rand.Intn(len(cadWinners)-1)])
+			//在候选列表中获取，如果候选列表中含有，在进行加入
+			//if cad,exists := cadNodeMap[string(i)]; exists == true{
+			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcaff", 16)
+		    address := common.BigToAddress(bigaddr)
+			//if ok, _ := Contain(address, hpbAddresses); !ok {
+			cadWinners = append(cadWinners,snapshots.CadWinner{"192.168.2"+strnum,address,uint64(VoteIndex)})
+			//}
 		}
 		
-		//fmt.Println("len:", len(lastCadWinners))
-		
-		//开始进行排序获取最大值
-		lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33","0xd3b686a79f4da9a415c34ef95926719bb8dfcafd",float64(10)}
-		voteIndexTemp := float64(0)
-		
-		for _, lastCadWinner := range lastCadWinners {
-	        if(lastCadWinner.VoteIndex > voteIndexTemp){
-	        	  voteIndexTemp = lastCadWinner.VoteIndex
-	        	  lastCadWinnerToChain = lastCadWinner
-	        }
-	    }
-		
-		fmt.Println("len:", voteIndexTemp)
-		fmt.Println("len:", lastCadWinnerToChain.VoteIndex)
-
 		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
 
         log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].Address)
@@ -158,7 +127,6 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 				return nil, err
 		}
 		log.Trace("Stored genesis voting CadNodeSnap to disk")
-		*/
-		//return cadNodeSnap,nil
-		return nil,nil
+		
+		return cadNodeSnap,nil
 }
