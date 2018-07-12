@@ -290,6 +290,42 @@ func (c *Nodeconfig) NodeKey() error {
 }
 
 
+// TODO: shanlin to del this function
+// NodeKey retrieves the currently configured private key of the node, checking
+// first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, a new one is generated.
+func (c *Nodeconfig) NodeKeyTemp() *ecdsa.PrivateKey {
+
+	// Generate ephemeral key if no datadir is being used.
+	if c.DataDir == "" {
+		key, err := crypto.GenerateKey()
+		if err != nil {
+			log.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
+		}
+		return key
+	}
+
+	keyfile := c.ResolvePath(DatadirPrivateKey)
+	if key, err := crypto.LoadECDSA(keyfile); err == nil {
+		return key
+	}
+	// No persistent key found, generate and store a new one.
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		log.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
+	}
+	instanceDir := filepath.Join(c.DataDir, c.name())
+	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+		return key
+	}
+	keyfile = filepath.Join(instanceDir, DatadirPrivateKey)
+	if err := crypto.SaveECDSA(keyfile, key); err != nil {
+		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+	}
+	return key
+}
+
 // parsePersistentNodes parses a list of discovery node URLs loaded from a .json
 // file from within the data directory.
 func (c *Nodeconfig) parsePersistentNodes(path string) []*discover.Node {
