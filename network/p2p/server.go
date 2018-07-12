@@ -65,9 +65,7 @@ type Config struct {
 	ListenAddr      string
 	NAT             nat.Interface `toml:",omitempty"`
 
-	SelfNodeType    string
 	EnableMsgEvents bool
-
 	NetworkId       uint64
 }
 

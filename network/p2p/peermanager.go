@@ -107,7 +107,6 @@ func (prm *PeerManager)Start() error {
 	prm.server.Config = Config{
 			PrivateKey: config.Node.PrivateKey,
 			Name: config.Network.Name,
-			SelfNodeType: config.Network.RoleType,
 			BootstrapNodes: config.Network.BootstrapNodes,
 			//StaticNodes: config.,
 			NetRestrict: config.Network.NetRestrict,
@@ -122,8 +121,12 @@ func (prm *PeerManager)Start() error {
 	prm.hpbpro.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
+
 	prm.server.localType = discover.InitNode
-	//prm.server.localType = discover.BootNode
+	if config.Network.RoleType == "bootnode" {
+		prm.server.localType = discover.BootNode
+	}
+	log.Debug("Manager start server para","NodeType",prm.server.localType.ToString())
 
 	// for-test
 	//PrivateKey is not set by node
