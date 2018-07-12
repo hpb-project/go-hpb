@@ -137,7 +137,7 @@ type conn struct {
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
-	rend  discover.EndPoint
+	//rend  discover.EndPoint
 }
 
 type transport interface {
@@ -668,8 +668,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
-	c.rend.IP, c.rend.UDP, c.rend.TCP = phs.End.IP,phs.End.UDP,phs.End.TCP
-	log.Info("handshake exchange end point","endpoint",c.rend)
+	//c.rend.IP, c.rend.UDP, c.rend.TCP = phs.End.IP,phs.End.UDP,phs.End.TCP
+	//log.Info("handshake exchange end point","endpoint",c.rend)
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
 }

@@ -434,7 +434,7 @@ func (tab *Table) add(new *Node) {
 	}
 
 	added := b.replace(new, oldest)
-	log.Info("add node to bucket","added",added,"node",new.String())
+	log.Trace("add node to bucket","added",added,"node",new.String())
 	if added && tab.nodeAddedHook != nil {
 		//log.Info("Add To Bucket Node","Node",new.String())
 		tab.nodeAddedHook(new)
