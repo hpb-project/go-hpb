@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -66,7 +65,6 @@ type SynCtrl struct {
 	AcceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      *txpool.TxPool
-	chaindb     hpbdb.Database
 	chainconfig *config.ChainConfig
 	maxPeers    int
 
@@ -102,7 +100,7 @@ func InstanceSynCtrl() *SynCtrl {
 				return nil
 			}
 			// todo for rujia
-			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, intan.Node.NetworkId, txpool.GetTxPool(), nil, nil)
+			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), nil)
 			if err != nil {
 				syncInstance = nil
 			}
@@ -114,12 +112,11 @@ func InstanceSynCtrl() *SynCtrl {
 }
 
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, networkId uint64, txpool *txpool.TxPool,
-	engine consensus.Engine, chaindb hpbdb.Database) (*SynCtrl, error) {
+func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.TxPool,
+	engine consensus.Engine) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		eventMux:    new(sub.TypeMux),
 		txpool:      txpool,
-		chaindb:     chaindb,
 		chainconfig: cfg,
 		newPeerCh:   make(chan *p2p.Peer),
 		noMorePeers: make(chan struct{}),
@@ -135,7 +132,7 @@ func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, networkId uint64,
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
-	synctrl.syner = NewSyncer(mode, chaindb, synctrl.eventMux, nil, synctrl.removePeer)
+	synctrl.syner = NewSyncer(mode, db.GetHpbDbInstance(), synctrl.eventMux, nil, synctrl.removePeer)
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
