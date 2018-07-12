@@ -31,7 +31,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -412,20 +411,17 @@ func (es *EventSystem) eventLoop() {
 		chainEvCh  = make(chan bc.ChainEvent, chainEvChanSize)
 		chainEvSub = es.backend.SubscribeChainEvent(chainEvCh)
 	)
-	log.Info("------------------1")
 	// Unsubscribe all events
 	defer subs.Unsubscribe()
 	//defer txSub.Unsubscribe() //TODO fix
 	defer rmLogsSub.Unsubscribe()
 	defer logsSub.Unsubscribe()
 	defer chainEvSub.Unsubscribe()
-	log.Info("------------------2")
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
 		index[i] = make(map[rpc.ID]*subscription)
 	}
 
 	for {
-		log.Info("------------------3")
 		select {
 		case ev, active := <-subs.Chan():
 			if !active { // system stopped
@@ -472,6 +468,5 @@ func (es *EventSystem) eventLoop() {
 		case <-chainEvSub.Err():
 			return
 		}
-		log.Info("------------------4")
 	}
 }

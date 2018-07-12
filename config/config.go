@@ -196,9 +196,11 @@ func  New() (*HpbConfig) {
 			Gas:		DefaultGasConfig,
 		}
 		log.Info("Create New HpbConfig object")
+		log.Info("99999999999999999 the IPCENdpoint is ", HpbConfigIns.Network.IpcEndpoint)
 		INSTANCE.Store(HpbConfigIns)
 		return HpbConfigIns
 	}
+
 	INSTANCE.Store(HpbConfigIns)
 	return HpbConfigIns
 

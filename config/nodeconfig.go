@@ -80,6 +80,7 @@ var DefaultConfig = Nodeconfig{
 	LightPeers:            20,
 	DatabaseCache:         128,
 	GasPrice:              big.NewInt(18 * Shannon),
+	IPCPath:               "ghpb.ipc",
 	/* HPB don't need dymatic gasprice
 	GPO: gasprice.Config{
 		Blocks:     10,

@@ -763,7 +763,6 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Node.IPCPath = ctx.GlobalString(IPCPathFlag.Name)
 	}
 	//config HTTPHost
-	log.Info("====httphost is ", cfg.Network.HTTPHost)
 	if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.Network.HTTPHost == "" {
 		cfg.Network.HTTPHost = "127.0.0.1"
 		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
