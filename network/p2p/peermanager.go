@@ -52,25 +52,6 @@ type HpbPeerInfo struct {
 	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
 }
 
-type Peer struct {
-	*PeerBase
-	rw MsgReadWriter
-
-	id        string
-	version   uint
-	txsRate   uint
-	bandwidth float32
-	address   common.Address
-
-	head common.Hash
-	td   *big.Int
-	lock sync.RWMutex
-
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-}
-
-
 type PeerManager struct {
 	peers  map[string]*Peer
 	lock   sync.RWMutex
@@ -106,22 +87,22 @@ func (prm *PeerManager)Start() error {
 	}
 
 	prm.server.Config = Config{
-			PrivateKey: config.Node.PrivateKey,
-			Name: config.Network.Name,
-			BootstrapNodes: config.Network.BootstrapNodes,
-			//StaticNodes: config.,
-			NetRestrict: config.Network.NetRestrict,
-			NodeDatabase: config.Network.NodeDatabase,
-			ListenAddr: config.Network.ListenAddr,
-			NAT: config.Network.NAT,
-			EnableMsgEvents: config.Network.EnableMsgEvents,
-			NetworkId: config.Node.NetworkId,
-			Protocols: prm.hpbpro.Protocols(),
+		NAT:        config.Network.NAT,
+		Name:       config.Network.Name,
+		PrivateKey: config.Node.PrivateKey,
+		NetworkId:  config.Node.NetworkId,
+		ListenAddr: config.Network.ListenAddr,
+
+		NetRestrict:    config.Network.NetRestrict,
+		NodeDatabase:   config.Network.NodeDatabase,
+		BootstrapNodes: config.Network.BootstrapNodes,
+		EnableMsgEvents:config.Network.EnableMsgEvents,
+
+		Protocols: prm.hpbpro.Protocols(),
 	}
 
 	prm.hpbpro.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
-
 
 	prm.server.localType = discover.InitNode
 	if config.Network.RoleType == "bootnode" {
@@ -162,7 +143,6 @@ func (prm *PeerManager)Start() error {
 		wsModules:    config.Network.WSModules,
 		wsExposeAll:  config.Network.WSExposeAll,
 	}
-
 	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
 
 	return nil
@@ -309,206 +289,6 @@ func (api *PeerManager) Peers() []*PeerInfo {
 
 func (api *PeerManager) NodeInfo() *NodeInfo {
 	return nil
-}
-
-func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
-	id := pr.ID()
-
-	return &Peer{
-		PeerBase:    pr,
-		rw:          rw,
-		version:     version,
-		id:          fmt.Sprintf("%x", id[:8]),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
-	}
-}
-
-// Info gathers and returns a collection of metadata known about a peer.
-func (p *Peer) Info() *HpbPeerInfo {
-	hash, td := p.Head()
-
-	return &HpbPeerInfo{
-		Version:    p.version,
-		Difficulty: td,
-		Head:       hash.Hex(),
-	}
-}
-
-func (p *Peer) GetID() string {
-	return  p.id
-}
-// Head retrieves a copy of the current head hash and total difficulty of the
-// peer.
-func (p *Peer) Head() (hash common.Hash, td *big.Int) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	copy(hash[:], p.head[:])
-	return hash, new(big.Int).Set(p.td)
-}
-
-// SetHead updates the head hash and total difficulty of the peer.
-func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	copy(p.head[:], hash[:])
-	p.td.Set(td)
-}
-
-func (p *Peer) TxsRate() uint {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	return p.txsRate
-}
-
-func (p *Peer) SetTxsRate(txs uint) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.txsRate = txs
-}
-
-
-func (p *Peer) Bandwidth() float32 {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	return p.bandwidth
-}
-
-func (p *Peer) SetBandwidth(bw float32) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.bandwidth = bw
-}
-
-func (p *Peer) Address() common.Address {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	return p.address
-}
-
-func (p *Peer) KnownBlockAdd(hash common.Hash){
-	for p.knownBlocks.Size() >= maxKnownBlocks {
-		p.knownBlocks.Pop()
-	}
-	p.knownBlocks.Add(hash)
-}
-
-func (p *Peer) KnownBlockHas(hash common.Hash) bool{
-	return p.knownBlocks.Has(hash)
-}
-
-func (p *Peer) KnownBlockSize() int{
-	return p.knownBlocks.Size()
-}
-
-
-func (p *Peer) KnownTxsAdd(hash common.Hash){
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
-	}
-	p.knownTxs.Add(hash)
-}
-
-func (p *Peer) KnownTxsHas(hash common.Hash) bool{
-	return p.knownTxs.Has(hash)
-}
-
-func (p *Peer) KnownTxsSize() int{
-	return p.knownTxs.Size()
-}
-
-func (p *Peer) SendData(msgCode uint64, data interface{}) error {
-	return Send(p.rw, msgCode, data)
-}
-
-
-// statusData is the network packet for the status message.
-type statusData struct {
-	ProtocolVersion uint32
-	NetworkId       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
-	Address         common.Address
-}
-
-// Handshake executes the eth protocol handshake, negotiating version number,
-// network IDs, difficulties, head and genesis blocks.
-func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
-	// Send out own handshake in a new thread
-	errc := make(chan error, 2)
-	var status statusData // safe to read after two values have been received from errc
-
-	go func() {
-		p.log.Trace("handshake send","NetworkId",network,"TD",td,"CurrentBlock",head,"GenesisBlock",genesis)
-		errc <- Send(p.rw, StatusMsg, &statusData{
-			ProtocolVersion: uint32(p.version),
-			NetworkId:       network,
-			TD:              td,
-			CurrentBlock:    head,
-			GenesisBlock:    genesis,
-			//TODO: exchange address,and set to peer
-		})
-	}()
-	go func() {
-		errc <- p.readStatus(network, &status, genesis)
-		p.log.Trace("handshake read","NetworkId",status.NetworkId,"TD",status.TD,"CurrentBlock",status.CurrentBlock,"GenesisBlock",status.GenesisBlock)
-	}()
-
-	timeout := time.NewTimer(handshakeTimeout)
-	defer timeout.Stop()
-	for i := 0; i < 2; i++ {
-		select {
-		case err := <-errc:
-			if err != nil {
-				return err
-			}
-		case <-timeout.C:
-			return DiscReadTimeout
-		}
-	}
-	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.Address
-	p.log.Trace("handshake over","td",p.td,"head", p.head, "address",p.address)
-	return nil
-}
-
-func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Hash) (err error) {
-	msg, err := p.rw.ReadMsg()
-	if err != nil {
-		return err
-	}
-	if msg.Code != StatusMsg {
-		return ErrResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
-	}
-
-	// Decode the handshake and make sure everything matches
-	if err := msg.Decode(&status); err != nil {
-		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	if status.GenesisBlock != genesis {
-		return ErrResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
-	}
-	if status.NetworkId != network {
-		return ErrResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
-	}
-	if uint(status.ProtocolVersion) != p.version {
-		return ErrResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
-	}
-
-	return nil
-}
-
-// String implements fmt.Stringer.
-func (p *Peer) String() string {
-	return fmt.Sprintf("Peer %s [%s]", p.id,
-		fmt.Sprintf("hpb/%2d", p.version),
-	)
 }
 
 
