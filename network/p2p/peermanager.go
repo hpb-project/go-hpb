@@ -435,6 +435,7 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+	Address         common.Address
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
@@ -452,6 +453,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
+			//TODO: exchange address,and set to peer
 		})
 	}()
 	go func() {
@@ -471,8 +473,8 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			return DiscReadTimeout
 		}
 	}
-	p.td, p.head = status.TD, status.CurrentBlock
-	p.log.Trace("handshake over","td",p.td,"head", p.head)
+	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.Address
+	p.log.Trace("handshake over","td",p.td,"head", p.head, "address",p.address)
 	return nil
 }
 
