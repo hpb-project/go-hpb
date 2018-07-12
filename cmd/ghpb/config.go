@@ -73,6 +73,7 @@ func MakeConfigNode(ctx *cli.Context) (*config.HpbConfig) {
 	}
 	// Apply flags.
 	utils.SetConfig(ctx, cfg)
+	log.Info("==============the datadir is", cfg.Node.DataDir)
 	//set cfg version
 	cfg.Node.Version = config.VersionWithCommit(GitCommit)
 

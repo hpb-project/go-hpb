@@ -125,6 +125,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 			return nil, err
 		}
 		conf.Node.DataDir = absdatadir
+
 	}
 
 	// Ensure that the instance name doesn't cause weird conflicts with
