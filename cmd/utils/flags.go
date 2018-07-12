@@ -816,12 +816,6 @@ func SetConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 }
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-
-	setNodeUserIdent(ctx, &cfg.Node)
-	setIPC(ctx, &cfg.Node)
-	setNodeKey(ctx, &cfg.Node)
-	cfg.Node.NodeKey()
-
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.Node.DataDir = ctx.GlobalString(DataDirFlag.Name)
@@ -905,6 +899,11 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		}
 		cfg.Node.DataDir = absdatadir
 	}
+
+	setNodeUserIdent(ctx, &cfg.Node)
+	setIPC(ctx, &cfg.Node)
+	setNodeKey(ctx, &cfg.Node)
+	cfg.Node.NodeKey()
 }
 
 func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
