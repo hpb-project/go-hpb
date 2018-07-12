@@ -60,6 +60,7 @@ type Peer struct {
 	version   uint
 	txsRate   uint
 	bandwidth float32
+	address   common.Address
 
 	head common.Hash
 	td   *big.Int
@@ -129,12 +130,8 @@ func (prm *PeerManager)Start() error {
 	log.Debug("Manager start server para","NodeType",prm.server.localType.ToString())
 
 	// for-test
-	//PrivateKey is not set by node
 	log.Info("para from config","PrivateKey",config.Node.PrivateKey)
 	prm.server.PrivateKey =config.Node.NodeKeyTemp()
-	log.Info("server","PrivateKey",prm.server.PrivateKey)
-
-
 	if prm.server.PrivateKey == nil {
 		log.Error("PrivateKey is nil")
 	}
@@ -144,8 +141,8 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 
+	// for-test
 	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
-
 	absdatadir, _ := filepath.Abs(config.Node.DataDir)
 	config.Node.DataDir = absdatadir
 	config.Node.IPCPath = "ghpb.ipc"
@@ -388,6 +385,12 @@ func (p *Peer) SetBandwidth(bw float32) {
 	p.bandwidth = bw
 }
 
+func (p *Peer) Address() common.Address {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.address
+}
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
 	for p.knownBlocks.Size() >= maxKnownBlocks {
