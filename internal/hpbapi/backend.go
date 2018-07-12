@@ -64,7 +64,7 @@ type Backend interface {
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
-	SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
+	//SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
 
 	ChainConfig() *config.ChainConfig
 	CurrentBlock() *types.Block
