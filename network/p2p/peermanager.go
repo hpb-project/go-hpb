@@ -128,7 +128,7 @@ func (prm *PeerManager)Start() error {
 	// for-test
 	//PrivateKey is not set by node
 	//prm.server.PrivateKey = config.Node.NodeKey()
-	//
+	log.Info("para from config","PrivateKey",config.Node.PrivateKey)
 
 	if prm.server.PrivateKey == nil {
 		log.Error("PrivateKey is nil")
