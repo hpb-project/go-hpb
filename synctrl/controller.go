@@ -77,7 +77,7 @@ type SynCtrl struct {
 
 	eventMux      *sub.TypeMux
 	txCh          chan bc.TxPreEvent
-	txSub         sub.Subscription
+	//txSub         sub.Subscription
 	minedBlockSub *sub.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
@@ -170,7 +170,7 @@ func (this *SynCtrl) Start() {
 			}
 		})
 	event.Subscribe(txPreReceiver, event.TxPreTopic)
-	//this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)//todo by xjl
+	//this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)
 
 	go this.txRoutingLoop()
 
@@ -286,7 +286,7 @@ func (this *SynCtrl) Syncer() *Syncer {
 func (this *SynCtrl) Stop() {
 	log.Info("Stopping Hpb data sync")
 
-	this.txSub.Unsubscribe()         // quits txRoutingLoop
+	//this.txSub.Unsubscribe()         // quits txRoutingLoop
 	this.minedBlockSub.Unsubscribe() // quits minedRoutingLoop
 
 	// Quit the sync loop.

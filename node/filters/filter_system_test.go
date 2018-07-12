@@ -72,9 +72,9 @@ func (b *testBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (t
 	return bc.GetBlockReceipts(b.db, blockHash, num), nil
 }
 
-func (b *testBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
-	return b.txFeed.Subscribe(ch)
-}
+//func (b *testBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
+//	return b.txFeed.Subscribe(ch)
+//}
 
 func (b *testBackend) SubscribeRemovedLogsEvent(ch chan<- bc.RemovedLogsEvent) sub.Subscription {
 	return b.rmLogsFeed.Subscribe(ch)
