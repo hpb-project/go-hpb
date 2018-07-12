@@ -60,6 +60,7 @@ type Peer struct {
 	version   uint
 	txsRate   uint
 	bandwidth float32
+	address   common.Address
 
 	head common.Hash
 	td   *big.Int
@@ -107,7 +108,6 @@ func (prm *PeerManager)Start() error {
 	prm.server.Config = Config{
 			PrivateKey: config.Node.PrivateKey,
 			Name: config.Network.Name,
-			SelfNodeType: config.Network.RoleType,
 			BootstrapNodes: config.Network.BootstrapNodes,
 			//StaticNodes: config.,
 			NetRestrict: config.Network.NetRestrict,
@@ -122,14 +122,16 @@ func (prm *PeerManager)Start() error {
 	prm.hpbpro.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
+
 	prm.server.localType = discover.InitNode
-	//prm.server.localType = discover.BootNode
+	if config.Network.RoleType == "bootnode" {
+		prm.server.localType = discover.BootNode
+	}
+	log.Debug("Manager start server para","NodeType",prm.server.localType.ToString())
 
 	// for-test
-	//PrivateKey is not set by node
-	//prm.server.PrivateKey = config.Node.NodeKey()
 	log.Info("para from config","PrivateKey",config.Node.PrivateKey)
-
+	prm.server.PrivateKey =config.Node.NodeKeyTemp()
 	if prm.server.PrivateKey == nil {
 		log.Error("PrivateKey is nil")
 	}
@@ -139,8 +141,8 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 
+	// for-test
 	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
-
 	absdatadir, _ := filepath.Abs(config.Node.DataDir)
 	config.Node.DataDir = absdatadir
 	config.Node.IPCPath = "ghpb.ipc"
@@ -165,6 +167,8 @@ func (prm *PeerManager)Start() error {
 
 	return nil
 }
+
+
 
 func (prm *PeerManager)Stop(){
 
@@ -381,6 +385,12 @@ func (p *Peer) SetBandwidth(bw float32) {
 	p.bandwidth = bw
 }
 
+func (p *Peer) Address() common.Address {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.address
+}
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
 	for p.knownBlocks.Size() >= maxKnownBlocks {
@@ -425,6 +435,7 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+	Address         common.Address
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
@@ -442,6 +453,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
+			//TODO: exchange address,and set to peer
 		})
 	}()
 	go func() {
@@ -461,8 +473,8 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			return DiscReadTimeout
 		}
 	}
-	p.td, p.head = status.TD, status.CurrentBlock
-	p.log.Trace("handshake over","td",p.td,"head", p.head)
+	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.Address
+	p.log.Trace("handshake over","td",p.td,"head", p.head, "address",p.address)
 	return nil
 }
 

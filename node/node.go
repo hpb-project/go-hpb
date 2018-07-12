@@ -181,7 +181,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 	hpbtxpool      := txpool.GetTxPool()
 
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), conf.Node.NetworkId, hpbtxpool,engine, db)
+	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, engine)
 
 	hpbnode := &Node{
 		Hpbconfig:         conf,
