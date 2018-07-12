@@ -181,6 +181,8 @@ type Nodeconfig struct {
 
 	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
+	DefaultAccount    string
+
 
 }
 // NodeDB returns the path to the discovery node database.
