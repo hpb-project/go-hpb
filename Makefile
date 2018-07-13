@@ -16,13 +16,19 @@ ghpb:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
-swarm:
-	build/env.sh go run build/ci.go install ./cmd/swarm
+promfile:
+	build/env.sh go run build/ci.go install ./consensus/promfile
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
+	@echo "Run \"$(GOBIN)/promfile\" to launch promfile."
 
 all:
-	build/env.sh go run build/ci.go install
+	build/env.sh go run build/ci.go install ./cmd/ghpb
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+	
+	build/env.sh go run build/ci.go install ./consensus/promfile
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/promfile\" to launch promfile."
 
 android:
 	build/env.sh go run build/ci.go aar --local
