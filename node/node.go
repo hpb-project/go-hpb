@@ -196,14 +196,11 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}
 		bc.WriteBlockChainVersion(hpbdb, bc.BlockChainVersion)
 	}
-	hpbnode.Hpbbc    = block
 	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
 	if err != nil {
 		return nil, err
 	}
-	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
-	hpbtxpool      := txpool.GetTxPool()
-	hpbnode.Hpbtxpool = hpbtxpool
+
 
 	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
 	hpbgenesis := bc.DevGenesisBlock()
@@ -213,7 +210,14 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	stored := bc.GetCanonicalHash(hpbdb, 0)
 	//syncctr := nil
 	if (stored == common.Hash{}) {
-		hpbnode.Hpbengine = CreateConsensusEngine(conf, chainConfig, hpbdb)
+		engine      :=  prometheus.InstancePrometheus()
+		block.InitWithEngine(engine)
+		hpbnode.Hpbbc = block
+
+		txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
+		hpbtxpool      := txpool.GetTxPool()
+		hpbnode.Hpbtxpool = hpbtxpool
+
 		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 		syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
 		if err != nil {
@@ -227,10 +231,12 @@ func New(conf  *config.HpbConfig) (*Node, error){
 			hpbnode.Hpbbc.SetHead(compat.RewindTo)
 			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
 		}
+
+		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 	}
 
 
-	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+
 
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
 	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}

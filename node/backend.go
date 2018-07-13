@@ -27,7 +27,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/node/filters"
 	"github.com/hpb-project/go-hpb/synctrl"
 )
 
@@ -62,12 +61,12 @@ func (s *Node) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
-		}, {
+		},/* { //TODO lsl
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,
-		}, {
+		}, */{
 			Namespace: "admin",
 			Version:   "1.0",
 			Service:   NewPrivateAdminAPI(s),
