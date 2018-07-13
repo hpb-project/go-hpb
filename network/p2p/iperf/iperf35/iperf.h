@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <iperf_api.h>
+#include "./include/iperf_api.h"
 
 #ifdef __cplusplus
 extern "C" { /* open extern "C" */

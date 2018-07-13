@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <iperf_api.h>
+#include "./include/iperf_api.h"
 #include <iperf.h>
 
 struct iperf_test *SERVER   = NULL;
