@@ -32,6 +32,7 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -175,7 +176,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//create all object
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
-
 	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
 	hpbnode.chainDb = hpbdb
 
@@ -189,13 +189,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 
-	if !conf.Node.SkipBcVersionCheck {
-		bcVersion := bc.GetBlockChainVersion(hpbdb)
-		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
-		}
-		bc.WriteBlockChainVersion(hpbdb, bc.BlockChainVersion)
-	}
 	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
 	if err != nil {
 		return nil, err
@@ -203,14 +196,28 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 
 	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
-	hpbgenesis := bc.DevGenesisBlock()
+	/*hpbgenesis := bc.DevGenesisBlock()
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(hpbdb, hpbgenesis)
-	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, config.BloomBitsBlocks)
+	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, config.BloomBitsBlocks)*/
 
 	stored := bc.GetCanonicalHash(hpbdb, 0)
-	//syncctr := nil
-	if (stored == common.Hash{}) {
+	if (stored != (common.Hash{})) {
+		if !conf.Node.SkipBcVersionCheck {
+			bcVersion := bc.GetBlockChainVersion(hpbdb)
+			if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
+				return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
+			}
+			bc.WriteBlockChainVersion(hpbdb, bc.BlockChainVersion)
+		}
+		// Rewind the chain in case of an incompatible config upgrade.
+		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
+			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+			hpbnode.Hpbbc.SetHead(compat.RewindTo)
+			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
+		}*/
+
 		engine      :=  prometheus.InstancePrometheus()
+		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
 		_, err := block.InitWithEngine(engine)
 		if err != nil {
@@ -232,12 +239,12 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbnode.Hpbsyncctr = syncctr
 
 		// Rewind the chain in case of an incompatible config upgrade.
-		if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
+		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
 			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
 			hpbnode.Hpbbc.SetHead(compat.RewindTo)
 			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
-		}
-
+		}*/
+		hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
 		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 	}
 
