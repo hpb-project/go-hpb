@@ -142,7 +142,7 @@ func (prm *PeerManager)Start() error {
 
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	add.Port = add.Port+100
-	log.Info("iperf server start", "port",add.Port)
+	log.Info("Iperf server start", "port",add.Port)
 	go iperf.StartSever(add.Port)
 
 	return nil
