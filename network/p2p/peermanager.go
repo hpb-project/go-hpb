@@ -26,6 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 )
 
 var (
@@ -144,6 +145,9 @@ func (prm *PeerManager)Start() error {
 		wsExposeAll:  config.Network.WSExposeAll,
 	}
 	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
+
+
+	iperf.StartSever(5000)
 
 	return nil
 }

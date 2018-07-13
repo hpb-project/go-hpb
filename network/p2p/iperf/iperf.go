@@ -18,10 +18,10 @@ package iperf
 
 
 /*
-#cgo CFLAGS: -I./iperf
-#cgo LDFLAGS: ./iperf/lib/libiperf.a
-#include "iperf/iperf.h"
-#include "iperf/iperf.c"
+#cgo CFLAGS: -I./iperf35
+#cgo LDFLAGS: -L./iperf35/lib/ -l iperf
+#include "iperf35/iperf.h"
+#include "iperf35/iperf.c"
 */
 import "C"
 import (
@@ -31,6 +31,7 @@ import (
 )
 
 var (
+	errServer          = errors.New("iperf server error")
 	errServerTimeout   = errors.New("iperf server stop time out")
 )
 
@@ -94,5 +95,25 @@ func (iperf *Iperf) StartTest(host string, port int, duration int) (error) {
 
 	log.Info("StartTest","result",result)
 	return  nil
+}
+///////////////////////////////////////////////////////////////////////////
+
+
+func StartSever(port int) error {
+
+	C.iperf_server_init(C.int(port))
+
+	if ret := C.iperf_server_start();ret != 0{
+		return errServer
+	}
+
+	return nil
+
+}
+
+func KillSever()  {
+
+	C.iperf_server_kill()
+	return
 }
 
