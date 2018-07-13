@@ -50,20 +50,12 @@ type LesServer interface {
 func (s *Node) APIs() []rpc.API {
 	apis := hpbapi.GetAPIs(s.ApiBackend)
 
-	// Append any APIs exposed explicitly by the consensus engine
-	apis = append(apis, s.Hpbengine.APIs(s.BlockChain())...)
-
 	// Append all the local APIs and return
-	return append(apis, []rpc.API{
+	apis = append(apis, []rpc.API{
 		{
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   NewPublicHpbAPI(s),
-			Public:    true,
-		}, {
-			Namespace: "hpb",
-			Version:   "1.0",
-			Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
@@ -91,10 +83,25 @@ func (s *Node) APIs() []rpc.API {
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   hpbapi.NewPublicNetAPI(p2p.PeerMgrInst().P2pSvr(),s.networkId),//s.netRPCService,
+			Service:   hpbapi.NewPublicNetAPI(p2p.PeerMgrInst().P2pSvr(), s.networkId), //s.netRPCService,
 			Public:    true,
 		},
 	}...)
+
+
+	// Append any APIs exposed explicitly by the consensus engine
+	if s.Hpbengine != nil {
+		apis = append(apis, s.Hpbengine.APIs(s.BlockChain())...)
+		apis = append(apis, []rpc.API{
+			{Namespace: "hpb",
+				Version:   "1.0",
+					Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.eventMux),
+					Public:    true,
+			},
+		}...)
+
+	}
+	return apis
 }
 
 func (s *Node) StopMining()         { s.Stop() }

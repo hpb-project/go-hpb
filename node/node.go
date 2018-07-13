@@ -140,85 +140,99 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
 	}
 
+	hpbnode := &Node{
+		Hpbconfig:         conf,
+		Hpbpeermanager:    nil, //peermanager,
+		Hpbsyncctr:		   nil, //syncctr,
+		Hpbtxpool:		   nil, //hpbtxpool,
+		Hpbbc:			   nil, //block,
+		//boe
+
+		chainDb:		   nil, //db,
+		networkId:		   conf.Node.NetworkId,
+
+		eventMux:          nil, //eventmux,
+		accman:	   		   nil, //am,
+		Hpbengine:		   nil,
+
+		gasPrice:       conf.Node.GasPrice,
+		hpberbase:      conf.Node.Hpberbase,
+		bloomRequests:  make(chan chan *bloombits.Retrieval),
+		bloomIndexer:   nil,
+	}
+	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
+
+
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
 	am, _, err := makeAccountManager(&conf.Node)
 	if err != nil {
 		return nil, err
 	}
+	hpbnode.accman = am
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
+    hpbnode.Hpbpeermanager = peermanager
+
+	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
+	hpbnode.chainDb = hpbdb
 
 
-	db, _      := db.CreateDB(&conf.Node, "chaindata")
 	eventmux    := new(sub.TypeMux)
-
-	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
-	hpbgenesis := bc.DevGenesisBlock()
-	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
-
-	engine      := CreateConsensusEngine(conf, chainConfig, db)
-
+	hpbnode.eventMux = eventmux
 
 	block			:= bc.InstanceBlockChain()
+
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 
 	if !conf.Node.SkipBcVersionCheck {
-		bcVersion := bc.GetBlockChainVersion(db)
+		bcVersion := bc.GetBlockChainVersion(hpbdb)
 		if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
 		}
-		bc.WriteBlockChainVersion(db, bc.BlockChainVersion)
+		bc.WriteBlockChainVersion(hpbdb, bc.BlockChainVersion)
 	}
+	hpbnode.Hpbbc    = block
 	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
 	if err != nil {
 		return nil, err
 	}
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 	hpbtxpool      := txpool.GetTxPool()
+	hpbnode.Hpbtxpool = hpbtxpool
 
-	syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, engine)
+	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
+	hpbgenesis := bc.DevGenesisBlock()
+	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(hpbdb, hpbgenesis)
+	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, config.BloomBitsBlocks)
 
-	hpbnode := &Node{
-		Hpbconfig:         conf,
-		Hpbpeermanager:    peermanager,
-		Hpbsyncctr:		   syncctr,
-		Hpbtxpool:		   hpbtxpool,
-		Hpbbc:			   block,
-		//boe
+	stored := bc.GetCanonicalHash(hpbdb, 0)
+	//syncctr := nil
+	if (stored == common.Hash{}) {
+		hpbnode.Hpbengine = CreateConsensusEngine(conf, chainConfig, hpbdb)
+		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
+		syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
+		if err != nil {
+			log.Warn("crete synctrl object error")
+		}
+		hpbnode.Hpbsyncctr = syncctr
 
-		chainDb:		   db,
-		networkId:		   conf.Node.NetworkId,
-
-		eventMux:          eventmux,
-		accman:	   am,
-		Hpbengine:		   engine,
-
-		gasPrice:       conf.Node.GasPrice,
-		hpberbase:      conf.Node.Hpberbase,
-		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   NewBloomIndexer(db, config.BloomBitsBlocks),
+		// Rewind the chain in case of an incompatible config upgrade.
+		if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
+			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+			hpbnode.Hpbbc.SetHead(compat.RewindTo)
+			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
+		}
 	}
-	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
 
 
-	// Rewind the chain in case of an incompatible config upgrade.
-	if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
-		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-		hpbnode.Hpbbc.SetHead(compat.RewindTo)
-		bc.WriteChainConfig(db, genesisHash, chainConfig)
-	}
 	hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
-
-
-	hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
-
 	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
 	//gpoParams := config.GPO
 	//if gpoParams.Default == nil {
@@ -229,14 +243,16 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	return hpbnode, nil
 }
 
-func (hpnode *Node) Start(conf  *config.HpbConfig) (error){
+func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
-	retval := hpnode.Hpbpeermanager.Start()
+	retval := hpbnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
 	}
-	hpnode.Hpbsyncctr.Start()
+	if hpbnode.Hpbsyncctr != nil {
+		hpbnode.Hpbsyncctr.Start()
+	}
 	return nil
 
 }
