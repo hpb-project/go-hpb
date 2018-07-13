@@ -95,7 +95,7 @@ type worker struct {
 	// update loop
 	mux          *sub.TypeMux
 	txCh         chan bc.TxPreEvent
-	txSub        sub.Subscription
+	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
 	chainSideCh  chan bc.ChainSideEvent
@@ -147,7 +147,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
-			case event.TxPreEvent:
+			case bc.TxPreEvent:
 				worker.txCh <- msg
 			}
 	})
@@ -250,7 +250,7 @@ func (self *worker) unregister(producer Producer) {
 
 func (self *worker) eventListener() {
 	
-	defer self.txSub.Unsubscribe()
+	//defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
@@ -284,8 +284,8 @@ func (self *worker) eventListener() {
 		
 
 		// System stopped
-		case <-self.txSub.Err():
-			return
+		//case <-self.txSub.Err():
+		//	return
 		case <-self.chainHeadSub.Err():
 			return
 		case <-self.chainSideSub.Err():
