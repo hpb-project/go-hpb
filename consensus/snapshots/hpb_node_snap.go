@@ -65,8 +65,10 @@ func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, num
 		Recents:  make(map[uint64]common.Address),
 		Tally:    make(map[common.Address]Tally),
 	}
-	for _, signerHash := range signersHash {
-		snap.Signers[signerHash] = struct{}{}
+	if(number ==0){
+		for _, signerHash := range signersHash {
+			snap.Signers[signerHash] = struct{}{}
+		}
 	}
 	return snap
 }
@@ -108,6 +110,9 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	//if !s.ValidVote(address) {
 	//	return false
 	//}
+	
+	fmt.Println("length Test: ", len(s.Tally))
+	
 	if old, ok := s.Tally[candAddress]; ok {
 		log.Info("Add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
         old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1))
@@ -173,9 +178,9 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, number uint64, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
-	
+
 	// 如果头部为空，直接返回
 	if len(headers) == 0 {
 		return nil, nil
@@ -190,7 +195,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	
 	signers := make([]common.Address,4)
 	
-	snap := NewHistorysnap(config, signatures, 0, headers[len(headers)-1].Hash(), signers)
+	snap := NewHistorysnap(config, signatures, number, headers[len(headers)-1].Hash(), signers)
 	
 	snap.Tally = make(map[common.Address]Tally)
 	
@@ -198,7 +203,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	for _, header := range headers {
 		snap.cast(header.CandAddress, header.VoteIndex);
 	}
-	
+
 	var keys []float64
 	indexTally := make(map[float64]Tally,len(snap.Tally))
 	
@@ -212,10 +217,17 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
 	
 	//设置config长度
-	for i := 0; i < 4; i++ {
-		fmt.Printf("#####%.f\n", keys[len(keys)-i-1])
-		if cands, ok := indexTally[keys[len(keys)-i-1]]; ok {
+	hpbNodeNum := 0
+	for i := len(keys) - 1; i > 0 ; i-- {
+		fmt.Printf("test 1 %d", i)
+		fmt.Printf("test 2 %f", keys[i])
+		if cands, ok := indexTally[keys[i]]; ok {
+			fmt.Printf("test 3", cands.CandAddress.Hex())
+			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
+			if(hpbNodeNum == 3){
+				break
+			}
 		}
 	}
 

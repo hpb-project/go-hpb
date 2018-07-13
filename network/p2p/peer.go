@@ -433,7 +433,7 @@ type Peer struct {
 
 	id        string
 	version   uint
-	txsRate   uint
+	txsRate   float64
 	bandwidth float64
 	address   common.Address
 
@@ -470,9 +470,15 @@ func (p *Peer) Info() *HpbPeerInfo {
 	}
 }
 
+
 func (p *Peer) GetID() string {
 	return  p.id
 }
+
+func (p *Peer) GetVersion() uint {
+	return  p.version
+}
+
 // Head retrieves a copy of the current head hash and total difficulty of the
 // peer.
 func (p *Peer) Head() (hash common.Hash, td *big.Int) {
@@ -492,14 +498,14 @@ func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
-func (p *Peer) TxsRate() uint {
+func (p *Peer) TxsRate() float64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.txsRate
 }
 
-func (p *Peer) SetTxsRate(txs uint) {
+func (p *Peer) SetTxsRate(txs float64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.txsRate = txs

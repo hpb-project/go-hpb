@@ -33,7 +33,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus/voting"
-	
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 const (
@@ -52,6 +52,8 @@ var (
 	uncleHash = types.CalcUncleHash(nil) //
 	diffInTurn = big.NewInt(2) // 当轮到的时候难度值设置 2
 	diffNoTurn = big.NewInt(1) // 当非轮到的时候难度设置 1
+	reentryMux sync.Mutex
+	insPrometheus *Prometheus
 )
 
 // Prometheus 的主体结构
@@ -90,6 +92,26 @@ func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 		signatures: signatures,
 		proposals:  make(map[common.Address]bool),
 	}
+}
+
+// InstanceBlockChain returns the singleton of BlockChain.
+func InstancePrometheus() (*Prometheus) {
+	if nil == insPrometheus {
+		reentryMux.Lock()
+		if  nil == insPrometheus {
+			intanconf, err := config.GetHpbConfigInstance()
+			
+			proIns := New(&intanconf.Prometheus ,db.GetHpbDbInstance())
+			
+			///*consensus.engine.InstanceEngine()*/nil
+			if err != nil {
+				insPrometheus = nil
+			}
+			insPrometheus = proIns
+		}
+		reentryMux.Unlock()
+	}
+	return insPrometheus
 }
 
 // 回掉函数

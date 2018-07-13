@@ -343,7 +343,6 @@ func (srv *Server) Start() (err error) {
 		return err
 	}
 
-
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
