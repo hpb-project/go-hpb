@@ -434,7 +434,7 @@ type Peer struct {
 	id        string
 	version   uint
 	txsRate   uint
-	bandwidth float32
+	bandwidth float64
 	address   common.Address
 
 	head common.Hash
@@ -506,14 +506,14 @@ func (p *Peer) SetTxsRate(txs uint) {
 }
 
 
-func (p *Peer) Bandwidth() float32 {
+func (p *Peer) Bandwidth() float64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.bandwidth
 }
 
-func (p *Peer) SetBandwidth(bw float32) {
+func (p *Peer) SetBandwidth(bw float64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
