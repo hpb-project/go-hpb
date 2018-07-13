@@ -104,6 +104,7 @@ func StartSever(port int) error {
 	C.iperf_server_init(C.int(port))
 
 	if ret := C.iperf_server_start();ret != 0{
+		log.Error("iperf server stop error.")
 		return errServer
 	}
 

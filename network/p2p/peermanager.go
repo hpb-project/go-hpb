@@ -26,6 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"net"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 )
 
@@ -147,7 +148,10 @@ func (prm *PeerManager)Start() error {
 	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
 
 
-	iperf.StartSever(5000)
+	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
+	add.Port = add.Port+100
+	log.Info("iperf server start", "port",add.Port)
+	go iperf.StartSever(add.Port)
 
 	return nil
 }
@@ -161,6 +165,8 @@ func (prm *PeerManager)Stop(){
 
 	prm.server.Stop()
 	prm.server = nil
+
+	iperf.KillSever()
 
 }
 
