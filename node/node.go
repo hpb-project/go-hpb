@@ -171,6 +171,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		log.Error("InitWithEngine() Err!")
 	}
 	block = eBlock
+	peermanager.RegChanStatus(block.Status)
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
