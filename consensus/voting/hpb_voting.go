@@ -69,13 +69,13 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	latestCheckPointNumber :=  uint64(math.Floor(float64(number/hpbNodeCheckpointInterval))) * hpbNodeCheckpointInterval
 	log.Error("Current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
 
-	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
-	latestCheckPointHash := header.Hash()
+	//header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
+	//latestCheckPointHash := header.Hash()
 	
-	if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
-			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
-			return snapcd, err
-	}else{
+	//if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
+	//		log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
+	//		return snapcd, err
+	//}else{
 		// 开始获取之前的所有header
 		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
 			log.Info("Header:",strconv.FormatUint(i, 10))
@@ -85,14 +85,14 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			}
 		}
 		
-		if snapa, err := snapshots.CalculateHpbSnap(signatures,config,headers,chain); err == nil {
+		if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,headers,chain); err == nil {
 			log.Info("HPB_VOTING： starting calculate Hpb Snap", "number", number, "hash", hash)
 			if err := StoreDataToCacheAndDb(recents,db, snapa); err != nil {
 				return nil, err
-			}
+ 			}
 			return snapa, err
 		}
-	}
+	//}
 	return nil, nil
 }
 
