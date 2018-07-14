@@ -334,7 +334,7 @@ func (srv *Server) Start() (err error) {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
 	srv.ourHandshake.End = ourend
-	log.Info("start our end point","EndPoint",ourend)
+	log.Debug("start our end point","EndPoint",ourend)
 
 	if srv.ListenAddr == "" {
 		log.Error("P2P server start, listen address is nil")
@@ -564,7 +564,7 @@ type tempError interface {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener))
+	//log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener))
 
 	// This channel acts as a semaphore limiting
 	// active inbound connections that are lingering pre-handshake.
