@@ -67,6 +67,7 @@ type Config struct {
 
 	EnableMsgEvents bool
 	NetworkId       uint64
+	DefaultAddr     common.Address
 }
 
 // Server manages all peer connections.
@@ -106,6 +107,8 @@ type Server struct {
 	localType    discover.NodeType
 
 	dialer        NodeDialer
+
+
 
 }
 

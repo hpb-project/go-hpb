@@ -181,7 +181,7 @@ type Nodeconfig struct {
 
 	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
-	DefaultAccount    string
+	DefaultAddress    common.Address
 
 
 }

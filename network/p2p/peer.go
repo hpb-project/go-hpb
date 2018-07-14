@@ -570,12 +570,12 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
-	Address         common.Address
+	DefaultAddr     common.Address
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *Peer) Handshake(network uint64, address common.Address,td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc
@@ -588,7 +588,7 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
-			//TODO: exchange address,and set to peer
+			DefaultAddr:     address,
 		})
 	}()
 	go func() {
@@ -608,8 +608,8 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 			return DiscReadTimeout
 		}
 	}
-	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.Address
-	p.log.Trace("handshake over","td",p.td,"head", p.head, "address",p.address)
+	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.DefaultAddr
+	p.log.Debug("handshake over","td",p.td,"head", p.head, "address",p.address)
 	return nil
 }
 

@@ -234,7 +234,11 @@ func startNode(ctx *cli.Context, stack *node.Node, conf  *config.HpbConfig) {
 		}
 	}
 
-	conf.Node.DefaultAccount = unlocks[0]
+	account, err := utils.MakeAddress(ks, strings.TrimSpace(unlocks[0]))
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+	conf.Node.DefaultAddress = account.Address
 	//set rpc aii
 	//utils.SetNodeAPI(&conf.Node, stack)
 	// Start up the node itself

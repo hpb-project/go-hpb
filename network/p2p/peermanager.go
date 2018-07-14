@@ -84,11 +84,13 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 
+
 	prm.server.Config = Config{
 		NAT:        config.Network.NAT,
 		Name:       config.Network.Name,
 		PrivateKey: config.Node.PrivateKey,
 		NetworkId:  config.Node.NetworkId,
+		DefaultAddr:config.Node.DefaultAddress,
 		ListenAddr: config.Network.ListenAddr,
 
 		NetRestrict:    config.Network.NetRestrict,
@@ -99,10 +101,11 @@ func (prm *PeerManager)Start() error {
 		Protocols: prm.hpbpro.Protocols(),
 	}
 
-	prm.hpbpro.networkId = config.Node.NetworkId
+	prm.hpbpro.networkId   = prm.server.NetworkId
+	prm.hpbpro.DefaultAddr = prm.server.DefaultAddr
+	prm.hpbpro.regMsgCall(ReqNodesMsg,HandleReqNodesMsg)
+	prm.hpbpro.regMsgCall(ResNodesMsg,HandleResNodesMsg)
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
-	prm.RegMsgCall(ReqNodesMsg,HandleReqNodesMsg)
-	prm.RegMsgCall(ResNodesMsg,HandleResNodesMsg)
 
 
 	prm.server.localType = discover.InitNode
@@ -111,13 +114,6 @@ func (prm *PeerManager)Start() error {
 	}
 	log.Debug("Manager start server para","NodeType",prm.server.localType.ToString())
 
-	//// for-test
-	//log.Info("para from config","PrivateKey",config.Node.PrivateKey)
-	////prm.server.PrivateKey =config.Node.NodeKeyTemp()
-	//if prm.server.PrivateKey == nil {
-	//	log.Error("PrivateKey is nil")
-	//}
-
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
 		return err
@@ -125,13 +121,6 @@ func (prm *PeerManager)Start() error {
 
 	// for-test
 	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
-	//absdatadir, _ := filepath.Abs(config.Node.DataDir)
-	//config.Node.DataDir = absdatadir
-	//config.Node.IPCPath = "ghpb.ipc"
-	//ipcEndpoint:=  config.Node.IPCEndpoint()
-	//httpEndpoint:= ""
-	//wsEndpoint  := ""
-
 	ipcEndpoint:=  config.Network.IpcEndpoint
 	httpEndpoint:= config.Network.HttpEndpoint
 	wsEndpoint  := config.Network.WsEndpoint
