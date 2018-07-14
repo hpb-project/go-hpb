@@ -94,8 +94,8 @@ type worker struct {
 
 	// update loop
 	mux          *sub.TypeMux
-	txCh         chan event.TxPreEvent
-	txSub        sub.Subscription
+	txCh         chan bc.TxPreEvent
+	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
 	chainSideCh  chan bc.ChainSideEvent
@@ -147,7 +147,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
-			case event.TxPreEvent:
+			case bc.TxPreEvent:
 				worker.txCh <- msg
 			}
 	})
@@ -250,8 +250,7 @@ func (self *worker) unregister(producer Producer) {
 
 func (self *worker) eventListener() {
 	
-	/*
-	defer self.txSub.Unsubscribe()
+	//defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
@@ -270,7 +269,7 @@ func (self *worker) eventListener() {
 
 		// Handle TxPreEvent
 
-		/*
+		
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
@@ -279,21 +278,20 @@ func (self *worker) eventListener() {
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 
-				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
+				self.current.commitTransactions(self.mux, txset, self.coinbase)
 				self.currentMu.Unlock()
 			}
-		*/
+		
 
 		// System stopped
 		//case <-self.txSub.Err():
-	//		return
-	//	case <-self.chainHeadSub.Err():
-	//		return
-	//	case <-self.chainSideSub.Err():
-	//		return
-	//	}
-//	}
-
+		//	return
+		case <-self.chainHeadSub.Err():
+			return
+		case <-self.chainSideSub.Err():
+			return
+		}
+	}
 }
 
 func (self *worker) handlerSelfMinedBlock() {
