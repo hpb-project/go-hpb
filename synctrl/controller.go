@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -99,8 +100,7 @@ func InstanceSynCtrl() *SynCtrl {
 			if err != nil {
 				return nil
 			}
-			// todo for rujia
-			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), nil)
+			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
 			if err != nil {
 				syncInstance = nil
 			}

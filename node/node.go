@@ -164,9 +164,13 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//engine      := CreateConsensusEngine(conf, chainConfig, db)
     
     engine      :=  prometheus.InstancePrometheus()
-   
 
 	block			:= bc.InstanceBlockChain()
+	eBlock, err := block.InitWithEngine(engine)
+	if err != nil {
+		log.Error("InitWithEngine() Err!")
+	}
+	block = eBlock
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
