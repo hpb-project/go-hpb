@@ -300,8 +300,22 @@ func (prm *PeerManager) RegMsgProcess(msg uint64,cb MsgProcessCB) {
 
 func (prm *PeerManager) RegChanStatus(cb ChanStatusCB) {
 	prm.hpbpro.regChanStatus(cb)
+	log.Info("ChanStatus has been register")
 	return
 }
+
+
+func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
+	prm.hpbpro.regOnAddPeer(cb)
+	log.Info("OnAddPeer has been register")
+	return
+}
+//func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
+//	prm.hpbpro.regOnDropPeer(cb)
+//	log.Debug("OnDropPeer has been register")
+//	return
+//}
+
 
 
 

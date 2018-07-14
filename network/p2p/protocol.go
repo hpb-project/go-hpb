@@ -55,8 +55,11 @@ type HpbProto struct {
 	networkId   uint64
 	DefaultAddr common.Address
 	protos      []Protocol
+
 	msgProcess  map[uint64]MsgProcessCB
 	chanStatus  ChanStatusCB
+	onAddPeer   OnAddPeerCB
+	onDropPeer  OnDropPeerCB
 }
 
 const ProtoName        = "hpb"
@@ -70,6 +73,10 @@ const ProtoMsgLength   uint64 =  20
 
 type MsgProcessCB func(p *Peer, msg Msg) error
 type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
+
+type OnAddPeerCB  func(p *Peer)
+type OnDropPeerCB func(p *Peer)
+
 type errCode int
 
 const (
@@ -178,6 +185,12 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	defer hp.removePeer(p.id)
 
+	if hp.onAddPeer != nil {
+		hp.onAddPeer(p)
+		p.log.Debug("has add peer to syncer")
+	}
+	//defer hp.onDropPeer(p)
+
 	// main loop. handle incoming messages.
 	for {
 		if err := hp.handleMsg(p); err != nil {
@@ -194,6 +207,15 @@ func (hp *HpbProto) regMsgProcess(msg uint64,cb MsgProcessCB) {
 func (hp *HpbProto) regChanStatus(cb ChanStatusCB) {
 	hp.chanStatus = cb
 }
+
+func (hp *HpbProto) regOnAddPeer(cb OnAddPeerCB) {
+	hp.onAddPeer = cb
+}
+
+func (hp *HpbProto) regOnDropPeer(cb OnDropPeerCB) {
+	hp.onDropPeer = cb
+}
+
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (hp *HpbProto) handleMsg(p *Peer) error {
