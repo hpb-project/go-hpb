@@ -146,34 +146,22 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig
 	// Just commit the new block if there is no stored genesis block.
 	stored := GetCanonicalHash(db, 0)
 	
-	log.Info("we are here","hash", stored)
-	
 	if (stored == common.Hash{}) {
-		    log.Info("we are here 11")
 
 		if genesis == nil {
-			log.Info("Writing default main-net genesis block")
 			genesis = DefaultGenesisBlock()
-			log.Info("we are here 22")
-			
 		} else {
-			log.Info("we are here 33")
 			log.Info("Writing custom genesis block")
 		}
-		log.Info("we are here 44")
 		block, err := genesis.Commit(db)
-		log.Info("we are here 55")
 		return genesis.Config, block.Hash(), err
 	}
-	
-	log.Info("we are here 66")
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
 		block, _ := genesis.ToBlock()
 		hash := block.Hash()
 		if hash != stored {
-			log.Info("we are here 77")
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
 	}
