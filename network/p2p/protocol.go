@@ -55,7 +55,8 @@ type HpbProto struct {
 	networkId   uint64
 	DefaultAddr common.Address
 	protos      []Protocol
-	procFun     map[uint64]MsgCallback
+	msgProcess  map[uint64]MsgProcessCB
+	chanStatus  ChanStatusCB
 }
 
 const ProtoName        = "hpb"
@@ -67,8 +68,8 @@ var ProtocolMsgLengths = []uint64{ProtoMsgLength}
 const ProtoVersion100  uint   =  100
 const ProtoMsgLength   uint64 =  20
 
-type MsgCallback func(p *Peer, msg Msg) error
-
+type MsgProcessCB func(p *Peer, msg Msg) error
+type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
 type errCode int
 
 const (
@@ -85,7 +86,7 @@ const (
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
 		protos:    make([]Protocol, 0, len(ProtocolVersions)),
-		procFun:   make(map[uint64]MsgCallback),
+		msgProcess:   make(map[uint64]MsgProcessCB),
 	}
 
 	for _, version := range ProtocolVersions {
@@ -182,8 +183,12 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 }
 
-func (hp *HpbProto) regMsgCall(msg uint64,cb MsgCallback) {
-	hp.procFun[msg] = cb
+func (hp *HpbProto) regMsgProcess(msg uint64,cb MsgProcessCB) {
+	hp.msgProcess[msg] = cb
+}
+
+func (hp *HpbProto) regChanStatus(cb ChanStatusCB) {
+	hp.chanStatus = cb
 }
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
@@ -205,14 +210,14 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return ErrResp(ErrExtraStatusMsg, "uncontrolled status message")
 
 	case msg.Code == ReqNodesMsg:
-		if cb := hp.procFun[ReqNodesMsg]; cb != nil{
+		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
 			cb(p,msg)
 			//log.Info("ReqNodesMsg callback ok")
 		}
 		//HandleReqNodesMsg(p,msg)
 		return nil
 	case msg.Code == ResNodesMsg:
-		if cb := hp.procFun[ResNodesMsg]; cb != nil{
+		if cb := hp.msgProcess[ResNodesMsg]; cb != nil{
 			cb(p,msg)
 			//log.Info("ResNodesMsg callback ok")
 		}
@@ -220,67 +225,67 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return nil
 
 	case msg.Code == GetBlockHeadersMsg:
-		if cb := hp.procFun[GetBlockHeadersMsg]; cb != nil{
+		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == BlockHeadersMsg:
-		if cb := hp.procFun[BlockHeadersMsg]; cb != nil{
+		if cb := hp.msgProcess[BlockHeadersMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == GetBlockBodiesMsg:
-		if cb := hp.procFun[GetBlockBodiesMsg]; cb != nil{
+		if cb := hp.msgProcess[GetBlockBodiesMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == BlockBodiesMsg:
-		if cb := hp.procFun[BlockBodiesMsg]; cb != nil{
+		if cb := hp.msgProcess[BlockBodiesMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == GetNodeDataMsg:
-		if cb := hp.procFun[GetNodeDataMsg]; cb != nil{
+		if cb := hp.msgProcess[GetNodeDataMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == NodeDataMsg:
-		if cb := hp.procFun[NodeDataMsg]; cb != nil{
+		if cb := hp.msgProcess[NodeDataMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == GetReceiptsMsg:
-		if cb := hp.procFun[GetReceiptsMsg]; cb != nil{
+		if cb := hp.msgProcess[GetReceiptsMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == ReceiptsMsg:
-		if cb := hp.procFun[ReceiptsMsg]; cb != nil{
+		if cb := hp.msgProcess[ReceiptsMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == NewBlockHashesMsg:
-		if cb := hp.procFun[NewBlockHashesMsg]; cb != nil{
+		if cb := hp.msgProcess[NewBlockHashesMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == NewBlockMsg:
-		if cb := hp.procFun[NewBlockMsg]; cb != nil{
+		if cb := hp.msgProcess[NewBlockMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil
 
 	case msg.Code == TxMsg:
-		if cb := hp.procFun[TxMsg]; cb != nil{
+		if cb := hp.msgProcess[TxMsg]; cb != nil{
 			cb(p,msg)
 		}
 		return nil

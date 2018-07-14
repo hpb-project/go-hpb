@@ -103,8 +103,8 @@ func (prm *PeerManager)Start() error {
 
 	prm.hpbpro.networkId   = prm.server.NetworkId
 	prm.hpbpro.DefaultAddr = prm.server.DefaultAddr
-	prm.hpbpro.regMsgCall(ReqNodesMsg,HandleReqNodesMsg)
-	prm.hpbpro.regMsgCall(ResNodesMsg,HandleResNodesMsg)
+	prm.hpbpro.regMsgProcess(ReqNodesMsg,HandleReqNodesMsg)
+	prm.hpbpro.regMsgProcess(ResNodesMsg,HandleResNodesMsg)
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
 
@@ -293,10 +293,16 @@ func (prm *PeerManager) NodeInfo() *NodeInfo {
 	return nil
 }
 
-func (prm *PeerManager) RegMsgCall(msg uint64,cb MsgCallback) {
-	prm.hpbpro.regMsgCall(msg,cb)
+func (prm *PeerManager) RegMsgCall(msg uint64,cb MsgProcessCB) {
+	prm.hpbpro.regMsgProcess(msg,cb)
 	return
 }
+
+func (prm *PeerManager) RegChanStatus(cb ChanStatusCB) {
+	prm.hpbpro.regChanStatus(cb)
+	return
+}
+
 
 
 
