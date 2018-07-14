@@ -120,10 +120,9 @@ func InstanceBlockChain() (*BlockChain) {
 	if nil == bcInstance {
 		reentryMux.Lock()
 		if  nil == bcInstance {
-			intan, err := config.GetHpbConfigInstance()
-			// todo for rujia
-			bcI, err := NewBlockChain(db.GetHpbDbInstance(), &intan.BlockChain, /*consensus.engine.InstanceEngine()*/nil)
-			if err != nil {
+			intan, _ := config.GetHpbConfigInstance()
+			bcI := NewBlockChain(db.GetHpbDbInstance(), &intan.BlockChain)
+			if bcI != nil {
 				bcInstance = nil
 			}
 			bcInstance = bcI
@@ -134,10 +133,33 @@ func InstanceBlockChain() (*BlockChain) {
 	return bcInstance
 }
 
+func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, error) {
+	bc.engine = engine
+	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
+	bc.SetProcessor(NewStateProcessor(bc.config, bc, engine))
+
+	var err error
+	bc.hc, err = NewHeaderChain(bc.chainDb, bc.config, engine, bc.getProcInterrupt)
+	if err != nil {
+		return nil, err
+	}
+	bc.genesisBlock = bc.GetBlockByNumber(0)
+	if bc.genesisBlock == nil {
+		return nil, errNoGenesis
+	}
+	if err := bc.loadLastState(); err != nil {
+		return nil, err
+	}
+
+	// Take ownership of this particular state
+	go bc.update()
+	return bc, nil
+}
+
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Hpb Validator and
 // Processor.
-func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine consensus.Engine) (*BlockChain, error) {
+func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig) (*BlockChain) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -153,14 +175,40 @@ func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig, engine co
 		bodyRLPCache: bodyRLPCache,
 		blockCache:   blockCache,
 		futureBlocks: futureBlocks,
-		engine:       engine,
 		badBlocks:    badBlocks,
 	}
-	bc.SetValidator(NewBlockValidator(config, bc, engine))
-	bc.SetProcessor(NewStateProcessor(config, bc, engine))
+
+	return bc
+}
+
+// NewBlockChain returns a fully initialised block chain using information
+// available in the database. It initialises the default Hpb Validator and
+// Processor.
+func NewBlockChainWithEngine(chainDb hpbdb.Database, config *config.ChainConfig, engine consensus.Engine) (*BlockChain, error) {
+	bodyCache, _ := lru.New(bodyCacheLimit)
+	bodyRLPCache, _ := lru.New(bodyCacheLimit)
+	blockCache, _ := lru.New(blockCacheLimit)
+	futureBlocks, _ := lru.New(maxFutureBlocks)
+	badBlocks, _ := lru.New(badBlockLimit)
+
+	bc := &BlockChain{
+		config:       config,
+		chainDb:      chainDb,
+		stateCache:   state.NewDatabase(chainDb),
+		quit:         make(chan struct{}),
+		bodyCache:    bodyCache,
+		bodyRLPCache: bodyRLPCache,
+		blockCache:   blockCache,
+		futureBlocks: futureBlocks,
+		badBlocks:    badBlocks,
+		engine:        engine,
+	}
+
+	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
+	bc.SetProcessor(NewStateProcessor(bc.config, bc, engine))
 
 	var err error
-	bc.hc, err = NewHeaderChain(chainDb, config, engine, bc.getProcInterrupt)
+	bc.hc, err = NewHeaderChain(bc.chainDb, bc.config, engine, bc.getProcInterrupt)
 	if err != nil {
 		return nil, err
 	}

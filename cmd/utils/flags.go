@@ -1008,7 +1008,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 	
 	engine = prometheus.New(cfg.Prometheus, chainDb)
 
-	chain, err = bc.NewBlockChain(chainDb, cfg, engine)
+	chain, err = bc.NewBlockChainWithEngine(chainDb, cfg, engine)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}
