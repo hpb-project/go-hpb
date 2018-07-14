@@ -101,6 +101,9 @@ func (prm *PeerManager)Start() error {
 
 	prm.hpbpro.networkId = config.Node.NetworkId
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
+	prm.RegMsgCall(ReqNodesMsg,HandleReqNodesMsg)
+	prm.RegMsgCall(ResNodesMsg,HandleResNodesMsg)
+
 
 	prm.server.localType = discover.InitNode
 	if config.Network.RoleType == "bootnode" {
@@ -293,12 +296,18 @@ func (prm *PeerManager) Close() {
 	prm.closed = true
 }
 
-func (api *PeerManager) Peers() []*PeerInfo {
+func (prm *PeerManager) Peers() []*PeerInfo {
 	return nil
 }
 
-func (api *PeerManager) NodeInfo() *NodeInfo {
+func (prm *PeerManager) NodeInfo() *NodeInfo {
 	return nil
 }
+
+func (prm *PeerManager) RegMsgCall(msg uint64,cb MsgCallback) {
+	prm.hpbpro.regMsgCall(msg,cb)
+	return
+}
+
 
 
