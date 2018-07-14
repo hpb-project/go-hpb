@@ -293,7 +293,7 @@ func (prm *PeerManager) NodeInfo() *NodeInfo {
 	return nil
 }
 
-func (prm *PeerManager) RegMsgCall(msg uint64,cb MsgProcessCB) {
+func (prm *PeerManager) RegMsgProcess(msg uint64,cb MsgProcessCB) {
 	prm.hpbpro.regMsgProcess(msg,cb)
 	return
 }

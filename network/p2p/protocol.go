@@ -155,7 +155,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	// Execute the Hpb handshake
 	//TODO: 调用blockchain接口，获取状态信息
 
-	td, head, genesis := bc.InstanceBlockChain().Status()
+	td, head, genesis := hp.chanStatus()//bc.InstanceBlockChain().Status()
 	if err := p.Handshake(hp.networkId, hp.DefaultAddr, td, head, genesis); err != nil {
 		p.Log().Debug("Handshake failed", "err", err)
 		return err
