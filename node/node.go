@@ -107,13 +107,15 @@ type Node struct {
 
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
+/*
 func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
 	if &chainConfig.Prometheus == nil {
 		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
 	}
-	return prometheus.New(chainConfig.Prometheus, db)
+	//return prometheus.New(chainConfig.Prometheus, db)
+	return prometheus.InstancePrometheus()
 }
-
+*/
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){
 
@@ -159,8 +161,10 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbgenesis := bc.DevGenesisBlock()
 	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(db, hpbgenesis)
 
-	engine      := CreateConsensusEngine(conf, chainConfig, db)
-
+	//engine      := CreateConsensusEngine(conf, chainConfig, db)
+    
+    engine      :=  prometheus.InstancePrometheus()
+   
 
 	block			:= bc.InstanceBlockChain()
 	//Hpbworker       *Worker
