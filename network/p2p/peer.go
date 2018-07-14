@@ -470,9 +470,15 @@ func (p *Peer) Info() *HpbPeerInfo {
 	}
 }
 
+
 func (p *Peer) GetID() string {
 	return  p.id
 }
+
+func (p *Peer) GetVersion() uint {
+	return  p.version
+}
+
 // Head retrieves a copy of the current head hash and total difficulty of the
 // peer.
 func (p *Peer) Head() (hash common.Hash, td *big.Int) {
