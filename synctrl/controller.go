@@ -151,17 +151,17 @@ func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.Tx
 	}
 	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)
 
-	p2p.PeerMgrInst().RegMsgCall(p2p.GetBlockHeadersMsg, HandleGetBlockHeadersMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.GetBlockBodiesMsg, HandleGetBlockBodiesMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.BlockHeadersMsg, HandleBlockHeadersMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.BlockBodiesMsg, HandleBlockBodiesMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.GetNodeDataMsg, HandleGetNodeDataMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.NodeDataMsg, HandleNodeDataMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.GetReceiptsMsg, HandleGetReceiptsMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.ReceiptsMsg, HandleReceiptsMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.NewBlockHashesMsg, HandleNewBlockHashesMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.NewBlockMsg, HandleNewBlockMsg)
-	p2p.PeerMgrInst().RegMsgCall(p2p.TxMsg, HandleTxMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockHeadersMsg, HandleGetBlockHeadersMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockBodiesMsg, HandleGetBlockBodiesMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.BlockHeadersMsg, HandleBlockHeadersMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.BlockBodiesMsg, HandleBlockBodiesMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.GetNodeDataMsg, HandleGetNodeDataMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.NodeDataMsg, HandleNodeDataMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.GetReceiptsMsg, HandleGetReceiptsMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.ReceiptsMsg, HandleReceiptsMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockHashesMsg, HandleNewBlockHashesMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
 	return synctrl, nil
 }
