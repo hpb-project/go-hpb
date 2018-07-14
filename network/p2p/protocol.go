@@ -74,8 +74,8 @@ const ProtoMsgLength   uint64 =  20
 type MsgProcessCB func(p *Peer, msg Msg) error
 type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
 
-type OnAddPeerCB  func(p *Peer)
-type OnDropPeerCB func(p *Peer)
+type OnAddPeerCB  func(p *Peer) error
+type OnDropPeerCB func(p *Peer) error
 
 type errCode int
 
