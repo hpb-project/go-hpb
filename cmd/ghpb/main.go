@@ -197,7 +197,7 @@ func ghpb(ctx *cli.Context) error {
 		utils.Fatalf("Failed to create node")
 		return err
 	}
-	startNode(ctx, hpbnode)
+	startNode(ctx, hpbnode, cfg)
 	hpbnode.Wait()
 	return nil
 }
@@ -219,12 +219,9 @@ func createNode(conf  *config.HpbConfig) (* node.Node, error) {
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
-func startNode(ctx *cli.Context, stack *node.Node) {
+func startNode(ctx *cli.Context, stack *node.Node, conf  *config.HpbConfig) {
 
-	//set rpc aii
-	//utils.SetNodeAPI(&conf.Node, stack)
-	// Start up the node itself
-	utils.StartNode(stack)
+
 
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
@@ -236,6 +233,20 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			unlockAccount(ctx, ks, trimmed, i, passwords)
 		}
 	}
+
+	if unlocks[0] != ""{
+		account, err := utils.MakeAddress(ks, strings.TrimSpace(unlocks[0]))
+		if err != nil {
+			utils.Fatalf("Could not list accounts: %v", err)
+		}
+		conf.Node.DefaultAddress = account.Address
+	}
+
+
+	//set rpc aii
+	//utils.SetNodeAPI(&conf.Node, stack)
+	// Start up the node itself
+	utils.StartNode(stack)
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)

@@ -52,9 +52,10 @@ func (cap Cap) String() string {
 ////////////////////////////////////////////////////////
 //HPB 协议
 type HpbProto struct {
-	networkId  uint64
-	protos     []Protocol
-	procFun    map[uint64]MsgCallback
+	networkId   uint64
+	DefaultAddr common.Address
+	protos      []Protocol
+	procFun     map[uint64]MsgCallback
 }
 
 const ProtoName        = "hpb"
@@ -83,7 +84,6 @@ const (
 
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
-		networkId: 0,
 		protos:    make([]Protocol, 0, len(ProtocolVersions)),
 		procFun:   make(map[uint64]MsgCallback),
 	}
@@ -155,7 +155,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	//TODO: 调用blockchain接口，获取状态信息
 
 	td, head, genesis := bc.InstanceBlockChain().Status()
-	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
+	if err := p.Handshake(hp.networkId, hp.DefaultAddr, td, head, genesis); err != nil {
 		p.Log().Debug("Handshake failed", "err", err)
 		return err
 	}
@@ -205,10 +205,18 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return ErrResp(ErrExtraStatusMsg, "uncontrolled status message")
 
 	case msg.Code == ReqNodesMsg:
-		HandleReqNodesMsg(p,msg)
+		if cb := hp.procFun[ReqNodesMsg]; cb != nil{
+			cb(p,msg)
+			//log.Info("ReqNodesMsg callback ok")
+		}
+		//HandleReqNodesMsg(p,msg)
 		return nil
 	case msg.Code == ResNodesMsg:
-		HandleResNodesMsg(p,msg)
+		if cb := hp.procFun[ResNodesMsg]; cb != nil{
+			cb(p,msg)
+			//log.Info("ResNodesMsg callback ok")
+		}
+		//HandleResNodesMsg(p,msg)
 		return nil
 
 	case msg.Code == GetBlockHeadersMsg:

@@ -78,7 +78,7 @@ func localConsole(ctx *cli.Context) error {
 		utils.Fatalf("Failed to create node")
 		return err
 	}
-	startNode(ctx, node)
+	startNode(ctx, node, cfg)
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
@@ -169,7 +169,7 @@ func ephemeralConsole(ctx *cli.Context) error {
 		utils.Fatalf("Failed to create node")
 		return err
 	}
-	startNode(ctx, node)
+	startNode(ctx, node, cfg)
 	defer node.Stop()
 
 	// Attach to the newly started node and start the JavaScript console
