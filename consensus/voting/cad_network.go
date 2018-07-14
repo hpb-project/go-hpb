@@ -18,7 +18,7 @@
 package voting
 
 import (
-	"math"
+	//"math"
 	//"strconv"
 	"math/rand"
     "fmt"
@@ -42,7 +42,8 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		bestCadWinners := []*snapshots.CadWinner{} 
 		
 		hpbAddresses := snap.GetHpbNodes()
-		cadWinners := csnap.CadWinners		
+		cadWinners := csnap.CadWinners
+		
 		
 		for _, cadWinner := range cadWinners {
 			if ok, _ := Contain(cadWinner.Address, hpbAddresses); !ok {
@@ -51,11 +52,12 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		}
 		
 		// 先获取长度，然后进行随机获取
-		lnlen := int(math.Log2(float64(len(bestCadWinners))))
+		//lnlen := int(math.Log2(float64(len(bestCadWinners))))
 		
 		var lastCadWinners []*snapshots.CadWinner
 		
-		for i := 0 ; i < lnlen; i++{
+		//for i := 0 ; i < lnlen; i++{
+		for i := 0 ; i < len(bestCadWinners); i++{
 			lastCadWinners = append(lastCadWinners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
 		}
 		
