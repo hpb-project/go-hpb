@@ -95,14 +95,16 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		// all nodes = Candidate node + HPB node
 		peers := p2p.PeerMgrInst().PeersAll()
 		
-		fmt.Println("length:", len(peers))
+		fmt.Println("peers length is:", len(peers))
 		
 		for _, peer := range peers {
-			fmt.Println("this is test:", peer.TxsRate())
+			fmt.Println("this is Address:", peer.Address())
+			fmt.Println("this is TxsRate:", peer.TxsRate())
+			fmt.Println("this is Bandwidth:", peer.Bandwidth())
 		}
 				
 		// 模拟从peer中获取
-		for i := 0; i < 150; i++ {
+		for i := 0; i < 9; i++ {
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
@@ -110,7 +112,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			strnum := strconv.Itoa(i)
 			//在候选列表中获取，如果候选列表中含有，在进行加入
 			//if cad,exists := cadNodeMap[string(i)]; exists == true{
-			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcaff", 16)
+			bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcaf"+strnum, 16)
 		    address := common.BigToAddress(bigaddr)
 			//if ok, _ := Contain(address, hpbAddresses); !ok {
 			cadWinners = append(cadWinners,snapshots.CadWinner{"192.168.2."+strnum,address,uint64(VoteIndex)})

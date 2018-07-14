@@ -184,7 +184,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.eventMux = eventmux
 
 	block			:= bc.InstanceBlockChain()
-
+	peermanager.RegChanStatus(block.Status)
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
@@ -211,7 +211,12 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//syncctr := nil
 	if (stored == common.Hash{}) {
 		engine      :=  prometheus.InstancePrometheus()
-		block.InitWithEngine(engine)
+		//add consensus engine to blockchain
+		_, err := block.InitWithEngine(engine)
+		if err != nil {
+			log.Error("add engine to blockchain error")
+			return nil, err
+		}
 		hpbnode.Hpbbc = block
 
 		txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
@@ -221,7 +226,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
 		syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
 		if err != nil {
-			log.Warn("crete synctrl object error")
+			log.Error("crete synctrl object error")
+			return nil, err
 		}
 		hpbnode.Hpbsyncctr = syncctr
 
