@@ -95,12 +95,16 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		// all nodes = Candidate node + HPB node
 		peers := p2p.PeerMgrInst().PeersAll()
 		
-		fmt.Println("peers length is:", len(peers))
+		fmt.Println("######### peers length is:", len(peers))
 		
 		for _, peer := range peers {
 			fmt.Println("this is Address:", peer.Address())
 			fmt.Println("this is TxsRate:", peer.TxsRate())
 			fmt.Println("this is Bandwidth:", peer.Bandwidth())
+			networkBandwidth := float64(peer.Bandwidth()) * float64(0.3)
+			transactionNum := float64(peer.TxsRate()) * float64(0.7)
+			VoteIndex := networkBandwidth + transactionNum
+			fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
 		}
 				
 		// 模拟从peer中获取
