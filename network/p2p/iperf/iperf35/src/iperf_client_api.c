@@ -364,7 +364,7 @@ iperf_connect(struct iperf_test *test)
 	}
 
     if (test->verbose) {
-	printf("Control connection MSS %d\n", test->ctrl_sck_mss);
+	//printf("Control connection MSS %d\n", test->ctrl_sck_mss);
     }
 
     /*

@@ -41,7 +41,7 @@ const (
 
 	pingInterval    = 15 * time.Second
 	nodereqInterval = 10 * time.Second
-	testBWDuration  = 10  //second
+	testBWDuration  = 3  //second
 )
 
 // protoHandshake is the RLP structure of the protocol handshake.
@@ -662,17 +662,17 @@ func (p *Peer) testBandwidth() (error) {
 			}
 		}()
 
-		p.log.Trace("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
+		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
 		result := iperf.StartTest(p.RemoteIP(), p.RemoteListenPort()+100, testBWDuration)
 		p.lock.Lock()
 		defer p.lock.Unlock()
 		p.bandwidth = result
-		p.log.Debug("Test bandwidth ok","result",result)
+		p.log.Info("Test bandwidth ok","result",result)
 		ch <- struct{}{}
 
 	}()
 
-	timeout := time.NewTimer(time.Second*15)
+	timeout := time.NewTimer(time.Second*5)
 	defer timeout.Stop()
 
 	select {

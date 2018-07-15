@@ -20,6 +20,7 @@ import (
 	"sync"
 	"errors"
 	"math/big"
+	"math/rand"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
@@ -145,7 +146,7 @@ func (prm *PeerManager)Start() error {
 	add.Port = add.Port+100
 	log.Info("Iperf server start", "port",add.Port)
 	go iperf.StartSever(add.Port)
-	if prm.server.localType == discover.BootNode {
+	if prm.server.localType != discover.BootNode {
 		go prm.randomTestBW()
 	}
 
@@ -167,8 +168,8 @@ func (prm *PeerManager)Stop(){
 }
 
 func (prm *PeerManager) randomTestBW() {
-
-	timeout := time.NewTimer(time.Second*20)
+	rd :=rand.Intn(30)
+	timeout := time.NewTimer(time.Second*time.Duration(30+rd))
 	defer timeout.Stop()
 
 	for {
@@ -176,12 +177,16 @@ func (prm *PeerManager) randomTestBW() {
 		//log.Info("waiting start test")
 		select {
 		case <-timeout.C:
-			timeout.Reset(time.Second*20)
+			timeout.Reset(time.Second*60)
 		}
 
 		//2 to test
 		for _, p := range prm.peers {
-			//p.log.Info("start testing")
+			if p.remoteType == discover.BootNode {
+				continue
+			}
+
+			p.log.Info("start testing","remoteType",p.remoteType.ToString())
 			if err:= p.testBandwidth();err != nil{
 				p.log.Error("random test bandwidth","error",err)
 			}else {

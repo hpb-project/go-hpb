@@ -484,12 +484,13 @@ running:
 				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
+					log.Info("peer id","nid",n.ID,"pid",p.ID())
 					if n.ID == p.ID() {
 						p.remoteType = discover.BootNode
 					}
 				}
 
-				log.Debug("Adding p2p peer", "id", c.id, "type", p.localType.ToString(), "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+				log.Info("Adding p2p peer", "id", c.id, "type", p.localType.ToString(),"remote", p.remoteType.ToString(), "name", name, "addr", c.fd.RemoteAddr())
 
 				peers[c.id] = p
 				go srv.runPeer(p)
