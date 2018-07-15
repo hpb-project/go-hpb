@@ -28,25 +28,24 @@ var (
 
 func TestValidateSign(t *testing.T) {
 
-	var result float64
-	ch := make(chan float64, 1)
+	var result = float64(0.0)
+	ch := make(chan struct{}, 1)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Log("iperf test result","result",r)
 			}
 		}()
-		ch <- StartTest("127.0.0.1",28201,5)
+		result = StartTest("127.0.0.1",28201,5)
+		ch <- struct{}{}
 	}()
-
 
 
 	timeout := time.NewTimer(time.Second*15)
 	defer timeout.Stop()
 
-	result = 0.0
 	select {
-	case result = <-ch:
+	case <-ch:
 	case <-timeout.C:
 	}
 	t.Log("iperf test result","result",result)

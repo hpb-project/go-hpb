@@ -138,7 +138,8 @@ type conn struct {
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
-	//rend  discover.EndPoint
+	rport int             // valid after the protocol handshake
+
 }
 
 type transport interface {
@@ -487,6 +488,7 @@ running:
 						p.remoteType = discover.BootNode
 					}
 				}
+
 				log.Debug("Adding p2p peer", "id", c.id, "type", p.localType.ToString(), "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 
 				peers[c.id] = p
@@ -661,7 +663,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(DiscUnexpectedIdentity)
 		return
 	}
-	c.caps, c.name = phs.Caps, phs.Name
+	c.caps, c.name ,c.rport = phs.Caps, phs.Name, int(phs.End.TCP)
+	log.Info("do protocol handshake","caps",c.caps,"name",c.name,"rport",c.rport)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		c.close(err)

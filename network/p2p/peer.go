@@ -41,6 +41,7 @@ const (
 
 	pingInterval    = 15 * time.Second
 	nodereqInterval = 10 * time.Second
+	testBWDuration  = 10  //second
 )
 
 // protoHandshake is the RLP structure of the protocol handshake.
@@ -51,7 +52,6 @@ type protoHandshake struct {
 	ListenPort uint64
 	ID         discover.NodeID
 	End        *discover.EndPoint
-
 	// Ignore additional fields (for forward compatibility).
 	Rest []rlp.RawValue `rlp:"tail"`
 }
@@ -80,7 +80,6 @@ type PeerEvent struct {
 // Peer represents a connected remote node.
 type PeerBase struct {
 	rw      *conn
-	//running map[string]*protoRW
 	running *protoRW
 	log     log.Logger
 	created mclock.AbsTime
@@ -95,8 +94,8 @@ type PeerBase struct {
 	events   *event.SyncEvent
 
 	////////////////////////////////////////////////////
-	localType  discover.NodeType  //本端节点类型
-	remoteType discover.NodeType  //远端验证后节点类型
+	localType  discover.NodeType
+	remoteType discover.NodeType
 
 	ntab      discoverTable
 
@@ -137,6 +136,12 @@ func (p *PeerBase) Caps() []Cap {
 // RemoteAddr returns the remote address of the network connection.
 func (p *PeerBase) RemoteAddr() net.Addr {
 	return p.rw.fd.RemoteAddr()
+}
+func (p *PeerBase) RemoteIP() string {
+	return p.rw.fd.RemoteAddr().(*net.TCPAddr).IP.String()
+}
+func (p *PeerBase) RemoteListenPort() int {
+	return p.rw.rport
 }
 
 // LocalAddr returns the local address of the network connection.
@@ -438,6 +443,7 @@ type Peer struct {
 	bandwidth float64
 	address   common.Address
 
+
 	head common.Hash
 	td   *big.Int
 	lock sync.RWMutex
@@ -512,19 +518,11 @@ func (p *Peer) SetTxsRate(txs float64) {
 	p.txsRate = txs
 }
 
-
 func (p *Peer) Bandwidth() float64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.bandwidth
-}
-
-func (p *Peer) SetBandwidth(bw float64) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.bandwidth = bw
 }
 
 func (p *Peer) Address() common.Address {
@@ -654,29 +652,35 @@ func (p *Peer) String() string {
 }
 
 
-func (p *Peer) testBandwidth(host string, port int, duration int) (float64,error) {
-	// Send out own handshake in a new thread
-	var result float64
-	ch := make(chan float64, 1)
+func (p *Peer) testBandwidth() (error) {
+
+	ch := make(chan struct{}, 1)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				p.log.Debug("Test bandwidth panic.")
+				p.log.Error("Test bandwidth panic.")
 			}
 		}()
-		ch <- iperf.StartTest(host,port,duration)
+
+		p.log.Trace("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
+		result := iperf.StartTest(p.RemoteIP(), p.RemoteListenPort()+100, testBWDuration)
+		p.lock.Lock()
+		defer p.lock.Unlock()
+		p.bandwidth = result
+		p.log.Debug("Test bandwidth ok","result",result)
+		ch <- struct{}{}
+
 	}()
 
 	timeout := time.NewTimer(time.Second*15)
 	defer timeout.Stop()
 
-	result = 0.0
 	select {
-	case result = <-ch:
+	case <-ch:
 	case <-timeout.C:
-		return 0,errPeerBWTestTimeout
+		return errPeerBWTestTimeout
 	}
 
-	return result,nil
+	return nil
 }
 

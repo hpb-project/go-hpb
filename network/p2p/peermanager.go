@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"net"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
+	"time"
 )
 
 var (
@@ -144,6 +145,9 @@ func (prm *PeerManager)Start() error {
 	add.Port = add.Port+100
 	log.Info("Iperf server start", "port",add.Port)
 	go iperf.StartSever(add.Port)
+	if prm.server.localType == discover.BootNode {
+		go prm.randomTestBW()
+	}
 
 	return nil
 }
@@ -160,6 +164,34 @@ func (prm *PeerManager)Stop(){
 
 	iperf.KillSever()
 
+}
+
+func (prm *PeerManager) randomTestBW() {
+
+	timeout := time.NewTimer(time.Second*20)
+	defer timeout.Stop()
+
+	for {
+		//1 start to test
+		//log.Info("waiting start test")
+		select {
+		case <-timeout.C:
+			timeout.Reset(time.Second*20)
+		}
+
+		//2 to test
+		for _, p := range prm.peers {
+			//p.log.Info("start testing")
+			if err:= p.testBandwidth();err != nil{
+				p.log.Error("random test bandwidth","error",err)
+			}else {
+				break
+			}
+		}
+
+	}
+
+	return
 }
 
 func (prm *PeerManager)P2pSvr() *Server {
@@ -310,6 +342,11 @@ func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
 	log.Info("OnAddPeer has been register")
 	return
 }
+
+
+
+
+
 //func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
 //	prm.hpbpro.regOnDropPeer(cb)
 //	log.Debug("OnDropPeer has been register")
