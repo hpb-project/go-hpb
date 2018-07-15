@@ -177,7 +177,8 @@ func (prm *PeerManager) randomTestBW() {
 		//log.Info("waiting start test")
 		select {
 		case <-timeout.C:
-			timeout.Reset(time.Second*60)
+			rd :=rand.Intn(6)
+			timeout.Reset(time.Second*time.Duration(60+rd))
 		}
 
 		//2 to test
