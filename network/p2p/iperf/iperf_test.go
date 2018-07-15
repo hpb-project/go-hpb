@@ -19,28 +19,37 @@ package iperf
 import (
 	"testing"
 	"time"
+	"encoding/json"
 )
 
 var (
-	iperf = &Iperf{SrvPort:5201,CliHost:"127.0.0.1",CliPort:5201,quit: make(chan int)}
+	iperf = &Iperf{SrvPort:5201,CliHost:"127.0.0.1",CliPort:28201,quit: make(chan int)}
 )
 
 func TestValidateSign(t *testing.T) {
 
 	time.Sleep(time.Second)
-	iperf.StartTest("127.0.0.1",5202,5)
-	//t.Log("iperf test","result",result)
-}
+	result := StartTest("127.0.0.1",28201,5)
 
-//func TestValidateSign(t *testing.T) {
-//
-//	go iperf.StartSever(5202)
-//
-//	time.Sleep(time.Second*20)
-//
-//
-//	err :=iperf.StopSever(3)
-//
-//	t.Log("Stop iperf server","err",err)
-//
-//}
+	var dat map[string]interface{}
+	json.Unmarshal([]byte(result), &dat)
+
+	//end := dat["end"]
+	//t.Log("iperf test","end",end)
+
+	sum:= dat["end"].(map[string]interface{})
+	//t.Log("iperf test","sum_sent",sum["sum_sent"])
+	//t.Log("iperf test","sum_received",sum["sum_received"])
+
+	sum_sent     := sum["sum_sent"].(map[string]interface{})
+	sum_received := sum["sum_received"].(map[string]interface{})
+	//t.Log("iperf test","sum_sent",sum_sent["bits_per_second"])
+	//t.Log("iperf test","sum_received",sum_received["bits_per_second"])
+
+	send := sum_sent["bits_per_second"].(float64)
+	t.Log("iperf test","sendrate",send)
+
+	recv := sum_received["bits_per_second"].(float64)
+	t.Log("iperf test","recvrate",recv)
+
+}

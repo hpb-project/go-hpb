@@ -118,3 +118,36 @@ func KillSever()  {
 	return
 }
 
+func StartTest(host string, port int, duration int) (string) {
+	result := C.GoString(C.iperf_test(C.CString(host),C.int(port),C.int(duration)))
+
+	/*
+	var dat map[string]interface{}
+	json.Unmarshal([]byte(result), &dat)
+
+
+	for _, item := range dat {
+
+		log.Info("result","item",item)
+
+		//end := v.([]interface{})
+		//for _, wsItem := range end {
+		//	wsMap := wsItem.(map[string]interface{})
+		//	if vCw, ok := wsMap["sum_sent"]; ok {
+		//		cw := vCw.([]interface{})
+		//		for _, cwItem := range cw {
+		//			cwItemMap := cwItem.(map[string]interface{})
+		//			if w, ok := cwItemMap["bits_per_second"]; ok {
+		//				sendRate := w.(string)
+		//				log.Info("sendRate","sendRate",sendRate)
+		//			}
+		//		}
+		//	}
+		//}
+	}
+	*/
+
+	//log.Info("StartTest","result",result)
+	return  result
+}
+
