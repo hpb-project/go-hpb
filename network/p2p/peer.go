@@ -652,3 +652,11 @@ func (p *Peer) String() string {
 	)
 }
 
+
+func (p *Peer) testBandwidth(host string, port int, duration int) (send float64,recv float64,err error) {
+
+
+
+	return send,recv,nil
+}
+
