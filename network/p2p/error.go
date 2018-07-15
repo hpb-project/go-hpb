@@ -137,3 +137,8 @@ var (
 var (
 	errProtNoStatusCB             = errors.New("protocol this is no status callback")
 )
+
+// Peer
+var (
+	errPeerBWTestTimeout             = errors.New("peer test bandwidth timeout")
+)

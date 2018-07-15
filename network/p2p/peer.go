@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"math/big"
 	"gopkg.in/fatih/set.v0"
+	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 )
 
 const (
@@ -653,10 +654,29 @@ func (p *Peer) String() string {
 }
 
 
-func (p *Peer) testBandwidth(host string, port int, duration int) (send float64,recv float64,err error) {
+func (p *Peer) testBandwidth(host string, port int, duration int) (float64,error) {
+	// Send out own handshake in a new thread
+	var result float64
+	ch := make(chan float64, 1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				p.log.Debug("Test bandwidth panic.")
+			}
+		}()
+		ch <- iperf.StartTest(host,port,duration)
+	}()
 
+	timeout := time.NewTimer(time.Second*15)
+	defer timeout.Stop()
 
+	result = 0.0
+	select {
+	case result = <-ch:
+	case <-timeout.C:
+		return 0,errPeerBWTestTimeout
+	}
 
-	return send,recv,nil
+	return result,nil
 }
 

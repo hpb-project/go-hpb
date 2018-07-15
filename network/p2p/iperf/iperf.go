@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"errors"
 	"time"
+	"encoding/json"
 )
 
 var (
@@ -118,36 +119,20 @@ func KillSever()  {
 	return
 }
 
-func StartTest(host string, port int, duration int) (string) {
+func StartTest(host string, port int, duration int) (float64) {
 	result := C.GoString(C.iperf_test(C.CString(host),C.int(port),C.int(duration)))
 
-	/*
 	var dat map[string]interface{}
 	json.Unmarshal([]byte(result), &dat)
 
+	sum:= dat["end"].(map[string]interface{})
 
-	for _, item := range dat {
+	sum_sent     := sum["sum_sent"].(map[string]interface{})
+	sum_received := sum["sum_received"].(map[string]interface{})
 
-		log.Info("result","item",item)
-
-		//end := v.([]interface{})
-		//for _, wsItem := range end {
-		//	wsMap := wsItem.(map[string]interface{})
-		//	if vCw, ok := wsMap["sum_sent"]; ok {
-		//		cw := vCw.([]interface{})
-		//		for _, cwItem := range cw {
-		//			cwItemMap := cwItem.(map[string]interface{})
-		//			if w, ok := cwItemMap["bits_per_second"]; ok {
-		//				sendRate := w.(string)
-		//				log.Info("sendRate","sendRate",sendRate)
-		//			}
-		//		}
-		//	}
-		//}
-	}
-	*/
-
-	//log.Info("StartTest","result",result)
-	return  result
+	send := sum_sent["bits_per_second"].(float64)
+	recv := sum_received["bits_per_second"].(float64)
+	log.Debug("iperf test result","sendrate",send, "recvrate",recv,"avg",(send+recv)/2)
+	return  (send+recv)/2
 }
 

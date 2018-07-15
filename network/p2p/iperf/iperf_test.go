@@ -19,7 +19,7 @@ package iperf
 import (
 	"testing"
 	"time"
-	"encoding/json"
+
 )
 
 var (
@@ -28,28 +28,47 @@ var (
 
 func TestValidateSign(t *testing.T) {
 
-	time.Sleep(time.Second)
-	result := StartTest("127.0.0.1",28201,5)
+	var result float64
+	ch := make(chan float64, 1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("iperf test result","result",r)
+			}
+		}()
+		ch <- StartTest("127.0.0.1",28201,5)
+	}()
 
-	var dat map[string]interface{}
-	json.Unmarshal([]byte(result), &dat)
 
-	//end := dat["end"]
-	//t.Log("iperf test","end",end)
 
-	sum:= dat["end"].(map[string]interface{})
-	//t.Log("iperf test","sum_sent",sum["sum_sent"])
-	//t.Log("iperf test","sum_received",sum["sum_received"])
+	timeout := time.NewTimer(time.Second*15)
+	defer timeout.Stop()
 
-	sum_sent     := sum["sum_sent"].(map[string]interface{})
-	sum_received := sum["sum_received"].(map[string]interface{})
-	//t.Log("iperf test","sum_sent",sum_sent["bits_per_second"])
-	//t.Log("iperf test","sum_received",sum_received["bits_per_second"])
+	result = 0.0
+	select {
+	case result = <-ch:
+	case <-timeout.C:
+	}
+	t.Log("iperf test result","result",result)
+	//var dat map[string]interface{}
+	//json.Unmarshal([]byte(result), &dat)
+	//
+	////end := dat["end"]
+	////t.Log("iperf test","end",end)
+	//
+	//sum:= dat["end"].(map[string]interface{})
+	////t.Log("iperf test","sum_sent",sum["sum_sent"])
+	////t.Log("iperf test","sum_received",sum["sum_received"])
+	//
+	//sum_sent     := sum["sum_sent"].(map[string]interface{})
+	//sum_received := sum["sum_received"].(map[string]interface{})
+	////t.Log("iperf test","sum_sent",sum_sent["bits_per_second"])
+	////t.Log("iperf test","sum_received",sum_received["bits_per_second"])
+	//
+	//send := sum_sent["bits_per_second"].(float64)
+	//t.Log("iperf test","sendrate",send)
+	//
+	//recv := sum_received["bits_per_second"].(float64)
 
-	send := sum_sent["bits_per_second"].(float64)
-	t.Log("iperf test","sendrate",send)
-
-	recv := sum_received["bits_per_second"].(float64)
-	t.Log("iperf test","recvrate",recv)
 
 }
