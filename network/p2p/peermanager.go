@@ -331,6 +331,10 @@ func (prm *PeerManager) Close() {
 	prm.closed = true
 }
 
+func (prm *PeerManager) Protocol() []Protocol {
+	return prm.hpbpro.protos
+}
+
 func (prm *PeerManager) Peers() []*PeerInfo {
 	return nil
 }
