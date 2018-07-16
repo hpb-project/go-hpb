@@ -125,7 +125,7 @@ const (
 	staticDialedConn
 	inboundConn
 )
-
+const RandNonceSize = 32
 // conn wraps a network connection with information gathered
 // during the two handshakes.
 type conn struct {
@@ -133,11 +133,13 @@ type conn struct {
 	transport
 	flags connFlag
 	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
+
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
-	rport int             // valid after the protocol handshake
 
+	rport  int            // valid after the protocol handshake
+	raddr  common.Address // valid after the protocol handshake
 }
 
 type transport interface {
@@ -323,17 +325,19 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.ntab = ntab
 
-	if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
-		return err
-	}
-
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
+	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
-	srv.ourHandshake.End = ourend
-	log.Debug("start our end point","EndPoint",ourend)
+	srv.ourHandshake.DefaultAddr = srv.DefaultAddr
+	log.Debug("start our handshake","Data",srv.ourHandshake)
+
+
+
+	if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+		return err
+	}
 
 	if srv.ListenAddr == "" {
 		log.Error("P2P server start, listen address is nil")
@@ -662,8 +666,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(DiscUnexpectedIdentity)
 		return
 	}
-	c.caps, c.name ,c.rport = phs.Caps, phs.Name, int(phs.End.TCP)
-	log.Info("do protocol handshake","caps",c.caps,"name",c.name,"rport",c.rport)
+	c.caps, c.name ,c.rport, c.raddr  = phs.Caps, phs.Name, int(phs.End.TCP),phs.DefaultAddr
+	log.Info("Do handshake","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		c.close(err)

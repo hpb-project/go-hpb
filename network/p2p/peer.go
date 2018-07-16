@@ -44,17 +44,6 @@ const (
 	testBWDuration  = 3  //second
 )
 
-// protoHandshake is the RLP structure of the protocol handshake.
-type protoHandshake struct {
-	Version    uint64
-	Name       string
-	Caps       []Cap
-	ListenPort uint64
-	ID         discover.NodeID
-	End        *discover.EndPoint
-	Rest []rlp.RawValue `rlp:"tail"`
-}
-
 // PeerEventType is the type of peer events emitted by a p2p.Server
 type PeerEventType string
 
@@ -65,8 +54,6 @@ const (
 	PeerEventMsgRecv event.EventType = 0x04
 )
 
-// PeerEvent is an event emitted when peers are either added or dropped from
-// a p2p.Server or when a message is sent or received on a peer connection
 type PeerEvent struct {
 	Type     event.EventType    `json:"type"`
 	Peer     discover.NodeID    `json:"peer"`
@@ -75,6 +62,28 @@ type PeerEvent struct {
 	MsgCode  *uint64            `json:"msg_code,omitempty"`
 	MsgSize  *uint32            `json:"msg_size,omitempty"`
 }
+
+// protoHandshake is the RLP structure of the protocol handshake.
+type protoHandshake struct {
+	Version    uint64
+	Name       string
+	Caps       []Cap
+	ID         discover.NodeID
+	End          *discover.EndPoint
+
+	DefaultAddr  common.Address
+	RandNonce    []byte  //Every peer is not the same,this is temp.
+}
+
+// statusData is the network packet for the status message.
+type statusData struct {
+	ProtocolVersion uint32
+	NetworkId       uint64
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	GenesisBlock    common.Hash
+}
+
 
 // Peer represents a connected remote node.
 type PeerBase struct {
@@ -93,11 +102,27 @@ type PeerBase struct {
 	events   *event.SyncEvent
 
 	////////////////////////////////////////////////////
+	ntab       discoverTable
 	localType  discover.NodeType
 	remoteType discover.NodeType
 
-	ntab      discoverTable
+}
 
+type Peer struct {
+	*PeerBase
+	rw MsgReadWriter
+
+	id        string
+	version   uint
+	txsRate   float64
+	bandwidth float64
+
+	head common.Hash
+	td   *big.Int
+	lock sync.RWMutex
+
+	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 }
 
 func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
@@ -161,6 +186,10 @@ func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
 // LocalType returns the local type of the node.
 func (p *PeerBase) LocalType() discover.NodeType {
 	return p.localType
+}
+
+func (p *PeerBase) Address() common.Address {
+	return p.rw.raddr
 }
 
 // Disconnect terminates the peer connection with the given reason.
@@ -432,25 +461,6 @@ func (p *PeerBase) Info() *PeerInfo {
 //////////////////////////////////////////////////////////////////////
 
 
-type Peer struct {
-	*PeerBase
-	rw MsgReadWriter
-
-	id        string
-	version   uint
-	txsRate   float64
-	bandwidth float64
-	address   common.Address
-
-
-	head common.Hash
-	td   *big.Int
-	lock sync.RWMutex
-
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-}
-
 
 func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 	id := pr.ID()
@@ -524,13 +534,6 @@ func (p *Peer) Bandwidth() float64 {
 	return p.bandwidth
 }
 
-func (p *Peer) Address() common.Address {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	return p.address
-}
-
 func (p *Peer) KnownBlockAdd(hash common.Hash){
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
@@ -545,7 +548,6 @@ func (p *Peer) KnownBlockHas(hash common.Hash) bool{
 func (p *Peer) KnownBlockSize() int{
 	return p.knownBlocks.Size()
 }
-
 
 func (p *Peer) KnownTxsAdd(hash common.Hash){
 	for p.knownTxs.Size() >= maxKnownTxs {
@@ -566,20 +568,9 @@ func (p *Peer) SendData(msgCode uint64, data interface{}) error {
 	return Send(p.rw, msgCode, data)
 }
 
-
-// statusData is the network packet for the status message.
-type statusData struct {
-	ProtocolVersion uint32
-	NetworkId       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
-	DefaultAddr     common.Address
-}
-
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *Peer) Handshake(network uint64, address common.Address,td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 	var status statusData // safe to read after two values have been received from errc
@@ -592,7 +583,6 @@ func (p *Peer) Handshake(network uint64, address common.Address,td *big.Int, hea
 			TD:              td,
 			CurrentBlock:    head,
 			GenesisBlock:    genesis,
-			DefaultAddr:     address,
 		})
 	}()
 	go func() {
@@ -612,8 +602,8 @@ func (p *Peer) Handshake(network uint64, address common.Address,td *big.Int, hea
 			return DiscReadTimeout
 		}
 	}
-	p.td, p.head, p.address = status.TD, status.CurrentBlock, status.DefaultAddr
-	p.log.Debug("handshake over","td",p.td,"head", p.head, "address",p.address)
+	p.td, p.head = status.TD, status.CurrentBlock
+	p.log.Debug("handshake over","td",p.td,"head", p.head)
 	return nil
 }
 

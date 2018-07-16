@@ -105,7 +105,6 @@ func (prm *PeerManager)Start() error {
 	}
 
 	prm.hpbpro.networkId   = prm.server.NetworkId
-	prm.hpbpro.DefaultAddr = prm.server.DefaultAddr
 	prm.hpbpro.regMsgProcess(ReqNodesMsg,HandleReqNodesMsg)
 	prm.hpbpro.regMsgProcess(ResNodesMsg,HandleResNodesMsg)
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())

@@ -53,7 +53,6 @@ func (cap Cap) String() string {
 //HPB 协议
 type HpbProto struct {
 	networkId   uint64
-	DefaultAddr common.Address
 	protos      []Protocol
 
 	msgProcess  map[uint64]MsgProcessCB
@@ -167,7 +166,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return errProtNoStatusCB
 	}
 	td, head, genesis := hp.chanStatus()
-	if err := p.Handshake(hp.networkId, hp.DefaultAddr, td, head, genesis); err != nil {
+	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
 		p.Log().Debug("Handshake failed", "err", err)
 		return err
 	}

@@ -31,12 +31,12 @@ import (
 
 // message of control
 const (
-	baseMsgVersion       = 0x01
-	handshakeMsg = 0x00
-	discMsg      = 0x01
-	pingMsg      = 0x02
-	pongMsg      = 0x03
-	baseMsgMax   = 0x0F
+	baseMsgVersion  = 0x01
+	handshakeMsg    = 0x00
+	discMsg         = 0x01
+	pingMsg         = 0x02
+	pongMsg         = 0x03
+	baseMsgMax      = 0x0F
 )
 
 // message of hpb protocol
