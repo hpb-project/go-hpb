@@ -52,7 +52,6 @@ type protoHandshake struct {
 	ListenPort uint64
 	ID         discover.NodeID
 	End        *discover.EndPoint
-	// Ignore additional fields (for forward compatibility).
 	Rest []rlp.RawValue `rlp:"tail"`
 }
 

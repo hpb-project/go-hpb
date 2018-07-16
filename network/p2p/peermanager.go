@@ -30,6 +30,7 @@ import (
 	"net"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"time"
+	"fmt"
 )
 
 var (
@@ -113,8 +114,16 @@ func (prm *PeerManager)Start() error {
 	prm.server.localType = discover.InitNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
+		//input cid&hib from json
+
+		filename := config.Node.DataDir + "/"+bindInfoFileName
+		log.Info("bootnode load bindings","filename",filename)
+		parseBindInfo(filename)
+
 	}
-	log.Debug("Manager start server para","NodeType",prm.server.localType.ToString())
+
+
+	log.Info("Manager start server para","NodeType",prm.server.localType.ToString())
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -349,10 +358,6 @@ func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
 	return
 }
 
-
-
-
-
 //func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
 //	prm.hpbpro.regOnDropPeer(cb)
 //	log.Debug("OnDropPeer has been register")
@@ -360,6 +365,29 @@ func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
 //}
 
 
+const  bindInfoFileName  = "binding.json"
+
+type BindInfo struct {
+	CID    string     `json:"cid"`
+	HIB    string     `json:"hib"`
+	ADR    string     `json:"address"`
+	AUT    string     `json:"-"`
+}
+
+func parseBindInfo(filename string) error{
+
+	// Load the nodes from the config file.
+	var bindings [] BindInfo
+
+	if err := common.LoadJSON(filename, &bindings); err != nil {
+		log.Error(fmt.Sprintf("Can't load node file %s: %v", filename, err))
+		return nil
+	}
+
+	log.Debug("parse binding","information",bindings)
+
+	return nil
+}
 
 
 

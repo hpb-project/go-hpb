@@ -166,7 +166,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
 	}
-	td, head, genesis := hp.chanStatus()//bc.InstanceBlockChain().Status()
+	td, head, genesis := hp.chanStatus()
 	if err := p.Handshake(hp.networkId, hp.DefaultAddr, td, head, genesis); err != nil {
 		p.Log().Debug("Handshake failed", "err", err)
 		return err

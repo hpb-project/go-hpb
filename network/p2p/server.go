@@ -108,8 +108,6 @@ type Server struct {
 
 	dialer        NodeDialer
 
-
-
 }
 
 type peerOpFunc func(map[discover.NodeID]*PeerBase)
