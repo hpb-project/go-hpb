@@ -61,14 +61,12 @@ type HpbProto struct {
 	onDropPeer  OnDropPeerCB
 }
 
-const ProtoName        = "hpb"
-const ProtoMaxMsg      = 10 * 1024 * 1024
-var ProtocolVersions   = []uint{ProtoVersion100}
-var ProtocolMsgLengths = []uint64{ProtoMsgLength}
 
 // HPB 支持的协议消息
-const ProtoVersion100  uint   =  111
-const ProtoMsgLength   uint64 =  20
+const ProtoName        = "hpb"
+const ProtoMaxMsg      = 10 * 1024 * 1024
+var   ProtocolVersions = []uint{ProtoVersion111}
+const ProtoVersion111  uint   =  111
 
 type MsgProcessCB func(p *Peer, msg Msg) error
 type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
