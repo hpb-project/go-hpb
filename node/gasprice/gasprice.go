@@ -30,11 +30,11 @@ import (
 
 var maxPrice = big.NewInt(500 * config.Shannon)
 
-type Config struct {
+/*type Config struct {
 	Blocks     int
 	Percentile int
 	Default    *big.Int `toml:",omitempty"`
-}
+}*/
 
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
@@ -50,7 +50,7 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend hpbapi.Backend, params Config) *Oracle {
+func NewOracle(backend hpbapi.Backend, params config.GpoConfig) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -74,6 +74,8 @@ func NewOracle(backend hpbapi.Backend, params Config) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
+
+
 	gpo.cacheLock.RLock()
 	lastHead := gpo.lastHead
 	lastPrice := gpo.lastPrice

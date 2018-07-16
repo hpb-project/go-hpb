@@ -91,7 +91,7 @@ var DefaultConfig = Nodeconfig{
 }
 
 //TODO: shanlin
-type Config struct {
+type GpoConfig struct {
 	Blocks     int
 	Percentile int
 	Default    *big.Int `toml:",omitempty"`
@@ -145,7 +145,7 @@ type Nodeconfig struct {
 
 	// Gas Price Oracle options,HPB don't need dynamic gas price
 	//TODO: shanlin
-	GPO Config
+	GPO GpoConfig
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool

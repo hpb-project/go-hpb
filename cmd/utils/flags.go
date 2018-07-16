@@ -42,7 +42,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -905,7 +904,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	cfg.Node.NodeKey()
 }
 
-func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
+func setGPO(ctx *cli.Context, cfg *config.GpoConfig) {
 	if ctx.GlobalIsSet(GpoBlocksFlag.Name) {
 		cfg.Blocks = ctx.GlobalInt(GpoBlocksFlag.Name)
 	}

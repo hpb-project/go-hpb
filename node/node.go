@@ -54,6 +54,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/node/db"
+	"github.com/hpb-project/go-hpb/node/gasprice"
 )
 
 // Node is a container on which services can be registered.
@@ -231,6 +232,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbnode.Hpbtxpool = hpbtxpool
 
 		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
+		if hpbnode.worker == nil {
+		}
 		syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
 		if err != nil {
 			log.Error("crete synctrl object error")
@@ -249,15 +252,13 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 
 
-
-
 	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
 	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
-	//gpoParams := config.GPO
-	//if gpoParams.Default == nil {
-	//	gpoParams.Default = config.GasPrice
-	//}
-	//hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpb.ApiBackend, gpoParams)
+	gpoParams := conf.Node.GPO
+	if gpoParams.Default == nil {
+	gpoParams.Default = conf.Node.GasPrice
+	}
+	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
 
 	return hpbnode, nil
 }
