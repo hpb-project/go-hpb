@@ -67,7 +67,7 @@ var ProtocolVersions   = []uint{ProtoVersion100}
 var ProtocolMsgLengths = []uint64{ProtoMsgLength}
 
 // HPB 支持的协议消息
-const ProtoVersion100  uint   =  100
+const ProtoVersion100  uint   =  111
 const ProtoMsgLength   uint64 =  20
 
 type MsgProcessCB func(p *Peer, msg Msg) error
