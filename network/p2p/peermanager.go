@@ -115,9 +115,9 @@ func (prm *PeerManager)Start() error {
 		prm.server.localType = discover.BootNode
 		//input cid&hib from json
 
-		filename := config.Node.DataDir + "/"+bindInfoFileName
-		log.Info("bootnode load bindings","filename",filename)
-		parseBindInfo(filename)
+		//filename := config.Node.DataDir + "/"+bindInfoFileName
+		//log.Info("bootnode load bindings","filename",filename)
+		//parseBindInfo(filename)
 
 	}
 
