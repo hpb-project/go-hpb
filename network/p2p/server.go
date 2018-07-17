@@ -323,6 +323,9 @@ func (srv *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+	if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
+		return err
+	}
 	srv.ntab = ntab
 
 	// handshake
@@ -333,11 +336,6 @@ func (srv *Server) Start() (err error) {
 	srv.ourHandshake.DefaultAddr = srv.DefaultAddr
 	log.Debug("start our handshake","Data",srv.ourHandshake)
 
-
-
-	if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
-		return err
-	}
 
 	if srv.ListenAddr == "" {
 		log.Error("P2P server start, listen address is nil")
