@@ -61,7 +61,7 @@ import (
 type Node struct {
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	accman   		*accounts.Manager
-	eventMux        *sub.TypeMux
+	newBlockMux        *sub.TypeMux
 
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
@@ -153,7 +153,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		chainDb:		   nil, //db,
 		networkId:		   conf.Node.NetworkId,
 
-		eventMux:          nil, //eventmux,
+		newBlockMux:       nil, //eventmux,
 		accman:	   		   nil, //am,
 		Hpbengine:		   nil,
 
@@ -181,8 +181,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.chainDb = hpbdb
 
 
-	eventmux    := new(sub.TypeMux)
-	hpbnode.eventMux = eventmux
+	hpbnode.newBlockMux = new(sub.TypeMux)
 
 	block			:= bc.InstanceBlockChain()
 	peermanager.RegChanStatus(block.Status)
@@ -231,15 +230,16 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbtxpool      := txpool.GetTxPool()
 		hpbnode.Hpbtxpool = hpbtxpool
 
-		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.EventMux(), hpbnode.Hpbengine)
-		if hpbnode.worker == nil {
-		}
-		syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
-		if err != nil {
-			log.Error("crete synctrl object error")
-			return nil, err
-		}
+		//syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
+		syncctr := synctrl.InstanceSynCtrl()
+		hpbnode.newBlockMux = syncctr.NewBlockMux()
+		//if err != nil {
+		//	log.Error("crete synctrl object error")
+		//	return nil, err
+		//}
 		hpbnode.Hpbsyncctr = syncctr
+
+		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine)
 
 		// Rewind the chain in case of an incompatible config upgrade.
 		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
@@ -448,8 +448,8 @@ func (n *Node) AccountManager() *accounts.Manager {
 
 // EventMux retrieves the event multiplexer used by all the network services in
 // the current protocol stack.
-func (n *Node) EventMux() *sub.TypeMux {
-	return n.eventMux
+func (n *Node) NewBlockMux() *sub.TypeMux {
+	return n.newBlockMux
 }
 
 

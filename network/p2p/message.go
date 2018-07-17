@@ -126,7 +126,7 @@ type MsgReadWriter interface {
 
 // Send writes an RLP-encoded message with the given code.
 // data should encode as an RLP list.
-func Send(w MsgWriter, msgcode uint64, data interface{}) error {
+func send(w MsgWriter, msgcode uint64, data interface{}) error {
 	size, r, err := rlp.EncodeToReader(data)
 	if err != nil {
 		return err
@@ -134,8 +134,8 @@ func Send(w MsgWriter, msgcode uint64, data interface{}) error {
 	return w.WriteMsg(Msg{Code: msgcode, Size: uint32(size), Payload: r})
 }
 
-func SendItems(w MsgWriter, msgcode uint64, elems ...interface{}) error {
-	return Send(w, msgcode, elems)
+func sendItems(w MsgWriter, msgcode uint64, elems ...interface{}) error {
+	return send(w, msgcode, elems)
 }
 
 // ExpectMsg reads a message from r and verifies that its

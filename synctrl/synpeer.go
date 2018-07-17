@@ -33,6 +33,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
 const (
@@ -578,4 +579,35 @@ func (ps *peerSet) medianRTT() time.Duration {
 		median = rttMaxEstimate
 	}
 	return median
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+type PeerSyn struct {
+	*p2p.Peer
+}
+
+func (ps *PeerSyn) Head() (common.Hash, *big.Int){
+	return ps.Peer.Head()
+}
+
+func (ps *PeerSyn) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error{
+	ps.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
+	return ps.SendData(p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+}
+func (ps *PeerSyn) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
+	ps.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
+	return ps.SendData(p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+}
+func (ps *PeerSyn) RequestBodies(hashes []common.Hash) error {
+	ps.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
+	return ps.SendData(p2p.GetBlockBodiesMsg, hashes)
+}
+func (ps *PeerSyn) RequestNodeData(hashes []common.Hash) error {
+	ps.Log().Debug("Fetching batch of state data", "count", len(hashes))
+	return ps.SendData(p2p.GetNodeDataMsg, hashes)
+}
+func (ps *PeerSyn) RequestReceipts(hashes []common.Hash) error {
+	ps.Log().Debug("Fetching batch of receipts", "count", len(hashes))
+	return ps.SendData(p2p.GetReceiptsMsg, hashes)
 }

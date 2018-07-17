@@ -110,7 +110,7 @@ func (prm *PeerManager)Start() error {
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
 
-	prm.server.localType = discover.InitNode
+	prm.server.localType = discover.PreNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
 		//input cid&hib from json
@@ -186,7 +186,7 @@ func (prm *PeerManager) randomTestBW() {
 		select {
 		case <-timeout.C:
 			rd :=rand.Intn(6)
-			timeout.Reset(time.Second*time.Duration(60+rd))
+			timeout.Reset(time.Second*time.Duration(60*10+rd))
 		}
 
 		//2 to test
@@ -224,6 +224,10 @@ func (prm *PeerManager) Register(p *Peer) error {
 
 	if prm.closed {
 		return errClosed
+	}
+	if p.remoteType == discover.BootNode{
+		log.Debug("peer with bootnode is not allowed to register")
+		return nil
 	}
 	if _, ok := prm.peers[p.id]; ok {
 		return errAlreadyRegistered
@@ -361,11 +365,11 @@ func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
 	return
 }
 
-//func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
-//	prm.hpbpro.regOnDropPeer(cb)
-//	log.Debug("OnDropPeer has been register")
-//	return
-//}
+func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
+	prm.hpbpro.regOnDropPeer(cb)
+	log.Debug("OnDropPeer has been register")
+	return
+}
 
 
 const  bindInfoFileName  = "binding.json"

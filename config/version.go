@@ -23,8 +23,8 @@ import (
 
 // hpb protocol version control
 const (
-	ProtocolV111 uint    = 111 // match up protocol versions and messages versions
-	SubProtocolV111 uint = 111 // Light Hpb Sub-protocol versions
+	ProtocolV111    uint = 100 // match up protocol versions and messages versions
+	SubProtocolV111 uint = 100 // Light Hpb Sub-protocol versions
 )
 const (
 	VersionMajor = 0        // Major version component of the current release

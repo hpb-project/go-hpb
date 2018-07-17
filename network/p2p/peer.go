@@ -268,7 +268,7 @@ func (p *PeerBase) pingLoop() {
 	for {
 		select {
 		case <-pingTime.C:
-			if err := SendItems(p.rw, pingMsg); err != nil {
+			if err := sendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
 				return
 			}
@@ -278,7 +278,7 @@ func (p *PeerBase) pingLoop() {
 				return
 			}
 
-			if err := SendItems(p.rw, ReqNodesMsg); err != nil {
+			if err := sendItems(p.rw, ReqNodesMsg); err != nil {
 				p.protoErr <- err
 				return
 			}
@@ -294,11 +294,13 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
+			log.Error("peer read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
+			log.Error("peer handle msg error","error",err)
 			errc <- err
 			return
 		}
@@ -310,7 +312,7 @@ func (p *PeerBase) handle(msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
-		go SendItems(p.rw, pongMsg)
+		go sendItems(p.rw, pongMsg)
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
 		// This is the last message. We don't need to discard or
@@ -565,7 +567,7 @@ func (p *Peer) KnownTxsSize() int{
 }
 
 func (p *Peer) SendData(msgCode uint64, data interface{}) error {
-	return Send(p.rw, msgCode, data)
+	return send(p.rw, msgCode, data)
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
@@ -577,7 +579,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 
 	go func() {
 		p.log.Trace("handshake send","NetworkId",network,"TD",td,"CurrentBlock",head,"GenesisBlock",genesis)
-		errc <- Send(p.rw, StatusMsg, &statusData{
+		errc <- p.SendData(StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,
 			TD:              td,
@@ -603,7 +605,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 		}
 	}
 	p.td, p.head = status.TD, status.CurrentBlock
-	p.log.Debug("handshake over","td",p.td,"head", p.head)
+	p.log.Info("handshake over","td",p.td,"head", p.head)
 	return nil
 }
 

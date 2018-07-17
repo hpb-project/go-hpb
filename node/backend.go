@@ -94,7 +94,7 @@ func (s *Node) APIs() []rpc.API {
 		apis = append(apis, []rpc.API{
 			{Namespace: "hpb",
 				Version:   "1.0",
-					Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.eventMux),
+					Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
 					Public:    true,
 			},
 		}...)

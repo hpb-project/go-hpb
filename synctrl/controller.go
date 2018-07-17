@@ -74,7 +74,7 @@ type SynCtrl struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux      *sub.TypeMux
+	newBlockMux      *sub.TypeMux
 	txCh          chan bc.TxPreEvent
 	//txSub         sub.Subscription
 	minedBlockSub *sub.TypeMuxSubscription
@@ -100,7 +100,7 @@ func InstanceSynCtrl() *SynCtrl {
 			if err != nil {
 				return nil
 			}
-			syncInstance, err = NewSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
+			syncInstance, err = newSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
 			if err != nil {
 				syncInstance = nil
 			}
@@ -111,11 +111,13 @@ func InstanceSynCtrl() *SynCtrl {
 	return syncInstance
 }
 
+
+
 // NewSynCtrl returns a new block synchronization controller.
-func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.TxPool,
+func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.TxPool,
 	engine consensus.Engine) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
-		eventMux:    new(sub.TypeMux),
+		newBlockMux: new(sub.TypeMux),
 		txpool:      txpool,
 		chainconfig: cfg,
 		newPeerCh:   make(chan *p2p.Peer),
@@ -132,7 +134,7 @@ func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.Tx
 		synctrl.fastSync = uint32(1)
 	}
 	// Construct the different synchronisation mechanisms
-	synctrl.syner = NewSyncer(mode, db.GetHpbDbInstance(), synctrl.eventMux, nil, synctrl.removePeer)
+	synctrl.syner = NewSyncer(mode, db.GetHpbDbInstance(), synctrl.newBlockMux, nil, synctrl.removePeer)
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
@@ -163,7 +165,14 @@ func NewSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.Tx
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
+	p2p.PeerMgrInst().RegOnAddPeer(synctrl.syner.RegisterNetPeer)
+	p2p.PeerMgrInst().RegOnDropPeer(synctrl.syner.UnregisterNetPeer)
+
 	return synctrl, nil
+}
+
+func (this *SynCtrl) NewBlockMux() *sub.TypeMux{
+	return this.newBlockMux
 }
 
 func (this *SynCtrl) Start() {
@@ -184,7 +193,7 @@ func (this *SynCtrl) Start() {
 	go this.txRoutingLoop()
 
 	// broadcast mined blocks
-	this.minedBlockSub = this.eventMux.Subscribe(bc.NewMinedBlockEvent{})
+	this.minedBlockSub = this.newBlockMux.Subscribe(bc.NewMinedBlockEvent{})
 	go this.minedRoutingLoop()
 
 	// start sync handlers
@@ -413,6 +422,7 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
+		log.Info("######SYN DO REMOVER PEER")
 		peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }

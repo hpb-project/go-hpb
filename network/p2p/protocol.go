@@ -61,12 +61,11 @@ type HpbProto struct {
 	onDropPeer  OnDropPeerCB
 }
 
-
 // HPB 支持的协议消息
 const ProtoName        = "hpb"
 const ProtoMaxMsg      = 10 * 1024 * 1024
-var   ProtocolVersions = []uint{ProtoVersion111}
-const ProtoVersion111  uint   =  111
+var ProtocolVersions   = []uint{ProtoVersion100}
+const ProtoVersion100  uint   =  100
 
 type MsgProcessCB func(p *Peer, msg Msg) error
 type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
@@ -79,7 +78,6 @@ type errCode int
 const (
 	ErrMsgTooLarge = iota
 	ErrDecode
-	ErrInvalidMsgCode
 	ErrProtocolVersionMismatch
 	ErrNetworkIdMismatch
 	ErrGenesisBlockMismatch
@@ -182,16 +180,20 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	defer hp.removePeer(p.id)
 
-	if hp.onAddPeer != nil {
+	//&& p.remoteType!=discover.BootNode && p.localType!=discover.BootNode
+	if p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
-		p.log.Debug("has add peer to syncer")
+		p.log.Info("network has reg peer to syncer")
 	}
-	//defer hp.onDropPeer(p)
 
 	// main loop. handle incoming messages.
 	for {
 		if err := hp.handleMsg(p); err != nil {
 			p.Log().Debug("Message handling failed", "err", err)
+			if p.remoteType != discover.BootNode && hp.onDropPeer != nil {
+				hp.onDropPeer(p)
+				p.log.Info("network has drop peer to syncer")
+			}
 			return err
 		}
 	}
@@ -250,80 +252,91 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case msg.Code == GetBlockHeadersMsg:
 		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process GetBlockHeadersMsg msg")
 		}
 		return nil
 
 	case msg.Code == BlockHeadersMsg:
 		if cb := hp.msgProcess[BlockHeadersMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process BlockHeadersMsg msg")
 		}
 		return nil
 
 	case msg.Code == GetBlockBodiesMsg:
 		if cb := hp.msgProcess[GetBlockBodiesMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process GetBlockBodiesMsg msg")
 		}
 		return nil
 
 	case msg.Code == BlockBodiesMsg:
 		if cb := hp.msgProcess[BlockBodiesMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process BlockBodiesMsg msg")
 		}
 		return nil
 
 	case msg.Code == GetNodeDataMsg:
 		if cb := hp.msgProcess[GetNodeDataMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process GetNodeDataMsg msg")
 		}
 		return nil
 
 	case msg.Code == NodeDataMsg:
 		if cb := hp.msgProcess[NodeDataMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process NodeDataMsg msg")
 		}
 		return nil
 
 	case msg.Code == GetReceiptsMsg:
 		if cb := hp.msgProcess[GetReceiptsMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process GetReceiptsMsg msg")
 		}
 		return nil
 
 	case msg.Code == ReceiptsMsg:
 		if cb := hp.msgProcess[ReceiptsMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process ReceiptsMsg msg")
 		}
 		return nil
 
 	case msg.Code == NewBlockHashesMsg:
 		if cb := hp.msgProcess[NewBlockHashesMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process NewBlockHashesMsg msg")
 		}
 		return nil
 
 	case msg.Code == NewBlockMsg:
 		if cb := hp.msgProcess[NewBlockMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process NewBlockMsg msg")
 		}
 		return nil
 
 	case msg.Code == TxMsg:
 		if cb := hp.msgProcess[TxMsg]; cb != nil{
 			cb(p,msg)
+			log.Info("######process TxMsg msg")
 		}
 		return nil
 
 	case msg.Code == HpbTestMsg:
-		data :=[] byte {0x4C,0x51,0x48}
-		err := p.SendData(HpbTestMsgResp,data)
-		log.Debug("handleMsg test send ...","peer",p.id, "Msg",msg.String(),"send err",err)
+		//data :=[] byte {0x4C,0x51,0x48}
+		//err := p.SendData(HpbTestMsgResp,data)
+		//log.Info("handleMsg test send ...","peer",p.id, "Msg",msg.String(),"send err",err)
 		return nil
 	case msg.Code == HpbTestMsgResp:
-		log.Debug("handleMsg rest recv ...","peer",p.id, "Msg",msg.String())
+		//log.Info("handleMsg test recv ...","peer",p.id, "Msg",msg.String())
 		return nil
 
 	default:
-		return ErrResp(ErrInvalidMsgCode, "%v", msg.Code)
+		log.Error("there is no handle to process msg","code", msg.Code)
 	}
 	return nil
 }
@@ -358,7 +371,7 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 	// Send in a new thread
 	errc := make(chan error, 1)
 	go func() {
-		errc <- Send(p.rw, ResNodesMsg, &resp)
+		errc <- p.SendData(ResNodesMsg, &resp)
 	}()
 	timeout := time.NewTimer(time.Second)
 	defer timeout.Stop()

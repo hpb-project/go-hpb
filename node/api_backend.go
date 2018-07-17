@@ -189,7 +189,7 @@ func (b *HpbApiBackend) ChainDb() hpbdb.Database {
 }
 
 func (b *HpbApiBackend) EventMux() *sub.TypeMux {
-	return b.hpb.EventMux()
+	return b.hpb.NewBlockMux()
 }
 
 func (b *HpbApiBackend) AccountManager() *accounts.Manager {
