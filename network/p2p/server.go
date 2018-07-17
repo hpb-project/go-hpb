@@ -406,7 +406,7 @@ func (srv *Server) run(dialstate dialer) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
-			log.Trace("New dial task", "task", t)
+			//log.Trace("New dial task", "task", t)
 			go func() { t.Do(srv); taskdone <- t }()
 			runningTasks = append(runningTasks, t)
 		}
@@ -458,7 +458,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			log.Trace("Dial task done", "task", t)
+			//log.Trace("Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:

@@ -59,10 +59,7 @@ const (
 
 	ReqNodesMsg        = 0x20
 	ResNodesMsg        = 0x21
-	HpbTestMsg         = 0x22
-	HpbTestMsgResp     = 0x23
-	//ShardHeadMsg       = 0x28
-	//ShardPieceMsg      = 0x29
+
 )
 
 
