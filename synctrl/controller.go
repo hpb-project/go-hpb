@@ -247,7 +247,7 @@ func (this *SynCtrl) sync() {
 // synchronise tries to sync up our local block chain with a remote peer.
 func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 	// Short circuit if no peers are available
-	if peer == nil {
+	if peer == nil || peer.LocalType() == discover.BootNode{
 		return
 	}
 	// Make sure the peer's TD is higher than our own
