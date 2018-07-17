@@ -180,8 +180,8 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	defer hp.removePeer(p.id)
 
-	//&& p.remoteType!=discover.BootNode && p.localType!=discover.BootNode
-	if p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
+	//&& p.remoteType!=discover.BootNode &&
+	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
 		p.log.Info("network has reg peer to syncer")
 	}
@@ -190,7 +190,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	for {
 		if err := hp.handleMsg(p); err != nil {
 			p.Log().Debug("Message handling failed", "err", err)
-			if p.remoteType != discover.BootNode && hp.onDropPeer != nil {
+			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
 				hp.onDropPeer(p)
 				p.log.Info("network has drop peer to syncer")
 			}
