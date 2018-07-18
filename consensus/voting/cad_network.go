@@ -46,9 +46,10 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		
 		
 		for _, cadWinner := range cadWinners {
-			if ok, _ := Contain(cadWinner.Address, hpbAddresses); !ok {
+			//if ok, _ := Contain(cadWinner.Address, hpbAddresses); !ok {
+			//保持全连接选举
 				bestCadWinners = append(bestCadWinners,&snapshots.CadWinner{cadWinner.NetworkId,cadWinner.Address,cadWinner.VoteIndex})
-			}
+			//}
 		}
 		
 		// 先获取长度，然后进行随机获取
@@ -56,11 +57,16 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		
 		var lastCadWinners []*snapshots.CadWinner
 		
-		fmt.Println("bestCadWinners:", len(bestCadWinners))
+		//fmt.Println("bestCadWinners - 1:", len(bestCadWinners)-1)
+		fmt.Println("hpbAddresses:", len(hpbAddresses))
 		
 		//for i := 0 ; i < lnlen; i++{
 		for i := 0 ; i < len(bestCadWinners); i++{
-			lastCadWinners = append(lastCadWinners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
+			if(len(bestCadWinners) > 1){
+				lastCadWinners = append(lastCadWinners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
+			}else{
+			   lastCadWinners = append(lastCadWinners,bestCadWinners[0])
+			}
 		}
 		
 		//开始进行排序获取最大值
@@ -78,7 +84,7 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 	        }
 	    }
 		//fmt.Println("len:", voteIndexTemp)
-		fmt.Println("Best VoteIndex:", lastCadWinnerToChain.VoteIndex)
+		//fmt.Println("Best VoteIndex:", lastCadWinnerToChain.VoteIndex)
 		return lastCadWinnerToChain,nil
 }
 
