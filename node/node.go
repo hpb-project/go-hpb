@@ -463,7 +463,7 @@ func (n *Node) ResolvePath(x string) string {
 }
 
 // apis returns the collection of RPC descriptors this node offers.
-func (n *Node) apis() []rpc.API {
+func (n *Node) Nodeapis() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "admin",
