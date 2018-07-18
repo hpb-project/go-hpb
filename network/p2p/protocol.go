@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"time"
@@ -32,7 +31,7 @@ type Protocol struct {
 	Version  uint
 	Length   uint64
 	Run      func(p *PeerBase, rw MsgReadWriter) error
-	NodeInfo func() interface{}
+	//NodeInfo func() interface{}
 	PeerInfo func(id discover.NodeID) interface{}
 }
 
@@ -99,9 +98,9 @@ func NewProtos() *HpbProto {
 				peer := NewPeer(version, p, rw)
 				return hpb.handle(peer)
 			},
-			NodeInfo: func() interface{} {
-				return hpb.NodeInfo()
-			},
+			//NodeInfo: func() interface{} {
+			//	return hpb.NodeInfo()
+			//},
 			PeerInfo: func(id discover.NodeID) interface{} {
 				if p := PeerMgrInst().Peer(fmt.Sprintf("%x", id[:8])); p != nil {
 					return p.Info()
@@ -121,27 +120,27 @@ func NewProtos() *HpbProto {
 func (s *HpbProto) Protocols() []Protocol {
 	return s.protos
 }
-
-type HpbNodeInfo struct {
-	Network    uint64      `json:"network"`    // Hpb network ID (1=Frontier, 2=Morden, Ropsten=3)
-	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
-	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
-	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
-}
-
-// NodeInfo retrieves some protocol metadata about the running host node.
-func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
-
-	currentBlock := bc.InstanceBlockChain().CurrentBlock()
-	return &HpbNodeInfo{
-		Network:    hp.networkId,
-		Difficulty: bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis:    bc.InstanceBlockChain().Genesis().Hash(),
-		Head:       currentBlock.Hash(),
-	}
-
-	return  nil
-}
+//
+//type HpbNodeInfo struct {
+//	Network    uint64      `json:"network"`    // Hpb network ID (1=Frontier, 2=Morden, Ropsten=3)
+//	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
+//	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
+//	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
+//}
+//
+//// NodeInfo retrieves some protocol metadata about the running host node.
+//func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
+//
+//	currentBlock := bc.InstanceBlockChain().CurrentBlock()
+//	return &HpbNodeInfo{
+//		Network:    hp.networkId,
+//		Difficulty: bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
+//		Genesis:    bc.InstanceBlockChain().Genesis().Hash(),
+//		Head:       currentBlock.Hash(),
+//	}
+//
+//	return  nil
+//}
 
 func ErrResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))

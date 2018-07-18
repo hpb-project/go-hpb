@@ -600,8 +600,7 @@ func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
 	if pm == nil {
 		return nil, ErrNodeStopped
 	}
-	return nil ,nil//TODO
-	//return pm.PeersInfo(), nil //TODO
+	return pm.PeersInfo() ,nil
 }
 
 // NodeInfo retrieves all the information we know about the host node at the
@@ -611,13 +610,12 @@ func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
 	if pm == nil {
 		return nil, ErrNodeStopped
 	}
-	return nil,nil
-	//return pm.NodeInfo(), nil //TODO
+	return pm.NodeInfo(), nil
 }
 
 // Datadir retrieves the current data directory the node is using.
 func (api *PublicAdminAPI) Datadir() string {
-	return "123456"//api.node.DataDir()
+	return api.node.DataDir()
 }
 // PublicWeb3API offers helper utils
 type PublicWeb3API struct {

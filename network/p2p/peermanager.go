@@ -87,7 +87,6 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 
-
 	prm.server.Config = Config{
 		NAT:        config.Network.NAT,
 		Name:       config.Network.Name,
@@ -339,12 +338,12 @@ func (prm *PeerManager) Protocol() []Protocol {
 	return prm.hpbpro.protos
 }
 
-func (prm *PeerManager) Peers() []*PeerInfo {
-	return nil
+func (prm *PeerManager) PeersInfo() []*PeerInfo {
+	return prm.server.PeersInfo()
 }
 
 func (prm *PeerManager) NodeInfo() *NodeInfo {
-	return nil
+	return prm.server.NodeInfo()
 }
 
 func (prm *PeerManager) RegMsgProcess(msg uint64,cb MsgProcessCB) {

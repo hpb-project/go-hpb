@@ -734,14 +734,14 @@ type NodeInfo struct {
 	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
 	Local string `json:"local"` // Local node type
-	Hnode string `json:"hnode"` // Hnode URL for adding this peer from remote peers
+	//Hnode string `json:"hnode"` // Hnode URL for adding this peer from remote peers
 	IP    string `json:"ip"`    // IP address of the node
 	Ports struct {
-		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
-		Listener  int `json:"listener"`  // TCP listening port for RLPx
+		UDP int `json:"udp"` // UDP listening port for discovery protocol
+		TCP  int `json:"tcp"`  // TCP listening port for RLPx
 	} `json:"ports"`
 	ListenAddr string                 `json:"listenAddr"`
-	Protocols  map[string]interface{} `json:"protocols"`
+	//Protocols  map[string]interface{} `json:"protocols"`
 }
 
 // NodeInfo gathers and returns a collection of metadata known about the host.
@@ -752,25 +752,26 @@ func (srv *Server) NodeInfo() *NodeInfo {
 	info := &NodeInfo{
 		Name:       srv.Name,
 		Local:      srv.localType.ToString(),
-		Hnode:      node.String(),
+		//Hnode:      node.String(),
 		ID:         node.ID.String(),
 		IP:         node.IP.String(),
 		ListenAddr: srv.ListenAddr,
-		Protocols:  make(map[string]interface{}),
+		//Protocols:  make(map[string]interface{}),
 	}
-	info.Ports.Discovery = int(node.UDP)
-	info.Ports.Listener = int(node.TCP)
+	info.Ports.UDP = int(node.UDP)
+	info.Ports.TCP = int(node.TCP)
 
 	// Gather all the running protocol infos (only once per protocol type)
-	for _, proto := range srv.Protocols {
-		if _, ok := info.Protocols[proto.Name]; !ok {
-			nodeInfo := interface{}("unknown")
-			if query := proto.NodeInfo; query != nil {
-				nodeInfo = proto.NodeInfo()
-			}
-			info.Protocols[proto.Name] = nodeInfo
-		}
-	}
+	//for _, proto := range srv.Protocols {
+	//	if _, ok := info.Protocols[proto.Name]; !ok {
+	//		nodeInfo := interface{}("unknown")
+	//		if query := proto.NodeInfo; query != nil {
+	//			nodeInfo = proto.NodeInfo()
+	//		}
+	//		info.Protocols[proto.Name] = nodeInfo
+	//	}
+	//}
+
 	return info
 }
 
