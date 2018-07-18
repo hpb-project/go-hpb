@@ -434,7 +434,7 @@ func (p *PeerBase) Info() *PeerInfo {
 	}
 	// Assemble the generic peer metadata
 	info := &PeerInfo{
-		ID:        p.ID().String(),
+		ID:        p.ID().TerminalString(),
 		Name:      p.Name(),
 		Remote:    p.remoteType.ToString(),
 		Caps:      caps,
