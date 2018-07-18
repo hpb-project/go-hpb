@@ -151,21 +151,19 @@ func ErrResp(code errCode, format string, v ...interface{}) error {
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (hp *HpbProto) handle(p *Peer) error {
-	p.Log().Debug("Peer connected", "name", p.Name())
+	//p.Log().Debug("Protocol handle peer connected.")
 
-	//return errors.New("HpbProto debugging")
-	// Execute the Hpb handshake
 	//TODO: 调用blockchain接口，获取状态信息
-
 	if hp.chanStatus == nil {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
 	}
 	td, head, genesis := hp.chanStatus()
 	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
-		p.Log().Debug("Handshake failed", "err", err)
+		p.Log().Error("Handshake failed in handle peer.", "err", err)
 		return err
 	}
+	p.log.Info("Do hpb handshake OK.")
 
 
 	//Peer 层性能统计
@@ -183,17 +181,19 @@ func (hp *HpbProto) handle(p *Peer) error {
 	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
-		p.log.Info("network has reg peer to syncer")
+		p.log.Debug("Network has register peer to syncer")
 	}
 
 	// main loop. handle incoming messages.
+	p.log.Info("Start hpb message loop.")
 	for {
 		if err := hp.handleMsg(p); err != nil {
 			p.Log().Debug("Message handling failed", "err", err)
 			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
 				hp.onDropPeer(p)
-				p.log.Info("network has drop peer to syncer")
+				p.log.Debug("Network has drop peer to notify syncer")
 			}
+			p.log.Info("Stop hpb message loop.")
 			return err
 		}
 	}
@@ -222,7 +222,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("Protocol handle massage","Msg",msg.String())
+	p.log.Debug("Protocol handle massage","Msg",msg.String())
 	defer msg.Discard()
 
 	if msg.Size > ProtoMaxMsg {
@@ -232,87 +232,87 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == StatusMsg:
-		log.Error("######uncontrolled StatusMsg msg")
+		p.log.Error("######uncontrolled StatusMsg msg")
 	case msg.Code == ReqNodesMsg:
 		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process ReqNodesMsg msg")
+			p.log.Trace("Handle send request nodes information message to remote.")
 		}
 		return nil
 	case msg.Code == ResNodesMsg:
 		if cb := hp.msgProcess[ResNodesMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process ResNodesMsg msg")
+			p.log.Debug("Handle receive nodes information message from remote.")
 		}
 		return nil
 	case msg.Code == GetBlockHeadersMsg:
 		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process GetBlockHeadersMsg msg")
+			p.log.Trace("######process GetBlockHeadersMsg msg")
 		}
 		return nil
 	case msg.Code == BlockHeadersMsg:
 		if cb := hp.msgProcess[BlockHeadersMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process BlockHeadersMsg msg")
+			p.log.Trace("######process BlockHeadersMsg msg")
 		}
 		return nil
 	case msg.Code == GetBlockBodiesMsg:
 		if cb := hp.msgProcess[GetBlockBodiesMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process GetBlockBodiesMsg msg")
+			p.log.Trace("######process GetBlockBodiesMsg msg")
 		}
 		return nil
 	case msg.Code == BlockBodiesMsg:
 		if cb := hp.msgProcess[BlockBodiesMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process BlockBodiesMsg msg")
+			p.log.Trace("######process BlockBodiesMsg msg")
 		}
 		return nil
 	case msg.Code == GetNodeDataMsg:
 		if cb := hp.msgProcess[GetNodeDataMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process GetNodeDataMsg msg")
+			p.log.Trace("######process GetNodeDataMsg msg")
 		}
 		return nil
 	case msg.Code == NodeDataMsg:
 		if cb := hp.msgProcess[NodeDataMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process NodeDataMsg msg")
+			p.log.Trace("######process NodeDataMsg msg")
 		}
 		return nil
 	case msg.Code == GetReceiptsMsg:
 		if cb := hp.msgProcess[GetReceiptsMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process GetReceiptsMsg msg")
+			p.log.Trace("######process GetReceiptsMsg msg")
 		}
 		return nil
 	case msg.Code == ReceiptsMsg:
 		if cb := hp.msgProcess[ReceiptsMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process ReceiptsMsg msg")
+			p.log.Trace("######process ReceiptsMsg msg")
 		}
 		return nil
 	case msg.Code == NewBlockHashesMsg:
 		if cb := hp.msgProcess[NewBlockHashesMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process NewBlockHashesMsg msg")
+			p.log.Trace("######process NewBlockHashesMsg msg")
 		}
 		return nil
 	case msg.Code == NewBlockMsg:
 		if cb := hp.msgProcess[NewBlockMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process NewBlockMsg msg")
+			p.log.Trace("######process NewBlockMsg msg")
 		}
 		return nil
 	case msg.Code == TxMsg:
 		if cb := hp.msgProcess[TxMsg]; cb != nil{
 			cb(p,msg)
-			log.Trace("######process TxMsg msg")
+			p.log.Trace("######process TxMsg msg")
 		}
 		return nil
 	default:
-		log.Error("there is no handle to process msg","code", msg.Code)
+		p.log.Error("there is no handle to process msg","code", msg.Code)
 	}
 	return nil
 }

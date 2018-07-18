@@ -480,7 +480,7 @@ running:
 				if srv.EnableMsgEvents {
 					p.events = srv.peerEvent
 				}
-				name := truncateName(c.name)
+
 				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
@@ -490,7 +490,7 @@ running:
 					}
 				}
 
-				log.Info("Adding p2p peer", "id", c.id, "type", p.localType.ToString(),"remote", p.remoteType.ToString(), "name", name, "addr", c.fd.RemoteAddr())
+				log.Info("Server add peer base to run hpb.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 
 				peers[c.id] = p
 				go srv.runPeer(p)
@@ -636,7 +636,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// Run the encryption handshake.
 	var err error
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
-		log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		log.Debug("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
 		return
 	}
@@ -652,30 +652,28 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
+	log.Info("Do enc handshake OK.","id",c.id)
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
-		clog.Trace("Failed proto handshake", "err", err)
+		clog.Debug("Failed proto handshake", "err", err)
 		c.close(err)
 		return
 	}
 	if phs.ID != c.id {
-		clog.Trace("Wrong devp2p handshake identity", "err", phs.ID)
+		clog.Debug("Wrong devp2p handshake identity", "err", phs.ID)
 		c.close(DiscUnexpectedIdentity)
 		return
 	}
 	c.caps, c.name ,c.rport, c.raddr  = phs.Caps, phs.Name, int(phs.End.TCP),phs.DefaultAddr
-	log.Info("Do handshake","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
+	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
+	log.Info("Do protocol handshake OK.","id",c.id)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
-		clog.Trace("Rejected peer", "err", err)
+		clog.Debug("Rejected peer", "err", err)
 		c.close(err)
 		return
 	}
 
-	//c.rend.IP, c.rend.UDP, c.rend.TCP = phs.End.IP,phs.End.UDP,phs.End.TCP
-	//log.Info("handshake exchange end point","endpoint",c.rend)
-	// If the checks completed successfully, runPeer has now been
-	// launched by run.
 }
 
 func truncateName(s string) string {
@@ -727,7 +725,7 @@ func (srv *Server) runPeer(p *PeerBase) {
 
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
-	log.Info("stop peer","ID",p.ID(),"err",err)
+	log.Info("Server stop to run peer","id",p.ID(),"err",err)
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 

@@ -294,13 +294,13 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
-			log.Error("peer read loop error","error",err)
+			log.Error("Peer base read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
-			log.Error("peer handle msg error","error",err)
+			log.Error("Peer base handle msg error","error",err)
 			errc <- err
 			return
 		}
@@ -578,7 +578,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
-		p.log.Trace("handshake send","NetworkId",network,"TD",td,"CurrentBlock",head,"GenesisBlock",genesis)
+		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis,"block",head,"td",td,"head",head)
 		errc <- p.SendData(StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,
@@ -589,7 +589,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	}()
 	go func() {
 		errc <- p.readStatus(network, &status, genesis)
-		p.log.Trace("handshake read","NetworkId",status.NetworkId,"TD",status.TD,"CurrentBlock",status.CurrentBlock,"GenesisBlock",status.GenesisBlock)
+		p.log.Debug("Do hpb handshake recv.","networkid",status.NetworkId,"genesis",status.GenesisBlock,"block",status.CurrentBlock,"td",p.td,"head", p.head)
 	}()
 
 	timeout := time.NewTimer(handshakeTimeout)
@@ -605,7 +605,6 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 		}
 	}
 	p.td, p.head = status.TD, status.CurrentBlock
-	p.log.Info("handshake over","td",p.td,"head", p.head)
 	return nil
 }
 

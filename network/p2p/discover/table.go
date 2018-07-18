@@ -273,7 +273,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 
 	for _, n := range seeds {
 		age := log.Lazy{Fn: func() time.Duration { return time.Since(tab.db.lastPong(n.ID)) }}
-		log.Debug("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
+		log.Trace("Found seed node in database", "id", n.ID, "addr", n.addr(), "age", age)
 	}
 
 	tab.mutex.Lock()
@@ -301,6 +301,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	for range nodes {
 		if n := <-rc; n != nil {
 			result = append(result, n)
+			//log.Debug("Bond node", "id", n.ID, "addr", n.addr())
 		}
 	}
 	return result
@@ -434,7 +435,7 @@ func (tab *Table) add(new *Node) {
 	}
 
 	added := b.replace(new, oldest)
-	log.Trace("add node to bucket","added",added,"node",new.String())
+	log.Debug("Find one node to dial.","added",added,"node",new.String())
 	if added && tab.nodeAddedHook != nil {
 		//log.Info("Add To Bucket Node","Node",new.String())
 		tab.nodeAddedHook(new)

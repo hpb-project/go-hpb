@@ -617,7 +617,7 @@ func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
 
 // Datadir retrieves the current data directory the node is using.
 func (api *PublicAdminAPI) Datadir() string {
-	return api.node.DataDir()
+	return "123456"//api.node.DataDir()
 }
 // PublicWeb3API offers helper utils
 type PublicWeb3API struct {

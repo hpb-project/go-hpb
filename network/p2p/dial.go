@@ -167,7 +167,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
-			log.Debug("add one node to dial task","Node",n.String())
+			log.Debug("Add node to dial task.","id",n.ID)
 		}
 	}
 
@@ -209,7 +209,7 @@ func (t *dialTask) Do(srv *Server) {
 		return
 	}
 	success := t.dial(srv, t.dest)
-	log.Debug("One dial task done.","result",success)
+	log.Trace("One dial task done.","result",success)
 
 }
 

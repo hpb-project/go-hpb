@@ -334,7 +334,7 @@ func (this *Syncer) RegisterPeer(id string, version uint, peer Peer) error {
 }
 func (this *Syncer) RegisterNetPeer(peer *p2p.Peer) error {
 	ps := &PeerSyn{peer}
-	ps.Log().Info("register network peer in syncer.")
+	//ps.Log().Debug("Register network peer in syncer.")
 	return this.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
 }
 
@@ -351,7 +351,7 @@ func (this *Syncer) UnregisterPeer(id string) error {
 }
 
 func (this *Syncer) UnregisterNetPeer(peer *p2p.Peer) error {
-	peer.Log().Info("register network peer in syncer.")
+	//peer.Log().Debug("Unregister network peer in syncer.")
 	return this.UnregisterPeer(peer.GetID())
 }
 
