@@ -49,7 +49,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < hpbNodeCheckpointInterval * 2){
+	if(number < hpbNodeCheckpointInterval * 4){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
@@ -67,18 +67,18 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
 	// 开始计算最后一次的确认区块
 	latestCheckPointNumber :=  uint64(math.Floor(float64(number/hpbNodeCheckpointInterval))) * hpbNodeCheckpointInterval
-	log.Error("Current latestCheckPointNumber:",strconv.FormatUint(latestCheckPointNumber, 10))
+	log.Error("Current latestCheckPointNumber in hpb voting:",strconv.FormatUint(latestCheckPointNumber, 10))
 
-	//header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
-	//latestCheckPointHash := header.Hash()
+	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
+	latestCheckPointHash := header.Hash()
 	
-	//if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
-	//		log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
-	//		return snapcd, err
-	//}else{
+	if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
+			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
+			return snapcd, err
+	}else{
 		// 开始获取之前的所有header
 		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
-			log.Info("Header:",strconv.FormatUint(i, 10))
+			//log.Info("Header:",strconv.FormatUint(i, 10))
 			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
 				headers = append(headers, header)
@@ -92,7 +92,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
  			}
 			return snapa, err
 		}
-	//}
+	}
 	return nil, nil
 }
 
@@ -138,7 +138,7 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 //将数据存入到缓存和数据库中
 func StoreDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.HpbNodeSnap) error {
 		// 存入到缓存中
-		//recents.Add(snap.Hash, snap)
+		recents.Add(snap.Hash, snap)
 		// 存入数据库
 		err := snap.Store(db)
 		return err
