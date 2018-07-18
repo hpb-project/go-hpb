@@ -151,12 +151,19 @@ func ErrResp(code errCode, format string, v ...interface{}) error {
 // this function terminates, the peer is disconnected.
 func (hp *HpbProto) handle(p *Peer) error {
 	//p.Log().Debug("Protocol handle peer connected.")
+	defer func() {
+		if r := recover(); r != nil {
+			p.log.Error("Handle hpb message panic.","r",r)
+		}
+	}()
 
 	//TODO: 调用blockchain接口，获取状态信息
 	if hp.chanStatus == nil {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
 	}
+
+
 	td, head, genesis := hp.chanStatus()
 	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
 		p.Log().Error("Handshake failed in handle peer.", "err", err)
