@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
 
 const (
@@ -109,21 +110,23 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			//transactionNum := float64(peer.TxsRate()) * float64(0.7)
 			//VoteIndex := networkBandwidth + transactionNum
 			
-			//因缺乏linux环境，先随机模拟
-			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
-			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
-			VoteIndex := networkBandwidth + transactionNum
-			
-			bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
-		    address := common.BigToAddress(bigaddr)
-		    
-		    if(peer.Address() != address){
-			    cadWinners = append(cadWinners,snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
+			if(peer.LocalType() != discover.BootNode){
+				//因缺乏linux环境，先随机模拟
+				networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
+				transactionNum := float64(rand.Intn(1000)) * float64(0.7)
+				VoteIndex := networkBandwidth + transactionNum
 				
-				fmt.Println("Id:", peer.GetID())
-				fmt.Println("Address:", peer.Address().Hex())
-				fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
-		    }
+				bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+			    address := common.BigToAddress(bigaddr)
+			    
+			    if(peer.Address() != address){
+				    cadWinners = append(cadWinners,snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
+					
+					fmt.Println("Id:", peer.GetID())
+					fmt.Println("Address:", peer.Address().Hex())
+					fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
+			    }
+			}
 			
 		}
 				
