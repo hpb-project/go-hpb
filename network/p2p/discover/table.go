@@ -134,7 +134,7 @@ func (tab *Table) Bondall(nodes []*Node) int{
 	boned := tab.bondall(nodes)
 
 	if len(boned) == 0 {
-		log.Trace("No nodes bond")
+		log.Warn("No nodes bond")
 		return 0
 	}
 

@@ -17,7 +17,6 @@
 package synctrl
 
 import (
-	"encoding/json"
 	"math"
 	"math/big"
 	"sync"
@@ -477,8 +476,7 @@ func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 				next    = current + query.Skip + 1
 			)
 			if next <= current {
-				infos, _ := json.MarshalIndent(p.Info(), "", "  ")
-				p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+				p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", p.ID())
 				unknown = true
 			} else {
 				if header := bc.InstanceBlockChain().GetHeaderByNumber(next); header != nil {

@@ -410,55 +410,6 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 	}
 }
 
-// PeerInfo represents a short summary of the information known about a connected
-// peer. Sub-protocol independent fields are contained and initialized here, with
-// protocol specifics delegated to all connected sub-protocols.
-type PeerInfo struct {
-	ID      string   `json:"id"`   // Unique node identifier (also the encryption key)
-	Name    string   `json:"name"` // Name of the node, including client type, version, OS, custom data
-	Remote  string   `json:"remote"` //Remote node type
-	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
-	Network struct {
-		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
-		RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
-	} `json:"network"`
-	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
-}
-
-// Info gathers and returns a collection of metadata known about a peer.
-func (p *PeerBase) Info() *PeerInfo {
-	// Gather the protocol capabilities
-	var caps []string
-	for _, cap := range p.Caps() {
-		caps = append(caps, cap.String())
-	}
-	// Assemble the generic peer metadata
-	info := &PeerInfo{
-		ID:        p.ID().TerminalString(),
-		Name:      p.Name(),
-		Remote:    p.remoteType.ToString(),
-		Caps:      caps,
-		Protocols: make(map[string]interface{}),
-	}
-	info.Network.LocalAddress  = p.LocalAddr().String()
-	info.Network.RemoteAddress = p.RemoteAddr().String()
-
-	// Gather all the running protocol infos
-	//for _, proto := range p.running {
-		proto := p.running
-		protoInfo := interface{}("unknown")
-		if query := proto.Protocol.PeerInfo; query != nil {
-			if metadata := query(p.ID()); metadata != nil {
-				protoInfo = metadata
-			} else {
-				protoInfo = "handshake"
-			}
-		}
-		info.Protocols[proto.Name] = protoInfo
-	//}
-	return info
-}
-
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
@@ -476,18 +427,6 @@ func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 		knownBlocks: set.New(),
 	}
 }
-
-// Info gathers and returns a collection of metadata known about a peer.
-func (p *Peer) Info() *HpbPeerInfo {
-	hash, td := p.Head()
-
-	return &HpbPeerInfo{
-		Version:    p.version,
-		Difficulty: td,
-		Head:       hash.Hex(),
-	}
-}
-
 
 func (p *Peer) GetID() string {
 	return  p.id

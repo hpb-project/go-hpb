@@ -32,7 +32,7 @@ type Protocol struct {
 	Length   uint64
 	Run      func(p *PeerBase, rw MsgReadWriter) error
 	//NodeInfo func() interface{}
-	PeerInfo func(id discover.NodeID) interface{}
+	//PeerInfo func(id discover.NodeID) interface{}
 }
 
 func (p Protocol) cap() Cap {
@@ -101,12 +101,12 @@ func NewProtos() *HpbProto {
 			//NodeInfo: func() interface{} {
 			//	return hpb.NodeInfo()
 			//},
-			PeerInfo: func(id discover.NodeID) interface{} {
-				if p := PeerMgrInst().Peer(fmt.Sprintf("%x", id[:8])); p != nil {
-					return p.Info()
-				}
-				return nil
-			},
+			//PeerInfo: func(id discover.NodeID) interface{} {
+			//	if p := PeerMgrInst().Peer(fmt.Sprintf("%x", id[:8])); p != nil {
+			//		return p.Info()
+			//	}
+			//	return nil
+			//},
 		})
 	}
 

@@ -45,14 +45,6 @@ const (
 	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)  //for testnet
 )
 
-// PeerInfo represents a short summary of the Hpb sub-protocol metadata known
-// about a connected peer.
-type HpbPeerInfo struct {
-	Version    uint     `json:"version"`    // Hpb protocol version negotiated
-	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
-	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
-}
-
 type PeerManager struct {
 	peers  map[string]*Peer
 	lock   sync.RWMutex
@@ -248,6 +240,7 @@ func (prm *PeerManager) Unregister(id string) error {
 	return nil
 }
 
+
 // Peer retrieves the registered peer with the given id.
 func (prm *PeerManager) Peer(id string) *Peer {
 	prm.lock.RLock()
@@ -337,15 +330,90 @@ func (prm *PeerManager) Close() {
 func (prm *PeerManager) Protocol() []Protocol {
 	return prm.hpbpro.protos
 }
+////////////////////////////////////////////////////////////////////
+
+type PeerInfo struct {
+	ID      string   `json:"id"`   // Unique node identifier (also the encryption key)
+	Name    string   `json:"name"` // Name of the node, including client type, version, OS, custom data
+	Remote  string   `json:"remote"` //Remote node type
+	Cap     string   `json:"cap"` // Sum-protocols advertised by this particular peer
+	Network struct {
+		Local  string `json:"local"`  // Local endpoint of the TCP data connection
+		Remote string `json:"remote"` // Remote endpoint of the TCP data connection
+	} `json:"network"`
+	HPB interface{} `json:"hpb"` // Sub-protocol specific metadata fields
+}
+
+type HpbInfo struct {
+	Version    uint     `json:"version"`    // Hpb protocol version negotiated
+	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
+	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
+}
 
 func (prm *PeerManager) PeersInfo() []*PeerInfo {
-	return prm.server.PeersInfo()
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	peerinfos := make([]*PeerInfo, 0, len(prm.peers))
+	for _, p := range prm.peers {
+		hash, td := p.Head()
+		info := &PeerInfo{
+			ID:        p.ID().TerminalString(),
+			Name:      p.Name(),
+			Remote:    p.remoteType.ToString(),
+			Cap:       p.Caps()[0].String(),
+			HPB:       &HpbInfo{
+				Version:    p.version,
+				Difficulty: td,
+				Head:       hash.Hex(),
+			},
+		}
+		info.Network.Local  = p.LocalAddr().String()
+		info.Network.Remote = p.RemoteAddr().String()
+		peerinfos = append(peerinfos, info)
+	}
+
+	for i := 0; i < len(peerinfos); i++ {
+		for j := i + 1; j < len(peerinfos); j++ {
+			if peerinfos[i].ID > peerinfos[j].ID {
+				peerinfos[i], peerinfos[j] = peerinfos[j], peerinfos[i]
+			}
+		}
+	}
+
+	return peerinfos
+}
+
+
+type NodeInfo struct {
+	ID    string `json:"id"`    // Unique node identifier (also the encryption key)
+	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
+	Local string `json:"local"` // Local node type
+	IP    string `json:"ip"`    // IP address of the node
+	Ports struct {
+		UDP int `json:"udp"`   // UDP listening port for discovery protocol
+		TCP  int `json:"tcp"`  // TCP listening port for RLPx
+	} `json:"ports"`
+	ListenAddr string `json:"listenAddr"`
 }
 
 func (prm *PeerManager) NodeInfo() *NodeInfo {
-	return prm.server.NodeInfo()
+	node := prm.server.Self()
+
+	info := &NodeInfo{
+		Name:       prm.server.Name,
+		Local:      prm.server.localType.ToString(),
+		ID:         node.ID.String(),
+		IP:         node.IP.String(),
+		ListenAddr: prm.server.ListenAddr,
+	}
+	info.Ports.UDP = int(node.UDP)
+	info.Ports.TCP = int(node.TCP)
+
+	return info
 }
 
+////////////////////////////////////////////////////////////////////
 func (prm *PeerManager) RegMsgProcess(msg uint64,cb MsgProcessCB) {
 	prm.hpbpro.regMsgProcess(msg,cb)
 	return
@@ -370,23 +438,21 @@ func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
 	return
 }
 
-
+////////////////////////////////////////////////////////////////////
 const  bindInfoFileName  = "binding.json"
-
 type BindInfo struct {
 	CID    string     `json:"cid"`
 	HIB    string     `json:"hib"`
 	ADR    string     `json:"address"`
 	AUT    string     `json:"-"`
 }
-
 func parseBindInfo(filename string) error{
 
 	// Load the nodes from the config file.
 	var bindings [] BindInfo
 
 	if err := common.LoadJSON(filename, &bindings); err != nil {
-		log.Error(fmt.Sprintf("Can't load node file %s: %v", filename, err))
+		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
 		return nil
 	}
 
