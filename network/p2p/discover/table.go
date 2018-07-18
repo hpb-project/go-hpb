@@ -134,7 +134,7 @@ func (tab *Table) Bondall(nodes []*Node) int{
 	boned := tab.bondall(nodes)
 
 	if len(boned) == 0 {
-		log.Warn("No nodes bond")
+		log.Trace("No nodes bond")
 		return 0
 	}
 
@@ -224,8 +224,9 @@ loop:
 		select {
 		case <-timer.C:
 			if done == nil {
+				//log.Warn("Refresh table time now.")
 				done = make(chan struct{})
-				//log.Info("table do refresh.")
+				log.Warn("Do refresh table.")
 				go tab.doRefresh(done)
 			}
 		case req := <-tab.refreshReq:
