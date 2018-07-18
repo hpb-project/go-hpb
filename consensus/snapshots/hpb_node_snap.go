@@ -20,7 +20,7 @@ package snapshots
 import (
 	"bytes"
 	"sort"
-	"fmt"
+	//"fmt"
 	"encoding/json"
 	"math/big"
 	"github.com/hpb-project/go-hpb/common"
@@ -34,7 +34,7 @@ import (
 	"strconv"
 	//"errors"
 	"math/rand"
-	"github.com/hpb-project/go-hpb/common/log"
+	//"github.com/hpb-project/go-hpb/common/log"
 )
 
 type Tally struct {
@@ -111,16 +111,16 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	//	return false
 	//}
 	
-	fmt.Println("length Test: ", len(s.Tally))
+	//fmt.Println("length Test: ", len(s.Tally))
 	
 	if old, ok := s.Tally[candAddress]; ok {
-		log.Info("Add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
+		//log.Info("Add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
         old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1))
         old.VoteIndexs.Add(old.VoteIndexs, voteIndexs)
         old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers)
         old.CandAddress = candAddress
 	} else {
-		log.Info("First add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
+		//log.Info("First add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
 		s.Tally[candAddress] = Tally{
 			VoteNumbers: big.NewInt(1),
 			VoteIndexs: voteIndexs,
@@ -214,20 +214,20 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	
 	sort.Float64s(keys) //对结果今昔那个排序
 	
-	fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
+	//fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
 	
 	//设置config长度
 	hpbNodeNum := 0
 	for i := len(keys) - 1; i > 0 ; i-- {
-		fmt.Printf("test 1 %d", i)
-		fmt.Printf("test 2 %f", keys[i])
+		//fmt.Printf("test 1 %d", i)
+		//fmt.Printf("test 2 %f", keys[i])
 		if cands, ok := indexTally[keys[i]]; ok {
-			fmt.Printf("test 3", cands.CandAddress.Hex())
+			
 			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
 			
 			//选举出2个
-			if(hpbNodeNum == 2){
+			if(hpbNodeNum == 3){
 				break
 			}
 		}
