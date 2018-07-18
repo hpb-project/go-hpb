@@ -49,7 +49,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < hpbNodeCheckpointInterval * 40000){
+	if(number < hpbNodeCheckpointInterval * 2){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
@@ -138,7 +138,7 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 //将数据存入到缓存和数据库中
 func StoreDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.HpbNodeSnap) error {
 		// 存入到缓存中
-		recents.Add(snap.Hash, snap)
+		//recents.Add(snap.Hash, snap)
 		// 存入数据库
 		err := snap.Store(db)
 		return err

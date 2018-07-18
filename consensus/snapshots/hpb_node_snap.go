@@ -193,7 +193,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 		}
 	}
 	
-	signers := make([]common.Address,4)
+	signers := make([]common.Address,2)
 	
 	snap := NewHistorysnap(config, signatures, number, headers[len(headers)-1].Hash(), signers)
 	
@@ -225,7 +225,9 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 			fmt.Printf("test 3", cands.CandAddress.Hex())
 			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
-			if(hpbNodeNum == 3){
+			
+			//选举出2个
+			if(hpbNodeNum == 2){
 				break
 			}
 		}

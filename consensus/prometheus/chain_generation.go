@@ -140,19 +140,26 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	
 	//在非投票点, 从网络中获取进行提案
-	if number%c.config.Epoch != 0 {
+	if (number%c.config.Epoch != 0) {
 		c.lock.RLock()
 		
-		// Get the best peer from the network
-		if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil{
-			header.CandAddress = cadWinner.Address // 设置地址
-			header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
-			copy(header.Nonce[:], consensus.NonceAuthVote)
-			log.Info("#########################################TESE", cadWinner.Address)
+		if (csnap==nil || len(csnap.CadWinners) < 2){
+		    bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+		    address := common.BigToAddress(bigaddr)
+		    header.CandAddress = address
+		}else{
+			// Get the best peer from the network
+			if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil{
+				header.CandAddress = cadWinner.Address // 设置地址
+				header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
+				copy(header.Nonce[:], consensus.NonceAuthVote)
+				log.Info("#########################################TESE", cadWinner.Address)
+			}
+		    if err != nil {
+				return err
+			}
 		}
-	    if err != nil {
-			return err
-		}
+		
 		c.lock.RUnlock()
 	}
 

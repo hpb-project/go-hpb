@@ -97,17 +97,38 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		
 		fmt.Println("######### peers length is:", len(peers))
 		
+		if(len(peers) == 0){
+			return nil,nil
+		}
+		
 		for _, peer := range peers {
-			fmt.Println("this is Address:", peer.Address())
-			fmt.Println("this is TxsRate:", peer.TxsRate())
-			fmt.Println("this is Bandwidth:", peer.Bandwidth())
-			networkBandwidth := float64(peer.Bandwidth()) * float64(0.3)
-			transactionNum := float64(peer.TxsRate()) * float64(0.7)
+			
+			//fmt.Println("this is TxsRate:", peer.TxsRate())
+			//fmt.Println("this is Bandwidth:", peer.Bandwidth())
+			//networkBandwidth := float64(peer.Bandwidth()) * float64(0.3)
+			//transactionNum := float64(peer.TxsRate()) * float64(0.7)
+			//VoteIndex := networkBandwidth + transactionNum
+			
+			//因缺乏linux环境，先随机模拟
+			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
+			transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			VoteIndex := networkBandwidth + transactionNum
-			fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
+			
+			bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+		    address := common.BigToAddress(bigaddr)
+		    
+		    if(peer.Address() != address){
+			    cadWinners = append(cadWinners,snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
+				
+				fmt.Println("Id:", peer.GetID())
+				fmt.Println("Address:", peer.Address().Hex())
+				fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
+		    }
+			
 		}
 				
 		// 模拟从peer中获取
+		/*
 		for i := 0; i < 9; i++ {
 			//加权算法
 			networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
@@ -121,11 +142,11 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			//if ok, _ := Contain(address, hpbAddresses); !ok {
 			cadWinners = append(cadWinners,snapshots.CadWinner{"192.168.2."+strnum,address,uint64(VoteIndex)})
 			//}
-		}
+		}*/
 		
 		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
 
-        log.Info("get Com form outside************************************", cadNodeSnap.CadWinners[0].Address)
+        log.Info("start calculate  candidate node************************************")
 		
 		// 存储到数据库中
 		if err := cadNodeSnap.Store(db); err != nil {

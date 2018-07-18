@@ -56,6 +56,8 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		
 		var lastCadWinners []*snapshots.CadWinner
 		
+		fmt.Println("bestCadWinners:", len(bestCadWinners))
+		
 		//for i := 0 ; i < lnlen; i++{
 		for i := 0 ; i < len(bestCadWinners); i++{
 			lastCadWinners = append(lastCadWinners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
