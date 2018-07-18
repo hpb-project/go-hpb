@@ -103,7 +103,7 @@ func (s *Node) APIs() []rpc.API {
 	return apis
 }
 
-func (s *Node) StopMining()         { s.Stop() }
+func (s *Node) StopMining()         { s.worker.Stop() }
 func (s *Node) IsMining() bool      { return s.worker.Mining() }
 func (s *Node) Miner() *worker.Miner { return s.worker }
 
