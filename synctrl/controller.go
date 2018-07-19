@@ -164,8 +164,8 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.Tx
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
-	p2p.PeerMgrInst().RegOnAddPeer(synctrl.syner.RegisterNetPeer)
-	p2p.PeerMgrInst().RegOnDropPeer(synctrl.syner.UnregisterNetPeer)
+	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
+	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
 
 	return synctrl, nil
 }
@@ -198,6 +198,18 @@ func (this *SynCtrl) Start() {
 	// start sync handlers
 	go this.sync()
 	go this.txsyncLoop()
+}
+
+func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
+	ps := &PeerSyn{peer}
+	//ps.Log().Debug("Register network peer in syncer.")
+	this.syncTransactions(peer)
+	return this.syner.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
+}
+
+func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
+	//peer.Log().Debug("Unregister network peer in syncer.")
+	return this.syner.UnregisterPeer(peer.GetID())
 }
 
 // Mined routing loop
