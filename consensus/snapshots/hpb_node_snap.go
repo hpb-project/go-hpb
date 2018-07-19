@@ -20,7 +20,7 @@ package snapshots
 import (
 	"bytes"
 	"sort"
-	//"fmt"
+	"fmt"
 	"encoding/json"
 	"math/big"
 	"github.com/hpb-project/go-hpb/common"
@@ -193,7 +193,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 		}
 	}
 	
-	signers := make([]common.Address,2)
+	signers := make([]common.Address,3)
 	
 	snap := NewHistorysnap(config, signatures, number, headers[len(headers)-1].Hash(), signers)
 	
@@ -232,6 +232,9 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 			}
 		}
 	}
+	
+	fmt.Println(" ****************************************headers length ********************************* ", len(headers))
+	fmt.Println(" ****************************************singer length ********************************* ", len(keys))
 
 	//等待完善
 	snap.Number += uint64(len(headers))
