@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"time"
 	"fmt"
+	"path/filepath"
 )
 
 var (
@@ -47,6 +48,7 @@ const (
 
 type PeerManager struct {
 	peers  map[string]*Peer
+	boots  map[string]*Peer
 	lock   sync.RWMutex
 	closed bool
 
@@ -61,6 +63,7 @@ func PeerMgrInst() *PeerManager {
 	if INSTANCE.Load() == nil {
 		pm :=&PeerManager{
 			peers:  make(map[string]*Peer),
+			boots:  make(map[string]*Peer),
 			server: &Server{},
 			rpcmgr: &RpcMgr{},
 			hpbpro: NewProtos(),
@@ -104,11 +107,11 @@ func (prm *PeerManager)Start() error {
 	prm.server.localType = discover.PreNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
-		//input cid&hib from json
 
-		//filename := config.Node.DataDir + "/"+bindInfoFileName
-		//log.Info("bootnode load bindings","filename",filename)
-		//parseBindInfo(filename)
+		//input cid&hib from json
+		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
+		log.Debug("bootnode load bindings","filename",filename)
+		parseBindInfo(filename)
 
 	}
 
@@ -217,9 +220,13 @@ func (prm *PeerManager) Register(p *Peer) error {
 		return errClosed
 	}
 	if p.remoteType == discover.BootNode{
-		log.Debug("peer with bootnode is not allowed to register")
+		if _, ok := prm.boots[p.id]; !ok {
+			prm.boots[p.id] = p
+			log.Info("Peer with bootnode is listed.")
+		}
 		return nil
 	}
+
 	if _, ok := prm.peers[p.id]; ok {
 		return errAlreadyRegistered
 	}
@@ -233,10 +240,14 @@ func (prm *PeerManager) Unregister(id string) error {
 	prm.lock.Lock()
 	defer prm.lock.Unlock()
 
-	if _, ok := prm.peers[id]; !ok {
-		return errNotRegistered
+	if _, ok := prm.peers[id]; ok {
+		delete(prm.peers, id)
 	}
-	delete(prm.peers, id)
+
+	if _, ok := prm.boots[id]; ok {
+		delete(prm.boots, id)
+	}
+
 	return nil
 }
 
@@ -354,6 +365,21 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
+
+	allinfos := make([]*PeerInfo, 0, len(prm.boots)+len(prm.peers))
+	for _, p := range prm.boots {
+		info := &PeerInfo{
+			ID:        p.ID().TerminalString(),
+			Name:      p.Name(),
+			Remote:    p.remoteType.ToString(),
+			Cap:       p.Caps()[0].String(),
+			HPB:       "",
+		}
+		info.Network.Local  = p.LocalAddr().String()
+		info.Network.Remote = p.RemoteAddr().String()
+		allinfos = append(allinfos, info)
+	}
+
 	peerinfos := make([]*PeerInfo, 0, len(prm.peers))
 	for _, p := range prm.peers {
 		hash, td := p.Head()
@@ -380,8 +406,9 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			}
 		}
 	}
+	allinfos = append(allinfos, peerinfos...)
 
-	return peerinfos
+	return allinfos
 }
 
 
