@@ -91,7 +91,7 @@ func (msg Msg) Decode(val interface{}) error {
 }
 
 func (msg Msg) String() string {
-	return fmt.Sprintf("msg #%v (%v bytes)", msg.Code, msg.Size)
+	return fmt.Sprintf("msg #0x%x (%v bytes)", msg.Code, msg.Size)
 }
 
 // Discard reads any remaining payload data into a black hole.

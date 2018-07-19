@@ -345,9 +345,9 @@ type PeerInfo struct {
 }
 
 type HpbInfo struct {
-	Version    uint     `json:"version"`    // Hpb protocol version negotiated
-	Difficulty *big.Int `json:"difficulty"` // Total difficulty of the peer's blockchain
-	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
+	Version  uint     `json:"version"`     // Hpb protocol version negotiated
+	TD       *big.Int `json:"handshakeTD"` // Total difficulty of the peer's blockchain
+	Head     string   `json:"handshakeHD"` // SHA3 hash of the peer's best owned block
 }
 
 func (prm *PeerManager) PeersInfo() []*PeerInfo {
@@ -364,8 +364,8 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Cap:       p.Caps()[0].String(),
 			HPB:       &HpbInfo{
 				Version:    p.version,
-				Difficulty: td,
-				Head:       hash.Hex(),
+				TD: td,
+				Head: hash.Hex(),
 			},
 		}
 		info.Network.Local  = p.LocalAddr().String()
