@@ -169,11 +169,20 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	p.log.Info("Do hpb handshake OK.")
 
-	if err := p.Exchange(); err != nil {
+
+	our := &exchangeData{
+		Version: 0xFFAA,
+	}
+	p.log.Info("Do hpb exchange data.","ours",our)
+	there,err := p.Exchange(our)
+	if  err != nil {
 		p.log.Error("Hpb exchange data failed in peer.", "err", err)
 		return err
 	}
-	p.log.Info("Do hpb exchange data OK.")
+	p.log.Info("Do hpb exchange data OK.","there",there)
+
+	//TODO bonding hardware info
+	p.log.Info("Do do bond hardware OK.")
 
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
