@@ -414,6 +414,9 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	log.Debug("Removing Hpb peer", "peer", id)
 
+	log.Info("###### SYN DO REMOVER PEER DISABLE")
+	return
+
 	// Unregister the peer from the downloader and Hpb peer set
 	this.syner.UnregisterPeer(id)
 	if err := p2p.PeerMgrInst().Unregister(id); err != nil {
@@ -421,7 +424,6 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		log.Info("######SYN DO REMOVER PEER")
 		peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
@@ -476,7 +478,7 @@ func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 				next    = current + query.Skip + 1
 			)
 			if next <= current {
-				p.Log().Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", p.ID())
+				log.Warn("GetBlockHeaders skip overflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", p.ID())
 				unknown = true
 			} else {
 				if header := bc.InstanceBlockChain().GetHeaderByNumber(next); header != nil {
