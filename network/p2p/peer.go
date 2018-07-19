@@ -581,6 +581,63 @@ func (p *Peer) String() string {
 }
 
 
+////////////////////////////////////////////
+type exchangeData struct {
+	Version uint32
+}
+
+func (p *Peer) Exchange() error {
+
+	errc := make(chan error, 2)
+	var exchange exchangeData
+
+	go func() {
+		p.log.Info("Send exchange data")
+		errc <- p.SendData(ExchangeMsg, &exchangeData{
+			Version: 0xFF00,
+		})
+	}()
+	go func() {
+		errc <- p.readExchange(&exchange)
+		p.log.Info("Read exchange data","remote",exchange)
+	}()
+
+	timeout := time.NewTimer(handshakeTimeout)
+	defer timeout.Stop()
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-errc:
+			if err != nil {
+				return err
+			}
+		case <-timeout.C:
+			return DiscReadTimeout
+		}
+	}
+
+	return nil
+}
+
+func (p *Peer) readExchange(status *exchangeData) (err error) {
+	msg, err := p.rw.ReadMsg()
+	if err != nil {
+		return err
+	}
+
+	if msg.Code != ExchangeMsg {
+		return ErrResp(ErrNoExchangeMsg, "Msg has code 0x%x (!= %x)", msg.Code, ExchangeMsg)
+	}
+
+	// Decode the handshake and make sure everything matches
+	if err := msg.Decode(&status); err != nil {
+		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	return nil
+}
+
+///////////////////////////////////////////////
+
 func (p *Peer) testBandwidth() (error) {
 
 	ch := make(chan struct{}, 1)

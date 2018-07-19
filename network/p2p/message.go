@@ -41,8 +41,8 @@ const (
 
 // message of hpb protocol
 const (
-	HpbMsgBegin        = 0x10
-	StatusMsg          = 0x11
+	StatusMsg          = 0x10
+	ExchangeMsg        = 0x11
 
 	NewBlockHashesMsg  = 0x12
 	TxMsg              = 0x13

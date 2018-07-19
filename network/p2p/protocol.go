@@ -81,7 +81,7 @@ const (
 	ErrNetworkIdMismatch
 	ErrGenesisBlockMismatch
 	ErrNoStatusMsg
-	ErrExtraStatusMsg
+	ErrNoExchangeMsg
 )
 
 func NewProtos() *HpbProto {
@@ -157,13 +157,11 @@ func (hp *HpbProto) handle(p *Peer) error {
 		}
 	}()
 
-	//TODO: 调用blockchain接口，获取状态信息
+
 	if hp.chanStatus == nil {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
 	}
-
-
 	td, head, genesis := hp.chanStatus()
 	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
 		p.log.Error("Handshake failed in handle peer.", "err", err)
@@ -171,6 +169,11 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	p.log.Info("Do hpb handshake OK.")
 
+	if err := p.Exchange(); err != nil {
+		p.log.Error("Hpb exchange data failed in peer.", "err", err)
+		return err
+	}
+	p.log.Info("Do hpb exchange data OK.")
 
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {

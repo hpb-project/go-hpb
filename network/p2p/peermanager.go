@@ -31,6 +31,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"time"
 	"fmt"
+	"path/filepath"
 )
 
 var (
@@ -106,11 +107,11 @@ func (prm *PeerManager)Start() error {
 	prm.server.localType = discover.PreNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
-		//input cid&hib from json
 
-		//filename := config.Node.DataDir + "/"+bindInfoFileName
-		//log.Info("bootnode load bindings","filename",filename)
-		//parseBindInfo(filename)
+		//input cid&hib from json
+		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
+		log.Debug("bootnode load bindings","filename",filename)
+		parseBindInfo(filename)
 
 	}
 
