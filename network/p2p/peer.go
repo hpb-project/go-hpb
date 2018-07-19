@@ -135,7 +135,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, 1+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		log:      log.New("id", conn.id, "conn", conn.flags),
+		log:      log.New("id", conn.id),
 		ntab:     ntb,
 	}
 	return p
@@ -587,7 +587,7 @@ func (p *Peer) testBandwidth() (error) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				p.log.Error("Test bandwidth panic.")
+				p.log.Error("Test bandwidth panic.","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
 			}
 		}()
 
