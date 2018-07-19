@@ -409,8 +409,6 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-
-
 func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 	id := pr.ID()
 
@@ -457,7 +455,7 @@ func (p *Peer) TxsRate() float64 {
 
 	return p.txsRate
 }
-
+// TODO: set txs rate value
 func (p *Peer) SetTxsRate(txs float64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()

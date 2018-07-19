@@ -20,7 +20,6 @@ package p2p
 
 import (
 	"net"
-
 	"github.com/hpb-project/go-hpb/common/metrics"
 )
 
@@ -31,15 +30,10 @@ var (
 	egressTrafficMeter  = metrics.NewMeter("p2p/OutboundTraffic")
 )
 
-// meteredConn is a wrapper around a network TCP connection that meters both the
-// inbound and outbound network traffic.
 type meteredConn struct {
-	*net.TCPConn // Network connection to wrap with metering
+	*net.TCPConn
 }
 
-// newMeteredConn creates a new metered connection, also bumping the ingress or
-// egress connection meter. If the metrics system is disabled, this function
-// returns the original object.
 func newMeteredConn(conn net.Conn, ingress bool) net.Conn {
 	// Short circuit if metrics are disabled
 	if !metrics.Enabled {
@@ -54,22 +48,17 @@ func newMeteredConn(conn net.Conn, ingress bool) net.Conn {
 	return &meteredConn{conn.(*net.TCPConn)}
 }
 
-// Read delegates a network read to the underlying connection, bumping the ingress
-// traffic meter along the way.
 func (c *meteredConn) Read(b []byte) (n int, err error) {
 	n, err = c.TCPConn.Read(b)
 	ingressTrafficMeter.Mark(int64(n))
 	return
 }
 
-// Write delegates a network write to the underlying connection, bumping the
-// egress traffic meter along the way.
 func (c *meteredConn) Write(b []byte) (n int, err error) {
 	n, err = c.TCPConn.Write(b)
 	egressTrafficMeter.Mark(int64(n))
 	return
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -108,15 +97,11 @@ var (
 	miscOutTrafficMeter       = metrics.NewMeter("hpb/misc/out/traffic")
 )
 
-// meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of
-// accumulating the above defined metrics based on the data stream contents.
 type meteredMsgReadWriter struct {
-	MsgReadWriter     // Wrapped message stream to meter
-	version           uint // Protocol version to select correct meters
+	MsgReadWriter
+	version           uint
 }
 
-// newMeteredMsgWriter wraps a p2p MsgReadWriter with metering support. If the
-// metrics system is disabled, this function returns the original object.
 func newMeteredMsgWriter(rw MsgReadWriter) MsgReadWriter {
 	if !metrics.Enabled {
 		return rw
@@ -124,8 +109,6 @@ func newMeteredMsgWriter(rw MsgReadWriter) MsgReadWriter {
 	return &meteredMsgReadWriter{MsgReadWriter: rw}
 }
 
-// Init sets the protocol version used by the stream to know which meters to
-// increment in case of overlapping message ids between protocol versions.
 func (rw *meteredMsgReadWriter) Init(version uint) {
 	rw.version = version
 }
@@ -186,6 +169,5 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg Msg) error {
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))
 
-	// Send the packet to the p2p layer
 	return rw.MsgReadWriter.WriteMsg(msg)
 }

@@ -31,34 +31,34 @@ import (
 
 // message of control
 const (
-	baseMsgVersion  = 0x01
-	handshakeMsg    = 0x00
-	discMsg         = 0x01
-	pingMsg         = 0x02
-	pongMsg         = 0x03
-	baseMsgMax      = 0x0F
+	baseMsgVersion  uint64 = 0x01
+	handshakeMsg    uint64 = 0x00
+	discMsg         uint64 = 0x01
+	pingMsg         uint64 = 0x02
+	pongMsg         uint64 = 0x03
+	baseMsgMax      uint64 = 0x0F
 )
 
 // message of hpb protocol
 const (
-	StatusMsg          = 0x10
-	ExchangeMsg        = 0x11
+	StatusMsg          uint64 = 0x10
+	ExchangeMsg        uint64 = 0x11
 
-	NewBlockHashesMsg  = 0x12
-	TxMsg              = 0x13
-	GetBlockHeadersMsg = 0x14
-	BlockHeadersMsg    = 0x15
-	GetBlockBodiesMsg  = 0x16
-	BlockBodiesMsg     = 0x17
-	NewBlockMsg        = 0x18
-	GetNodeDataMsg     = 0x19
-	NodeDataMsg        = 0x1a
-	GetReceiptsMsg     = 0x1b
-	ReceiptsMsg        = 0x1c
+	NewBlockHashesMsg  uint64 = 0x12
+	TxMsg              uint64 = 0x13
+	GetBlockHeadersMsg uint64 = 0x14
+	BlockHeadersMsg    uint64 = 0x15
+	GetBlockBodiesMsg  uint64 = 0x16
+	BlockBodiesMsg     uint64 = 0x17
+	NewBlockMsg        uint64 = 0x18
+	GetNodeDataMsg     uint64 = 0x19
+	NodeDataMsg        uint64 = 0x1a
+	GetReceiptsMsg     uint64 = 0x1b
+	ReceiptsMsg        uint64 = 0x1c
 
 
-	ReqNodesMsg        = 0x20
-	ResNodesMsg        = 0x21
+	ReqNodesMsg        uint64 = 0x20
+	ResNodesMsg        uint64 = 0x21
 
 )
 

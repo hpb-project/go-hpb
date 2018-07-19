@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"time"
+	"runtime/debug"
 )
 
 // Protocol represents a P2P subprotocol implementation.
@@ -118,9 +119,10 @@ func ErrResp(code errCode, format string, v ...interface{}) error {
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (hp *HpbProto) handle(p *Peer) error {
-	//p.Log().Debug("Protocol handle peer connected.")
+
 	defer func() {
 		if r := recover(); r != nil {
+			debug.PrintStack()
 			p.log.Error("Handle hpb message panic.","r",r)
 		}
 	}()
@@ -222,6 +224,8 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	switch {
 	case msg.Code == StatusMsg:
 		p.log.Error("######uncontrolled StatusMsg msg")
+	case msg.Code == ExchangeMsg:
+		p.log.Error("######uncontrolled ExchangeMsg msg")
 	case msg.Code == ReqNodesMsg:
 		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
 			cb(p,msg)
