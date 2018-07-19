@@ -25,6 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // statusData is the network packet for the status message.
@@ -143,13 +144,13 @@ func sendReceiptsRLP(peer *p2p.Peer, receipts []rlp.RawValue) error {
 // requestOneHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func requestOneHeader(peer *p2p.Peer, hash common.Hash) error {
-	peer.Log().Debug("Fetching single header", "hash", hash)
+	log.Debug("Fetching single header", "hash", hash)
 	return peer.SendData(p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
 }
 
 // requestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func requestBodies(peer *p2p.Peer, hashes []common.Hash) error {
-	peer.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
+	log.Debug("Fetching batch of block bodies", "count", len(hashes))
 	return peer.SendData(p2p.GetBlockBodiesMsg, hashes)
 }

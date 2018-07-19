@@ -74,7 +74,7 @@ func (this *SynCtrl) txsyncLoop() {
 			delete(pending, s.p.ID())
 		}
 		// Send the pack in the background.
-		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
+		log.Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
 		sending = true
 		go func() { done <- sendTransactions(pack.p, pack.txs) }()
 	}
@@ -104,7 +104,7 @@ func (this *SynCtrl) txsyncLoop() {
 			sending = false
 			// Stop tracking peers that cause send failures.
 			if err != nil {
-				pack.p.Log().Debug("Transaction send failed", "err", err)
+				log.Debug("Transaction send failed", "err", err)
 				delete(pending, pack.p.ID())
 			}
 			// Schedule the next send.

@@ -206,9 +206,9 @@ func (p *PeerBase) String() string {
 	return fmt.Sprintf("Peer %x %v", p.rw.id[:8], p.RemoteAddr())
 }
 
-func (p *PeerBase) Log() log.Logger {
-	return p.log
-}
+//func (p *PeerBase) Log() log.Logger {
+//	return p.log
+//}
 
 func (p *PeerBase) run() (remoteRequested bool, err error) {
 	var (

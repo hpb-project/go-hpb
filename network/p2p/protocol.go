@@ -166,7 +166,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	td, head, genesis := hp.chanStatus()
 	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
-		p.Log().Error("Handshake failed in handle peer.", "err", err)
+		p.log.Error("Handshake failed in handle peer.", "err", err)
 		return err
 	}
 	p.log.Info("Do hpb handshake OK.")
@@ -179,7 +179,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	// Register the peer locally
 	if err := PeerMgrInst().Register(p); err != nil {
-		p.Log().Error("Hpb peer registration failed", "err", err)
+		p.log.Error("Hpb peer registration failed", "err", err)
 		return err
 	}
 	defer hp.removePeer(p.id)
@@ -194,7 +194,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	p.log.Info("Start hpb message loop.")
 	for {
 		if err := hp.handleMsg(p); err != nil {
-			p.Log().Debug("Message handling failed", "err", err)
+			p.log.Debug("Message handling failed", "err", err)
 			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
 				hp.onDropPeer(p)
 				p.log.Debug("Network has drop peer to notify syncer")

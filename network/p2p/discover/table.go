@@ -226,7 +226,7 @@ loop:
 			if done == nil {
 				//log.Warn("Refresh table time now.")
 				done = make(chan struct{})
-				log.Warn("Do refresh table.")
+				log.Debug("Do refresh table.")
 				go tab.doRefresh(done)
 			}
 		case req := <-tab.refreshReq:
