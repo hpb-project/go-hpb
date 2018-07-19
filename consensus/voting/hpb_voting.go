@@ -49,7 +49,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < hpbNodeCheckpointInterval * 4){
+	if(number < hpbNodeCheckpointInterval * 60000000){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
@@ -77,7 +77,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			return snapcd, err
 	}else{
 		// 开始获取之前的所有header
-		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
+		for i := latestCheckPointNumber-4*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
 			//log.Info("Header:",strconv.FormatUint(i, 10))
 			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
