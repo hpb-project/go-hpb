@@ -31,8 +31,6 @@ type Protocol struct {
 	Version  uint
 	Length   uint64
 	Run      func(p *PeerBase, rw MsgReadWriter) error
-	//NodeInfo func() interface{}
-	//PeerInfo func(id discover.NodeID) interface{}
 }
 
 func (p Protocol) cap() Cap {
@@ -98,15 +96,6 @@ func NewProtos() *HpbProto {
 				peer := NewPeer(version, p, rw)
 				return hpb.handle(peer)
 			},
-			//NodeInfo: func() interface{} {
-			//	return hpb.NodeInfo()
-			//},
-			//PeerInfo: func(id discover.NodeID) interface{} {
-			//	if p := PeerMgrInst().Peer(fmt.Sprintf("%x", id[:8])); p != nil {
-			//		return p.Info()
-			//	}
-			//	return nil
-			//},
 		})
 	}
 
@@ -120,32 +109,11 @@ func NewProtos() *HpbProto {
 func (s *HpbProto) Protocols() []Protocol {
 	return s.protos
 }
-//
-//type HpbNodeInfo struct {
-//	Network    uint64      `json:"network"`    // Hpb network ID (1=Frontier, 2=Morden, Ropsten=3)
-//	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
-//	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
-//	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
-//}
-//
-//// NodeInfo retrieves some protocol metadata about the running host node.
-//func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
-//
-//	currentBlock := bc.InstanceBlockChain().CurrentBlock()
-//	return &HpbNodeInfo{
-//		Network:    hp.networkId,
-//		Difficulty: bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-//		Genesis:    bc.InstanceBlockChain().Genesis().Hash(),
-//		Head:       currentBlock.Hash(),
-//	}
-//
-//	return  nil
-//}
+
 
 func ErrResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
-
 
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
@@ -157,19 +125,8 @@ func (hp *HpbProto) handle(p *Peer) error {
 		}
 	}()
 
-
-	if hp.chanStatus == nil {
-		p.log.Error("this no chan status callback")
-		return errProtNoStatusCB
-	}
-	td, head, genesis := hp.chanStatus()
-	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
-		p.log.Error("Handshake failed in handle peer.", "err", err)
-		return err
-	}
-	p.log.Info("Do hpb handshake OK.")
-
-
+	///////////////////////////////////////////
+	///////////////////////////////////////////
 	our := &exchangeData{
 		Version: 0xFFAA,
 	}
@@ -183,6 +140,20 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	//TODO bonding hardware info
 	p.log.Info("Do do bond hardware OK.")
+
+	///////////////////////////////////////////
+	///////////////////////////////////////////
+	if hp.chanStatus == nil {
+		p.log.Error("this no chan status callback")
+		return errProtNoStatusCB
+	}
+	td, head, genesis := hp.chanStatus()
+	if err := p.Handshake(hp.networkId, td, head, genesis); err != nil {
+		p.log.Error("Handshake failed in handle peer.", "err", err)
+		return err
+	}
+	p.log.Info("Do hpb handshake OK.")
+
 
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
