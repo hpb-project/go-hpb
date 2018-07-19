@@ -159,7 +159,7 @@ func (prm *PeerManager)Start() error {
 
 func (prm *PeerManager)Stop(){
 
-	prm.Close()
+	prm.close()
 	prm.rpcmgr.stopRPC()
 
 	prm.server.Stop()
@@ -328,7 +328,7 @@ func (prm *PeerManager) BestPeer() *Peer {
 
 // Close disconnects all peers.
 // No new peers can be registered after Close has returned.
-func (prm *PeerManager) Close() {
+func (prm *PeerManager) close() {
 	prm.lock.Lock()
 	defer prm.lock.Unlock()
 

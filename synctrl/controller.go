@@ -325,12 +325,6 @@ func (this *SynCtrl) Stop() {
 	// Quit fetcher, txsyncLoop.
 	close(this.quitSync)
 
-	// Disconnect existing sessions.
-	// This also closes the gate for any new registrations on the peer set.
-	// sessions which are already established but not added to pm.peers yet
-	// will exit when they try to register.
-	p2p.PeerMgrInst().Close()
-
 	// Wait for all peer handler goroutines and the loops to come down.
 	this.wg.Wait()
 
