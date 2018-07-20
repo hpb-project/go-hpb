@@ -20,7 +20,7 @@ package voting
 import (
 	//"math"
 	"math/big"
-	"strconv"
+	//"strconv"
 	"math/rand"
     "fmt"
 	"github.com/hpb-project/go-hpb/common"
@@ -122,9 +122,9 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 			    if(peer.Address() != address){
 				    cadWinners = append(cadWinners,snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
 					
-					fmt.Println("Id:", peer.GetID())
-					fmt.Println("Address:", peer.Address().Hex())
-					fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
+					//fmt.Println("Id:", peer.GetID())
+					//fmt.Println("Address:", peer.Address().Hex())
+					//fmt.Println("VoteIndex:", strconv.FormatFloat(VoteIndex, 'g', 1, 64))
 			    }
 			}
 			
