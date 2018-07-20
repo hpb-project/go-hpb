@@ -184,7 +184,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 				hp.onDropPeer(p)
 				p.log.Debug("Network has drop peer to notify syncer")
 			}
-			p.log.Info("Stop hpb message loop.")
+			p.log.Debug("Stop hpb message loop.")
 			return err
 		}
 	}

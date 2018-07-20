@@ -290,13 +290,13 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
-			log.Error("Peer base read loop error","error",err)
+			log.Debug("Peer base read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
-			log.Error("Peer base handle msg error","error",err)
+			log.Debug("Peer base handle msg error","error",err)
 			errc <- err
 			return
 		}
