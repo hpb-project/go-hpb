@@ -273,6 +273,8 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 	if hpbnode.Hpbsyncctr != nil {
 		hpbnode.Hpbsyncctr.Start()
 	}
+
+	hpbnode.stop = make(chan struct{})
 	return nil
 
 }
