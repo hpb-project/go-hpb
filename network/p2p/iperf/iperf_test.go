@@ -18,7 +18,6 @@ package iperf
 
 import (
 	"testing"
-	"time"
 
 )
 
@@ -28,26 +27,27 @@ var (
 
 func TestValidateSign(t *testing.T) {
 
-	var result = float64(0.0)
-	ch := make(chan struct{}, 1)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("iperf test result","result",r)
-			}
-		}()
-		result = StartTest("127.0.0.1",28201,5)
-		ch <- struct{}{}
-	}()
-
-
-	timeout := time.NewTimer(time.Second*15)
-	defer timeout.Stop()
-
-	select {
-	case <-ch:
-	case <-timeout.C:
-	}
+	//var result = float64(0.0)
+	//ch := make(chan struct{}, 1)
+	//go func() {
+	//	defer func() {
+	//		if r := recover(); r != nil {
+	//			t.Log("iperf test result","result",r)
+	//		}
+	//	}()
+	//	result = StartTest("127.0.0.1",28201,5)
+	//	ch <- struct{}{}
+	//}()
+	//
+	//
+	//timeout := time.NewTimer(time.Second*15)
+	//defer timeout.Stop()
+	//
+	//select {
+	//case <-ch:
+	//case <-timeout.C:
+	//}
+	result := StartTest("127.0.0.1",28000,5)
 	t.Log("iperf test result","result",result)
 	//var dat map[string]interface{}
 	//json.Unmarshal([]byte(result), &dat)

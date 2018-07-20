@@ -27,7 +27,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"net"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"time"
 	"fmt"
@@ -144,13 +143,17 @@ func (prm *PeerManager)Start() error {
 	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
 
 
-	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
-	add.Port = add.Port+100
-	log.Info("Iperf server start", "port",add.Port)
-	go iperf.StartSever(add.Port)
-	if prm.server.localType != discover.BootNode {
-		go prm.randomTestBW()
-	}
+	//add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
+	//add.Port = add.Port+100
+	//log.Info("Iperf server start", "port",add.Port)
+	//go iperf.StartSever(add.Port)
+	//if prm.server.localType != discover.BootNode {
+	//	go prm.randomTestBW()
+	//}
+
+
+	//go iperf.OpenServer(28800,15)
+	go iperf.ServerIperfTTT()
 
 	return nil
 }
@@ -165,41 +168,8 @@ func (prm *PeerManager)Stop(){
 	prm.server.Stop()
 	prm.server = nil
 
-	iperf.KillSever()
+	//iperf.KillSever()
 
-}
-
-func (prm *PeerManager) randomTestBW() {
-	rd :=rand.Intn(30)
-	timeout := time.NewTimer(time.Second*time.Duration(30+rd))
-	defer timeout.Stop()
-
-	for {
-		//1 start to test
-		//log.Info("waiting start test")
-		select {
-		case <-timeout.C:
-			rd :=rand.Intn(6)
-			timeout.Reset(time.Second*time.Duration(60*10+rd))
-		}
-
-		//2 to test
-		for _, p := range prm.peers {
-			if p.remoteType == discover.BootNode {
-				continue
-			}
-
-			p.log.Info("start testing","remoteType",p.remoteType.ToString())
-			if err:= p.testBandwidth();err != nil{
-				p.log.Error("random test bandwidth","error",err)
-			}else {
-				break
-			}
-		}
-
-	}
-
-	return
 }
 
 func (prm *PeerManager)P2pSvr() *Server {
@@ -219,6 +189,7 @@ func (prm *PeerManager) Register(p *Peer) error {
 	if prm.closed {
 		return errClosed
 	}
+
 	if p.remoteType == discover.BootNode{
 		if _, ok := prm.boots[p.id]; !ok {
 			prm.boots[p.id] = p
@@ -487,6 +458,36 @@ func parseBindInfo(filename string) error{
 
 	return nil
 }
+
+func (prm *PeerManager) randomTestBW() {
+	rd :=rand.Intn(30)
+	timeout := time.NewTimer(time.Second*time.Duration(30+rd))
+	defer timeout.Stop()
+
+	for {
+		//1 start to test
+		//log.Info("waiting start test")
+		select {
+		case <-timeout.C:
+			rd :=rand.Intn(6)
+			timeout.Reset(time.Second*time.Duration(60*10+rd))
+		}
+
+		//2 to test
+		for _, p := range prm.peers {
+			p.log.Info("start testing","remoteType",p.remoteType.ToString())
+			if err:= p.testBandwidth();err != nil{
+				p.log.Error("random test bandwidth","error",err)
+			}else {
+				break
+			}
+		}
+
+	}
+
+	return
+}
+
 
 
 
