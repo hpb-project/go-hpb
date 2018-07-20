@@ -20,7 +20,7 @@ package snapshots
 import (
 	"bytes"
 	"sort"
-	"fmt"
+	//"fmt"
 	"encoding/json"
 	"math/big"
 	"github.com/hpb-project/go-hpb/common"
@@ -114,19 +114,20 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	//fmt.Println("length Test: ", len(s.Tally))
 	
 	if old, ok := s.Tally[candAddress]; ok {
-		//log.Info("Add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
-        old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1))
-        old.VoteIndexs.Add(old.VoteIndexs, voteIndexs)
-        old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers)
-        old.CandAddress = candAddress
+		s.Tally[candAddress] = Tally{
+	        VoteNumbers: old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1)),
+	        VoteIndexs:  old.VoteIndexs.Add(old.VoteIndexs, voteIndexs),
+	        VotePercent: old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers),
+	        CandAddress: candAddress,
+		}
 	} else {
-		//log.Info("First add new candAddress", "VoteNumbers", old.VoteNumbers, "VoteIndexs", old.VoteIndexs, "VoteNumbers", old.VoteNumbers)
 		s.Tally[candAddress] = Tally{
 			VoteNumbers: big.NewInt(1),
 			VoteIndexs: voteIndexs,
 			VotePercent: voteIndexs,
 			CandAddress: candAddress,
 		}
+		//log.Info("new candAddress", "VoteNumbers", 1, "VoteIndexs", voteIndexs, "VotePercent", voteIndexs)
 	}
 	return true
 }
@@ -200,6 +201,8 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	snap.Tally = make(map[common.Address]Tally)
 	
 	//开始投票
+	//fmt.Println(" ****************************************headers length ++++********************************* ", len(headers))
+
 	for _, header := range headers {
 		snap.cast(header.CandAddress, header.VoteIndex);
 	}
@@ -215,14 +218,14 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	sort.Float64s(keys) //对结果今昔那个排序
 	
 	//fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
+	//fmt.Println("Sorted len: ", len(keys))
 	
 	//设置config长度
 	hpbNodeNum := 0
-	for i := len(keys) - 1; i > 0 ; i-- {
+	for i := len(keys) - 1; i >= 0 ; i-- {
 		//fmt.Printf("test 1 %d", i)
-		//fmt.Printf("test 2 %f", keys[i])
+		//fmt.Printf("test 2 %f", keys[0])
 		if cands, ok := indexTally[keys[i]]; ok {
-			
 			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
 			
@@ -232,9 +235,6 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 			}
 		}
 	}
-	
-	fmt.Println(" ****************************************headers length ********************************* ", len(headers))
-	fmt.Println(" ****************************************singer length ********************************* ", len(keys))
 
 	//等待完善
 	snap.Number += uint64(len(headers))
