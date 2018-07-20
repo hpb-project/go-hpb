@@ -158,15 +158,14 @@ func (prm *PeerManager)Start() error {
 
 
 func (prm *PeerManager)Stop(){
-
-	prm.close()
-	prm.rpcmgr.stopRPC()
-
 	prm.server.Stop()
 	prm.server = nil
 
-	iperf.KillSever()
+	prm.close()
 
+	prm.rpcmgr.stopRPC()
+
+	//iperf.KillSever()
 }
 
 func (prm *PeerManager) randomTestBW() {
