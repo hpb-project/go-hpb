@@ -161,6 +161,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpberbase:      conf.Node.Hpberbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   nil,
+		stop:           make(chan struct{}),
 	}
 	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
 
@@ -273,6 +274,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 	if hpbnode.Hpbsyncctr != nil {
 		hpbnode.Hpbsyncctr.Start()
 	}
+
 	return nil
 
 }

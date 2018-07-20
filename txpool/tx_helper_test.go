@@ -29,7 +29,7 @@ package txpool
 //	// setup pool with 2 transaction in it
 //	statedb.SetBalance(address, new(big.Int).SetUint64(config.Ether))
 //	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000)}, address, &trigger}
-//	pool := NewTxPool(testTxPoolConfig, config.TestnetChainConfig, blockchain)
+//	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 //	return ks.(*keystore.KeyStore), pool
 //}
 //

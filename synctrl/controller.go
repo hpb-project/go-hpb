@@ -166,8 +166,8 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
-	p2p.PeerMgrInst().RegOnAddPeer(synctrl.syner.RegisterNetPeer)
-	p2p.PeerMgrInst().RegOnDropPeer(synctrl.syner.UnregisterNetPeer)
+	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
+	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
 
 	//subcrier txch event
 	//synctrl.txchreciver = txpoolins.Txchevent
@@ -206,6 +206,18 @@ func (this *SynCtrl) Start() {
 	// start sync handlers
 	go this.sync()
 	go this.txsyncLoop()
+}
+
+func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
+	ps := &PeerSyn{peer}
+	//ps.Log().Debug("Register network peer in syncer.")
+	this.syncTransactions(peer)
+	return this.syner.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
+}
+
+func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
+	//peer.Log().Debug("Unregister network peer in syncer.")
+	return this.syner.UnregisterPeer(peer.GetID())
 }
 
 // Mined routing loop
@@ -320,12 +332,6 @@ func (this *SynCtrl) Stop() {
 
 	// Quit fetcher, txsyncLoop.
 	close(this.quitSync)
-
-	// Disconnect existing sessions.
-	// This also closes the gate for any new registrations on the peer set.
-	// sessions which are already established but not added to pm.peers yet
-	// will exit when they try to register.
-	p2p.PeerMgrInst().Close()
 
 	// Wait for all peer handler goroutines and the loops to come down.
 	this.wg.Wait()

@@ -206,10 +206,6 @@ func (p *PeerBase) String() string {
 	return fmt.Sprintf("Peer %x %v", p.rw.id[:8], p.RemoteAddr())
 }
 
-//func (p *PeerBase) Log() log.Logger {
-//	return p.log
-//}
-
 func (p *PeerBase) run() (remoteRequested bool, err error) {
 	var (
 		writeStart = make(chan struct{}, 1)
@@ -294,13 +290,13 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
-			log.Error("Peer base read loop error","error",err)
+			log.Debug("Peer base read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
-			log.Error("Peer base handle msg error","error",err)
+			log.Debug("Peer base handle msg error","error",err)
 			errc <- err
 			return
 		}
@@ -413,8 +409,6 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
-
-
 func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 	id := pr.ID()
 
@@ -461,7 +455,7 @@ func (p *Peer) TxsRate() float64 {
 
 	return p.txsRate
 }
-
+// TODO: set txs rate value
 func (p *Peer) SetTxsRate(txs float64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -586,20 +580,20 @@ type exchangeData struct {
 	Version uint32
 }
 
-func (p *Peer) Exchange() error {
+func (p *Peer) Exchange(our *exchangeData) (*exchangeData,error) {
 
 	errc := make(chan error, 2)
-	var exchange exchangeData
+	var there exchangeData
 
 	go func() {
-		p.log.Info("Send exchange data")
+		p.log.Debug("Send exchange data")
 		errc <- p.SendData(ExchangeMsg, &exchangeData{
-			Version: 0xFF00,
+			Version: our.Version,
 		})
 	}()
 	go func() {
-		errc <- p.readExchange(&exchange)
-		p.log.Info("Read exchange data","remote",exchange)
+		errc <- p.readExchange(&there)
+		p.log.Debug("Read exchange data","remote",there)
 	}()
 
 	timeout := time.NewTimer(handshakeTimeout)
@@ -608,14 +602,14 @@ func (p *Peer) Exchange() error {
 		select {
 		case err := <-errc:
 			if err != nil {
-				return err
+				return nil,err
 			}
 		case <-timeout.C:
-			return DiscReadTimeout
+			return nil,DiscReadTimeout
 		}
 	}
 
-	return nil
+	return &there,nil
 }
 
 func (p *Peer) readExchange(status *exchangeData) (err error) {

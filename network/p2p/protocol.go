@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"time"
+	"runtime/debug"
 )
 
 // Protocol represents a P2P subprotocol implementation.
@@ -31,8 +32,6 @@ type Protocol struct {
 	Version  uint
 	Length   uint64
 	Run      func(p *PeerBase, rw MsgReadWriter) error
-	//NodeInfo func() interface{}
-	//PeerInfo func(id discover.NodeID) interface{}
 }
 
 func (p Protocol) cap() Cap {
@@ -98,15 +97,6 @@ func NewProtos() *HpbProto {
 				peer := NewPeer(version, p, rw)
 				return hpb.handle(peer)
 			},
-			//NodeInfo: func() interface{} {
-			//	return hpb.NodeInfo()
-			//},
-			//PeerInfo: func(id discover.NodeID) interface{} {
-			//	if p := PeerMgrInst().Peer(fmt.Sprintf("%x", id[:8])); p != nil {
-			//		return p.Info()
-			//	}
-			//	return nil
-			//},
 		})
 	}
 
@@ -120,44 +110,41 @@ func NewProtos() *HpbProto {
 func (s *HpbProto) Protocols() []Protocol {
 	return s.protos
 }
-//
-//type HpbNodeInfo struct {
-//	Network    uint64      `json:"network"`    // Hpb network ID (1=Frontier, 2=Morden, Ropsten=3)
-//	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
-//	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
-//	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
-//}
-//
-//// NodeInfo retrieves some protocol metadata about the running host node.
-//func (hp *HpbProto) NodeInfo() *HpbNodeInfo {
-//
-//	currentBlock := bc.InstanceBlockChain().CurrentBlock()
-//	return &HpbNodeInfo{
-//		Network:    hp.networkId,
-//		Difficulty: bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-//		Genesis:    bc.InstanceBlockChain().Genesis().Hash(),
-//		Head:       currentBlock.Hash(),
-//	}
-//
-//	return  nil
-//}
+
 
 func ErrResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
 
-
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (hp *HpbProto) handle(p *Peer) error {
-	//p.Log().Debug("Protocol handle peer connected.")
+
 	defer func() {
 		if r := recover(); r != nil {
+			debug.PrintStack()
 			p.log.Error("Handle hpb message panic.","r",r)
 		}
 	}()
 
+	///////////////////////////////////////////
+	///////////////////////////////////////////
+	our := &exchangeData{
+		Version: 0xFFAA,
+	}
+	p.log.Info("Do hpb exchange data.","ours",our)
+	there,err := p.Exchange(our)
+	if  err != nil {
+		p.log.Error("Hpb exchange data failed in peer.", "err", err)
+		return err
+	}
+	p.log.Info("Do hpb exchange data OK.","there",there)
 
+	//TODO bonding hardware info
+	p.log.Info("Do do bond hardware OK.")
+
+	///////////////////////////////////////////
+	///////////////////////////////////////////
 	if hp.chanStatus == nil {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
@@ -169,11 +156,6 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	p.log.Info("Do hpb handshake OK.")
 
-	if err := p.Exchange(); err != nil {
-		p.log.Error("Hpb exchange data failed in peer.", "err", err)
-		return err
-	}
-	p.log.Info("Do hpb exchange data OK.")
 
 	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
@@ -202,7 +184,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 				hp.onDropPeer(p)
 				p.log.Debug("Network has drop peer to notify syncer")
 			}
-			p.log.Info("Stop hpb message loop.")
+			p.log.Debug("Stop hpb message loop.")
 			return err
 		}
 	}
@@ -242,6 +224,8 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	switch {
 	case msg.Code == StatusMsg:
 		p.log.Error("######uncontrolled StatusMsg msg")
+	case msg.Code == ExchangeMsg:
+		p.log.Error("######uncontrolled ExchangeMsg msg")
 	case msg.Code == ReqNodesMsg:
 		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
 			cb(p,msg)

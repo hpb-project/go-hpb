@@ -35,7 +35,7 @@ import (
 // testTxPoolConfig is a transaction pool configuration without stateful disk
 // sideeffects used during testing.
 var testTxPoolConfig config.TxPoolConfiguration
-var boeSigner = types.NewBoeSigner(config.TestnetChainConfig.ChainId)
+var boeSigner = types.NewBoeSigner(config.MainnetChainConfig.ChainId)
 
 func init() {
 	testTxPoolConfig = config.DefaultTxPoolConfig
@@ -66,7 +66,7 @@ func transaction(nonce uint64, gaslimit *big.Int, key *ecdsa.PrivateKey) *types.
 
 func pricedTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	//tx := types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil)
-	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), types.NewBoeSigner(config.TestnetChainConfig.ChainId), key)
+	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), types.NewBoeSigner(config.MainnetChainConfig.ChainId), key)
 	return tx
 }
 
@@ -76,7 +76,7 @@ func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 	blockchain := &testBlockChain{statedb, big.NewInt(1000000)}
 
 	key, _ := crypto.GenerateKey()
-	pool := NewTxPool(testTxPoolConfig, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 	return pool, key
 }
 
@@ -152,7 +152,7 @@ func TestAddTx(t *testing.T) {
 	tx0 := transaction(0, big.NewInt(100000), key)
 	tx1 := transaction(1, big.NewInt(100000), key)
 
-	pool := NewTxPool(testTxPoolConfig, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	pool.currentState.AddBalance(address, new(big.Int).SetUint64(config.Ether))
@@ -201,7 +201,7 @@ func TestStateChangeDuringPoolReset(t *testing.T) {
 	tx0 := transaction(0, big.NewInt(100000), key)
 	tx1 := transaction(1, big.NewInt(100000), key)
 
-	pool := NewTxPool(testTxPoolConfig, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	nonce := pool.State().GetNonce(address)
@@ -379,7 +379,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 	}
 	resetState()
 
-	signer := types.NewBoeSigner(config.TestnetChainConfig.ChainId)
+	signer := types.NewBoeSigner(config.MainnetChainConfig.ChainId)
 	tx1, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), big.NewInt(100000), big.NewInt(1), nil), signer, key)
 	tx2, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), big.NewInt(1000000), big.NewInt(2), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), big.NewInt(1000000), big.NewInt(1), nil), signer, key)
@@ -676,7 +676,7 @@ func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 	cfg := testTxPoolConfig
 	cfg.GlobalQueue = cfg.AccountQueue*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
 
-	pool := NewTxPool(cfg, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them (last one will be the local)
@@ -728,7 +728,7 @@ func TestTransactionQueueTimeLimiting(t *testing.T) {
 	cfg := testTxPoolConfig
 	cfg.Lifetime = time.Second
 
-	pool := NewTxPool(cfg, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create two test accounts to ensure remotes expire but locals do not
@@ -856,7 +856,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	cfg := testTxPoolConfig
 	cfg.GlobalSlots = cfg.AccountSlots * 10
 
-	pool := NewTxPool(cfg, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -903,7 +903,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	cfg.AccountQueue = 2
 	cfg.GlobalSlots = 8
 
-	pool := NewTxPool(cfg, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -934,7 +934,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	cfg := testTxPoolConfig
 	cfg.GlobalSlots = 0
 
-	pool := NewTxPool(cfg, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -975,7 +975,7 @@ func TestTransactionReplacement(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	blockchain := &testBlockChain{statedb, big.NewInt(1000000)}
 
-	pool := NewTxPool(testTxPoolConfig, config.TestnetChainConfig, blockchain)
+	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
 	// Create a test account to add transactions with

@@ -110,11 +110,17 @@ func StartSever(port int) error {
 	}
 
 	return nil
+}
 
+func PauseSever() error {
+	return  nil
+}
+
+func StopSever() error {
+	return  nil
 }
 
 func KillSever()  {
-
 	C.iperf_server_kill()
 	return
 }

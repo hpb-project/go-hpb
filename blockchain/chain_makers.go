@@ -217,7 +217,7 @@ func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	db, _ := hpbdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, config.TestnetChainConfig, prometheus.New(nil,nil))
+	blockchain, _ := NewBlockChain(db, config.MainnetChainConfig, prometheus.New(nil,nil))
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil
@@ -248,7 +248,7 @@ func makeHeaderChain(parent *types.Header, n int, db hpbdb.Database, seed int) [
 
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
 func makeBlockChain(parent *types.Block, n int, db hpbdb.Database, seed int) []*types.Block {
-	blocks, _ := GenerateChain(config.TestnetChainConfig, parent, db, n, func(i int, b *BlockGen) {
+	blocks, _ := GenerateChain(config.MainnetChainConfig, parent, db, n, func(i int, b *BlockGen) {
 		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks
