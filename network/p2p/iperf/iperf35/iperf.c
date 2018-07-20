@@ -93,32 +93,6 @@ int iperf_server_start()
     return result;
 }
 
-
-
-int iperf_server_one_start(int port)
-{
-    struct iperf_test * server = NULL;
-
-    server = iperf_new_test();
-    if ( server == NULL ) return IPERF_ERR;
-
-    iperf_defaults( server );
-    iperf_set_verbose( server, 1 );
-    iperf_set_test_role( server, 's' );
-    iperf_set_test_server_port( server, port );
-    iperf_set_test_json_output( server, 1 );
-    /*iperf_set_test_one_off( server, 1 );*/
-
-    printf("11111111111111111\n");
-    iperf_run_server( server );
-    printf("22222222222222222\n");
-
-	iperf_reset_test( server );
-    iperf_free_test( server );
-
-    return IPERF_OK;
-}
-
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 char* iperf_test(char* host, int port, int duration)
