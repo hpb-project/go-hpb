@@ -26,7 +26,7 @@ package txpool
 //
 //func MockBlockChain() *bc.BlockChain {
 //	engine := solo.New()
-//	blockchain, err := core.NewBlockChain(testdb, config.TestnetChainConfig, engine)
+//	blockchain, err := core.NewBlockChain(testdb, config.MainnetChainConfig, engine)
 //	if err != nil {
 //		panic(err)
 //	}

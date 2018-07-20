@@ -140,7 +140,7 @@ func (e *GenesisMismatchError) Error() string {
 
 func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return config.PrivatenetChainConfig, common.Hash{}, errGenesisNoConfig
+		return config.MainnetChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -198,16 +198,20 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig
 }
 
 func (g *Genesis) configOrDefault(ghash common.Hash) *config.ChainConfig {
+	
+	/*
 	switch {
 	case g != nil:
 		return g.Config
 	case ghash == config.MainnetGenesisHash:
 		return config.MainnetChainConfig
 	case ghash == config.TestnetGenesisHash:
-		return config.TestnetChainConfig
+		return config.MainnetChainConfig
 	default:
-		return config.PrivatenetChainConfig
-	}
+		return config.MainnetChainConfig
+	}*/
+	
+	return config.MainnetChainConfig
 }
 
 // ToBlock creates the block and state of a genesis specification.
@@ -278,7 +282,7 @@ func (g *Genesis) Commit(db hpbdb.Database) (*types.Block, error) {
 	}
 	configtemp := g.Config
 	if configtemp == nil {
-		configtemp = config.PrivatenetChainConfig
+		configtemp = config.MainnetChainConfig
 	}
 	
 	return block, WriteChainConfig(db, block.Hash(), configtemp)
@@ -315,7 +319,7 @@ func DefaultGenesisBlock() *Genesis {
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     config.TestnetChainConfig,
+		Config:     config.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
@@ -328,7 +332,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DevGenesisBlock returns the 'geth --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     config.PrivatenetChainConfig,
+		Config:     config.MainnetChainConfig,
 		Nonce:      42,
 		GasLimit:   4712388,
 		Difficulty: big.NewInt(131072),

@@ -11,14 +11,14 @@ import (
 
 func makeTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *Transaction {
 	//tx := types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil)
-	tx, _ := SignTx(NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), NewBoeSigner(config.TestnetChainConfig.ChainId), key)
+	tx, _ := SignTx(NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), NewBoeSigner(config.MainnetChainConfig.ChainId), key)
 	return tx
 }
 
 func TestBoeSigner_Sender(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	address := crypto.PubkeyToAddress(key.PublicKey)
-	signer := NewBoeSigner(config.TestnetChainConfig.ChainId)
+	signer := NewBoeSigner(config.MainnetChainConfig.ChainId)
 	tx := makeTransaction(0, big.NewInt(1000), big.NewInt(1000), key)
 	sender, _ := signer.Sender(tx)
 	t.Logf("sender : %x",sender)

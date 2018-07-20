@@ -231,7 +231,7 @@ func (st *StateTransition) TransitionOnEVM() (ret []byte, requiredGas, usedGas *
 	context := hvm.NewEVMContext(st.msg, st.header, InstanceBlockChain(), st.author)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	ethereum_vm := evm.NewEVM(context, st.state, config.TestnetChainConfig, evm.Config{})
+	ethereum_vm := evm.NewEVM(context, st.state, config.MainnetChainConfig, evm.Config{})
 
 	msg := st.msg
 	sender := st.from() // err checked in preCheck

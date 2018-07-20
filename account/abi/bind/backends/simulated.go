@@ -61,7 +61,7 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc bc.GenesisAlloc) *SimulatedBackend {
 	database, _ := hpbdb.NewMemDatabase()
-	genesis := bc.Genesis{Config: config.TestnetChainConfig, Alloc: alloc}
+	genesis := bc.Genesis{Config: config.MainnetChainConfig, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := bc.NewBlockChain(database, genesis.Config, solo.New())
 	backend := &SimulatedBackend{database: database, blockchain: blockchain, config: genesis.Config}

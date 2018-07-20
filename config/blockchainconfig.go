@@ -30,34 +30,14 @@ var (
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 )
 
-var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
+var	MainnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1),
 		Prometheus: &PrometheusConfig{
-			Period: 15,
+			Period: 3,
 			Epoch:  30000,
 		},
-	}
-
-	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
-	TestnetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(3),
-		Prometheus: &PrometheusConfig{
-			Period: 15,
-			Epoch:  30000,
-		},
-	}
-
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	PrivatenetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(1000),
-		Prometheus: &PrometheusConfig{
-			Period: 15,
-			Epoch:  30000,
-		},
-	}
-)
+}
 
 
 //同步控制逻辑参数
