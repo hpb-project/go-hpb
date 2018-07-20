@@ -31,7 +31,6 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
-	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
@@ -87,6 +86,9 @@ type SynCtrl struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+
+	//txch event receiver
+	//txchreciver *event.SyncEvent
 }
 
 // InstanceSynCtrl returns the singleton of SynCtrl.
@@ -113,11 +115,11 @@ func InstanceSynCtrl() *SynCtrl {
 
 
 // NewSynCtrl returns a new block synchronization controller.
-func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.TxPool,
+func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool.TxPool,
 	engine consensus.Engine) (*SynCtrl, error) {
 	synctrl := &SynCtrl{
 		newBlockMux: new(sub.TypeMux),
-		txpool:      txpool,
+		txpool:      txpoolins,
 		chainconfig: cfg,
 		newPeerCh:   make(chan *p2p.Peer),
 		noMorePeers: make(chan struct{}),
@@ -167,6 +169,12 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpool *txpool.Tx
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.syner.RegisterNetPeer)
 	p2p.PeerMgrInst().RegOnDropPeer(synctrl.syner.UnregisterNetPeer)
 
+	//subcrier txch event
+	//synctrl.txchreciver = txpoolins.Txchevent
+	//synctrl.txchreciver.Subscribe(txpool.TxpoolEvent)
+
+
+
 	return synctrl, nil
 }
 
@@ -177,7 +185,7 @@ func (this *SynCtrl) NewBlockMux() *sub.TypeMux{
 func (this *SynCtrl) Start() {
 	// broadcast transactions
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
-	txPreReceiver := event.RegisterReceiver("synctrl_tx_pre_receiver",
+	/*txPreReceiver := event.RegisterReceiver("synctrl_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
@@ -185,8 +193,8 @@ func (this *SynCtrl) Start() {
 					this.txCh <- bc.TxPreEvent{Tx: msg.Message}
 				}
 			}
-		})
-	event.Subscribe(txPreReceiver, event.TxPreTopic)
+		})*/
+	//event.Subscribe(txPreReceiver, event.TxPreTopic)
 	//this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)
 
 	go this.txRoutingLoop()

@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/rand"
+	"github.com/hpb-project/go-hpb/event"
 )
 
 type txsync struct {
@@ -118,6 +119,18 @@ func (this *SynCtrl) txsyncLoop() {
 }
 
 func (this *SynCtrl) txRoutingLoop() {
+
+	txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				this.routingTx(msg.Message.Hash(), msg.Message)
+				//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
+			}
+		})
+	event.Subscribe(txPreReceiver, event.TxPreTopic)
+
+
 	for {
 		select {
 		case event := <-this.txCh:

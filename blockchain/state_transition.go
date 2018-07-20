@@ -94,12 +94,15 @@ func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, hea
 // state and would never be accepted within a block.
 func ApplyMessage(header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool) ([]byte, *big.Int, bool, error) {
 
+
 	st := NewStateTransition(msg, gp, db, header, author)
 
 	if err := st.preCheck(); err != nil {
 		return nil, nil, false, err
 	}
 
+
+	////////////////////////
 	contractCreation := msg.To() == nil
 	// Pay intrinsic gas
 	intrinsicGas := types.IntrinsicGas(st.data, contractCreation)
@@ -110,7 +113,7 @@ func ApplyMessage(header *types.Header, db *state.StateDB, author *common.Addres
 		return nil, nil, false, err
 	}
 
-	if st.native {
+	if !st.native {
 		ret, _, gasUsed, failed, err := st.TransitionOnNative()
 		return ret, gasUsed, failed, err
 	} else {
@@ -208,6 +211,9 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 		st.state.CreateAccount(to)
 	}
 	native.Transfer(st.state, from, to, st.msg.Value())
+
+	sender := st.from()
+	st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
 	st.refundGas()

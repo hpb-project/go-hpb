@@ -21,6 +21,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math"
@@ -31,6 +32,7 @@ import (
 	"fmt"
 	"sort"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var (
@@ -49,16 +51,25 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
-}
 
+	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
+}
+type Txchevent struct{
+	Tx *types.Transaction
+
+}
 type TxPool struct {
 	wg     sync.WaitGroup
 	stopCh chan struct{}
 
 	//TODO remove
 	chain        blockChain
-	chainHeadCh  chan event.ChainHeadEvent
+	//TODO uddate the new event system
+	chainHeadSub sub.Subscription
+	chainHeadCh  chan bc.ChainHeadEvent
+
 	txPreTrigger *event.Trigger
+	//Txchevent *event.SyncEvent
 
 	signer types.Signer
 	mu     sync.RWMutex
@@ -74,7 +85,9 @@ type TxPool struct {
 	beats   map[common.Address]time.Time       // Last heartbeat from each known account
 	all     map[common.Hash]*types.Transaction // All transactions to allow lookups
 }
-
+const (
+	TxpoolEventtype     event.EventType = 0x01
+)
 //Create the transaction pool and start main process loop.
 func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfig, blockChain blockChain) *TxPool {
 	if INSTANCE.Load() != nil {
@@ -90,13 +103,13 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
-		chainHeadCh: make(chan event.ChainHeadEvent, chanHeadBuffer),
+		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
 		stopCh:      make(chan struct{}),
 	}
 	pool.reset(nil, pool.chain.CurrentBlock().Header())
 
-	//3.Subscribe ChainHeadEvent
-	chainHeadReceiver := event.RegisterReceiver("tx_pool_chain_head_subscriber",
+	//3.Subscribe ChainHeadEvent //TODO update the new event system
+	/*chainHeadReceiver := event.RegisterReceiver("tx_pool_chain_head_subscriber",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.ChainHeadEvent:
@@ -105,8 +118,11 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 				//default:
 				//	log.Warn("TxPool get Unknown msg")
 			}
-		})
-	event.Subscribe(chainHeadReceiver, event.ChainHeadTopic)
+		})*/
+	//TODO update the new evnt system
+	//event.Subscribe(chainHeadReceiver, event.ChainHeadTopic)
+	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
+	//pool.Txchevent = event.NewEvent()
 
 	//4.Register Publish TxPre publisher
 	pool.txPreTrigger = event.RegisterTrigger("tx_pool_tx_pre_publisher")
@@ -158,10 +174,11 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
-			if ev.Message != nil {
+			log.Error("********receive chainhead ")
+			if ev.Block != nil {
 				pool.mu.Lock()
-				pool.reset(head.Header(), ev.Message.Header())
-				head = ev.Message
+				pool.reset(head.Header(), ev.Block.Header())
+				head = ev.Block
 
 				pool.mu.Unlock()
 			}
@@ -429,7 +446,8 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
 		// We've directly injected a replacement transaction, notify subsystems
-		event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
+		//TODO why inject event here
+		//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
 
 		return old != nil, nil
 	}
@@ -521,8 +539,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 func (pool *TxPool) demoteUnexecutables() {
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
+		if pool.currentState == nil {
+		}
 		nonce := pool.currentState.GetNonce(addr)
-
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(nonce) {
 			hash := tx.Hash()
@@ -583,8 +602,11 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats[addr] = time.Now()
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
-
+	//TODO update the new event system
 	event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
+	/*pool.txch.Notify(txpoolEvent,&txchevent{
+		tx,
+	})*/
 }
 
 //If the pending limit is overflown, start equalizing allowances
@@ -778,6 +800,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
+
 
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
