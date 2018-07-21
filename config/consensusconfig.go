@@ -18,7 +18,7 @@
 package config
 
 var DefaultPrometheusConfig = PrometheusConfig {
-	Period:    15,
+	Period:    3,
 	Epoch:	   30000,
 }
 
