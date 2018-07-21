@@ -45,6 +45,9 @@ const (
 	ExchangeMsg        uint64 = 0x1011
 	ReqNodesMsg        uint64 = 0x1020
 	ResNodesMsg        uint64 = 0x1021
+	ReqBWTestMsg       uint64 = 0x1030
+	ResBWTestMsg       uint64 = 0x1031
+
 
 	NewBlockHashesMsg  uint64 = 0x2012
 	TxMsg              uint64 = 0x2013

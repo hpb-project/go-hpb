@@ -164,8 +164,13 @@ func (p *PeerBase) RemoteAddr() net.Addr {
 func (p *PeerBase) RemoteIP() string {
 	return p.rw.fd.RemoteAddr().(*net.TCPAddr).IP.String()
 }
+
 func (p *PeerBase) RemoteListenPort() int {
 	return p.rw.rport
+}
+
+func (p *PeerBase) RemoteIperfPort() int {
+	return p.rw.rport+100
 }
 
 // LocalAddr returns the local address of the network connection.

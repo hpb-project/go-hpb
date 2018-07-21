@@ -223,9 +223,10 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == StatusMsg:
-		p.log.Error("######uncontrolled StatusMsg msg")
+		p.log.Error("Uncontrolled StatusMsg msg")
 	case msg.Code == ExchangeMsg:
-		p.log.Error("######uncontrolled ExchangeMsg msg")
+		p.log.Error("Uncontrolled ExchangeMsg msg")
+
 	case msg.Code == ReqNodesMsg:
 		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
 			cb(p,msg)
@@ -238,6 +239,21 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 			p.log.Debug("Handle receive nodes information message from remote.")
 		}
 		return nil
+
+
+	case msg.Code == ReqBWTestMsg:
+		if cb := hp.msgProcess[ReqBWTestMsg]; cb != nil{
+			cb(p,msg)
+			p.log.Info("Handle send request bandwidth test message to remote.")
+		}
+		return nil
+	case msg.Code == ResBWTestMsg:
+		if cb := hp.msgProcess[ResBWTestMsg]; cb != nil{
+			cb(p,msg)
+			p.log.Info("Handle receive bandwidth test message from remote.")
+		}
+		return nil
+
 	case msg.Code == GetBlockHeadersMsg:
 		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
@@ -328,6 +344,7 @@ func (hp *HpbProto) removePeer(id string) {
 	}
 }
 
+////////////////////////////////////////////////////////
 type nodeRes struct {
 	Version    uint64
 	Nodes      []*discover.Node
@@ -369,5 +386,4 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 	return nil
 }
 
-////////////////////////////////////////////////////////
 

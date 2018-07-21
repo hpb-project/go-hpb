@@ -362,6 +362,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 	// Request a bonding slot to limit network usage
 	<-tab.bondslots
 	defer func() { tab.bondslots <- struct{}{} }()
+
 	// Ping the remote side and wait for a pong.
 	if w.err = tab.ping(id, addr); w.err != nil {
 		close(w.done)

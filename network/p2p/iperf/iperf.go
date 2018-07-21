@@ -29,6 +29,7 @@ import (
 	"errors"
 	"time"
 	"encoding/json"
+	"strings"
 )
 
 var (
@@ -101,11 +102,11 @@ func (iperf *Iperf) StartTest(host string, port int, duration int) (error) {
 
 
 func StartSever(port int) error {
+	//TODO all is running
 
 	C.iperf_server_init(C.int(port))
-
 	if ret := C.iperf_server_start();ret != 0{
-		log.Error("iperf server stop error.")
+		log.Error("Iperf server stop error.")
 		return errServer
 	}
 
@@ -127,6 +128,12 @@ func KillSever()  {
 
 func StartTest(host string, port int, duration int) (float64) {
 	result := C.GoString(C.iperf_test(C.CString(host),C.int(port),C.int(duration)))
+
+	//log.Info("test string","result",result)
+	if !strings.Contains(result, "bits_per_second"){
+		log.Warn("Test string in not right.")
+		return 0
+	}
 
 	var dat map[string]interface{}
 	json.Unmarshal([]byte(result), &dat)

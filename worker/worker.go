@@ -158,7 +158,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	//event.Subscribe(txPreReceiver, event.TxPreTopic)
 	//worker.txSub = txpool.GetTxPool().SubscribeTxPreEvent(worker.txCh)
 	// Subscribe events for blockchain
-	log.Error("****fedd chainhedevent")
+	//log.Error("****fedd chainhedevent")
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	//对以上事件的监听
@@ -476,7 +476,7 @@ func (self *worker) startNewMinerRound() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	log.Error("----read tx from pending is ", "number is", len(pending))
+	//log.Error("----read tx from pending is ", "number is", len(pending))
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.coinbase)
 	// compute uncles for the new block.
@@ -530,7 +530,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address) {
-	log.Error("----------------committransactions--------------")
+	//log.Error("----------------committransactions--------------")
 	gp := new(hvm.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log

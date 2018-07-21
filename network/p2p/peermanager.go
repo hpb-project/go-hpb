@@ -55,6 +55,9 @@ type PeerManager struct {
 	rpcmgr *RpcMgr
 	server *Server
 	hpbpro *HpbProto
+
+	ilock  sync.Mutex
+	iport  int
 }
 
 var INSTANCE = atomic.Value{}
@@ -101,6 +104,10 @@ func (prm *PeerManager)Start() error {
 	prm.hpbpro.networkId   = prm.server.NetworkId
 	prm.hpbpro.regMsgProcess(ReqNodesMsg,HandleReqNodesMsg)
 	prm.hpbpro.regMsgProcess(ResNodesMsg,HandleResNodesMsg)
+
+	prm.hpbpro.regMsgProcess(ReqBWTestMsg,prm.HandleReqBWTestMsg)
+	prm.hpbpro.regMsgProcess(ResBWTestMsg,prm.HandleResBWTestMsg)
+
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
 
@@ -116,7 +123,7 @@ func (prm *PeerManager)Start() error {
 	}
 
 
-	log.Info("Manager start server para","NodeType",prm.server.localType.ToString())
+	log.Info("Peer manager start server with type.","NodeType",prm.server.localType.ToString())
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -124,15 +131,12 @@ func (prm *PeerManager)Start() error {
 	}
 
 	// for-test
-	log.Info("para from config","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
-	ipcEndpoint:=  config.Network.IpcEndpoint
-	httpEndpoint:= config.Network.HttpEndpoint
-	wsEndpoint  := config.Network.WsEndpoint
+	log.Debug("Para from config.","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
 
 	prm.rpcmgr    = &RpcMgr{
-		ipcEndpoint:  ipcEndpoint,
-		httpEndpoint: httpEndpoint,
-		wsEndpoint:   wsEndpoint,
+		ipcEndpoint:  config.Network.IpcEndpoint,
+		httpEndpoint: config.Network.HttpEndpoint,
+		wsEndpoint:   config.Network.WsEndpoint,
 
 		httpCors:     config.Network.HTTPCors,
 		httpModules:  config.Network.HTTPModules,
@@ -145,9 +149,10 @@ func (prm *PeerManager)Start() error {
 
 
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
-	add.Port = add.Port+100
-	log.Info("Iperf server start", "port",add.Port)
-	go iperf.StartSever(add.Port)
+	prm.iport = add.Port+100
+	log.Info("Iperf server start", "port",prm.iport)
+	go iperf.StartSever(prm.iport)
+
 	if prm.server.localType != discover.BootNode {
 		go prm.randomTestBW()
 	}
@@ -166,39 +171,6 @@ func (prm *PeerManager)Stop(){
 	prm.rpcmgr.stopRPC()
 
 	//iperf.KillSever()
-}
-
-func (prm *PeerManager) randomTestBW() {
-	rd :=rand.Intn(30)
-	timeout := time.NewTimer(time.Second*time.Duration(30+rd))
-	defer timeout.Stop()
-
-	for {
-		//1 start to test
-		//log.Info("waiting start test")
-		select {
-		case <-timeout.C:
-			rd :=rand.Intn(6)
-			timeout.Reset(time.Second*time.Duration(60*10+rd))
-		}
-
-		//2 to test
-		for _, p := range prm.peers {
-			if p.remoteType == discover.BootNode {
-				continue
-			}
-
-			p.log.Info("start testing","remoteType",p.remoteType.ToString())
-			if err:= p.testBandwidth();err != nil{
-				p.log.Error("random test bandwidth","error",err)
-			}else {
-				break
-			}
-		}
-
-	}
-
-	return
 }
 
 func (prm *PeerManager)P2pSvr() *Server {
@@ -447,14 +419,14 @@ func (prm *PeerManager) RegMsgProcess(msg uint64,cb MsgProcessCB) {
 
 func (prm *PeerManager) RegChanStatus(cb ChanStatusCB) {
 	prm.hpbpro.regChanStatus(cb)
-	log.Info("ChanStatus has been register")
+	log.Debug("ChanStatus has been register")
 	return
 }
 
 
 func (prm *PeerManager) RegOnAddPeer(cb OnAddPeerCB) {
 	prm.hpbpro.regOnAddPeer(cb)
-	log.Info("OnAddPeer has been register")
+	log.Debug("OnAddPeer has been register")
 	return
 }
 
@@ -486,6 +458,122 @@ func parseBindInfo(filename string) error{
 
 	return nil
 }
+
+////////////////////////////////////////////////////////
+
+func (prm *PeerManager) randomTestBW() {
+	inteval := 60*5
+	rand.Seed(time.Now().UnixNano())
+	timeout := time.NewTimer(time.Second*time.Duration(inteval+rand.Intn(inteval)))
+	defer timeout.Stop()
+
+	for {
+		//1 start to test
+		//log.Info("waiting start test")
+		select {
+		case <-timeout.C:
+			timeout.Reset(time.Second*time.Duration(inteval+rand.Intn(inteval)))
+		}
+
+		//2 to test
+		if len(prm.peers) == 0 {
+			log.Warn("There is no peer to start bandwidth testing.")
+			continue
+		}
+
+		skip :=rand.Intn(len(prm.peers))
+		for _, p := range prm.peers {
+			if skip > 0 {
+				skip = skip -1
+				continue
+			}
+
+			p.log.Info("Start bandwidth testing.","remoteType",p.remoteType.ToString())
+			prm.sendReqBWTestMsg(p)
+			break
+		}
+	}
+	log.Error("Test bandwidth loop stop.")
+	return
+}
+
+type bwTestRes struct {
+	Version    uint64
+	Port       uint16
+	Allowed    uint16
+	Expir      uint64
+}
+
+
+func (prm *PeerManager) sendReqBWTestMsg(p *Peer) {
+	if err := p.SendData(ReqBWTestMsg, struct{}{}); err != nil{
+		log.Error("Send req bandwidth test msg.","error",err)
+	}
+
+	return
+}
+
+func (prm *PeerManager) HandleReqBWTestMsg(p *Peer, msg Msg) error {
+	go func() {
+		prm.ilock.Lock()
+		defer prm.ilock.Unlock()
+
+		p.log.Warn("Lock of iperf server.")
+		resp := bwTestRes{
+			Version:0x01,
+			Port:uint16(prm.iport),
+			Allowed:0xff,
+			Expir:uint64(time.Now().Add(time.Second*5).Unix()),
+			}
+		if err :=p.SendData(ResBWTestMsg, &resp);err!=nil{
+			p.log.Warn("Send ResBWTestMsg msg error.","error",err)
+			return
+		}
+
+		time.Sleep(time.Second*15)
+		p.log.Warn("Release lock of iperf server.")
+	}()
+
+	return nil
+}
+
+func (prm *PeerManager) HandleResBWTestMsg(p *Peer, msg Msg) error {
+	var request bwTestRes
+	if err := msg.Decode(&request); err != nil {
+		log.Error("Received nodes from remote","msg", msg, "error", err)
+		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	log.Trace("Received bandwidth test msg from remote","request", request)
+
+	if request.Allowed == 0 {
+		log.Error("Remote node do not allowed to bw test.")
+		return errors.New("remote node do not allowed to bw test")
+	}
+	if time.Unix(int64(request.Expir), 0).Before(time.Now()) {
+		log.Error("Test bandwidth msg timeout.")
+		return errors.New("test bandwidth msg timeout")
+	}
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				p.log.Error("Test bandwidth panic.","ip",p.RemoteIP(),"port",p.RemoteIperfPort())
+				p.log.Error("Test bandwidth panic.","r",r)
+			}
+		}()
+
+		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteIperfPort())
+		result := iperf.StartTest(p.RemoteIP(), p.RemoteIperfPort(), testBWDuration)
+		p.lock.Lock()
+		defer p.lock.Unlock()
+		p.bandwidth = result
+		p.log.Info("Test bandwidth ok","result",result)
+	}()
+
+
+	return nil
+}
+
 
 
 
