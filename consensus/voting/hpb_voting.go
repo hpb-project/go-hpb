@@ -30,7 +30,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 
-const hpbNodeCheckpointInterval   = 5 // 社区投票间隔
+const hpbNodeCheckpointInterval   = 100 // 社区投票间隔
 
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
@@ -49,8 +49,8 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(true){
-		//if(number < hpbNodeCheckpointInterval * 6){
+	//if(true){
+	if(number < hpbNodeCheckpointInterval){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
@@ -74,11 +74,11 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	latestCheckPointHash := header.Hash()
 	
 	if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config,latestCheckPointHash); err == nil {
-			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
+			log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			return snapcd, err
 	}else{
 		// 开始获取之前的所有header
-		for i := latestCheckPointNumber-2*hpbNodeCheckpointInterval; i < latestCheckPointNumber; i++{
+		for i := latestCheckPointNumber-hpbNodeCheckpointInterval; i < latestCheckPointNumber-64; i++{
 			//log.Info("Header:",strconv.FormatUint(i, 10))
 			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
@@ -87,8 +87,8 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		}
 		
 		if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,headers,chain); err == nil {
-			log.Debug("HPB_VOTING： starting calculate Hpb Snap", "number", number, "hash", hash)
-			if err := StoreDataToCacheAndDb(recents,db, snapa); err != nil {
+			log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
 				return nil, err
  			}
 			return snapa, err
@@ -111,7 +111,7 @@ func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		}
 		snap := snapshots.NewHistorysnap(config, signatures, 0, genesis.Hash(), signers)
 		// 存入缓存和数据库中
-		if err := StoreDataToCacheAndDb(recents,db, snap); err != nil {
+		if err := StoreDataToCacheAndDb(recents,db, snap,genesis.Hash()); err != nil {
 			return nil, err
 		}
 		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
@@ -137,10 +137,10 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 }
 
 //将数据存入到缓存和数据库中
-func StoreDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.HpbNodeSnap) error {
+func StoreDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.HpbNodeSnap,latestCheckPointHash common.Hash) error {
 		// 存入到缓存中
-		recents.Add(snap.Hash, snap)
+		recents.Add(latestCheckPointHash, snap)
 		// 存入数据库
-		err := snap.Store(db)
+		err := snap.Store(latestCheckPointHash,db)
 		return err
 }
