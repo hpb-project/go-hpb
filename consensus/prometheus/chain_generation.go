@@ -274,7 +274,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
        if(currentIndex <= uint64(len(snap.Signers)/2)){
 	       if(offset - currentIndex <= uint64(len(snap.Signers)/2)){
 				wiggle = time.Duration(1000) * wiggleTime
-				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","less than half",common.PrettyDuration(wiggle))
+				//log.Info("$$$$$$$$$$$$$$$$$$$$$$$","less than half",common.PrettyDuration(wiggle))
 				delay += wiggle;
 			}else{
 				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
@@ -282,7 +282,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
        }else{
        	    if(offset + uint64(len(snap.Signers)/2) <= currentIndex){
 				wiggle = time.Duration(1000) * wiggleTime
-				log.Info("$$$$$$$$$$$$$$$$$$$$$$$","more than half",common.PrettyDuration(wiggle))
+				//log.Info("$$$$$$$$$$$$$$$$$$$$$$$","more than half",common.PrettyDuration(wiggle))
 				delay += wiggle;
 			}else{
 				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle

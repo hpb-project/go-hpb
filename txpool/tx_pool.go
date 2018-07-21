@@ -174,7 +174,7 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
-			log.Error("********receive chainhead ")
+			//log.Error("********receive chainhead ")
 			if ev.Block != nil {
 				pool.mu.Lock()
 				pool.reset(head.Header(), ev.Block.Header())

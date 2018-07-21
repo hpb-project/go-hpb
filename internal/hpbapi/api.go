@@ -453,7 +453,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
-	log.Info("-----get block by number")
+	//log.Info("-----get block by number")
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		response, err := s.rpcOutputBlock(block, true, fullTx)

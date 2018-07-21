@@ -363,7 +363,7 @@ func (self *worker) handlerSelfMinedBlock() {
 			if stat == bc.CanonStatTy {
 				events = append(events, bc.ChainHeadEvent{Block: block})
 			}
-			log.Error("********post chainheadevent")
+			//log.Error("********post chainheadevent")
 			self.chain.PostChainEvents(events, logs)
 
 			// Insert the block into the set of pending ones to wait for confirmations

@@ -149,7 +149,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash) (*snap
 		
 		cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,cadWinners)
 
-        log.Info("start calculate  candidate node************************************")
+        //log.Info("start calculate  candidate node************************************")
 		
 		// 存储到数据库中
 		if err := cadNodeSnap.Store(db); err != nil {

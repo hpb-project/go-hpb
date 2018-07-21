@@ -132,7 +132,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	our := &exchangeData{
 		Version: 0xFFAA,
 	}
-	p.log.Info("Do hpb exchange data.","ours",our)
+	p.log.Debug("Do hpb exchange data.","ours",our)
 	there,err := p.Exchange(our)
 	if  err != nil {
 		p.log.Error("Hpb exchange data failed in peer.", "err", err)
@@ -141,7 +141,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	p.log.Info("Do hpb exchange data OK.","there",there)
 
 	//TODO bonding hardware info
-	p.log.Info("Do do bond hardware OK.")
+	//p.log.Info("Do do bond hardware OK.")
 
 	///////////////////////////////////////////
 	///////////////////////////////////////////

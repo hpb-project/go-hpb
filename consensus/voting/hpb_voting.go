@@ -54,11 +54,11 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		hash := genesis.Hash()
 		// 从缓存中获取
 		if snapcd, err := GetDataFromCacheAndDb(db, recents,signatures,config,hash); err == nil {
-			log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
+			log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
 		}else{
 			if snapg,err := GenGenesisSnap(db, recents,signatures ,config ,chain); err == nil{
-				log.Info("HPB_VOTING： Loaded voting Hpb Node Snap form genesis snap", "number", number, "hash", hash)
+				log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form genesis snap", "number", number, "hash", hash)
 				return snapg, err
 			}
 		}
@@ -86,7 +86,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		}
 		
 		if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,headers,chain); err == nil {
-			log.Info("HPB_VOTING： starting calculate Hpb Snap", "number", number, "hash", hash)
+			log.Debug("HPB_VOTING： starting calculate Hpb Snap", "number", number, "hash", hash)
 			if err := StoreDataToCacheAndDb(recents,db, snapa); err != nil {
 				return nil, err
  			}
@@ -105,7 +105,7 @@ func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		}*/
 		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
 		for i := 0; i < len(signers); i++ {
-			log.Info("miner initialization", "i:",i)
+			//log.Info("miner initialization", "i:",i)
 			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
 		}
 		snap := snapshots.NewHistorysnap(config, signatures, 0, genesis.Hash(), signers)

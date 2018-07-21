@@ -484,7 +484,7 @@ running:
 				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
-					//log.Info("peer id","nid",n.ID,"pid",p.ID())
+					//log.Info("Compare to boot nodes peer id","bootid",n.ID,"peerid",p.ID())
 					if n.ID == p.ID() {
 						p.remoteType = discover.BootNode
 					}

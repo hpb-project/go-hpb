@@ -153,9 +153,9 @@ func (prm *PeerManager)Start() error {
 	log.Info("Iperf server start", "port",prm.iport)
 	go iperf.StartSever(prm.iport)
 
-	if prm.server.localType != discover.BootNode {
-		go prm.randomTestBW()
-	}
+	//if prm.server.localType != discover.BootNode {
+	//	go prm.randomTestBW()
+	//}
 
 	return nil
 }
