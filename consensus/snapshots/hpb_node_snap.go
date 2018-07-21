@@ -20,7 +20,7 @@ package snapshots
 import (
 	"bytes"
 	"sort"
-	//"fmt"
+	"fmt"
 	"encoding/json"
 	"math/big"
 	"github.com/hpb-project/go-hpb/common"
@@ -89,12 +89,12 @@ func LoadHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, db
 }
 
 // store inserts the snapshot into the database.
-func (s *HpbNodeSnap) Store(db hpbdb.Database) error {
+func (s *HpbNodeSnap) Store(hash common.Hash ,db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("prometheus-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("prometheus-"), hash[:]...), blob)
 }
 
 
@@ -218,13 +218,13 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	sort.Float64s(keys) //对结果今昔那个排序
 	
 	//fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
-	//fmt.Println("Sorted len: ", len(keys))
+	fmt.Println("Sorted len: ", len(keys))
 	
 	//设置config长度
 	hpbNodeNum := 0
 	for i := len(keys) - 1; i >= 0 ; i-- {
-		//fmt.Printf("test 1 %d", i)
-		//fmt.Printf("test 2 %f", keys[0])
+		fmt.Printf("test 1 %d", i)
+		fmt.Printf("test 2 %f", keys[i])
 		if cands, ok := indexTally[keys[i]]; ok {
 			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
