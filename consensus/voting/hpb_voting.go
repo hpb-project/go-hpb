@@ -49,7 +49,8 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
-	if(number < hpbNodeCheckpointInterval * 6){
+	if(true){
+		//if(number < hpbNodeCheckpointInterval * 6){
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
