@@ -48,19 +48,21 @@ type HpbNodeSnap struct {
 	config   *config.PrometheusConfig 
 	sigcache *lru.ARCCache       
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
-	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
+	CheckPointNum  uint64               `json:"checkPointNum"`  // 最近的检查点
+	CheckPointHash    common.Hash       `json:"checkPointHash"`    // 生成快照的Block hash
 	Signers map[common.Address]struct{} `json:"signers"` // 当前的授权用户
 	Recents map[uint64]common.Address   `json:"recents"` // 最近签名者 spam
 	Tally   map[common.Address]Tally    `json:"tally"`   // 目前的计票情况
 }
 
 // 为创世块使用
-func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signersHash []common.Address) *HpbNodeSnap {
+func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, number uint64, checkPointNum uint64, checkPointHash common.Hash, signersHash []common.Address) *HpbNodeSnap {
 	snap := &HpbNodeSnap{
 		config:   config,
 		sigcache: sigcache,
 		Number:   number,
-		Hash:     hash,
+		CheckPointNum: checkPointNum,
+		CheckPointHash: checkPointHash,
 		Signers:  make(map[common.Address]struct{}),
 		Recents:  make(map[uint64]common.Address),
 		Tally:    make(map[common.Address]Tally),
@@ -179,7 +181,7 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, number uint64, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 
 	// 如果头部为空，直接返回
@@ -196,7 +198,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	
 	signers := make([]common.Address,3)
 	
-	snap := NewHistorysnap(config, signatures, number, headers[len(headers)-1].Hash(), signers)
+	snap := NewHistorysnap(config, signatures, number,latestCheckPointNum,latestCheckPointHash, signers)
 	
 	snap.Tally = make(map[common.Address]Tally)
 	
@@ -237,8 +239,8 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	}
 
 	//等待完善
-	snap.Number += uint64(len(headers))
-	snap.Hash = headers[len(headers)-1].Hash()
+	//snap.Number += uint64(len(headers))
+	//snap.Hash = latestCheckPointHash
 	return snap, nil
 }
 
