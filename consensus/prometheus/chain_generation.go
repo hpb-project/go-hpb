@@ -128,42 +128,41 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	number := header.Number.Uint64()
 
     // get hpb node snap
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, nil)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
 	
 	// get andidate node snap
-	csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number-1, header.ParentHash)
+	csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number, header.ParentHash)
 	if cerr != nil {
 		return err
 	}
 	
-	//在非投票点, 从网络中获取进行提案
-	if (number%c.config.Epoch != 0) {
-		c.lock.RLock()
-		
-		bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
-		address := common.BigToAddress(bigaddr)
-		
-		if (csnap==nil || len(csnap.CadWinners) < 2){
-		    header.CandAddress = address
-		}else{
-			// Get the best peer from the network
-			if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil {
-				if(cadWinner == nil){
-					 header.CandAddress = address
-				}else{
-					header.CandAddress = cadWinner.Address // 设置地址
-					header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
-					copy(header.Nonce[:], consensus.NonceAuthVote)
-				}
+	
+	
+	c.lock.RLock()
+	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+	address := common.BigToAddress(bigaddr)
+	
+	if (csnap==nil || len(csnap.CadWinners) < 2){
+	    header.CandAddress = address
+	}else{
+		// Get the best peer from the network
+		if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil {
+			if(cadWinner == nil){
+				 header.CandAddress = address
 			}else{
-				return err
+				header.CandAddress = cadWinner.Address // 设置地址
+				header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
+				copy(header.Nonce[:], consensus.NonceAuthVote)
 			}
+		}else{
+			return err
 		}
-		c.lock.RUnlock()
 	}
+	c.lock.RUnlock()
+	
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
@@ -183,7 +182,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	header.Extra = header.Extra[:consensus.ExtraVanity]
 
     //在投票周期的时候，放入全部的Address
-	if number%c.config.Epoch == 0 {
+	if number% consensus.HpbNodeCheckpointInterval == 0 {
 		for _, signer := range snap.GetHpbNodes() {
 			header.Extra = append(header.Extra, signer[:]...)
 		}
@@ -231,7 +230,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	c.lock.RUnlock()
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil)
 	
 	if err != nil {
 		return nil, err
@@ -357,7 +356,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}
 	
 	// reward on hpb nodes
-	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number-1, header.ParentHash, nil); err == nil{
+	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
 			state.AddBalance(signer, hpbReward)

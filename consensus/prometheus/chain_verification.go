@@ -65,17 +65,17 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
-	checkpoint := (number % c.config.Epoch) == 0
-	if checkpoint && header.Coinbase != (common.Address{}) {
-		return consensus.ErrInvalidCheckpointBeneficiary
-	}
+	checkpoint := (number % consensus.HpbNodeCheckpointInterval) == 0
+	//if checkpoint && header.Coinbase != (common.Address{}) {
+	//	return consensus.ErrInvalidCheckpointBeneficiary
+	//}
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
 	if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
 		return consensus.ErrInvalidVote
 	}
-	if checkpoint && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
-		return consensus.ErrInvalidCheckpointVote
-	}
+	//if checkpoint && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
+	//	return consensus.ErrInvalidCheckpointVote
+	//}
 	// Check that the extra-data contains both the vanity and signature
 	if len(header.Extra) < consensus.ExtraVanity {
 		return consensus.ErrMissingVanity
@@ -135,12 +135,13 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrInvalidTimestamp
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, parents)
+	
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
 	// If the block is a checkpoint block, verify the signerHash list
-	if number%c.config.Epoch == 0 {
+	if number%consensus.HpbNodeCheckpointInterval == 0 {
 		//获取出当前快照的内容, snap.Signers 实际为hash
 		log.Info("the block is at epoch checkpoint", "block number",number)
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
@@ -152,6 +153,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 			return consensus.ErrInvalidCheckpointSigners
 		}
 	}
+	
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
 }
@@ -174,13 +176,13 @@ func (c *Prometheus) VerifySeal(chain consensus.ChainReader, header *types.Heade
 // 验证封装的正确性，判断是否满足共识算法的需求
 func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
-
+    
 	number := header.Number.Uint64()
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number-1, header.ParentHash, parents)
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
 
 	if err != nil {
 		return err
@@ -189,13 +191,10 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	// Resolve the authorization key and check against signers
 	signer, err := consensus.Ecrecover(header, c.signatures)
 
-	//signerHash := common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(signer.Str() + header.Random)))
-	
-	//log.Info("current block head from remote nodes", "Number",number,"Random",header.Random,"Difficulty",header.Difficulty)
-
 	if err != nil {
 		return err
 	}
+	
 	if _, ok := snap.Signers[signer]; !ok {
 		return consensus.ErrUnauthorized
 	}
@@ -209,7 +208,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		}
 	}
 	*/
-	// Ensure that the difficulty corresponds to the turn-ness of the signerHash
+	//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 	inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 		return consensus.ErrInvalidDifficulty
