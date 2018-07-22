@@ -47,7 +47,7 @@ type Tally struct {
 type HpbNodeSnap struct {
 	config   *config.PrometheusConfig 
 	sigcache *lru.ARCCache       
-	Number  uint64                      `json:"number"`  // 生成快照的时间点
+	//Number  uint64                      `json:"number"`  // 生成快照的时间点
 	CheckPointNum  uint64               `json:"checkPointNum"`  // 最近的检查点
 	CheckPointHash    common.Hash       `json:"checkPointHash"`    // 生成快照的Block hash
 	Signers map[common.Address]struct{} `json:"signers"` // 当前的授权用户
@@ -60,7 +60,7 @@ func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, num
 	snap := &HpbNodeSnap{
 		config:   config,
 		sigcache: sigcache,
-		Number:   number,
+		//Number:   number,
 		CheckPointNum: checkPointNum,
 		CheckPointHash: checkPointHash,
 		Signers:  make(map[common.Address]struct{}),
