@@ -338,6 +338,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	//concurrent validate tx before pool's lock.
+	pool.mu.Lock()
 	for _, tx := range txs {
 		hash := tx.Hash()
 		if pool.all[hash] != nil {
@@ -350,7 +351,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 			return err
 		}
 	}
-	pool.mu.Lock()
+
 	defer pool.mu.Unlock()
 	return pool.addTxsLocked(txs)
 }
