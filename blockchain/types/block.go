@@ -218,6 +218,11 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	return b
 }
 
+func BuildBlock(header *Header, txs []*Transaction, uncles []*Header,td *big.Int) *Block {
+	b := &Block{header: header, uncles:uncles,transactions:txs,td: td}
+	return b
+}
+
 // NewBlockWithHeader creates a block with the given header data. The
 // header data is copied, changes to header and to the field values
 // will not affect the block.

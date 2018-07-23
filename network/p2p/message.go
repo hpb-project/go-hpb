@@ -60,6 +60,8 @@ const (
 	NodeDataMsg        uint64 = 0x201a
 	GetReceiptsMsg     uint64 = 0x201b
 	ReceiptsMsg        uint64 = 0x201c
+
+	NewHashBlockMsg    uint64 = 0x2020
 )
 
 

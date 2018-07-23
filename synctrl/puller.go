@@ -661,13 +661,13 @@ func (this *Puller) insert(peer string, block *types.Block) {
 
 		default:
 			// Something went very wrong, drop the peer
-			log.Error("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
+			log.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
 			this.dropPeer(peer)
 			return
 		}
 		// Run the actual import and log any issues
 		if _, err := this.insertChain(types.Blocks{block}); err != nil {
-			log.Error("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
+			log.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
 			return
 		}
 		// If import succeeded, broadcast the block

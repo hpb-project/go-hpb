@@ -141,8 +141,7 @@ type BlockChain interface {
 
 type syncStrategy interface {
 	deliverHeaders(id string, headers []*types.Header) (err error)
-	deliverBodies(id string, transactions [][]*types.Transaction,
-		uncles [][]*types.Header) (err error)
+	deliverBodies(id string, transactions [][]*types.Transaction, uncles [][]*types.Header) (err error)
 	deliverReceipts(id string, receipts [][]*types.Receipt) (err error)
 	deliverNodeData(id string, data [][]byte) (err error)
 

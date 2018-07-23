@@ -164,6 +164,8 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegMsgProcess(p2p.ReceiptsMsg, HandleReceiptsMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockHashesMsg, HandleNewBlockHashesMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
+	p2p.PeerMgrInst().RegMsgProcess(p2p.NewHashBlockMsg, HandleNewHashBlockMsg)
+
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
@@ -363,6 +365,8 @@ func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
+					//TODO test sendNewHashBlock
+					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -372,9 +376,13 @@ func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
+					//TODO test sendNewHashBlock
+					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.HpNode:
 					sendNewBlock(peer, block, td)
+					//TODO test sendNewHashBlock
+					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -740,6 +748,57 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	var (
 		trueHead = request.Block.ParentHash()
 		trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
+	)
+	// Update the peers total difficulty if better than the previous
+	if _, td := p.Head(); trueTD.Cmp(td) > 0 {
+		p.SetHead(trueHead, trueTD)
+
+		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
+		// a singe block (as the true TD is below the propagated block), however this
+		// scenario should easily be covered by the fetcher.
+		currentBlock := bc.InstanceBlockChain().CurrentBlock()
+		if trueTD.Cmp(bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
+			go InstanceSynCtrl().synchronise(p)
+		}
+	}
+	return nil
+}
+
+
+// HandleNewBlockMsg deal received NewBlockMsg
+func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
+	// Retrieve and decode the propagated block
+	log.Warn("######<<<<<< Handle new hash block msg.","peerid",p.ID())
+	var request hashBlock
+	if err := msg.Decode(&request); err != nil {
+		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
+	}
+	txs := make([]*types.Transaction,0,len(request.txsHash))
+	//TODO GetTxByHash
+	//for _, txhs := range request.txsHash {
+	//	//get tx data from txpool
+	//	tx := txpool.GetTxPool().GetTxByHash(txhs)
+	//	txs = append(txs,tx)
+	//}
+	newBlock := types.BuildBlock(request.header,txs,request.uncles,request.td)
+	log.Warn("######Build new block.","newHash",newBlock.Hash(),"orgHash",request.blockHash)
+	//newBlock := types.NewBlock(request.header, txs, request.uncles, nil)
+
+	newBlock.ReceivedAt   = msg.ReceivedAt
+	newBlock.ReceivedFrom = p
+	////////////////////////////////////////////////
+
+
+	////////////////////////////////////////////////
+	// Mark the peer as owning the block and schedule it for import
+	p.KnownBlockAdd(newBlock.Hash())
+	InstanceSynCtrl().puller.Enqueue(p.GetID(), newBlock)
+
+	// Assuming the block is importable by the peer, but possibly not yet done so,
+	// calculate the head hash and TD that the peer truly must have.
+	var (
+		trueHead = newBlock.ParentHash()
+		trueTD   = new(big.Int).Sub(request.td, newBlock.Difficulty())
 	)
 	// Update the peers total difficulty if better than the previous
 	if _, td := p.Head(); trueTD.Cmp(td) > 0 {

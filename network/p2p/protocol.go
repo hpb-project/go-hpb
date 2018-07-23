@@ -314,6 +314,14 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 			p.log.Trace("######process NewBlockMsg msg")
 		}
 		return nil
+
+	case msg.Code == NewHashBlockMsg:
+		if cb := hp.msgProcess[NewHashBlockMsg]; cb != nil{
+			cb(p,msg)
+			p.log.Trace("######process NewHashBlockMsg msg")
+		}
+		return nil
+
 	case msg.Code == TxMsg:
 		if cb := hp.msgProcess[TxMsg]; cb != nil{
 			cb(p,msg)
