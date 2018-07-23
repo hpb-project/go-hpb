@@ -184,5 +184,5 @@ func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
 	for _, tx := range txs {
 		peer.KnownTxsAdd(tx.Hash())
 	}
-	return peer.SendData(p2p.TxMsg, txs)
+	return p2p.SendData(peer,p2p.TxMsg, txs)
 }

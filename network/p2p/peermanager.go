@@ -506,7 +506,7 @@ type bwTestRes struct {
 
 
 func (prm *PeerManager) sendReqBWTestMsg(p *Peer) {
-	if err := p.SendData(ReqBWTestMsg, struct{}{}); err != nil{
+	if err := SendData(p,ReqBWTestMsg, struct{}{}); err != nil{
 		log.Error("Send req bandwidth test msg.","error",err)
 	}
 
@@ -525,7 +525,7 @@ func (prm *PeerManager) HandleReqBWTestMsg(p *Peer, msg Msg) error {
 			Allowed:0xff,
 			Expir:uint64(time.Now().Add(time.Second*5).Unix()),
 			}
-		if err :=p.SendData(ResBWTestMsg, &resp);err!=nil{
+		if err :=SendData(p,ResBWTestMsg, &resp);err!=nil{
 			p.log.Warn("Send ResBWTestMsg msg error.","error",err)
 			return
 		}

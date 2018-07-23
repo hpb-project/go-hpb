@@ -365,7 +365,7 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 	// Send in a new thread
 	errc := make(chan error, 1)
 	go func() {
-		errc <- p.SendData(ResNodesMsg, &resp)
+		errc <- SendData(p,ResNodesMsg, &resp)
 	}()
 	timeout := time.NewTimer(time.Second)
 	defer timeout.Stop()

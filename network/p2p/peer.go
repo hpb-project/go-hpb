@@ -32,6 +32,7 @@ import (
 	"math/big"
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
+	"errors"
 )
 
 const (
@@ -504,7 +505,11 @@ func (p *Peer) KnownTxsSize() int{
 	return p.knownTxs.Size()
 }
 
-func (p *Peer) SendData(msgCode uint64, data interface{}) error {
+func SendData(p *Peer, msgCode uint64, data interface{}) error {
+	if p == nil {
+		log.Error("P2P SendData para of peer is nil.")
+		return errors.New("send data para of peer is nil")
+	}
 	return send(p.rw, msgCode, data)
 }
 
@@ -517,7 +522,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 
 	go func() {
 		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis,"block",head,"td",td,"head",head)
-		errc <- p.SendData(StatusMsg, &statusData{
+		errc <- SendData(p,StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,
 			TD:              td,
@@ -592,7 +597,7 @@ func (p *Peer) Exchange(our *exchangeData) (*exchangeData,error) {
 
 	go func() {
 		p.log.Debug("Send exchange data")
-		errc <- p.SendData(ExchangeMsg, &exchangeData{
+		errc <- SendData(p,ExchangeMsg, &exchangeData{
 			Version: our.Version,
 		})
 	}()

@@ -112,7 +112,7 @@ type blockBodiesData []*blockBody
 
 func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
 	peer.KnownTxsAdd(block.Hash())
-	return peer.SendData(p2p.NewBlockMsg, []interface{}{block, td})
+	return p2p.SendData(peer,p2p.NewBlockMsg, []interface{}{block, td})
 }
 
 func sendNewHashBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
@@ -124,7 +124,7 @@ func sendNewHashBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
 	hashBlock := &hashBlock{header:block.Header(),uncles:block.Uncles(),txsHash:txsHash,td:td,blockHash:block.Hash()}
 
 	peer.KnownTxsAdd(block.Hash())
-	return peer.SendData(p2p.NewHashBlockMsg, []interface{}{hashBlock, td})
+	return p2p.SendData(peer,p2p.NewHashBlockMsg, []interface{}{hashBlock, td})
 }
 
 func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
@@ -136,41 +136,41 @@ func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) 
 		request[i].Hash = hashes[i]
 		request[i].Number = numbers[i]
 	}
-	return peer.SendData(p2p.NewBlockHashesMsg, request)
+	return p2p.SendData(peer,p2p.NewBlockHashesMsg, request)
 }
 
 func sendBlockHeaders(peer *p2p.Peer, headers []*types.Header) error {
-	return peer.SendData(p2p.BlockHeadersMsg, headers)
+	return p2p.SendData(peer,p2p.BlockHeadersMsg, headers)
 }
 
 // sendBlockBodiesRLP sends a batch of block contents to the remote peer from
 // an already RLP encoded format.
 func sendBlockBodiesRLP(peer *p2p.Peer, bodies []rlp.RawValue) error {
-	return peer.SendData(p2p.BlockBodiesMsg, bodies)
+	return p2p.SendData(peer,p2p.BlockBodiesMsg, bodies)
 }
 
 // sendNodeData sends a batch of arbitrary internal data, corresponding to the
 // hashes requested.
 func sendNodeData(peer *p2p.Peer, data [][]byte) error {
-	return peer.SendData(p2p.NodeDataMsg, data)
+	return p2p.SendData(peer,p2p.NodeDataMsg, data)
 }
 
 // sendReceiptsRLP sends a batch of transaction receipts, corresponding to the
 // ones requested from an already RLP encoded format.
 func sendReceiptsRLP(peer *p2p.Peer, receipts []rlp.RawValue) error {
-	return peer.SendData(p2p.ReceiptsMsg, receipts)
+	return p2p.SendData(peer,p2p.ReceiptsMsg, receipts)
 }
 
 // requestOneHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func requestOneHeader(peer *p2p.Peer, hash common.Hash) error {
 	log.Debug("Fetching single header", "hash", hash)
-	return peer.SendData(p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
+	return p2p.SendData(peer,p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
 }
 
 // requestBodies fetches a batch of blocks' bodies corresponding to the hashes
 // specified.
 func requestBodies(peer *p2p.Peer, hashes []common.Hash) error {
 	log.Debug("Fetching batch of block bodies", "count", len(hashes))
-	return peer.SendData(p2p.GetBlockBodiesMsg, hashes)
+	return p2p.SendData(peer,p2p.GetBlockBodiesMsg, hashes)
 }
