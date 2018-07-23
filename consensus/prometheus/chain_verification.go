@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/log"
+	//"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 )
 
@@ -88,10 +88,10 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	if !checkpoint && signersBytes != 0 {
 		return consensus.ErrExtraSigners
 	}
-	if checkpoint && signersBytes%common.AddressLength != 0 {
-		log.Info("at checkpoint", "checkpoint",checkpoint)
-		return consensus.ErrInvalidCheckpointSigners
-	}
+	//if checkpoint && signersBytes%common.AddressLength != 0 {
+	//	log.Info("at checkpoint", "checkpoint",checkpoint)
+	//	return consensus.ErrInvalidCheckpointSigners
+	//}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != (common.Hash{}) {
 		return consensus.ErrInvalidMixDigest
