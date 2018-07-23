@@ -332,7 +332,7 @@ func (hp *HpbProto) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Hpb peer", "peer", id)
+	log.Info("Removing Hpb peer", "peer", id)
 
 	// Unregister the peer from the downloader and Hpb peer set
 	if err := PeerMgrInst().Unregister(id); err != nil {

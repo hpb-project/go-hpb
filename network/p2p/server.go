@@ -506,7 +506,7 @@ running:
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
+			pd.log.Info("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
 
 			delete(peers, pd.ID())
 		}
@@ -726,6 +726,7 @@ func (srv *Server) runPeer(p *PeerBase) {
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	log.Info("Server stop to run peer","id",p.ID(),"err",err)
+
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
