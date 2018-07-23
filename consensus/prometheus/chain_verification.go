@@ -135,7 +135,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrInvalidTimestamp
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	
+	/*
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 			return consensus.ErrInvalidCheckpointSigners
 		}
 	}
-	
+	*/
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
 }
