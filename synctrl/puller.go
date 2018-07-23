@@ -646,7 +646,7 @@ func (this *Puller) insert(peer string, block *types.Block) {
 		// If the parent's unknown, abort insertion
 		parent := this.getBlock(block.ParentHash())
 		if parent == nil {
-			log.Error("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
+			log.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
 			return
 		}
 		// Quickly validate the header and propagate the block if it passes
