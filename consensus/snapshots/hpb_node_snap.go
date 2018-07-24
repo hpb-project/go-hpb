@@ -106,7 +106,7 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 	return !signer
 }
 
-
+/*
 // 投票池中添加
 func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
 	//if !s.ValidVote(address) {
@@ -133,6 +133,7 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	}
 	return true
 }
+*/
 
 // 判断当前的次序
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address) bool {
@@ -205,8 +206,36 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	//开始投票
 	//fmt.Println(" ****************************************headers length ++++********************************* ", len(headers))
 
+	//for _, header := range headers {
+	//	snap.cast(header.CandAddress, header.VoteIndex);
+	//}
+	
 	for _, header := range headers {
-		snap.cast(header.CandAddress, header.VoteIndex);
+		
+		if old, ok := snap.Tally[header.CandAddress]; ok {
+			
+		    VoteNumberstemp := big.NewInt(0)
+			VoteIndexstemp := big.NewInt(0)
+			VotePercenttemp := big.NewInt(0)
+			
+			VoteNumberstemp.Add(old.VoteNumbers, big.NewInt(1))
+			VoteIndexstemp.Add(old.VoteIndexs, header.VoteIndex)
+			VotePercenttemp.Div(VoteIndexstemp, VoteNumberstemp)
+			
+			snap.Tally[header.CandAddress] = Tally{
+		        VoteNumbers: VoteNumberstemp,
+		        VoteIndexs:  VoteIndexstemp,
+		        VotePercent: VotePercenttemp,
+		        CandAddress: header.CandAddress,
+			}
+		} else {
+			snap.Tally[header.CandAddress] = Tally{
+				VoteNumbers: big.NewInt(1),
+				VoteIndexs: header.VoteIndex,
+				VotePercent: header.VoteIndex,
+				CandAddress: header.CandAddress,
+			}
+		}
 	}
 
 	var keys []float64

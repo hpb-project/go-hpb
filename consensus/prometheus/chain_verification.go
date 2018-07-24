@@ -195,9 +195,11 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 	
+	/*
 	if _, ok := snap.Signers[signer]; !ok {
 		return consensus.ErrUnauthorized
 	}
+	*/
 	/*
 	for seen, recent := range snap.Recents {
 		if recent == signerHash {
@@ -209,6 +211,8 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 	*/
 	//Ensure that the difficulty corresponds to the turn-ness of the signerHash
+	
+	/*
 	inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
 	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 		return consensus.ErrInvalidDifficulty
@@ -216,5 +220,6 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
 		return consensus.ErrInvalidDifficulty
 	}
+	*/
 	return nil
 }
