@@ -239,24 +239,30 @@ loop:
 			// there was no error.
 			if err != nil {
 				reason = DiscNetworkError
+				p.log.Error("PeerBase run Write DiscNetwork Err")
 				break loop
 			}
 			writeStart <- struct{}{}
 		case err = <-readErr:
 			if r, ok := err.(DiscReason); ok {
 				remoteRequested = true
+				p.log.Error("PeerBase run Read Remote Requested")
 				reason = r
 			} else {
 				reason = DiscNetworkError
 			}
+			p.log.Error("PeerBase run Read DiscNetwork Err")
 			break loop
 		case err = <-p.protoErr:
 			reason = discReasonForError(err)
+			p.log.Error("PeerBase run proto Err","reason",reason,"error",err)
 			break loop
 		case err = <-p.disc:
+			p.log.Error("PeerBase run peer disc Err","error",err)
 			break loop
 		}
 	}
+
 
 	close(p.closed)
 	p.rw.close(reason)
@@ -400,6 +406,7 @@ func (p *PeerBase) startProtocols(writeStart <-chan struct{}, writeErr chan<- er
 		} else if err != io.EOF {
 			p.log.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 		}
+		p.log.Warn("######Protocol returned","error",err)
 		p.protoErr <- err
 		p.wg.Done()
 	}()
