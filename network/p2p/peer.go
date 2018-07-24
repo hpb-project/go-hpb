@@ -37,11 +37,10 @@ import (
 
 const (
 	baseProtocolMaxMsgSize = 2 * 1024
-
 	snappyProtocolVersion = 5
 
-	pingInterval    = 15 * time.Second
-	nodereqInterval = 10 * time.Second
+	pingInterval    = 5 * time.Second
+	nodereqInterval = 30 * time.Second
 	testBWDuration  = 3  //second
 )
 
@@ -219,9 +218,10 @@ func (p *PeerBase) run() (remoteRequested bool, err error) {
 		readErr    = make(chan error, 1)
 		reason     DiscReason // sent to the peer
 	)
-	p.wg.Add(2)
+	p.wg.Add(3)
 	go p.readLoop(readErr)
 	go p.pingLoop()
+	go p.updateNodesLoop()
 
 	// Start all protocol handlers.
 	writeStart <- struct{}{}
@@ -263,33 +263,58 @@ loop:
 
 func (p *PeerBase) pingLoop() {
 	pingTime := time.NewTimer(pingInterval)
-	nodeTime := time.NewTimer(nodereqInterval)
 	defer p.wg.Done()
 	defer pingTime.Stop()
-	defer nodeTime.Stop()
 	for {
 		select {
 		case <-pingTime.C:
 			if err := sendItems(p.rw, pingMsg); err != nil {
+				p.log.Error("PeerBase Send heartbeat ERROR","error",err)
 				p.protoErr <- err
 				return
 			}
 			pingTime.Reset(pingInterval)
+		case <-p.closed:
+			p.log.Error("PeerBase pingLoop CLOSED")
+			return
+		}
+	}
+	p.log.Error("PeerBase pingLoop STOP")
+}
+
+
+func (p *PeerBase) updateNodesLoop() {
+	nodeTime := time.NewTimer(nodereqInterval) //TODO only send to bootnode
+	defer p.wg.Done()
+	defer nodeTime.Stop()
+	for {
+		select {
 		case <-nodeTime.C:
 			if p.localType == discover.BootNode {
+				p.log.Info("BootNode do not need update nodes loop.")
+				return
+			}
+
+			if p.remoteType != discover.BootNode {
+				p.log.Info("Only update nodes form BootNode.")
 				return
 			}
 
 			if err := sendItems(p.rw, ReqNodesMsg); err != nil {
+				p.log.Error("PeerBase Send ReqNodesMsg ERROR","error",err)
 				p.protoErr <- err
 				return
 			}
+			p.log.Info("######Update nodes form BootNode start.")
 			nodeTime.Reset(nodereqInterval)
 		case <-p.closed:
+			p.log.Error("PeerBase update nodes loop CLOSED")
 			return
 		}
 	}
+	p.log.Error("PeerBase update nodes loop  STOP")
 }
+
 
 func (p *PeerBase) readLoop(errc chan<- error) {
 	defer p.wg.Done()
@@ -316,7 +341,7 @@ func (p *PeerBase) handle(msg Msg) error {
 		msg.Discard()
 		go sendItems(p.rw, pongMsg)
 	case msg.Code == pongMsg:
-		p.log.Debug("PeerBase receive heartbeat from remote.")
+		p.log.Info("######PeerBase receive heartbeat from remote.")
 		msg.Discard()
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
