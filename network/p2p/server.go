@@ -511,7 +511,7 @@ running:
 		}
 	}
 
-	log.Trace("P2P networking is spinning down")
+	log.Error("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
 	if srv.ntab != nil {
@@ -635,7 +635,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// Run the encryption handshake.
 	var err error
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
-		log.Debug("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		log.Error("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
 		return
 	}
@@ -643,11 +643,11 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// For dialed connections, check that the remote public key matches.
 	if dialDest != nil && c.id != dialDest.ID {
 		c.close(DiscUnexpectedIdentity)
-		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
+		clog.Error("Dialed identity mismatch", "want", c, dialDest.ID)
 		return
 	}
 	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
-		clog.Trace("Rejected peer before protocol handshake", "err", err)
+		clog.Error("Rejected peer before protocol handshake", "err", err)
 		c.close(err)
 		return
 	}
@@ -655,12 +655,12 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
-		clog.Debug("Failed proto handshake", "err", err)
+		clog.Error("Failed proto handshake", "err", err)
 		c.close(err)
 		return
 	}
 	if phs.ID != c.id {
-		clog.Debug("Wrong devp2p handshake identity", "err", phs.ID)
+		clog.Error("Wrong devp2p handshake identity", "err", phs.ID)
 		c.close(DiscUnexpectedIdentity)
 		return
 	}
@@ -668,7 +668,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
 	log.Info("Do protocol handshake OK.","id",c.id)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
-		clog.Debug("Rejected peer", "err", err)
+		clog.Error("Rejected peer", "err", err)
 		c.close(err)
 		return
 	}
