@@ -39,8 +39,11 @@ const (
 	baseProtocolMaxMsgSize = 2 * 1024
 	snappyProtocolVersion = 5
 
+	//TODO: for test ,this value is 5 second
 	pingInterval    = 5 * time.Second
-	nodereqInterval = 30 * time.Second
+	//TODO: for test ,this value is 15 second
+	nodereqInterval = 15 * time.Second
+	//TODO: for test ,this value is 3 second
 	testBWDuration  = 3  //second
 )
 
@@ -305,7 +308,7 @@ func (p *PeerBase) updateNodesLoop() {
 				p.protoErr <- err
 				return
 			}
-			p.log.Info("######Update nodes form BootNode start.")
+			//p.log.Info("######Update nodes form BootNode start.")
 			nodeTime.Reset(nodereqInterval)
 		case <-p.closed:
 			p.log.Error("PeerBase update nodes loop CLOSED")
