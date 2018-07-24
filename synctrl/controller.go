@@ -818,9 +818,10 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 // HandleTxMsg deal received TxMsg
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
-	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
-		return nil
-	}
+	// TODO: why AcceptTxs 0 and return nil
+	//if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+	//	return nil
+	//}
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
