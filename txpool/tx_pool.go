@@ -339,6 +339,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	//concurrent validate tx before pool's lock.
 	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	for _, tx := range txs {
 		hash := tx.Hash()
 		if pool.all[hash] != nil {
@@ -352,12 +354,14 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 		}
 	}
 
-	defer pool.mu.Unlock()
 	return pool.addTxsLocked(txs)
 }
 
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
@@ -368,8 +372,7 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+
 	return pool.addTxLocked(tx)
 }
 
