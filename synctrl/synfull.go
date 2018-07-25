@@ -1006,7 +1006,7 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 }
 
 // deliver injects a new batch of data received from a remote node.
-func (this *fullSync) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
+func (this *fullSync) deliver(id string, destCh chan <- dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
 	// Update the delivery metrics for both good and failed deliveries
 		inMeter.Mark(int64(packet.Items()))
 	defer func() {
