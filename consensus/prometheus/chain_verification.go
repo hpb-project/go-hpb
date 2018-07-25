@@ -182,16 +182,12 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
-
-	if err != nil {
+	if _, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents);err != nil {
 		return err
 	}
 
 	// Resolve the authorization key and check against signers
-	signer, err := consensus.Ecrecover(header, c.signatures)
-
-	if err != nil {
+	if _, err := consensus.Ecrecover(header, c.signatures); err != nil {
 		return err
 	}
 	
