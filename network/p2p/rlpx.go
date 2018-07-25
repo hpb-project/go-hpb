@@ -42,6 +42,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/golang/snappy"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 const (
@@ -285,6 +286,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 		return s, err
 	}
 	if _, err = conn.Write(authPacket); err != nil {
+		log.Error("io write","err",err)
 		return s, err
 	}
 
@@ -481,6 +483,7 @@ type plainDecoder interface {
 func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r io.Reader) ([]byte, error) {
 	buf := make([]byte, plainSize)
 	if _, err := io.ReadFull(r, buf); err != nil {
+		log.Error("io read error","err",err)
 		return buf, err
 	}
 	// Attempt decoding pre-EIP-8 "plain" format.
@@ -497,6 +500,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	}
 	buf = append(buf, make([]byte, size-uint16(plainSize)+2)...)
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
+		log.Error("io read","error",err)
 		return buf, err
 	}
 	dec, err := key.Decrypt(rand.Reader, buf[2:], nil, prefix)
@@ -618,6 +622,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// write header MAC
 	copy(headbuf[16:], updateMAC(rw.egressMAC, rw.macCipher, headbuf[:16]))
 	if _, err := rw.conn.Write(headbuf); err != nil {
+		log.Error("rlpx frame write","err",err)
 		return err
 	}
 
@@ -625,6 +630,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// the data written to conn.
 	tee := cipher.StreamWriter{S: rw.enc, W: io.MultiWriter(rw.conn, rw.egressMAC)}
 	if _, err := tee.Write(ptype); err != nil {
+		log.Error("rlpx frame write","err",err)
 		return err
 	}
 	if _, err := io.Copy(tee, msg.Payload); err != nil {
@@ -632,6 +638,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	}
 	if padding := fsize % 16; padding > 0 {
 		if _, err := tee.Write(zero16[:16-padding]); err != nil {
+			log.Error("rlpx frame write","err",err)
 			return err
 		}
 	}
@@ -641,6 +648,10 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	fmacseed := rw.egressMAC.Sum(nil)
 	mac := updateMAC(rw.egressMAC, rw.macCipher, fmacseed)
 	_, err := rw.conn.Write(mac)
+	if err != nil{
+		log.Error("rlpx frame write","err",err)
+	}
+
 	return err
 }
 

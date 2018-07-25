@@ -647,7 +647,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
-		clog.Error("Rejected peer before protocol handshake", "err", err)
+		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		c.close(err)
 		return
 	}
