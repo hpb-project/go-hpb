@@ -300,12 +300,12 @@ func (p *PeerBase) updateNodesLoop() {
 		select {
 		case <-nodeTime.C:
 			if p.localType == discover.BootNode {
-				p.log.Info("BootNode do not need update nodes loop.")
+				p.log.Debug("BootNode do not need update nodes loop.")
 				return
 			}
 
 			if p.remoteType != discover.BootNode {
-				p.log.Info("Only update nodes form BootNode.")
+				p.log.Debug("Only update nodes form BootNode.")
 				return
 			}
 
