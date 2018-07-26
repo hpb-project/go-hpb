@@ -613,8 +613,8 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size
 	if fsize > maxUint24 {
-		log.Error("Message size overflows uint24.")
-		return errors.New("message size overflows uint24")
+		log.Error("Write message size overflows uint24.")
+		//return errors.New("message size overflows uint24")
 	}
 	putInt24(fsize, headbuf) // TODO: check overflow
 	copy(headbuf[3:], zeroHeader)
@@ -714,7 +714,8 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 			return msg, err
 		}
 		if size > int(maxUint24) {
-			return msg, errPlainMessageTooLarge
+			log.Error("Read message size overflows uint24.")
+			//return msg, errPlainMessageTooLarge
 		}
 		payload, err = snappy.Decode(nil, payload)
 		if err != nil {
