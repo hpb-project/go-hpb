@@ -146,6 +146,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 		return nil, err
 	}
 	if msg.Size > baseProtocolMaxMsgSize {
+		log.Error("Message too big when read protocol handshake.")
 		return nil, fmt.Errorf("message too big")
 	}
 	if msg.Code == discMsg {
@@ -155,6 +156,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 		// back otherwise. Wrap it in a string instead.
 		var reason [1]DiscReason
 		rlp.Decode(msg.Payload, &reason)
+		log.Error("Handshake message to disconnect.")
 		return nil, reason[0]
 	}
 	if msg.Code != handshakeMsg {
@@ -286,7 +288,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 		return s, err
 	}
 	if _, err = conn.Write(authPacket); err != nil {
-		log.Error("io write","err",err)
+		log.Debug("initiator io write","err",err)
 		return s, err
 	}
 
@@ -483,7 +485,7 @@ type plainDecoder interface {
 func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r io.Reader) ([]byte, error) {
 	buf := make([]byte, plainSize)
 	if _, err := io.ReadFull(r, buf); err != nil {
-		log.Error("io read error","err",err)
+		log.Debug("io read error","err",err)
 		return buf, err
 	}
 	// Attempt decoding pre-EIP-8 "plain" format.
@@ -500,7 +502,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	}
 	buf = append(buf, make([]byte, size-uint16(plainSize)+2)...)
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
-		log.Error("io read","error",err)
+		log.Debug("io read buf","error",err)
 		return buf, err
 	}
 	dec, err := key.Decrypt(rand.Reader, buf[2:], nil, prefix)
@@ -601,6 +603,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// if snappy is enabled, compress message now
 	if rw.snappy {
 		if msg.Size > maxUint24 {
+			log.Error("Write message length >= 16MB.")
 			return errPlainMessageTooLarge
 		}
 		payload, _ := ioutil.ReadAll(msg.Payload)
@@ -623,7 +626,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// write header MAC
 	copy(headbuf[16:], updateMAC(rw.egressMAC, rw.macCipher, headbuf[:16]))
 	if _, err := rw.conn.Write(headbuf); err != nil {
-		log.Error("rlpx frame write","err",err)
+		log.Debug("rlpx frame write head","err",err)
 		return err
 	}
 
@@ -631,7 +634,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// the data written to conn.
 	tee := cipher.StreamWriter{S: rw.enc, W: io.MultiWriter(rw.conn, rw.egressMAC)}
 	if _, err := tee.Write(ptype); err != nil {
-		log.Error("rlpx frame write","err",err)
+		log.Debug("rlpx frame write tee","err",err)
 		return err
 	}
 	if _, err := io.Copy(tee, msg.Payload); err != nil {
@@ -639,7 +642,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	}
 	if padding := fsize % 16; padding > 0 {
 		if _, err := tee.Write(zero16[:16-padding]); err != nil {
-			log.Error("rlpx frame write","err",err)
+			log.Debug("rlpx frame write padding","err",err)
 			return err
 		}
 	}
@@ -650,7 +653,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	mac := updateMAC(rw.egressMAC, rw.macCipher, fmacseed)
 	_, err := rw.conn.Write(mac)
 	if err != nil{
-		log.Error("rlpx frame write","err",err)
+		log.Debug("rlpx frame write mac","err",err)
 	}
 
 	return err
@@ -660,6 +663,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	// read the header
 	headbuf := make([]byte, 32)
 	if _, err := io.ReadFull(rw.conn, headbuf); err != nil {
+		log.Debug("rlpx frame read mac","err",err)
 		return msg, err
 	}
 	// verify header mac
@@ -678,6 +682,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	}
 	framebuf := make([]byte, rsize)
 	if _, err := io.ReadFull(rw.conn, framebuf); err != nil {
+		log.Debug("rlpx frame read frame","err",err)
 		return msg, err
 	}
 
@@ -707,6 +712,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	if rw.snappy {
 		payload, err := ioutil.ReadAll(msg.Payload)
 		if err != nil {
+			log.Debug("rlpx frame head snappy","err",err)
 			return msg, err
 		}
 		size, err := snappy.DecodedLen(payload)

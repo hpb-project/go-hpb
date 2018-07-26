@@ -73,7 +73,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 	
 	if(number % consensus.HpbNodeCheckpointInterval != 0){
 		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures,config,latestCheckPointHash); err == nil {
-			log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			//log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			return snapcd, err
 		}else{
 			// 开始获取之前的所有header
@@ -86,7 +86,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			}
 			
 			if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,latestCheckPointNumber,latestCheckPointHash,headers,chain); err == nil {
-				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				//log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 					if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
 						return nil, err
 		 			}

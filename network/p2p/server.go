@@ -655,7 +655,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
-		clog.Error("Failed proto handshake", "err", err)
+		clog.Debug("Failed proto handshake", "err", err)
 		c.close(err)
 		return
 	}
@@ -668,7 +668,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
 	log.Info("Do protocol handshake OK.","id",c.id)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
-		clog.Error("Rejected peer", "err", err)
+		clog.Warn("Rejected peer", "err", err)
 		c.close(err)
 		return
 	}

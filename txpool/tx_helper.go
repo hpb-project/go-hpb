@@ -5,7 +5,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -106,10 +105,10 @@ func SubmitTx(args SendTxArgs) (common.Hash, error) {
 		if err != nil {
 			return common.Hash{}, err
 		}
-		addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
+		crypto.CreateAddress(from, tx.Nonce())
+		//log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		//log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return signed.Hash(), nil
 }
@@ -134,10 +133,10 @@ func SubmitRawTx(encodedTx hexutil.Bytes) (common.Hash, error) {
 		if err != nil {
 			return common.Hash{}, err
 		}
-		addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
+		crypto.CreateAddress(from, tx.Nonce())
+		//log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		//log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
 }
@@ -163,10 +162,10 @@ func SubmitRawTxFromP2P(encodedTx hexutil.Bytes) (common.Hash, error) {
 		if err != nil {
 			return common.Hash{}, err
 		}
-		addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
+		crypto.CreateAddress(from, tx.Nonce())
+		//log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
-		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
+		//log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
 }
