@@ -263,7 +263,10 @@ func (self *worker) eventListener() {
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
-				log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
+				if msg.Message.Nonce() % 1000  == 0{
+					log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
+				}
+
 				//worker.txCh <- msg.Message
 				if atomic.LoadInt32(&self.mining) == 0 {
 					self.currentMu.Lock()

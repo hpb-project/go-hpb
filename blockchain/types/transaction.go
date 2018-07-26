@@ -386,9 +386,6 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(len(r.Bytes()))
-	fmt.Println(len(s.Bytes()))
-
 
 	cpy := &Transaction{data: tx.data}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
