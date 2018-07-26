@@ -212,16 +212,14 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	
 	for _, header := range headers {
 		
+		 VoteNumberstemp := big.NewInt(0)
+		 VoteIndexstemp := big.NewInt(0)
+		VotePercenttemp := big.NewInt(0)
+		
 		if old, ok := snap.Tally[header.CandAddress]; ok {
-			
-		    VoteNumberstemp := big.NewInt(0)
-			VoteIndexstemp := big.NewInt(0)
-			VotePercenttemp := big.NewInt(0)
-			
 			VoteNumberstemp.Add(old.VoteNumbers, big.NewInt(1))
 			VoteIndexstemp.Add(old.VoteIndexs, header.VoteIndex)
 			VotePercenttemp.Div(VoteIndexstemp, VoteNumberstemp)
-			
 			snap.Tally[header.CandAddress] = Tally{
 		        VoteNumbers: VoteNumberstemp,
 		        VoteIndexs:  VoteIndexstemp,
