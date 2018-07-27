@@ -342,7 +342,7 @@ func (hp *HpbProto) protocolRemovePeer(id string) {
 	log.Error("###### NEED P2P TO REMOVE PEER!", "peer", id)
 
 	// Unregister the peer from the downloader and Hpb peer set
-	if err := PeerMgrInst().Unregister(id); err != nil {
+	if err := PeerMgrInst().unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer

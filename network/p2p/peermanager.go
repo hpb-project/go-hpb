@@ -207,7 +207,7 @@ func (prm *PeerManager) Register(p *Peer) error {
 
 // Unregister removes a remote peer from the active set, disabling any further
 // actions to/from that particular entity.
-func (prm *PeerManager) Unregister(id string) error {
+func (prm *PeerManager) unregister(id string) error {
 	prm.lock.Lock()
 	defer prm.lock.Unlock()
 
