@@ -535,6 +535,7 @@ running:
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
+		log.Error("Protocol Handshake Checks Error")
 		return DiscUselessPeer
 	}
 	// Repeat the encryption handshake checks because the

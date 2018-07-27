@@ -263,7 +263,7 @@ func (self *worker) eventListener() {
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
-				if msg.Message.Nonce() % 1000  == 0{
+				if msg.Message.Nonce() % 10000  == 0{
 					log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
 				}
 

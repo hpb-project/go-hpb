@@ -61,7 +61,6 @@ type HpbProto struct {
 
 // HPB 支持的协议消息
 const ProtoName        = "hpb"
-const ProtoMaxMsg      = 10 * 1024 * 1024
 var ProtocolVersions   = []uint{ProtoVersion100}
 const ProtoVersion100  uint   =  100
 
@@ -156,8 +155,6 @@ func (hp *HpbProto) handle(p *Peer) error {
 	}
 	p.log.Info("Do hpb handshake OK.")
 
-
-	//Peer 层性能统计
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
 	}
@@ -167,7 +164,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.log.Error("Hpb peer registration failed", "err", err)
 		return err
 	}
-	defer hp.removePeer(p.id)
+	defer hp.protocolRemovePeer(p.id)
 
 	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
@@ -211,13 +208,15 @@ func (hp *HpbProto) regOnDropPeer(cb OnDropPeerCB) {
 func (hp *HpbProto) handleMsg(p *Peer) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
+		log.Error("Hpb protocol read msg error","error",err)
 		return err
 	}
 	p.log.Debug("Protocol handle massage","Msg",msg.String())
 	defer msg.Discard()
 
-	if msg.Size > ProtoMaxMsg {
-		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtoMaxMsg)
+	if msg.Size > MaxMsgSize {
+		log.Error("Hpb protocol massage too large.","msg",msg)
+		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, MaxMsgSize)
 	}
 
 	// Handle the message depending on its contents
@@ -334,13 +333,13 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	return nil
 }
 
-func (hp *HpbProto) removePeer(id string) {
+func (hp *HpbProto) protocolRemovePeer(id string) {
 	// Short circuit if the peer was already removed
 	peer := PeerMgrInst().Peer(id)
 	if peer == nil {
 		return
 	}
-	log.Info("Removing Hpb peer", "peer", id)
+	log.Error("###### NEED P2P TO REMOVE PEER!", "peer", id)
 
 	// Unregister the peer from the downloader and Hpb peer set
 	if err := PeerMgrInst().Unregister(id); err != nil {
