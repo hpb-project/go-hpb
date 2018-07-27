@@ -436,8 +436,8 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	log.Debug("Removing Hpb peer", "peer", id)
 
-	log.Info("###### SYN DO REMOVER PEER DISABLE")
-	return
+	log.Error("###### SYN DO REMOVER PEER ENABLE")
+	//return
 
 	// Unregister the peer from the downloader and Hpb peer set
 	this.syner.UnregisterPeer(id)

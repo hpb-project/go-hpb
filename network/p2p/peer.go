@@ -239,26 +239,26 @@ loop:
 			// there was no error.
 			if err != nil {
 				reason = DiscNetworkError
-				p.log.Error("PeerBase run Write DiscNetwork Err")
+				p.log.Error("PeerBase run Write DiscNetwork Error")
 				break loop
 			}
 			writeStart <- struct{}{}
 		case err = <-readErr:
 			if r, ok := err.(DiscReason); ok {
 				remoteRequested = true
-				p.log.Error("PeerBase run Read Remote Requested")
+				p.log.Error("PeerBase run Read Remote Requested DISCONNECTION","error",err)
 				reason = r
 			} else {
+				p.log.Error("PeerBase run Read DiscNetwork Error","error",err)
 				reason = DiscNetworkError
 			}
-			p.log.Error("PeerBase run Read DiscNetwork Err")
 			break loop
 		case err = <-p.protoErr:
 			reason = discReasonForError(err)
-			p.log.Error("PeerBase run proto Err","reason",reason,"error",err)
+			p.log.Error("PeerBase run proto Error","reason",reason,"error",err)
 			break loop
 		case err = <-p.disc:
-			p.log.Error("PeerBase run peer disc Err","error",err)
+			p.log.Error("PeerBase run peer disc Error","error",err)
 			break loop
 		}
 	}
