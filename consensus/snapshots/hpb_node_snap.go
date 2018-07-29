@@ -197,7 +197,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 		}
 	}
 	
-	signers := make([]common.Address,6)
+	signers := make([]common.Address,3)
 	
 	snap := NewHistorysnap(config, signatures, number,latestCheckPointNum,latestCheckPointHash, signers)
 	
@@ -212,8 +212,8 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 	
 	for _, header := range headers {
 		
-		 VoteNumberstemp := big.NewInt(0)
-		 VoteIndexstemp := big.NewInt(0)
+		VoteNumberstemp := big.NewInt(0)
+		VoteIndexstemp := big.NewInt(0)
 		VotePercenttemp := big.NewInt(0)
 		
 		if old, ok := snap.Tally[header.CandAddress]; ok {
@@ -259,7 +259,7 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 			snap.Signers[cands.CandAddress] = struct{}{}
 			
 			//选举出2个
-			if(hpbNodeNum == 6){
+			if(hpbNodeNum == 3){
 				break
 			}
 		}
