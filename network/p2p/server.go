@@ -490,8 +490,7 @@ running:
 					}
 				}
 
-				log.Info("Server add peer base to run hpb.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
-
+				log.Info("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -505,9 +504,17 @@ running:
 			}
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
+			nid := pd.ID()
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Info("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
-			delete(peers, pd.ID())
+			pd.log.Info("Removing p2p peer", "duration", d, "req", pd.requested, "err", pd.err)
+			delete(peers, nid)
+
+			shortid := fmt.Sprintf("%x", nid[0:8])
+			//pd.log.Info("######","pid",shortid,"id",nid)
+			if err := PeerMgrInst().unregister(shortid); err != nil {
+				log.Error("Peer removal failed", "peer", shortid, "err", err)
+			}
+
 		}
 	}
 
@@ -545,10 +552,6 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *
 
 func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	switch {
-	/*
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
-		return DiscTooManyPeers
-	*/
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected
 	case c.id == srv.Self().ID:

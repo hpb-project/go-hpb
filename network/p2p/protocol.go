@@ -30,7 +30,6 @@ import (
 type Protocol struct {
 	Name     string
 	Version  uint
-	Length   uint64
 	Run      func(p *PeerBase, rw MsgReadWriter) error
 }
 
@@ -48,7 +47,6 @@ func (cap Cap) String() string {
 }
 
 ////////////////////////////////////////////////////////
-//HPB 协议
 type HpbProto struct {
 	networkId   uint64
 	protos      []Protocol
@@ -84,7 +82,7 @@ const (
 
 func NewProtos() *HpbProto {
 	hpb :=&HpbProto{
-		protos:    make([]Protocol, 0, len(ProtocolVersions)),
+		protos:       make([]Protocol, 0, len(ProtocolVersions)),
 		msgProcess:   make(map[uint64]MsgProcessCB),
 	}
 
@@ -134,7 +132,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	p.log.Debug("Do hpb exchange data.","ours",our)
 	there,err := p.Exchange(our)
 	if  err != nil {
-		p.log.Error("Hpb exchange data failed in peer.", "err", err)
+		p.log.Debug("Hpb exchange data failed in peer.", "err", err)
 		return err
 	}
 	p.log.Info("Do hpb exchange data OK.","there",there)
@@ -164,7 +162,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.log.Error("Hpb peer registration failed", "err", err)
 		return err
 	}
-	defer hp.protocolRemovePeer(p.id)
+	//defer hp.protocolRemovePeer(p.id)
 
 	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
@@ -177,10 +175,10 @@ func (hp *HpbProto) handle(p *Peer) error {
 	for {
 		if err := hp.handleMsg(p); err != nil {
 			p.log.Debug("Message handling failed", "err", err)
-			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
-				hp.onDropPeer(p)
-				p.log.Debug("Network has drop peer to notify syncer")
-			}
+			//if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
+			//	hp.onDropPeer(p)
+			//	p.log.Debug("Network has drop peer to notify syncer")
+			//}
 			p.log.Error("Stop hpb message loop.","error",err)
 			return err
 		}
@@ -211,7 +209,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		log.Error("Hpb protocol read msg error","error",err)
 		return err
 	}
-	p.log.Debug("Protocol handle massage","Msg",msg.String())
+	p.log.Trace("Protocol handle massage","Msg",msg.String())
 	defer msg.Discard()
 
 	if msg.Size > MaxMsgSize {
@@ -220,136 +218,68 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	}
 
 	// Handle the message depending on its contents
-	switch {
-	case msg.Code == StatusMsg:
-		p.log.Error("Uncontrolled StatusMsg msg")
-	case msg.Code == ExchangeMsg:
-		p.log.Error("Uncontrolled ExchangeMsg msg")
+	switch  msg.Code {
+	case  StatusMsg, ExchangeMsg:
+		p.log.Error("Uncontrolled massage","msg",msg)
 
-	case msg.Code == ReqNodesMsg:
-		if cb := hp.msgProcess[ReqNodesMsg]; cb != nil{
+	case ReqNodesMsg, ResNodesMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
-			p.log.Trace("Handle send request nodes information message to remote.")
-		}
-		return nil
-	case msg.Code == ResNodesMsg:
-		if cb := hp.msgProcess[ResNodesMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Debug("Handle receive nodes information message from remote.")
+			p.log.Debug("Handle send nodes information message.","msg",msg)
 		}
 		return nil
 
-
-	case msg.Code == ReqBWTestMsg:
-		if cb := hp.msgProcess[ReqBWTestMsg]; cb != nil{
+	case ReqBWTestMsg, ResBWTestMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
-			p.log.Info("Handle send request bandwidth test message to remote.")
-		}
-		return nil
-	case msg.Code == ResBWTestMsg:
-		if cb := hp.msgProcess[ResBWTestMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Info("Handle receive bandwidth test message from remote.")
+			p.log.Trace("Handle bandwidth test message.","msg",msg)
 		}
 		return nil
 
-	case msg.Code == GetBlockHeadersMsg:
+	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
 		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
-			p.log.Trace("######process GetBlockHeadersMsg msg")
-		}
-		return nil
-	case msg.Code == BlockHeadersMsg:
-		if cb := hp.msgProcess[BlockHeadersMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process BlockHeadersMsg msg")
-		}
-		return nil
-	case msg.Code == GetBlockBodiesMsg:
-		if cb := hp.msgProcess[GetBlockBodiesMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process GetBlockBodiesMsg msg")
-		}
-		return nil
-	case msg.Code == BlockBodiesMsg:
-		if cb := hp.msgProcess[BlockBodiesMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process BlockBodiesMsg msg")
-		}
-		return nil
-	case msg.Code == GetNodeDataMsg:
-		if cb := hp.msgProcess[GetNodeDataMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process GetNodeDataMsg msg")
-		}
-		return nil
-	case msg.Code == NodeDataMsg:
-		if cb := hp.msgProcess[NodeDataMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process NodeDataMsg msg")
-		}
-		return nil
-	case msg.Code == GetReceiptsMsg:
-		if cb := hp.msgProcess[GetReceiptsMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process GetReceiptsMsg msg")
-		}
-		return nil
-	case msg.Code == ReceiptsMsg:
-		if cb := hp.msgProcess[ReceiptsMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process ReceiptsMsg msg")
-		}
-		return nil
-	case msg.Code == NewBlockHashesMsg:
-		if cb := hp.msgProcess[NewBlockHashesMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process NewBlockHashesMsg msg")
-		}
-		return nil
-	case msg.Code == NewBlockMsg:
-		if cb := hp.msgProcess[NewBlockMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("######process NewBlockMsg msg")
+			p.log.Trace("Process syn get msg","msg",msg)
 		}
 		return nil
 
-	case msg.Code == NewHashBlockMsg:
-		if cb := hp.msgProcess[NewHashBlockMsg]; cb != nil{
+	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
+		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
-			p.log.Trace("######process NewHashBlockMsg msg")
+			p.log.Trace("Process syn msg","msg",msg)
 		}
 		return nil
 
-	case msg.Code == TxMsg:
-		if cb := hp.msgProcess[TxMsg]; cb != nil{
+	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg,TxMsg:
+		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
 			cb(p,msg)
-			p.log.Trace("######process TxMsg msg")
+			p.log.Trace("Process syn new msg","msg",msg)
 		}
 		return nil
+
 	default:
 		p.log.Error("there is no handle to process msg","code", msg.Code)
 	}
 	return nil
 }
 
-func (hp *HpbProto) protocolRemovePeer(id string) {
-	// Short circuit if the peer was already removed
-	peer := PeerMgrInst().Peer(id)
-	if peer == nil {
-		return
-	}
-	log.Error("###### NEED P2P TO REMOVE PEER!", "peer", id)
-
-	// Unregister the peer from the downloader and Hpb peer set
-	if err := PeerMgrInst().unregister(id); err != nil {
-		log.Error("Peer removal failed", "peer", id, "err", err)
-	}
-	// Hard disconnect at the networking layer
-	if peer != nil {
-		peer.Disconnect(DiscUselessPeer)
-	}
-}
+//func (hp *HpbProto) protocolRemovePeer(id string) {
+//	// Short circuit if the peer was already removed
+//	peer := PeerMgrInst().Peer(id)
+//	if peer == nil {
+//		return
+//	}
+//	log.Error("###### NEED P2P TO REMOVE PEER! ######", "peer", id)
+//
+//	// Unregister the peer from the downloader and Hpb peer set
+//	if err := PeerMgrInst().unregister(id); err != nil {
+//		log.Error("Peer removal failed", "peer", id, "err", err)
+//	}
+//	// Hard disconnect at the networking layer
+//	if peer != nil {
+//		peer.Disconnect(DiscUselessPeer)
+//	}
+//}
 
 ////////////////////////////////////////////////////////
 type nodeRes struct {
