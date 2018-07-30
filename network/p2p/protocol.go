@@ -237,21 +237,21 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return nil
 
 	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
 			p.log.Trace("Process syn get msg","msg",msg)
 		}
 		return nil
 
 	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
 			p.log.Trace("Process syn msg","msg",msg)
 		}
 		return nil
 
 	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg,TxMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
 			p.log.Trace("Process syn new msg","msg",msg)
 		}
