@@ -225,7 +225,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case ReqNodesMsg, ResNodesMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			cb(p,msg)
-			p.log.Debug("Handle send nodes information message.","msg",msg)
+			p.log.Debug("Handle nodes information message.","msg",msg)
 		}
 		return nil
 
