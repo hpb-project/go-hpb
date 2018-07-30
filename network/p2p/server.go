@@ -490,8 +490,7 @@ running:
 					}
 				}
 
-				log.Info("Server add peer base to run hpb.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
-
+				log.Info("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -505,9 +504,16 @@ running:
 			}
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
+			nid := pd.ID()
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Info("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
-			delete(peers, pd.ID())
+			pd.log.Info("Removing p2p peer", "duration", d, "req", pd.requested, "err", pd.err)
+			delete(peers, nid)
+
+			shortid := fmt.Sprintf("%x", nid[0:8])
+			if err := PeerMgrInst().unregister(shortid); err != nil {
+				log.Error("Peer removal failed", "peer", shortid, "err", err)
+			}
+
 		}
 	}
 
@@ -535,6 +541,7 @@ running:
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
+		log.Error("Protocol Handshake Checks Error")
 		return DiscUselessPeer
 	}
 	// Repeat the encryption handshake checks because the
@@ -544,10 +551,6 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *
 
 func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	switch {
-	/*
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
-		return DiscTooManyPeers
-	*/
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected
 	case c.id == srv.Self().ID:
@@ -668,7 +671,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
 	log.Info("Do protocol handshake OK.","id",c.id)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
-		clog.Warn("Rejected peer", "err", err)
+		clog.Warn("Rejected peer", "err", err, "dialDest",dialDest)
 		c.close(err)
 		return
 	}
@@ -725,7 +728,10 @@ func (srv *Server) runPeer(p *PeerBase) {
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	log.Info("Server stop to run peer","id",p.ID(),"err",err)
-
+	if err.Error() == DiscAlreadyConnected.Error(){
+		p.log.Error("######DO not stop already connected peer######")
+		//return
+	}
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 

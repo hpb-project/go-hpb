@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	maxUint24 = ^uint32(0) >> 8
+    MaxMsgSize = 50 * 1024 * 1024
 
 	sskLen = 16 // ecies.MaxSharedKeyLength(pubKey) / 2
 	sigLen = 65 // elliptic S256
@@ -602,7 +602,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 
 	// if snappy is enabled, compress message now
 	if rw.snappy {
-		if msg.Size > maxUint24 {
+		if msg.Size > MaxMsgSize {
 			log.Error("Write message length >= 16MB.")
 			return errPlainMessageTooLarge
 		}
@@ -615,7 +615,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// write header
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size
-	if fsize > maxUint24 {
+	if fsize > MaxMsgSize {
 		log.Error("Write message size overflows uint24.")
 		//return errors.New("message size overflows uint24")
 	}
@@ -719,7 +719,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 		if err != nil {
 			return msg, err
 		}
-		if size > int(maxUint24) {
+		if size > int(MaxMsgSize) {
 			log.Error("Read message size overflows uint24.")
 			//return msg, errPlainMessageTooLarge
 		}

@@ -436,16 +436,16 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	log.Debug("Removing Hpb peer", "peer", id)
 
-	log.Info("###### SYN DO REMOVER PEER DISABLE")
-	return
+	//log.Error("###### SYN DO REMOVER PEER DISABLE")
+	//return
+
 
 	// Unregister the peer from the downloader and Hpb peer set
 	this.syner.UnregisterPeer(id)
-	if err := p2p.PeerMgrInst().Unregister(id); err != nil {
-		log.Error("Peer removal failed", "peer", id, "err", err)
-	}
+
 	// Hard disconnect at the networking layer
 	if peer != nil {
+		log.Error("###### SYN DO REMOVER PEER")
 		peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }
