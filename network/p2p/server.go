@@ -24,7 +24,7 @@ import (
 	"net"
 	"sync"
 	"time"
-
+	"math/rand"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/mclock"
 	"github.com/hpb-project/go-hpb/event"
@@ -32,6 +32,8 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -107,6 +109,12 @@ type Server struct {
 	localType    discover.NodeType
 
 	dialer        NodeDialer
+
+	delHist       *dialHistory
+
+	//only for test
+	hpflag       bool // block num > 100  this should be false
+	hptype       [] RemotePeerType
 
 }
 
@@ -305,7 +313,6 @@ func (srv *Server) Start() (err error) {
 		srv.newTransport = newRLPX
 	}
 
-
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *conn)
 	srv.delpeer = make(chan peerDrop)
@@ -315,6 +322,7 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 	srv.peerEvent = event.NewEvent()
+	srv.delHist = new(dialHistory)
 
 	srv.dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 
@@ -343,6 +351,10 @@ func (srv *Server) Start() (err error) {
 	if err := srv.startListening(); err != nil {
 		return err
 	}
+
+	//todo: only for test
+	srv.parseRemoteHpType()
+	log.Error("######Server start","hpflag",srv.hpflag)
 
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 	srv.loopWG.Add(1)
@@ -383,6 +395,7 @@ type dialer interface {
 
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
+	rand.Seed(time.Now().Unix())
 	var (
 		peers        = make(map[discover.NodeID]*PeerBase)
 		taskdone     = make(chan task, maxActiveDialTasks)
@@ -404,8 +417,14 @@ func (srv *Server) run(dialstate dialer) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
-			//log.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t }()
+			go func() {
+				//log.Error("###### start task.","task",t)
+				//time.Sleep(time.Second*time.Duration(rand.Intn(3)))
+				t.Do(srv)
+				//time.Sleep(time.Second*time.Duration(rand.Intn(3)))
+				//log.Error("###### task done.")
+				taskdone <- t
+				}()
 			runningTasks = append(runningTasks, t)
 		}
 		return ts[i:]
@@ -429,6 +448,8 @@ running:
 	for {
 		scheduleTasks()
 
+		srv.delHist.expire(time.Now())
+		log.Debug("###### Server running: expire node from history.","DelHist",srv.delHist.Len())
 		select {
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
@@ -456,7 +477,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			//log.Trace("Dial task done", "task", t)
+			//log.Error("###### Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
@@ -489,6 +510,19 @@ running:
 						p.remoteType = discover.BootNode
 					}
 				}
+				//////////////////////////////////////////////////////////
+				// todo only for test
+				log.Info("Set remote hp type.","pid",p.ID().TerminalString(), "hpflag",srv.hpflag, "peertype",srv.hptype)
+				if srv.hpflag {
+					for _, hp := range srv.hptype {
+						if hp.PID == p.ID().TerminalString() {
+							p.remoteType = discover.HpNode
+							p.log.Warn("Set remote hp type.", "remoteType",p.remoteType)
+						}
+					}
+				}
+
+				//////////////////////////////////////////////////////////
 
 				log.Info("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
@@ -513,6 +547,12 @@ running:
 			if err := PeerMgrInst().unregister(shortid); err != nil {
 				log.Error("Peer removal failed", "peer", shortid, "err", err)
 			}
+
+			srv.ntab.RemoveNode(nid)
+
+			expire := time.Second*time.Duration(1+rand.Intn(60))
+			srv.delHist.add(nid, time.Now().Add(expire))
+			log.Debug("Server running: add node to history.","expire",expire)
 
 		}
 	}
@@ -735,3 +775,34 @@ func (srv *Server) runPeer(p *PeerBase) {
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//for test code
+const  remotePeerTypeFileName  = "config.json"
+type RemotePeerType struct {
+	PID    string     `json:"pid"`
+}
+func (srv *Server) parseRemoteHpType()  error{
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	filename := filepath.Join(dir, remotePeerTypeFileName)
+	log.Debug("Parse remote hp type from config.","filename",filename)
+
+
+	if err := common.LoadJSON(filename, &srv.hptype); err != nil {
+		log.Warn(fmt.Sprintf("Can't load file %s: %v", filename, err))
+		return nil
+	}
+
+	if srv.hpflag {
+		for _, hp := range srv.hptype {
+			if hp.PID == srv.ntab.Self().ID.TerminalString() {
+				srv.localType = discover.HpNode
+				log.Warn("Set server local node type to Hpnode.", "localType",srv.localType.ToString())
+			}
+		}
+	}
+	log.Debug("Parse remote hp type from config.","peertype",srv.hptype,"localType",srv.localType.ToString())
+
+	return  nil
+}
+///////////////////////////////////////////////////////////////////////////////

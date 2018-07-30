@@ -111,7 +111,7 @@ type blockBody struct {
 type blockBodiesData []*blockBody
 
 func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
-	peer.KnownTxsAdd(block.Hash())
+	peer.KnownBlockAdd(block.Hash())
 	return p2p.SendData(peer,p2p.NewBlockMsg, []interface{}{block, td})
 }
 
@@ -123,13 +123,13 @@ func sendNewHashBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
 	}
 	hashBlock := &hashBlock{header:block.Header(),uncles:block.Uncles(),txsHash:txsHash,td:td,blockHash:block.Hash()}
 
-	peer.KnownTxsAdd(block.Hash())
+	peer.KnownBlockAdd(block.Hash())
 	return p2p.SendData(peer,p2p.NewHashBlockMsg, []interface{}{hashBlock, td})
 }
 
 func sendNewBlockHashes(peer *p2p.Peer, hashes []common.Hash, numbers []uint64) error {
 	for _, hash := range hashes {
-		peer.KnownTxsAdd(hash)
+		peer.KnownBlockAdd(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
 	for i := 0; i < len(hashes); i++ {

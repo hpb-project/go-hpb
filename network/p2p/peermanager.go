@@ -123,7 +123,6 @@ func (prm *PeerManager)Start() error {
 
 
 	log.Info("Peer manager start server with type.","NodeType",prm.server.localType.ToString())
-
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
 		return err
@@ -155,6 +154,7 @@ func (prm *PeerManager)Start() error {
 	//if prm.server.localType != discover.BootNode {
 	//	go prm.randomTestBW()
 	//}
+
 
 	return nil
 }
@@ -230,6 +230,10 @@ func (prm *PeerManager) Peer(id string) *Peer {
 	return prm.peers[id]
 }
 
+func (prm *PeerManager) DefaultAddr() common.Address {
+	return prm.server.DefaultAddr
+}
+
 func (prm *PeerManager) PeersAll() []*Peer {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
@@ -240,6 +244,27 @@ func (prm *PeerManager) PeersAll() []*Peer {
 	}
 	return list
 }
+
+func (prm *PeerManager) GetLocalType()  discover.NodeType {
+	return prm.server.localType
+}
+
+func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
+	prm.server.localType = nt
+	for _, p := range prm.peers {
+		p.localType = nt
+	}
+	log.Info("######Set peer local type","nodetype",nt.ToString())
+
+	return true
+}
+
+
+func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
+	prm.server.hpflag = flag
+	log.Info("######Set hp remote flag","hpflag",prm.server.hpflag)
+}
+
 
 // Len returns if the current number of peers in the set.
 func (prm *PeerManager) Len() int {

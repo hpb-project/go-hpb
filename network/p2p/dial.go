@@ -70,7 +70,7 @@ type discoverTable interface {
 	Bondall(nodes []*discover.Node) int
 
     //AddNode(node *discover.Node)
-	//RemoveNode(nid discover.NodeID)
+	RemoveNode(nid discover.NodeID)
 	//HasNode(nid discover.NodeID) bool
 }
 
@@ -206,6 +206,10 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 
 func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
+		return
+	}
+	if srv.delHist.contains(t.dest.ID){
+		log.Warn("###### Do task: recently delete node.")
 		return
 	}
 	success := t.dial(srv, t.dest)
