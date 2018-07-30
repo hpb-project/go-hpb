@@ -243,7 +243,13 @@ func (prm *PeerManager) PeersAll() []*Peer {
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	prm.server.localType = nt
+
+	for _, p := range prm.peers {
+		p.localType = nt
+	}
+
 	log.Info("######Set local type","nodetype",nt.ToString())
+
 	return true
 }
 
