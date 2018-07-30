@@ -368,6 +368,11 @@ func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 					//TODO test sendNewHashBlock
 					//sendNewHashBlock(peer, block, td)
 					break
+				case discover.HpNode:
+					sendNewBlock(peer, block, td)
+					//TODO test sendNewHashBlock
+					//sendNewHashBlock(peer, block, td)
+					break
 				default:
 					break
 				}
