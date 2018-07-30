@@ -107,6 +107,8 @@ type PeerBase struct {
 	////////////////////////////////////////////////////
 	ntab       discoverTable
 	localType  discover.NodeType
+
+	typelock   sync.Mutex
 	remoteType discover.NodeType
 
 }
@@ -183,10 +185,16 @@ func (p *PeerBase) LocalAddr() net.Addr {
 
 //  RemoteType returns the remote type of the node.
 func (p *PeerBase) RemoteType() discover.NodeType {
+	p.typelock.Lock()
+	defer p.typelock.Unlock()
+
 	return p.remoteType
 }
 
 func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
+	p.typelock.Lock()
+	defer p.typelock.Unlock()
+
 	p.remoteType = nt
 	return true
 }
