@@ -138,7 +138,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, 1+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		log:      log.New("id", conn.id),
+		log:      log.New("id", conn.id,"port",conn.rport),
 		ntab:     ntb,
 	}
 	return p

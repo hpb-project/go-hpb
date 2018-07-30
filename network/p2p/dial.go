@@ -69,9 +69,9 @@ type discoverTable interface {
 	FindNodes()[]*discover.Node
 	Bondall(nodes []*discover.Node) int
 
-    AddNode(node *discover.Node)
-	RemoveNode(nid discover.NodeID)
-	HasNode(nid discover.NodeID) bool
+    //AddNode(node *discover.Node)
+	//RemoveNode(nid discover.NodeID)
+	//HasNode(nid discover.NodeID) bool
 }
 
 // the dial history remembers recent dials.

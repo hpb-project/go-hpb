@@ -81,7 +81,7 @@ var discReasonToString = [...]string{
 	DiscProtocolError:       "breach of protocol",
 	DiscUselessPeer:         "useless peer",
 	DiscTooManyPeers:        "too many peers",
-	DiscAlreadyConnected:    "already connected",
+	DiscAlreadyConnected:    "already connected peer",
 	DiscIncompatibleVersion: "incompatible p2p protocol version",
 	DiscInvalidIdentity:     "invalid node identity",
 	DiscQuitting:            "client quitting",
