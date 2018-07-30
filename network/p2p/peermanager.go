@@ -241,6 +241,13 @@ func (prm *PeerManager) PeersAll() []*Peer {
 	return list
 }
 
+func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
+	prm.server.localType = nt
+	log.Info("######Set local type","nodetype",nt.ToString())
+	return true
+}
+
+
 // Len returns if the current number of peers in the set.
 func (prm *PeerManager) Len() int {
 	prm.lock.RLock()
