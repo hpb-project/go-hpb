@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/common"
@@ -34,6 +35,9 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/node/db"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
 
 const (
@@ -140,7 +144,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	
 	
-	
 	c.lock.RLock()
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
@@ -232,6 +235,14 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil)
 	
+	// 已经投票结束
+	if (number-1)% consensus.HpbNodeCheckpointInterval == 0 {
+		if header.Difficulty.Cmp(diffNoTurn) != 0 {
+			SetNetNodeType(snap)
+			log.Info("SetNetNodeType ***********************")
+		}
+	}
+	
 	if err != nil {
 		return nil, err
 	}
@@ -262,33 +273,30 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		//delay += time.Duration(rand.Int63n(int64(wiggle)))
+		//log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 
-		log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-		
-		currentIndex := number % uint64(len(snap.Signers))	
-		offset := snap.GetOffset(header.Number.Uint64(), signer)
+		midIndex := uint64(len(snap.Signers)/2)                  //中间位置，一般的个数为奇数个
+		currentIndex := number % uint64(len(snap.Signers))	     //挖矿的机器位置
+		offset := snap.GetOffset(header.Number.Uint64(), signer) //当前的位置
 
-       //在一定范围内延迟8分,当前的currentIndex往前的没有超过
-       if(currentIndex <= uint64(len(snap.Signers)/2)){
-	       if(offset - currentIndex <= uint64(len(snap.Signers)/2)){
-				wiggle = time.Duration(1000) * wiggleTime
-				//log.Info("$$$$$$$$$$$$$$$$$$$$$$$","less than half",common.PrettyDuration(wiggle))
+        //在一定范围内延迟8分,当前的currentIndex往前的没有超过
+        if(currentIndex <= midIndex){
+	        if(offset < currentIndex + midIndex/2){
+			 	wiggle = time.Duration(1000) * wiggleTime
 				delay += wiggle;
 			}else{
-				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
+				//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
+				delay += time.Duration(offset - currentIndex - midIndex)* wiggleTime
 			}
-       }else{
-       	    if(offset + uint64(len(snap.Signers)/2) <= currentIndex){
+        }else{
+       	    if(offset < currentIndex - midIndex/2){
 				wiggle = time.Duration(1000) * wiggleTime
-				//log.Info("$$$$$$$$$$$$$$$$$$$$$$$","more than half",common.PrettyDuration(wiggle))
 				delay += wiggle;
 			}else{
-				delay += time.Duration(offset - currentIndex - uint64(len(snap.Signers)/2))* wiggle
+				delay += time.Duration(offset - currentIndex - midIndex)* wiggleTime
 			}
-       }
-		log.Info("Out-of-turn signing requested ++++++++++++++++++++++++++++++++++", "delay", common.PrettyDuration(delay))
-	}
+        }
+	 }
 
 	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 
@@ -308,6 +316,24 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	return block.WithSeal(header), nil
 }
+
+
+// 设置网络节点类型
+func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
+	peers := p2p.PeerMgrInst().PeersAll()
+	addresses := snapa.GetHpbNodes()
+	
+	for _, peer := range peers {
+		peer.SetRemoteType(discover.PreNode)
+		for _, address := range addresses{
+			if(peer.Address() == address){
+				peer.SetRemoteType(discover.HpNode)
+			}
+		}
+	}
+	return nil
+}
+
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.

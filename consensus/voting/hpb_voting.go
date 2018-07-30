@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hashicorp/golang-lru"
+	
 )
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
@@ -86,7 +87,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			}
 			
 			if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,latestCheckPointNumber,latestCheckPointHash,headers,chain); err == nil {
-				//log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				    log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 					if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
 						return nil, err
 		 			}
@@ -103,8 +104,9 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 				}
 			}
 			
+			
 			if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,latestCheckPointNumber,latestCheckPointHash,headers,chain); err == nil {
-				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				    log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 					if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
 						return nil, err
 		 			}
