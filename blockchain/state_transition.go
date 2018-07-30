@@ -113,7 +113,7 @@ func ApplyMessage(header *types.Header, db *state.StateDB, author *common.Addres
 		return nil, nil, false, err
 	}
 
-	if !st.native {
+	if st.native {
 		log.Error("--------------------------------------st.native is not null------------------------------------------")
 		ret, _, gasUsed, failed, err := st.TransitionOnNative()
 		return ret, gasUsed, failed, err
