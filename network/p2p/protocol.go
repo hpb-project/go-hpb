@@ -318,7 +318,29 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 	}
 	log.Trace("Received nodes from remote","request", request)
 
-	go p.ntab.Bondall(request.Nodes)
+
+	self := p.ntab.Self().ID
+	toBondNode := make([]*discover.Node, 0, len(request.Nodes))
+	//log.Error("############","self",self,"Nodes",request.Nodes)
+	//log.Error("############","Peers",PeerMgrInst().PeersAll())
+	for _, n := range request.Nodes {
+		if self == n.ID {
+			continue
+		}
+
+		pid := fmt.Sprintf("%x", n.ID[0:8])
+		//p.log.Error("############","pid",pid,"peer", PeerMgrInst().Peer(pid))
+		if PeerMgrInst().Peer(pid) == nil{
+			toBondNode = append(toBondNode,n)
+		}
+	}
+
+	//log.Error("############","len",len(toBondNode))
+	if len(toBondNode) > 0{
+		log.Debug("Discovery new nodes to bonding.","Nodes",toBondNode)
+		go p.ntab.Bondall(toBondNode)
+	}
+
 
 	return nil
 }

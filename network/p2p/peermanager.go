@@ -36,7 +36,6 @@ import (
 
 var (
 	errClosed            = errors.New("peer set is closed")
-	errAlreadyRegistered = errors.New("peer is already registered")
 	errNotRegistered     = errors.New("peer is not registered")
 	errIncomplete        = errors.New("PeerManager is incomplete creation")
 )
@@ -199,7 +198,7 @@ func (prm *PeerManager) Register(p *Peer) error {
 	}
 
 	if _, ok := prm.peers[p.id]; ok {
-		return errAlreadyRegistered
+		return DiscAlreadyConnected
 	}
 	prm.peers[p.id] = p
 	return nil
@@ -312,6 +311,13 @@ func (prm *PeerManager) close() {
 func (prm *PeerManager) Protocol() []Protocol {
 	return prm.hpbpro.protos
 }
+
+//func (prm *PeerManager) hasPeer(id string) bool {
+//	prm.lock.RLock()
+//	defer prm.lock.RUnlock()
+//
+//	return prm.boots[id] != nil || prm.peers[id] !=nil
+//}
 ////////////////////////////////////////////////////////////////////
 
 type PeerInfo struct {

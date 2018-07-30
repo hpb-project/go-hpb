@@ -510,7 +510,6 @@ running:
 			delete(peers, nid)
 
 			shortid := fmt.Sprintf("%x", nid[0:8])
-			//pd.log.Info("######","pid",shortid,"id",nid)
 			if err := PeerMgrInst().unregister(shortid); err != nil {
 				log.Error("Peer removal failed", "peer", shortid, "err", err)
 			}
@@ -672,7 +671,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
 	log.Info("Do protocol handshake OK.","id",c.id)
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
-		clog.Warn("Rejected peer", "err", err)
+		clog.Warn("Rejected peer", "err", err, "dialDest",dialDest)
 		c.close(err)
 		return
 	}
@@ -729,7 +728,10 @@ func (srv *Server) runPeer(p *PeerBase) {
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	log.Info("Server stop to run peer","id",p.ID(),"err",err)
-
+	if err.Error() == DiscAlreadyConnected.Error(){
+		p.log.Error("######DO not stop already connected peer######")
+		//return
+	}
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
