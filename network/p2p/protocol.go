@@ -224,36 +224,36 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 
 	case ReqNodesMsg, ResNodesMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			cb(p,msg)
-			p.log.Debug("Handle send nodes information message.","msg",msg)
+			err := cb(p,msg)
+			p.log.Debug("Handle nodes information message.","msg",msg,"err",err)
 		}
 		return nil
 
 	case ReqBWTestMsg, ResBWTestMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("Handle bandwidth test message.","msg",msg)
+			err := cb(p,msg)
+			p.log.Trace("Handle bandwidth test message.","msg",msg,"err",err)
 		}
 		return nil
 
 	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("Process syn get msg","msg",msg)
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
+			err := cb(p,msg)
+			p.log.Trace("Process syn get msg","msg",msg,"err",err)
 		}
 		return nil
 
 	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("Process syn msg","msg",msg)
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
+			err := cb(p,msg)
+			p.log.Trace("Process syn msg","msg",msg,"err",err)
 		}
 		return nil
 
 	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg,TxMsg:
-		if cb := hp.msgProcess[GetBlockHeadersMsg]; cb != nil{
-			cb(p,msg)
-			p.log.Trace("Process syn new msg","msg",msg)
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
+			err := cb(p,msg)
+			p.log.Trace("Process syn new msg","msg",msg,"err",err)
 		}
 		return nil
 

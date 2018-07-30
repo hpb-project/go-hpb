@@ -348,9 +348,10 @@ func (p *PeerBase) handle(msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
+		p.log.Debug("PeerBase send heartbeat from remote.")
 		go sendItems(p.rw, pongMsg)
 	case msg.Code == pongMsg:
-		//p.log.Info("######PeerBase receive heartbeat from remote.")
+		p.log.Debug("PeerBase receive heartbeat from remote.")
 		msg.Discard()
 	case msg.Code == discMsg:
 		var reason [1]DiscReason
