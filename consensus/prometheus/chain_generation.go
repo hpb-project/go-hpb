@@ -237,10 +237,10 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	
 	// 已经投票结束
 	if (number-1)% consensus.HpbNodeCheckpointInterval == 0 {
-		if header.Difficulty.Cmp(diffNoTurn) != 0 {
+		//if header.Difficulty.Cmp(diffNoTurn) != 0 {
 			SetNetNodeType(snap)
 			log.Info("SetNetNodeType ***********************")
-		}
+		//}
 	}
 	
 	if err != nil {
@@ -324,16 +324,33 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
 	addresses := snapa.GetHpbNodes()
 	
 	for _, peer := range peers {
-		peer.SetRemoteType(discover.PreNode)
-		for _, address := range addresses{
-			if(peer.Address() == address){
-				peer.SetRemoteType(discover.HpNode)
-			}
+		switch peer.LocalType() {
+			case discover.PreNode:
+				if flag := FindHpbNode(peer.Address(), addresses); flag{
+					log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+					peer.SetRemoteType(discover.HpNode)
+				}
+			case discover.HpNode:
+				if flag := FindHpbNode(peer.Address(), addresses); !flag{
+					log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
+					peer.SetRemoteType(discover.PreNode)
+				}
+			default:
+				break
 		}
 	}
 	return nil
 }
 
+
+func FindHpbNode(address common.Address, addresses []common.Address) bool{
+	for _, addresstemp := range addresses{
+		if(addresstemp == address){
+			return true
+		}
+	}
+	return false
+}
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
