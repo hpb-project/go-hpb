@@ -777,7 +777,7 @@ func (srv *Server) runPeer(p *PeerBase) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //for test code
-const  remotePeerTypeFileName  = "remotepeertype.json"
+const  remotePeerTypeFileName  = "config.json"
 type RemotePeerType struct {
 	PID    string     `json:"pid"`
 }
