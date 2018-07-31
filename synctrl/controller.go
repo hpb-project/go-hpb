@@ -152,7 +152,7 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 		atomic.StoreUint32(&synctrl.AcceptTxs, 1) // Mark initial sync done on any fetcher import
 		return bc.InstanceBlockChain().InsertChain(blocks)
 	}
-	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, synctrl.routingBlock, heighter, inserter, synctrl.removePeer)
+	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, routingBlock, heighter, inserter, synctrl.removePeer)
 
 	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockHeadersMsg, HandleGetBlockHeadersMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockBodiesMsg, HandleGetBlockBodiesMsg)
@@ -228,8 +228,8 @@ func (this *SynCtrl) minedRoutingLoop() {
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
-			this.routingBlock(ev.Block, true)  // First propagate block to peers
-			this.routingBlock(ev.Block, false) // Only then announce to the rest
+			routingBlock(ev.Block, true)  // First propagate block to peers
+			routingBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }
@@ -314,7 +314,7 @@ func (this *SynCtrl) synchronise(peer *p2p.Peer) {
 		// scenario will most often crop up in private and hackathon networks with
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
-		go this.routingBlock(head, false)
+		go routingBlock(head, false)
 	}
 }
 
@@ -343,7 +343,7 @@ func (this *SynCtrl) Stop() {
 
 // routingBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
-func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
+func routingBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
 	peers := p2p.PeerMgrInst().PeersWithoutBlock(hash)
 
@@ -368,7 +368,7 @@ func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 					//TODO test sendNewHashBlock
 					//sendNewHashBlock(peer, block, td)
 					break
-				case discover.HpNode:
+				case discover.HpNode://todo xjl :when local type can change, then delete
 					sendNewBlock(peer, block, td)
 					//TODO test sendNewHashBlock
 					//sendNewHashBlock(peer, block, td)
@@ -407,6 +407,9 @@ func (this *SynCtrl) routingBlock(block *types.Block, propagate bool) {
 			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
+				case discover.HpNode://todo xjl :when local type can change, then delete
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
 				default:
