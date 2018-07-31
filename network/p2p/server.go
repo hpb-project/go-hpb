@@ -513,7 +513,7 @@ running:
 				//////////////////////////////////////////////////////////
 				// todo only for test
 				log.Info("Set remote hp type.","pid",p.ID().TerminalString(),"hpflag",srv.hpflag, "peertype",srv.hptype)
-				if !srv.hpflag {
+				if srv.hpflag {
 					for _, hp := range srv.hptype {
 						if hp.PID == p.ID().TerminalString() {
 							p.remoteType = discover.HpNode
