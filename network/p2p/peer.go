@@ -138,7 +138,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		running:  protorw,
 		created:  mclock.Now(),
 		disc:     make(chan DiscReason),
-		protoErr: make(chan error, 1+1), // protocols + pingLoop
+		protoErr: make(chan error, 1), // protocols + pingLoop
 		closed:   make(chan struct{}),
 		log:      log.New("id", conn.id,"port",conn.rport),
 		ntab:     ntb,
@@ -200,14 +200,14 @@ func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
 	return true
 }
 
-func (p *PeerBase) SetLocalType(nt discover.NodeType) bool {
-	//p.typelock.Lock()
-	//defer p.typelock.Unlock()
-
-	p.log.Info("######Set local type","nodetype",nt.ToString())
-	p.localType = nt
-	return true
-}
+//func (p *PeerBase) SetLocalType(nt discover.NodeType) bool {
+//	//p.typelock.Lock()
+//	//defer p.typelock.Unlock()
+//
+//	p.log.Info("######Set local type","nodetype",nt.ToString())
+//	p.localType = nt
+//	return true
+//}
 // LocalType returns the local type of the node.
 func (p *PeerBase) LocalType() discover.NodeType {
 	//p.typelock.Lock()

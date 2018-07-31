@@ -24,7 +24,7 @@ import (
 	"net"
 	"sync"
 	"time"
-
+	"math/rand"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/mclock"
 	"github.com/hpb-project/go-hpb/event"
@@ -107,6 +107,8 @@ type Server struct {
 	localType    discover.NodeType
 
 	dialer        NodeDialer
+
+	delHist          *dialHistory
 
 }
 
@@ -315,6 +317,7 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 	srv.peerEvent = event.NewEvent()
+	srv.delHist = new(dialHistory)
 
 	srv.dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 
@@ -383,6 +386,7 @@ type dialer interface {
 
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
+	rand.Seed(time.Now().Unix())
 	var (
 		peers        = make(map[discover.NodeID]*PeerBase)
 		taskdone     = make(chan task, maxActiveDialTasks)
@@ -404,8 +408,14 @@ func (srv *Server) run(dialstate dialer) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
-			//log.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t }()
+			go func() {
+				//log.Error("###### start task.","task",t)
+				//time.Sleep(time.Second*time.Duration(rand.Intn(3)))
+				t.Do(srv)
+				//time.Sleep(time.Second*time.Duration(rand.Intn(3)))
+				//log.Error("###### task done.")
+				taskdone <- t
+				}()
 			runningTasks = append(runningTasks, t)
 		}
 		return ts[i:]
@@ -429,6 +439,8 @@ running:
 	for {
 		scheduleTasks()
 
+		srv.delHist.expire(time.Now())
+		log.Debug("###### Server running: expire node from history.","DelHist",srv.delHist.Len())
 		select {
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
@@ -456,7 +468,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			//log.Trace("Dial task done", "task", t)
+			//log.Error("###### Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
@@ -513,6 +525,12 @@ running:
 			if err := PeerMgrInst().unregister(shortid); err != nil {
 				log.Error("Peer removal failed", "peer", shortid, "err", err)
 			}
+
+
+
+			expire := time.Second*time.Duration(1+rand.Intn(60))
+			srv.delHist.add(nid, time.Now().Add(expire))
+			log.Debug("###### Server running: add node to history.","expire",expire)
 
 		}
 	}

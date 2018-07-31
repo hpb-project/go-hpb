@@ -208,6 +208,10 @@ func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
 		return
 	}
+	if srv.delHist.contains(t.dest.ID){
+		log.Warn("###### Do task: recently delete node.")
+		return
+	}
 	success := t.dial(srv, t.dest)
 	log.Trace("One dial task done.","result",success)
 
