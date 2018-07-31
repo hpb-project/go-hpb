@@ -78,7 +78,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 			return snapcd, err
 		}else{
 			// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-64; i++{
+			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-900; i++{
 				//log.Info("Header:",strconv.FormatUint(i, 10))
 				header := chain.GetHeaderByNumber(uint64(i))
 				if header != nil {
@@ -96,7 +96,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARC
 		}
 	}else{
 		// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-64; i++{
+			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-900; i++{
 				//log.Info("Header:",strconv.FormatUint(i, 10))
 				header := chain.GetHeaderByNumber(uint64(i))
 				if header != nil {
