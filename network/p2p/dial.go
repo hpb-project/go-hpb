@@ -70,7 +70,7 @@ type discoverTable interface {
 	Bondall(nodes []*discover.Node) int
 
     //AddNode(node *discover.Node)
-	//RemoveNode(nid discover.NodeID)
+	RemoveNode(nid discover.NodeID)
 	//HasNode(nid discover.NodeID) bool
 }
 

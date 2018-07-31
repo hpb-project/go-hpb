@@ -526,11 +526,11 @@ running:
 				log.Error("Peer removal failed", "peer", shortid, "err", err)
 			}
 
-
+			srv.ntab.RemoveNode(nid)
 
 			expire := time.Second*time.Duration(1+rand.Intn(60))
 			srv.delHist.add(nid, time.Now().Add(expire))
-			log.Debug("###### Server running: add node to history.","expire",expire)
+			log.Debug("Server running: add node to history.","expire",expire)
 
 		}
 	}

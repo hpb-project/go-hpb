@@ -147,27 +147,29 @@ func (tab *Table) Bondall(nodes []*Node) int{
 }
 
 func (tab *Table) AddNode(node *Node)  {
-	tab.lock.Lock()
-	defer tab.lock.Unlock()
-	delete(tab.allNodes, node.ID)
-	tab.allNodes[node.ID] = node
 
 	return
 }
 
 func (tab *Table) RemoveNode(nid NodeID) {
-	tab.lock.Lock()
-	defer tab.lock.Unlock()
-	delete(tab.allNodes, nid)
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+
+	for _, bucket := range tab.buckets {
+		for i := range bucket.entries {
+			if bucket.entries[i].ID == nid {
+				log.Warn("Remove node from table","ID",nid,"Node",bucket.entries[i])
+				bucket.entries = append(bucket.entries[:i], bucket.entries[i+1:]...)
+				return
+			}
+		}
+	}
 
 	return
 }
 
 func (tab *Table) HasNode(nid NodeID) bool {
-	tab.lock.RLock()
-	defer tab.lock.RUnlock()
-
-	return tab.allNodes[nid] != nil
+	return false
 }
 
 // Close terminates the network listener and flushes the node database.
