@@ -159,7 +159,39 @@ Remove blockchain and state databases`,
 The arguments are interpreted as block numbers or hashes.
 Use "hpb dump 0" to dump the genesis block.`,
 	}
+	boeUpdateCommand = cli.Command{
+		Action:    utils.MigrateFlags(boeupdate),
+		Name:      "boeupdate",
+		Usage:     "update boe firmware",
+		ArgsUsage: "<firmwarepath>",
+		Flags: []cli.Flag{
+		},
+		Category: "BOE FIRMWARE UPDATE COMMANDS",
+		Description: `
+Update the firmwre of BOE.`,
+	}
+	boeDetectCommand = cli.Command{
+		Action:    utils.MigrateFlags(boedetect),
+		Name:      "boedetect",
+		Usage:     "detect boe",
+		ArgsUsage: "",
+		Flags: []cli.Flag{
+		},
+		Category: "BOE DETECT COMMANDS",
+		Description: `
+Detect BOE.`,
+	}
+
 )
+func boeupdate(ctx *cli.Context) error {
+	log.Info("-----start boe update-----")
+	return nil
+}
+
+func boedetect(ctx *cli.Context) error {
+	log.Info("-----start boe detect-----")
+	return nil
+}
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
