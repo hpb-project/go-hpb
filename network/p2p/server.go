@@ -313,7 +313,6 @@ func (srv *Server) Start() (err error) {
 		srv.newTransport = newRLPX
 	}
 
-
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *conn)
 	srv.delpeer = make(chan peerDrop)
@@ -353,13 +352,14 @@ func (srv *Server) Start() (err error) {
 		return err
 	}
 
+	//todo: only for test
+	srv.parseRemoteHpType()
+	log.Error("######Server start","hpflag",srv.hpflag)
+
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
 	srv.running = true
-
-	//todo: only for test
-	srv.parseRemoteHpType()
 
 	return nil
 }
@@ -512,7 +512,7 @@ running:
 				}
 				//////////////////////////////////////////////////////////
 				// todo only for test
-				log.Info("Set remote hp type.","pid",p.ID().TerminalString(),"hpflag",srv.hpflag, "peertype",srv.hptype)
+				log.Info("Set remote hp type.","pid",p.ID().TerminalString(), "hpflag",srv.hpflag, "peertype",srv.hptype)
 				if srv.hpflag {
 					for _, hp := range srv.hptype {
 						if hp.PID == p.ID().TerminalString() {
@@ -793,7 +793,15 @@ func (srv *Server) parseRemoteHpType()  error{
 		return nil
 	}
 
-	log.Debug("Parse remote hp type from config.","peertype",srv.hptype)
+	if srv.hpflag {
+		for _, hp := range srv.hptype {
+			if hp.PID == srv.ntab.Self().ID.TerminalString() {
+				srv.localType = discover.HpNode
+				log.Warn("Set server local node type to Hpnode.", "localType",srv.localType.ToString())
+			}
+		}
+	}
+	log.Debug("Parse remote hp type from config.","peertype",srv.hptype,"localType",srv.localType.ToString())
 
 	return  nil
 }

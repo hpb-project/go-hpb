@@ -131,6 +131,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
+
     // get hpb node snap
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, nil)
 	if err != nil {
@@ -142,8 +143,14 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if cerr != nil {
 		return err
 	}
-	
-	
+
+	if number <= consensus.HpbNodeCheckpointInterval {
+		SetNetNodeType(snap)
+		p2p.PeerMgrInst().SetHpRemoteFlag(true)
+	}else {
+		p2p.PeerMgrInst().SetHpRemoteFlag(false)
+	}
+
 	c.lock.RLock()
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
@@ -234,15 +241,15 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RUnlock()
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil)
-	
+
+
 	// 已经投票结束
-	if (number-1)% consensus.HpbNodeCheckpointInterval == 0 {
-		//if header.Difficulty.Cmp(diffNoTurn) != 0 {
-			SetNetNodeType(snap)
-			log.Info("SetNetNodeType ***********************")
-		//}
+	if ((number-1)% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+		// 轮转
+		SetNetNodeType(snap)
+		log.Info("SetNetNodeType ***********************")
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -320,9 +327,18 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 // 设置网络节点类型
 func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
-	peers := p2p.PeerMgrInst().PeersAll()
 	addresses := snapa.GetHpbNodes()
-	
+
+	newlocaltyp := discover.PreNode
+	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag{
+		newlocaltyp = discover.HpNode
+	}
+	if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
+		p2p.PeerMgrInst().SetLocalType(newlocaltyp)
+	}
+
+
+	peers := p2p.PeerMgrInst().PeersAll()
 	for _, peer := range peers {
 		switch peer.LocalType() {
 			case discover.PreNode:
