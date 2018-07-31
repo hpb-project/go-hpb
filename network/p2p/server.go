@@ -32,6 +32,8 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -108,7 +110,11 @@ type Server struct {
 
 	dialer        NodeDialer
 
-	delHist          *dialHistory
+	delHist       *dialHistory
+
+	//only for test
+	hpflag       bool // block num > 100  this should be false
+	hptype       [] RemotePeerType
 
 }
 
@@ -352,6 +358,9 @@ func (srv *Server) Start() (err error) {
 	go srv.run(dialer)
 	srv.running = true
 
+	//todo: only for test
+	srv.parseRemoteHpType()
+
 	return nil
 }
 
@@ -501,6 +510,19 @@ running:
 						p.remoteType = discover.BootNode
 					}
 				}
+				//////////////////////////////////////////////////////////
+				// todo only for test
+				log.Info("Set remote hp type.","pid",p.ID().TerminalString(),"hpflag",srv.hpflag, "peertype",srv.hptype)
+				if !srv.hpflag {
+					for _, hp := range srv.hptype {
+						if hp.PID == p.ID().TerminalString() {
+							p.remoteType = discover.HpNode
+							p.log.Warn("Set remote hp type.", "remoteType",p.remoteType)
+						}
+					}
+				}
+
+				//////////////////////////////////////////////////////////
 
 				log.Info("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
@@ -753,3 +775,26 @@ func (srv *Server) runPeer(p *PeerBase) {
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//for test code
+const  remotePeerTypeFileName  = "remotepeertype.json"
+type RemotePeerType struct {
+	PID    string     `json:"pid"`
+}
+func (srv *Server) parseRemoteHpType()  error{
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	filename := filepath.Join(dir, remotePeerTypeFileName)
+	log.Debug("Parse remote hp type from config.","filename",filename)
+
+
+	if err := common.LoadJSON(filename, &srv.hptype); err != nil {
+		log.Warn(fmt.Sprintf("Can't load file %s: %v", filename, err))
+		return nil
+	}
+
+	log.Debug("Parse remote hp type from config.","peertype",srv.hptype)
+
+	return  nil
+}
+///////////////////////////////////////////////////////////////////////////////

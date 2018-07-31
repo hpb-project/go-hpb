@@ -156,6 +156,7 @@ func (prm *PeerManager)Start() error {
 	//	go prm.randomTestBW()
 	//}
 
+
 	return nil
 }
 
@@ -243,14 +244,17 @@ func (prm *PeerManager) PeersAll() []*Peer {
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	prm.server.localType = nt
-
 	for _, p := range prm.peers {
 		p.localType = nt
 	}
-
-	log.Info("######Set local type","nodetype",nt.ToString())
+	log.Info("######Set peer local type","nodetype",nt.ToString())
 
 	return true
+}
+
+func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
+	prm.server.hpflag = flag
+	log.Info("######Set hp remote flag","hpflag",prm.server.hpflag)
 }
 
 
