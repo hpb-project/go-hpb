@@ -413,8 +413,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
+	state.AddBalance(header.Coinbase, hpbReward)
 	
 	// reward on hpb nodes
+	/*
 	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
@@ -423,6 +425,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}else{
 		return err
 	}
+	*/
 	
 	// reward on Cad nodes
 	/*
