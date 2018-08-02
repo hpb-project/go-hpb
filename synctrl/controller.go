@@ -74,7 +74,7 @@ type SynCtrl struct {
 
 	newBlockMux      *sub.TypeMux
 	txCh          chan bc.TxPreEvent
-	//txSub         sub.Subscription
+	txSub         sub.Subscription
 	minedBlockSub *sub.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
@@ -196,8 +196,10 @@ func (this *SynCtrl) Start() {
 				}
 			}
 		})*/
+
+	//TOD new event system
 	//event.Subscribe(txPreReceiver, event.TxPreTopic)
-	//this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)
+	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)
 
 	go this.txRoutingLoop()
 

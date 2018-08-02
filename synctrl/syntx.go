@@ -23,7 +23,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/rand"
-	"github.com/hpb-project/go-hpb/event"
 )
 
 type txsync struct {
@@ -120,25 +119,29 @@ func (this *SynCtrl) txsyncLoop() {
 
 func (this *SynCtrl) txRoutingLoop() {
 
-	txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
+	//TODO new event system
+	/*txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
 				this.routingTx(msg.Message.Hash(), msg.Message)
+
 				//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
+				break
 			}
 		})
-	event.Subscribe(txPreReceiver, event.TxPreTopic)
+	event.Subscribe(txPreReceiver, event.TxPreTopic)*/
 
 
 	for {
 		select {
 		case event := <-this.txCh:
+			//log.Error("-----------receive txpre event--------")
 			this.routingTx(event.Tx.Hash(), event.Tx)
 
 		// Err() channel will be closed when unsubscribing.
 		// todo by xjl
-		//case <-this.txSub.Err():
+		//case <-this.   txSub.Err():
 		//	return
 		}
 	}

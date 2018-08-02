@@ -67,6 +67,8 @@ type TxPool struct {
 	//TODO uddate the new event system
 	chainHeadSub sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
+	txFeed		 sub.Feed
+	scope        sub.SubscriptionScope
 
 	txPreTrigger *event.Trigger
 	//Txchevent *event.SyncEvent
@@ -607,10 +609,10 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	pool.beats[addr] = time.Now()
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
 	//TODO update the new event system
-	event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
-	/*pool.txch.Notify(txpoolEvent,&txchevent{
-		tx,
-	})*/
+	//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
+	//log.Error("-----------------send txpre event-------")
+	//TODO old event  system
+	go pool.txFeed.Send(bc.TxPreEvent{tx})
 }
 
 //If the pending limit is overflown, start equalizing allowances
@@ -836,6 +838,9 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
+func (pool *TxPool) SubscribeTxPreEvent(ch chan<-bc.TxPreEvent) sub.Subscription {
+	return pool.scope.Track(pool.txFeed.Subscribe(ch))
+}
 // SetGasPrice updates the minimum price required by the transaction pool for a
 // new transaction
 func (pool *TxPool) SetGasPrice(price *big.Int) {

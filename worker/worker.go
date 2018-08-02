@@ -35,7 +35,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/event"
 )
 
 const (
@@ -44,7 +43,7 @@ const (
 
 	// txChanSize is the size of channel listening to TxPreEvent.
 	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
+	txChanSize = 100000
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
@@ -94,7 +93,9 @@ type worker struct {
 
 	// update loop
 	mux          *sub.TypeMux
+	pool         *txpool.TxPool
 	txCh         chan bc.TxPreEvent
+	txSub		 sub.Subscription
 	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
@@ -143,7 +144,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
-
+	//TODO new event system
 	/*txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
@@ -155,10 +156,9 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		})*/
 
 
-	//event.Subscribe(txPreReceiver, event.TxPreTopic)
-	//worker.txSub = txpool.GetTxPool().SubscribeTxPreEvent(worker.txCh)
-	// Subscribe events for blockchain
-	//log.Error("****fedd chainhedevent")
+	worker.pool = txpool.GetTxPool()
+	worker.txCh = make(chan bc.TxPreEvent, txChanSize)
+	worker.txSub = worker.pool.SubscribeTxPreEvent(worker.txCh)
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	//对以上事件的监听
@@ -255,11 +255,12 @@ func (self *worker) unregister(producer Producer) {
 
 func (self *worker) eventListener() {
 	
-	//defer self.txSub.Unsubscribe()
+	defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
-	txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
+	//TODO new event system
+	/*txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
 		func(payload interface{}) {
 			switch msg := payload.(type) {
 			case event.TxPreEvent:
@@ -281,8 +282,7 @@ func (self *worker) eventListener() {
 
 
 			}
-		})
-	event.Subscribe(txPreReceiver, event.TxPreTopic)
+		})*/
 
 	for {
 		// A real event arrived, process interesting content
