@@ -257,7 +257,6 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 		if cands, ok := indexTally[keys[i]]; ok {
 			hpbNodeNum = hpbNodeNum + 1 
 			snap.Signers[cands.CandAddress] = struct{}{}
-			
 			//选举出2个
 			if(hpbNodeNum == 3){
 				break

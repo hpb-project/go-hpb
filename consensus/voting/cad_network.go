@@ -24,32 +24,55 @@ import (
     "fmt"
     "reflect"
     "errors"
+    "math/big"
     
 	//"github.com/hpb-project/go-hpb/common"
 	//"github.com/hpb-project/go-hpb/consensus"
    // "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
-	//"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+    "github.com/hpb-project/go-hpb/common"
+	
 )
 
 
 // 从网络中获取最优化的
-func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadNodeSnap) (*snapshots.CadWinner, error) {
+func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
 		//type CadWinners []*snapshots.CadWinner
+		
+		
+		bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+	    address := common.BigToAddress(bigaddr)
+		
 		bestCadWinners := []*snapshots.CadWinner{} 
-		
-		hpbAddresses := snap.GetHpbNodes()
-		cadWinners := csnap.CadWinners
-		
-		
-		for _, cadWinner := range cadWinners {
-			//if ok, _ := Contain(cadWinner.Address, hpbAddresses); !ok {
-			//保持全连接选举
-				bestCadWinners = append(bestCadWinners,&snapshots.CadWinner{cadWinner.NetworkId,cadWinner.Address,cadWinner.VoteIndex})
-			//}
+		peers := p2p.PeerMgrInst().PeersAll()
+		fmt.Println("######### peers length is:", len(peers))
+		if(len(peers) == 0){
+			return nil,nil
+		}
+		for _, peer := range peers {
+			
+			//fmt.Println("this is TxsRate:", peer.TxsRate())
+			//fmt.Println("this is Bandwidth:", peer.Bandwidth())
+			//networkBandwidth := float64(peer.Bandwidth()) * float64(0.3)
+			//transactionNum := float64(peer.TxsRate()) * float64(0.7)
+			//VoteIndex := networkBandwidth + transactionNum
+			
+			if(peer.LocalType() != discover.BootNode){
+				//因缺乏linux环境，先随机模拟
+				networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
+				transactionNum := float64(rand.Intn(1000)) * float64(0.7)
+				VoteIndex := networkBandwidth + transactionNum
+			    
+			    if(peer.Address() != address){
+				    bestCadWinners = append(bestCadWinners,&snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
+			    }
+			}
+			
 		}
 		
 		// 先获取长度，然后进行随机获取
@@ -58,7 +81,7 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		var lastCadWinners []*snapshots.CadWinner
 		
 		//fmt.Println("bestCadWinners - 1:", len(bestCadWinners)-1)
-		fmt.Println("hpbAddresses:", len(hpbAddresses))
+		//fmt.Println("hpbAddresses:", len(hpbAddresses))
 		
 		//for i := 0 ; i < lnlen; i++{
 		for i := 0 ; i < len(bestCadWinners); i++{
@@ -70,22 +93,19 @@ func GetBestCadNodeFromNetwork(snap *snapshots.HpbNodeSnap,csnap *snapshots.CadN
 		}
 		
 		//开始进行排序获取最大值
-		//bigaddr, _ := new(big.Int).SetString("d3b686a79f4da9a415c34ef95926719bb8dfcafd", 16)
-		//address := common.BigToAddress(bigaddr)
-		//lastCadWinnerToChain := &snapshots.CadWinner{"192.168.2.33",address,uint64(0)}
-		
-		var lastCadWinnerToChain *snapshots.CadWinner
+		winners := []*snapshots.CadWinner{}
+		lastCadWinnerToChain := &snapshots.CadWinner{}
 		voteIndexTemp := uint64(0)
 		
 		for _, lastCadWinner := range lastCadWinners {
 	        if(lastCadWinner.VoteIndex > voteIndexTemp){
 	        	  voteIndexTemp = lastCadWinner.VoteIndex
-	        	  lastCadWinnerToChain = lastCadWinner //返回最优的
+	        	  lastCadWinnerToChain = lastCadWinner 
 	        }
 	    }
-		//fmt.Println("len:", voteIndexTemp)
-		//fmt.Println("Best VoteIndex:", lastCadWinnerToChain.VoteIndex)
-		return lastCadWinnerToChain,nil
+		winners = append(winners,lastCadWinnerToChain) //返回最优的
+		winners = append(winners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
+		return winners,nil
 }
 
 func Contain(obj interface{}, target interface{}) (bool, error) {

@@ -48,7 +48,7 @@ func (api *API) GetCandidateNodeSnap(number *rpc.BlockNumber) (*snapshots.CadNod
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	return voting.GetCadNodeSnap(api.prometheus.db, api.chain, header.Number.Uint64(), header.ParentHash)
+	return voting.GetCadNodeSnap(api.prometheus.db,api.prometheus.recents, api.chain, header.Number.Uint64(), header.ParentHash)
 }
 
 func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
@@ -69,18 +69,11 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 
 
 // 获取候选节点信息
-func (api *API) GetCandidateNodes(number *rpc.BlockNumber) ([]snapshots.CadWinner, error) {
+func (api *API) GetCandidateNodes(number *rpc.BlockNumber) (snapshots.CadNodeSnap, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
-	if header == nil {
-		return nil, consensus.ErrUnknownBlock
-	}
-	cadNodeSnap, err := voting.GetCadNodeSnap(api.prometheus.db, api.chain, header.Number.Uint64(), header.ParentHash)
-	
-	if err != nil {
-		return nil, err
-	}
-	return cadNodeSnap.CadWinners, nil
+	cadNodeSnap, _ := voting.GetCadNodeSnap(api.prometheus.db, api.prometheus.recents,api.chain, header.Number.Uint64(), header.ParentHash)
+	return *cadNodeSnap, nil
 }
 
 

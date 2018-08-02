@@ -253,6 +253,8 @@ func initCadNodes(ctx *cli.Context) error {
 	}
     
 	MakeConfigNode(ctx)
+	
+	/*
 
 	for _, name := range []string{"chaindata"} {
 		chaindb, err := db.OpenDatabase(name, 0, 0)
@@ -279,6 +281,7 @@ func initCadNodes(ctx *cli.Context) error {
 		}
 		log.Info("Successfully wrote candidate nodes")
 	}
+	*/
 	
 	return nil
 	
