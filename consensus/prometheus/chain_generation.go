@@ -125,7 +125,7 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
 
 	//获取Coinbase
-	header.Coinbase = common.Address{}
+	//header.Coinbase = common.Address{}
 	//获取Nonce
 	header.Nonce = types.BlockNonce{}
 	//获得块号
@@ -213,6 +213,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
+	
+	log.Info("PrepareBlockHeader-------------+++++ signer's address","signer", header.CandAddress.Hex())
 	return nil
 }
 
@@ -236,7 +238,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("signer's address","signer", signer.Hex())
+	log.Info("GenBlockWithSig-------------+++++ signer's address","signer", signer.Hex())
 
 	c.lock.RUnlock()
 
@@ -312,6 +314,10 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, nil
 	case <-time.After(delay):
 	}
+	
+	// 地址赋值
+	header.Coinbase = signer
+	
 	// 签名交易，signFn为回掉函数
 	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
 	if err != nil {
@@ -340,7 +346,7 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
 
 	peers := p2p.PeerMgrInst().PeersAll()
 	for _, peer := range peers {
-		switch peer.LocalType() {
+		switch peer.RemoteType() {
 			case discover.PreNode:
 				if flag := FindHpbNode(peer.Address(), addresses); flag{
 					log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
@@ -385,6 +391,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	
+	log.Info("Finalize-------------+++++ signer's address","signer", header.CandAddress.Hex())
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -413,8 +420,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
+	state.AddBalance(header.Coinbase, hpbReward)
 	
 	// reward on hpb nodes
+	/*
 	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
@@ -423,6 +432,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}else{
 		return err
 	}
+	*/
 	
 	// reward on Cad nodes
 	/*

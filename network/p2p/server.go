@@ -34,6 +34,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"path/filepath"
 	"os"
+	"github.com/hpb-project/go-hpb/boe"
 )
 
 const (
@@ -116,6 +117,8 @@ type Server struct {
 	hpflag       bool // block num > 100  this should be false
 	hptype       [] RemotePeerType
 
+	hdtab        [] BindInfo
+
 }
 
 type peerOpFunc func(map[discover.NodeID]*PeerBase)
@@ -143,17 +146,23 @@ type conn struct {
 	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
 
 	id    discover.NodeID // valid after the encryption handshake
-	caps  []Cap           // valid after the protocol handshake
-	name  string          // valid after the protocol handshake
+	//caps  []Cap           // valid after the protocol handshake
+	//name  string          // valid after the protocol handshake
 
-	rport  int            // valid after the protocol handshake
-	raddr  common.Address // valid after the protocol handshake
+
+	our   protoHandshake  // valid after the protocol handshake
+	their protoHandshake  // valid after the protocol handshake
+
+	//rport  int            // valid after the protocol handshake
+	//raddr  common.Address // valid after the protocol handshake
+	//rrand  []byte         // valid after the protocol handshake
 }
 
 type transport interface {
 	// The two handshakes.
-	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error)
+	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, []byte, []byte, error)
 	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
+	doHardwareTable(our *hardwareTable) (*hardwareTable, error)
 	// The MsgReadWriter can only be used after the encryption
 	// handshake has completed. The code uses conn.id to track this
 	// by setting it to a non-nil value after the encryption handshake.
@@ -304,6 +313,7 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.running = true
 	log.Info("Starting P2P networking")
+	rand.Seed(time.Now().Unix())
 
 	// static fields
 	if srv.PrivateKey == nil {
@@ -337,13 +347,11 @@ func (srv *Server) Start() (err error) {
 	srv.ntab = ntab
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
+	srv.ourHandshake = &protoHandshake{Version: MsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
 	srv.ourHandshake.DefaultAddr = srv.DefaultAddr
-	log.Debug("start our handshake","Data",srv.ourHandshake)
-
 
 	if srv.ListenAddr == "" {
 		log.Error("P2P server start, listen address is nil")
@@ -395,7 +403,6 @@ type dialer interface {
 
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
-	rand.Seed(time.Now().Unix())
 	var (
 		peers        = make(map[discover.NodeID]*PeerBase)
 		taskdone     = make(chan task, maxActiveDialTasks)
@@ -502,6 +509,7 @@ running:
 					p.events = srv.peerEvent
 				}
 
+				p.beatStart  = time.Now()
 				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
@@ -512,12 +520,12 @@ running:
 				}
 				//////////////////////////////////////////////////////////
 				// todo only for test
-				log.Info("Set remote hp type.","pid",p.ID().TerminalString(), "hpflag",srv.hpflag, "peertype",srv.hptype)
 				if srv.hpflag {
+					log.Info("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
 					for _, hp := range srv.hptype {
 						if hp.PID == p.ID().TerminalString() {
 							p.remoteType = discover.HpNode
-							p.log.Warn("Set remote hp type.", "remoteType",p.remoteType)
+							p.log.Warn("Set remote type.", "remoteType",p.remoteType.ToString())
 						}
 					}
 				}
@@ -580,8 +588,8 @@ running:
 
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	// Drop connections with no matching protocols.
-	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
-		log.Error("Protocol Handshake Checks Error")
+	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.their.Caps) == 0 {
+		//log.Error("Protocol Handshake Checks Error")
 		return DiscUselessPeer
 	}
 	// Repeat the encryption handshake checks because the
@@ -675,9 +683,11 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(errServerStopped)
 		return
 	}
+
 	// Run the encryption handshake.
 	var err error
-	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
+	var ourRand, theirRand []byte
+	if c.id, ourRand, theirRand, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
 		log.Error("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
 		return
@@ -695,26 +705,68 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	log.Info("Do enc handshake OK.","id",c.id)
+
+	/////////////////////////////////////////////////////////////////////////////////
 	// Run the protocol handshake
-	phs, err := c.doProtoHandshake(srv.ourHandshake)
+	c.our = *srv.ourHandshake
+	c.our.RandNonce = ourRand
+
+	if c.our.Sign, err = boe.BoeGetInstance().HWSign(theirRand); err!=nil{
+		log.Error("Do hardware sign  error.","err",err)
+		c.our.Sign = &boe.SignResult{R:make([]byte,32),S:make([]byte,32),V:0xFF}
+		//todo close and return
+	}
+	log.Info("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
+
+
+
+	their, err := c.doProtoHandshake(&c.our)
 	if err != nil {
-		clog.Debug("Failed proto handshake", "err", err)
+		clog.Info("Failed proto handshake", "err", err)
 		c.close(err)
 		return
 	}
-	if phs.ID != c.id {
-		clog.Error("Wrong devp2p handshake identity", "err", phs.ID)
+	if their.ID != c.id {
+		clog.Error("Wrong devp2p handshake identity", "err", their.ID)
 		c.close(DiscUnexpectedIdentity)
 		return
 	}
-	c.caps, c.name ,c.rport, c.raddr  = phs.Caps, phs.Name, int(phs.End.TCP),phs.DefaultAddr
-	log.Debug("Do protocol handshake.","caps",c.caps,"name",c.name,"rport",c.rport,"raddr",c.raddr)
+	c.their = *their
 	log.Info("Do protocol handshake OK.","id",c.id)
+	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
+
+	/////////////////////////////////////////////////////////////////////////////////
+	//their.DefaultAddr--> mhid,mcid
+	//mhid := make([]byte,32)
+	//hash, err := boe.BoeGetInstance().Hash(append(ourRand,mhid...))
+	//rcid, err := boe.BoeGetInstance().ValidateSign(hash, c.their.Sign.R, c.their.Sign.S, c.their.Sign.V)
+	//log.Debug("Validate by hardware","hash",hash,"rcid",rcid)
+
+	//if mcid != rcid {
+	//	clog.Error("Hardware signed err", "err", rcid)
+	//	c.close(DiscHwSignError)
+	//	return
+	//}
+
+
+	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
+	log.Error("######Get remote hardware table","ourtable",ourHdtable)
+	theirHdtable, err := c.doHardwareTable(ourHdtable)
+	if err != nil {
+		clog.Info("Failed hardware table handshake", "err", err)
+		c.close(err)
+		return
+	}
+	log.Error("######Get remote hardware table","theirtable",theirHdtable)
+
+
+	/////////////////////////////////////////////////////////////////////////////////
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Warn("Rejected peer", "err", err, "dialDest",dialDest)
 		c.close(err)
 		return
 	}
+
 
 }
 

@@ -30,13 +30,16 @@ import (
 
 
 // message of control
+const MsgVersion  uint64 = 0x0001
 const (
-	baseMsgVersion  uint64 = 0x0001
 	handshakeMsg    uint64 = 0x0000
 	discMsg         uint64 = 0x0001
 	pingMsg         uint64 = 0x0002
 	pongMsg         uint64 = 0x0003
-	baseMsgMax      uint64 = 0x000F
+
+	hardwareMsg     uint64 = 0x0010
+
+	baseMsgMax      uint64 = 0x0FFF
 )
 
 // message of hpb protocol

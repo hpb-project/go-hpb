@@ -32,6 +32,7 @@ import (
 	"time"
 	"fmt"
 	"path/filepath"
+	"strconv"
 )
 
 var (
@@ -113,12 +114,6 @@ func (prm *PeerManager)Start() error {
 	prm.server.localType = discover.PreNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
-
-		//input cid&hib from json
-		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
-		log.Debug("bootnode load bindings","filename",filename)
-		parseBindInfo(filename)
-
 	}
 
 
@@ -155,6 +150,11 @@ func (prm *PeerManager)Start() error {
 	//	go prm.randomTestBW()
 	//}
 
+	if prm.server.localType == discover.BootNode{
+		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
+		log.Debug("bootnode load bindings","filename",filename)
+		prm.parseBindInfo(filename)
+	}
 
 	return nil
 }
@@ -250,19 +250,27 @@ func (prm *PeerManager) GetLocalType()  discover.NodeType {
 }
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
-	prm.server.localType = nt
-	for _, p := range prm.peers {
-		p.localType = nt
-	}
-	log.Info("######Set peer local type","nodetype",nt.ToString())
+	if prm.server.localType != nt{
+		log.Info("######Change server local type","from",prm.server.localType.ToString(),"to",nt.ToString())
+		prm.server.localType = nt
 
-	return true
+		for _, p := range prm.peers {
+			p.localType = nt
+		}
+		log.Info("######Set all peer local type","nodetype",nt.ToString())
+
+		return true
+	}
+
+	return false
 }
 
 
 func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
-	prm.server.hpflag = flag
-	log.Info("######Set hp remote flag","hpflag",prm.server.hpflag)
+	if prm.server.hpflag != flag {
+		log.Info("######Change hp remote flag","from",prm.server.hpflag,"to",flag)
+		prm.server.hpflag = flag
+	}
 }
 
 
@@ -354,6 +362,8 @@ type PeerInfo struct {
 		Local  string `json:"local"`  // Local endpoint of the TCP data connection
 		Remote string `json:"remote"` // Remote endpoint of the TCP data connection
 	} `json:"network"`
+	Start    string   `json:"start"` //
+	Beat     string   `json:"beat"` //
 	HPB interface{} `json:"hpb"` // Sub-protocol specific metadata fields
 }
 
@@ -375,10 +385,14 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Name:      p.Name(),
 			Remote:    p.remoteType.ToString(),
 			Cap:       p.Caps()[0].String(),
+			Start:     p.beatStart.String(),
+			Beat:      strconv.FormatUint(p.count,10),
 			HPB:       "",
+
 		}
 		info.Network.Local  = p.LocalAddr().String()
 		info.Network.Remote = p.RemoteAddr().String()
+
 		allinfos = append(allinfos, info)
 	}
 
@@ -390,11 +404,14 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Name:      p.Name(),
 			Remote:    p.remoteType.ToString(),
 			Cap:       p.Caps()[0].String(),
+			Start:     p.beatStart.String(),
+			Beat:      strconv.FormatUint(p.count,10),
 			HPB:       &HpbInfo{
 				Version:    p.version,
 				TD: td,
 				Head: hash.Hex(),
 			},
+
 		}
 		info.Network.Local  = p.LocalAddr().String()
 		info.Network.Remote = p.RemoteAddr().String()
@@ -472,20 +489,17 @@ const  bindInfoFileName  = "binding.json"
 type BindInfo struct {
 	CID    string     `json:"cid"`
 	HIB    string     `json:"hib"`
-	ADR    string     `json:"address"`
+	ADR    string     `json:"coinbase"`
 	AUT    string     `json:"-"`
 }
-func parseBindInfo(filename string) error{
+func (prm *PeerManager) parseBindInfo(filename string) error{
 
 	// Load the nodes from the config file.
-	var bindings [] BindInfo
-
-	if err := common.LoadJSON(filename, &bindings); err != nil {
+	if err := common.LoadJSON(filename, &prm.server.hdtab); err != nil {
 		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
 		return nil
 	}
-
-	log.Debug("parse binding","information",bindings)
+	log.Info("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
 
 	return nil
 }

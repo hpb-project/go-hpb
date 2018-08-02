@@ -37,9 +37,9 @@ type BoeHandle struct {
 }
 
 type SignResult struct {
-    r   []byte 
-    s   []byte 
-    v   byte 
+    R   []byte
+    S   []byte
+    V   byte
 }
 
 type TVersion struct {
@@ -253,12 +253,12 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
 
 func (boe *BoeHandle) HWSign(data []byte) (*SignResult, error) {
     var result = make([]byte, 65)
-    var sig = &SignResult{r: make([]byte, 32), s: make([]byte, 32)}
+    var sig = &SignResult{R: make([]byte, 32), S: make([]byte, 32)}
     var ret = C.boe_hw_sign((*C.char)(unsafe.Pointer(&data[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
     if ret == C.BOE_OK {
-        copy(sig.r, result[0:32])
-        copy(sig.s, result[32:64])
-        sig.v = result[64]
+        copy(sig.R, result[0:32])
+        copy(sig.S, result[32:64])
+        sig.V = result[64]
         return sig, nil
 
     } 
@@ -273,4 +273,9 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
 
     } 
     return nil, ErrGetNextHashFailed
+}
+
+func (boe *BoeHandle) Hash(data []byte) ([] byte, error) {
+    var hash = make([]byte, 32)
+    return hash, nil
 }

@@ -444,7 +444,7 @@ func (this *SynCtrl) removePeer(id string) {
 	}
 	log.Debug("Removing Hpb peer", "peer", id)
 
-	//log.Error("###### SYN DO REMOVER PEER DISABLE ######")
+	//log.Error("###### SYN DO REMOVER PEER DISABLE ######","peer", id)
 	//return
 
 
@@ -453,8 +453,8 @@ func (this *SynCtrl) removePeer(id string) {
 
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		log.Error("###### SYN DO REMOVER PEER ######")
-		peer.Disconnect(p2p.DiscUselessPeer)
+		log.Error("###### SYN DO REMOVER PEER ######","peer", id)
+		peer.Disconnect(p2p.DiscPeerBySyn)
 	}
 }
 
@@ -777,19 +777,21 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Retrieve and decode the propagated block
 	log.Warn("######<<<<<< Handle new hash block msg.","peerid",p.ID())
-	var request hashBlock
+	var request newBlockHashData
 	if err := msg.Decode(&request); err != nil {
+		log.Error("######<<<<<< ","msg",msg,"err",err)
 		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
 	}
-	txs := make([]*types.Transaction,0,len(request.txsHash))
+	log.Error("######<<<<<< OOOKKKK","msg",msg)
+	txs := make([]*types.Transaction,0,len(request.BlockH.TxsHash))
 	//TODO GetTxByHash
 	//for _, txhs := range request.txsHash {
 	//	//get tx data from txpool
 	//	tx := txpool.GetTxPool().GetTxByHash(txhs)
 	//	txs = append(txs,tx)
 	//}
-	newBlock := types.BuildBlock(request.header,txs,request.uncles,request.td)
-	log.Warn("######Build new block.","newHash",newBlock.Hash(),"orgHash",request.blockHash)
+	newBlock := types.BuildBlock(request.BlockH.Header,txs,request.BlockH.Uncles,request.BlockH.Td)
+	log.Warn("######Build new block.","newHash",newBlock.Hash(),"orgHash",request.BlockH.BlockHash)
 	//newBlock := types.NewBlock(request.header, txs, request.uncles, nil)
 
 	newBlock.ReceivedAt   = msg.ReceivedAt
@@ -806,7 +808,7 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// calculate the head hash and TD that the peer truly must have.
 	var (
 		trueHead = newBlock.ParentHash()
-		trueTD   = new(big.Int).Sub(request.td, newBlock.Difficulty())
+		trueTD   = new(big.Int).Sub(request.BlockH.Td, newBlock.Difficulty())
 	)
 	// Update the peers total difficulty if better than the previous
 	if _, td := p.Head(); trueTD.Cmp(td) > 0 {

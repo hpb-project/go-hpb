@@ -29,7 +29,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
-const HpbNodeCheckpointInterval   = 1000 // 社区投票间隔
+const HpbNodeCheckpointInterval   = 200 // 社区投票间隔
 
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor

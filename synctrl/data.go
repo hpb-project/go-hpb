@@ -94,11 +94,16 @@ type newBlockData struct {
 }
 
 type hashBlock struct {
-	header       *types.Header
-	uncles       []*types.Header
-	txsHash      []common.Hash
-	td           *big.Int
-	blockHash    common.Hash
+	Header       *types.Header
+	Uncles       []*types.Header
+	TxsHash      []common.Hash
+	Td           *big.Int
+	BlockHash    common.Hash
+}
+
+type newBlockHashData struct {
+	BlockH    *hashBlock
+	TD        *big.Int
 }
 
 // blockBody represents the data content of a single block.
@@ -121,7 +126,7 @@ func sendNewHashBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
 	for _, tx := range block.Transactions() {
 		txsHash = append(txsHash,tx.Hash())
 	}
-	hashBlock := &hashBlock{header:block.Header(),uncles:block.Uncles(),txsHash:txsHash,td:td,blockHash:block.Hash()}
+	hashBlock := &hashBlock{Header:block.Header(),Uncles:block.Uncles(),TxsHash:txsHash,Td:td,BlockHash:block.Hash()}
 
 	peer.KnownBlockAdd(block.Hash())
 	return p2p.SendData(peer,p2p.NewHashBlockMsg, []interface{}{hashBlock, td})
