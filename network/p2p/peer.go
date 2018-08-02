@@ -111,6 +111,9 @@ type PeerBase struct {
 	//typelock   sync.Mutex
 	remoteType discover.NodeType
 
+	beatStart  time.Time
+	count      uint64
+
 }
 
 type Peer struct {
@@ -371,6 +374,7 @@ func (p *PeerBase) handle(msg Msg) error {
 		p.log.Debug("PeerBase send heartbeat from remote.")
 		go sendItems(p.rw, pongMsg)
 	case msg.Code == pongMsg:
+		p.count = p.count+1
 		p.log.Debug("PeerBase receive heartbeat from remote.")
 		msg.Discard()
 	case msg.Code == discMsg:

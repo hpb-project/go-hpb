@@ -502,6 +502,7 @@ running:
 					p.events = srv.peerEvent
 				}
 
+				p.beatStart  = time.Now()
 				p.localType  = srv.localType
 				p.remoteType = discover.PreNode
 				for _, n := range srv.BootstrapNodes {
@@ -512,12 +513,12 @@ running:
 				}
 				//////////////////////////////////////////////////////////
 				// todo only for test
-				log.Info("Set remote hp type.","pid",p.ID().TerminalString(), "hpflag",srv.hpflag, "peertype",srv.hptype)
 				if srv.hpflag {
+					log.Info("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
 					for _, hp := range srv.hptype {
 						if hp.PID == p.ID().TerminalString() {
 							p.remoteType = discover.HpNode
-							p.log.Warn("Set remote hp type.", "remoteType",p.remoteType)
+							p.log.Warn("Set remote type.", "remoteType",p.remoteType.ToString())
 						}
 					}
 				}

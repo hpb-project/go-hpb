@@ -32,6 +32,7 @@ import (
 	"time"
 	"fmt"
 	"path/filepath"
+	"strconv"
 )
 
 var (
@@ -250,19 +251,27 @@ func (prm *PeerManager) GetLocalType()  discover.NodeType {
 }
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
-	prm.server.localType = nt
-	for _, p := range prm.peers {
-		p.localType = nt
-	}
-	log.Info("######Set peer local type","nodetype",nt.ToString())
+	if prm.server.localType != nt{
+		log.Info("######Change server local type","from",prm.server.localType.ToString(),"to",nt.ToString())
+		prm.server.localType = nt
 
-	return true
+		for _, p := range prm.peers {
+			p.localType = nt
+		}
+		log.Info("######Set all peer local type","nodetype",nt.ToString())
+
+		return true
+	}
+
+	return false
 }
 
 
 func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
-	prm.server.hpflag = flag
-	log.Info("######Set hp remote flag","hpflag",prm.server.hpflag)
+	if prm.server.hpflag != flag {
+		log.Info("######Change hp remote flag","from",prm.server.hpflag,"to",flag)
+		prm.server.hpflag = flag
+	}
 }
 
 
@@ -354,6 +363,8 @@ type PeerInfo struct {
 		Local  string `json:"local"`  // Local endpoint of the TCP data connection
 		Remote string `json:"remote"` // Remote endpoint of the TCP data connection
 	} `json:"network"`
+	Start    string   `json:"start"` //
+	Beat     string   `json:"beat"` //
 	HPB interface{} `json:"hpb"` // Sub-protocol specific metadata fields
 }
 
@@ -375,10 +386,14 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Name:      p.Name(),
 			Remote:    p.remoteType.ToString(),
 			Cap:       p.Caps()[0].String(),
+			Start:     p.beatStart.String(),
+			Beat:      strconv.FormatUint(p.count,10),
 			HPB:       "",
+
 		}
 		info.Network.Local  = p.LocalAddr().String()
 		info.Network.Remote = p.RemoteAddr().String()
+
 		allinfos = append(allinfos, info)
 	}
 
@@ -390,11 +405,14 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Name:      p.Name(),
 			Remote:    p.remoteType.ToString(),
 			Cap:       p.Caps()[0].String(),
+			Start:     p.beatStart.String(),
+			Beat:      strconv.FormatUint(p.count,10),
 			HPB:       &HpbInfo{
 				Version:    p.version,
 				TD: td,
 				Head: hash.Hex(),
 			},
+
 		}
 		info.Network.Local  = p.LocalAddr().String()
 		info.Network.Remote = p.RemoteAddr().String()
