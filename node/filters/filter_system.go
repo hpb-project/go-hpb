@@ -30,6 +30,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 )
 
@@ -399,8 +400,8 @@ func (es *EventSystem) eventLoop() {
 		index = make(filterIndex)
 		subs   = es.mux.Subscribe(bc.PendingLogsEvent{})
 		// Subscribe TxPreEvent form txpool
-	//	txCh  = make(chan bc.TxPreEvent, txChanSize) //TODO fix
-	//	txSub = es.backend.SubscribeTxPreEvent(txCh) //TODO fix
+		//txCh  = make(chan bc.TxPreEvent, txChanSize) //TODO fix
+		//txSub = es.backend.SubscribeTxPreEvent(txCh) //TODO fix
 		// Subscribe RemovedLogsEvent
 		rmLogsCh  = make(chan bc.RemovedLogsEvent, rmLogsChanSize)
 		rmLogsSub = es.backend.SubscribeRemovedLogsEvent(rmLogsCh)
@@ -411,6 +412,16 @@ func (es *EventSystem) eventLoop() {
 		chainEvCh  = make(chan bc.ChainEvent, chainEvChanSize)
 		chainEvSub = es.backend.SubscribeChainEvent(chainEvCh)
 	)
+
+	txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
+		func(payload interface{}) {
+			switch msg := payload.(type) {
+			case event.TxPreEvent:
+				es.broadcast(index, msg)
+
+			}
+		})
+	event.Subscribe(txPreReceiver, event.TxPreTopic)
 	// Unsubscribe all events
 	defer subs.Unsubscribe()
 	//defer txSub.Unsubscribe() //TODO fix

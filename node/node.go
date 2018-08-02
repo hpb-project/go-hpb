@@ -266,6 +266,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
+	hpbnode.startBloomHandlers()
 	retval := hpbnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
