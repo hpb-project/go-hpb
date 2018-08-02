@@ -272,7 +272,7 @@ type rpcProgress struct {
 // no sync currently running, it returns nil.
 func (ec *Client) SyncProgress(ctx context.Context) (*hpb_project.SyncProgress, error) {
 	var raw json.RawMessage
-	if err := ec.c.CallContext(ctx, &raw, "eth_syncing"); err != nil {
+	if err := ec.c.CallContext(ctx, &raw, "hpb_syncing"); err != nil {
 		return nil, err
 	}
 	// Handle the possible response types
