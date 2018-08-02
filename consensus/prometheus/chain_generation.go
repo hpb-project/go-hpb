@@ -340,7 +340,7 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
 
 	peers := p2p.PeerMgrInst().PeersAll()
 	for _, peer := range peers {
-		switch peer.LocalType() {
+		switch peer.RemoteType() {
 			case discover.PreNode:
 				if flag := FindHpbNode(peer.Address(), addresses); flag{
 					log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
