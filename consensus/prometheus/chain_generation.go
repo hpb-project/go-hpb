@@ -312,6 +312,10 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, nil
 	case <-time.After(delay):
 	}
+	
+	// 地址赋值
+	header.Coinbase = signer
+	
 	// 签名交易，signFn为回掉函数
 	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
 	if err != nil {
