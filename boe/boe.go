@@ -274,3 +274,8 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
     } 
     return nil, ErrGetNextHashFailed
 }
+
+func (boe *BoeHandle) Hash(data []byte) ([] byte, error) {
+    var hash = make([]byte, 32)
+    return hash, nil
+}
