@@ -111,6 +111,7 @@ func NewEventSystem(mux *sub.TypeMux, backend Backend, lightMode bool) *EventSys
 		uninstall: make(chan *subscription),
 	}
 
+
 	go m.eventLoop()
 
 	return m
@@ -400,18 +401,25 @@ func (es *EventSystem) eventLoop() {
 		index = make(filterIndex)
 		subs   = es.mux.Subscribe(bc.PendingLogsEvent{})
 		// Subscribe TxPreEvent form txpool
-		//txCh  = make(chan bc.TxPreEvent, txChanSize) //TODO fix
-		//txSub = es.backend.SubscribeTxPreEvent(txCh) //TODO fix
+
 		// Subscribe RemovedLogsEvent
-		rmLogsCh  = make(chan bc.RemovedLogsEvent, rmLogsChanSize)
-		rmLogsSub = es.backend.SubscribeRemovedLogsEvent(rmLogsCh)
-		// Subscribe []*types.Log
-		logsCh  = make(chan []*types.Log, logsChanSize)
-		logsSub = es.backend.SubscribeLogsEvent(logsCh)
-		// Subscribe ChainEvent
-		chainEvCh  = make(chan bc.ChainEvent, chainEvChanSize)
-		chainEvSub = es.backend.SubscribeChainEvent(chainEvCh)
+
+
 	)
+
+	txCh  := make(chan bc.TxPreEvent, txChanSize) //TODO fix
+	txSub := es.backend.SubscribeTxPreEvent(txCh) //TODO fix
+
+	rmLogsCh  := make(chan bc.RemovedLogsEvent, rmLogsChanSize)
+	rmLogsSub := es.backend.SubscribeRemovedLogsEvent(rmLogsCh)
+
+	// Subscribe []*types.Log
+	logsCh  := make(chan []*types.Log, logsChanSize)
+	logsSub := es.backend.SubscribeLogsEvent(logsCh)
+	// Subscribe ChainEvent
+	chainEvCh  := make(chan bc.ChainEvent, chainEvChanSize)
+	chainEvSub := es.backend.SubscribeChainEvent(chainEvCh)
+
 
 	txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
 		func(payload interface{}) {
@@ -441,8 +449,8 @@ func (es *EventSystem) eventLoop() {
 			es.broadcast(index, ev)
 
 		// Handle subscribed events
-		//case ev := <-txCh: //TODO fix
-		//	es.broadcast(index, ev) //TODO fix
+		case ev := <-txCh: //TODO fix
+			es.broadcast(index, ev) //TODO fix
 		case ev := <-rmLogsCh:
 			es.broadcast(index, ev)
 		case ev := <-logsCh:
@@ -470,8 +478,8 @@ func (es *EventSystem) eventLoop() {
 			close(f.err)
 
 		// System stopped
-		//case <-txSub.Err(): //TODO fix
-		//	return //TODO fix
+		case <-txSub.Err(): //TODO fix
+			return //TODO fix
 		case <-rmLogsSub.Err():
 			return
 		case <-logsSub.Err():

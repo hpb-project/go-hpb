@@ -191,15 +191,20 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
 
 	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
-	if err != nil {
-		return nil, err
+
+
+	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
+	hpbtxpool      := txpool.GetTxPool()
+
+	hpbnode.Hpbtxpool = hpbtxpool
+	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
+
+	gpoParams := conf.Node.GPO
+	if gpoParams.Default == nil{
+		gpoParams.Default = conf.Node.GasPrice
 	}
 
-
-	//hpbgenesis = bc.DefaultTestnetGenesisBlock()
-	/*hpbgenesis := bc.DevGenesisBlock()
-	chainConfig,  genesisHash, genesisErr := bc.SetupGenesisBlock(hpbdb, hpbgenesis)
-	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, config.BloomBitsBlocks)*/
+	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
 
 	stored := bc.GetCanonicalHash(hpbdb, 0)
 	if (stored != (common.Hash{})) {
@@ -227,9 +232,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}
 		hpbnode.Hpbbc = block
 
-		txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
-		hpbtxpool      := txpool.GetTxPool()
-		hpbnode.Hpbtxpool = hpbtxpool
+
 
 		//syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
 		syncctr := synctrl.InstanceSynCtrl()
@@ -242,6 +245,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
 
+
 		// Rewind the chain in case of an incompatible config upgrade.
 		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
 			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -250,16 +254,10 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}*/
 		hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
 		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+	}else{
+		return nil, errors.New(`The genesis block is not inited`)
 	}
 
-
-	//hpbnode.worker.SetExtra(makeExtraData(config.ExtraData))
-	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
-	gpoParams := conf.Node.GPO
-	if gpoParams.Default == nil {
-	gpoParams.Default = conf.Node.GasPrice
-	}
-	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
 
 	return hpbnode, nil
 }
@@ -267,6 +265,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
 	hpbnode.startBloomHandlers()
+	hpbnode.Hpbtxpool.Start()
 	retval := hpbnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")

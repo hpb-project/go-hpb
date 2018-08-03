@@ -108,6 +108,10 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
 		stopCh:      make(chan struct{}),
 	}
+	INSTANCE.Store(pool)
+	return pool
+}
+func (pool *TxPool) Start(){
 	pool.reset(nil, pool.chain.CurrentBlock().Header())
 
 	//3.Subscribe ChainHeadEvent //TODO update the new event system
@@ -132,8 +136,6 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 	//5.start main process loop
 	pool.wg.Add(1)
 	go pool.loop()
-	INSTANCE.Store(pool)
-	return pool
 }
 
 func GetTxPool() *TxPool {

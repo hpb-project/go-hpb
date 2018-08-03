@@ -168,9 +168,9 @@ func (b *HpbApiBackend) TxPoolContent() (map[common.Address]types.Transactions, 
 	return b.hpb.TxPool().Content()
 }
 
-//func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
-//	return b.hpb.TxPool().SubscribeTxPreEvent(ch)
-//}
+func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
+	return b.hpb.TxPool().SubscribeTxPreEvent(ch)
+}
 
 func (b *HpbApiBackend) Downloader() *synctrl.Syncer  {
 	return b.hpb.Hpbsyncctr.Syncer()
