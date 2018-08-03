@@ -43,7 +43,6 @@ const (
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
 
 	forceSyncCycle      = 10 * time.Second
-	minDesiredPeerCount = 5 // Amount of peers desired to start syncing
 	txChanSize          = 100000
 	// This is the target size for the packs of transactions sent by txsyncLoop.
 	// A pack can get larger than this if a single transactions exceeds this size.
@@ -213,8 +212,10 @@ func (this *SynCtrl) Start() {
 }
 
 func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
+	// start new peer syn
+	this.newPeerCh <- peer
+
 	ps := &PeerSyn{peer}
-	//ps.Log().Debug("Register network peer in syncer.")
 	this.syncTransactions(peer)
 	return this.syner.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
 }
@@ -251,10 +252,6 @@ func (this *SynCtrl) sync() {
 	for {
 		select {
 		case <-this.newPeerCh:
-			// Make sure we have peers to select from, then sync
-			if p2p.PeerMgrInst().Len() < minDesiredPeerCount {
-				break
-			}
 			go this.synchronise(p2p.PeerMgrInst().BestPeer())
 
 		case <-forceSync.C:
