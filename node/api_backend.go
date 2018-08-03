@@ -101,7 +101,7 @@ func (b *HpbApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) (*t
 }
 
 func (b *HpbApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
-	return bc.GetBlockReceipts(b.hpb.chainDb, blockHash, bc.GetBlockNumber(b.hpb.chainDb, blockHash)), nil
+	return bc.GetBlockReceipts(b.hpb.HpbDb, blockHash, bc.GetBlockNumber(b.hpb.HpbDb, blockHash)), nil
 }
 
 func (b *HpbApiBackend) GetTd(blockHash common.Hash) *big.Int {

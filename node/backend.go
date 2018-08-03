@@ -113,7 +113,7 @@ func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
 func (s *Node) TxPool() *txpool.TxPool             { return s.Hpbtxpool }
 //func (s *Node) EventMux() *event.T       		   { return s.eventMux }
 func (s *Node) Engine() consensus.Engine           { return s.Hpbengine }
-func (s *Node) ChainDb() hpbdb.Database            { return s.chainDb }
+func (s *Node) ChainDb() hpbdb.Database            { return s.HpbDb }
 func (s *Node) IsListening() bool                  { return true } // Always listening
 func (s *Node) EthVersion() int                    { return int(s.Hpbpeermanager.Protocol()[0].Version)}
 func (s *Node) NetVersion() uint64                 { return s.networkId }

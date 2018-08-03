@@ -61,8 +61,8 @@ func (h *Node) startBloomHandlers() {
 
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := bc.GetCanonicalHash(h.chainDb, (section+1)*config.BloomBitsBlocks-1)
-						blob, err := bitutil.DecompressBytes(bc.GetBloomBits(h.chainDb, task.Bit, section, head), int(config.BloomBitsBlocks)/8)
+						head := bc.GetCanonicalHash(h.HpbDb, (section+1)*config.BloomBitsBlocks-1)
+						blob, err := bitutil.DecompressBytes(bc.GetBloomBits(h.HpbDb, task.Bit, section, head), int(config.BloomBitsBlocks)/8)
 						if err != nil {
 							panic(err)
 						}

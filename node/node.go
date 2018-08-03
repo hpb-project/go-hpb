@@ -71,7 +71,7 @@ type Node struct {
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//HpbDb
-	chainDb  	    hpbdb.Database
+	HpbDb  	    hpbdb.Database
 
 	networkId		uint64
 	netRPCService   *hpbapi.PublicNetAPI
@@ -150,7 +150,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		Hpbbc:			   nil, //block,
 		//boe
 
-		chainDb:		   nil, //db,
+		HpbDb:		   nil, //db,
 		networkId:		   conf.Node.NetworkId,
 
 		newBlockMux:       nil, //eventmux,
@@ -179,13 +179,14 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
 	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
-	hpbnode.chainDb = hpbdb
+	hpbnode.HpbDb = hpbdb
 
 
 	hpbnode.newBlockMux = new(sub.TypeMux)
 
-	block			:= bc.InstanceBlockChain()
-	peermanager.RegChanStatus(block.Status)
+	hpbnode.Hpbbc = bc.InstanceBlockChain()
+
+	peermanager.RegChanStatus(hpbnode.Hpbbc.Status)
 	//Hpbworker       *Worker
 	//Hpbboe			*boe.BoeHandle
 	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
@@ -193,7 +194,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
 
 
-	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
+	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
 	hpbtxpool      := txpool.GetTxPool()
 
 	hpbnode.Hpbtxpool = hpbtxpool
@@ -205,15 +206,23 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 
 	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
+	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
 
-	stored := bc.GetCanonicalHash(hpbdb, 0)
+
+
+
+
+	return hpbnode, nil
+}
+func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
+	stored := bc.GetCanonicalHash(hpbnode.HpbDb, 0)
 	if (stored != (common.Hash{})) {
 		if !conf.Node.SkipBcVersionCheck {
-			bcVersion := bc.GetBlockChainVersion(hpbdb)
+			bcVersion := bc.GetBlockChainVersion(hpbnode.HpbDb)
 			if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
-				return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
+				return fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, bc.BlockChainVersion)
 			}
-			bc.WriteBlockChainVersion(hpbdb, bc.BlockChainVersion)
+			bc.WriteBlockChainVersion(hpbnode.HpbDb, bc.BlockChainVersion)
 		}
 		// Rewind the chain in case of an incompatible config upgrade.
 		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
@@ -225,15 +234,11 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		engine      :=  prometheus.InstancePrometheus()
 		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
-		_, err := block.InitWithEngine(engine)
+		_, err := hpbnode.Hpbbc.InitWithEngine(engine)
 		if err != nil {
 			log.Error("add engine to blockchain error")
-			return nil, err
+			return err
 		}
-		hpbnode.Hpbbc = block
-
-
-
 		//syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
 		syncctr := synctrl.InstanceSynCtrl()
 		hpbnode.newBlockMux = syncctr.NewBlockMux()
@@ -244,6 +249,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		hpbnode.Hpbsyncctr = syncctr
 
 		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
+		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
 
 		// Rewind the chain in case of an incompatible config upgrade.
@@ -252,18 +258,22 @@ func New(conf  *config.HpbConfig) (*Node, error){
 			hpbnode.Hpbbc.SetHead(compat.RewindTo)
 			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
 		}*/
-		hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
-		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+
+
 	}else{
-		return nil, errors.New(`The genesis block is not inited`)
+		return errors.New(`The genesis block is not inited`)
 	}
-
-
-	return hpbnode, nil
+	return nil
 }
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
+
+	error := hpbnode.WorkerInit(conf)
+	if error != nil{
+		log.Error("Worker init failed",":", error)
+		return error
+	}
 	hpbnode.startBloomHandlers()
 	hpbnode.Hpbtxpool.Start()
 	retval := hpbnode.Hpbpeermanager.Start()
