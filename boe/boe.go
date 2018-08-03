@@ -93,7 +93,8 @@ func (boe *BoeHandle) Init()(error) {
     }
     log.Error("Init ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
     C.boe_err_free(ret)
-    return ErrInitFailed
+    return nil 
+    //return ErrInitFailed
 }
 
 func (boe *BoeHandle) Release() (error) {
