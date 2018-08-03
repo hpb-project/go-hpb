@@ -802,12 +802,6 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 }
 
-//set nodeconfig API
-func SetNodeAPI(cfg *config.Nodeconfig, node *node.Node) {
-	cfg.RpcAPIs = node.APIs()
-	cfg.RpcAPIs = append(cfg.RpcAPIs, node.Nodeapis()...)
-}
-
 func SetConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 	SetNodeConfig(ctx, cfg)

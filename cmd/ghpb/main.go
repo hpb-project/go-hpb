@@ -213,9 +213,6 @@ func createNode(conf  *config.HpbConfig) (* node.Node, error) {
 		utils.Fatalf("Failed to create node: %v", err)
 		return nil, err
 	}
-
-	//set node rpc api
-   utils.SetNodeAPI(&conf.Node, stack)
 	return stack, nil
 }
 // startNode boots up the system node and all registered protocols, after which

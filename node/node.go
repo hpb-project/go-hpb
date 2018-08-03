@@ -65,6 +65,7 @@ type Node struct {
 
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
+	Hpbrpcmanager   *rpc.RpcManager
 	Hpbsyncctr      *synctrl.SynCtrl
 	Hpbtxpool 		*txpool.TxPool
 	Hpbbc           *bc.BlockChain
@@ -103,6 +104,8 @@ type Node struct {
 
 	lock sync.RWMutex
 	ApiBackend *HpbApiBackend
+
+	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
 	stop chan struct{} // Channel to wait for termination notifications
 }
@@ -178,6 +181,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//create all object
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
+	hpbnode.Hpbrpcmanager = rpc.RpcMgrInst()
 	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
 	hpbnode.HpbDb = hpbdb
 
@@ -274,8 +278,10 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 		log.Error("Worker init failed",":", error)
 		return error
 	}
+	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
 	hpbnode.Hpbtxpool.Start()
+	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	retval := hpbnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
@@ -590,5 +596,11 @@ func (s *Node) StartMining(local bool) error {
 
 // get all rpc api from modules
 func (n *Node) GetAPI() error{
+	return nil
+}
+
+func (n *Node)SetNodeAPI() error {
+	n.RpcAPIs = n.APIs()
+	n.RpcAPIs = append(n.RpcAPIs, n.Nodeapis()...)
 	return nil
 }
