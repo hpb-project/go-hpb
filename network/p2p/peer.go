@@ -33,6 +33,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"errors"
+	"github.com/hpb-project/go-hpb/boe"
 )
 
 const (
@@ -72,10 +73,11 @@ type protoHandshake struct {
 	Name       string
 	Caps       []Cap
 	ID         discover.NodeID
-	End          *discover.EndPoint
+	End        *discover.EndPoint
 
 	DefaultAddr  common.Address
-	RandNonce    []byte  //Every peer is not the same,this is temp.
+	RandNonce    []byte
+	Sign         *boe.SignResult
 }
 
 // statusData is the network packet for the status message.
@@ -143,7 +145,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, 1), // protocols + pingLoop
 		closed:   make(chan struct{}),
-		log:      log.New("id", conn.id,"port",conn.rport),
+		log:      log.New("id", conn.id,"port",conn.their.End.TCP),
 		ntab:     ntb,
 	}
 	return p
@@ -156,13 +158,13 @@ func (p *PeerBase) ID() discover.NodeID {
 
 // Name returns the node name that the remote node advertised.
 func (p *PeerBase) Name() string {
-	return p.rw.name
+	return p.rw.their.Name
 }
 
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *PeerBase) Caps() []Cap {
 	// TODO: maybe return copy
-	return p.rw.caps
+	return p.rw.their.Caps
 }
 
 // RemoteAddr returns the remote address of the network connection.
@@ -174,11 +176,11 @@ func (p *PeerBase) RemoteIP() string {
 }
 
 func (p *PeerBase) RemoteListenPort() int {
-	return p.rw.rport
+	return int(p.rw.their.End.TCP)
 }
 
 func (p *PeerBase) RemoteIperfPort() int {
-	return p.rw.rport+100
+	return int(p.rw.their.End.TCP+100)
 }
 
 // LocalAddr returns the local address of the network connection.
@@ -198,19 +200,15 @@ func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
 	//p.typelock.Lock()
 	//defer p.typelock.Unlock()
 
-	p.log.Info("######Set remote type","nodetype",nt.ToString())
-	p.remoteType = nt
-	return true
+	if p.remoteType != nt {
+		p.remoteType = nt
+		p.log.Info("Set peer's remote type","nodetype",nt.ToString())
+		return true
+	}
+
+	return false
 }
 
-//func (p *PeerBase) SetLocalType(nt discover.NodeType) bool {
-//	//p.typelock.Lock()
-//	//defer p.typelock.Unlock()
-//
-//	p.log.Info("######Set local type","nodetype",nt.ToString())
-//	p.localType = nt
-//	return true
-//}
 // LocalType returns the local type of the node.
 func (p *PeerBase) LocalType() discover.NodeType {
 	//p.typelock.Lock()
@@ -220,7 +218,7 @@ func (p *PeerBase) LocalType() discover.NodeType {
 }
 
 func (p *PeerBase) Address() common.Address {
-	return p.rw.raddr
+	return p.rw.their.DefaultAddr
 }
 
 // Disconnect terminates the peer connection with the given reason.

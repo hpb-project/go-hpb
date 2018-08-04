@@ -126,8 +126,15 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 	// disconnects us early with a valid reason, we should return it
 	// as the error so it can be tracked elsewhere.
 	werr := make(chan error, 1)
-	go func() { werr <- send(t.rw, handshakeMsg, our) }()
+	go func() {
+		err := send(t.rw, handshakeMsg, our)
+		if err != nil{
+			log.Error("send handshake message","err",err)
+		}
+		werr <- err
+		}()
 	if their, err = readProtocolHandshake(t.rw, our); err != nil {
+		log.Error("read handshake message","err",err)
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
@@ -164,6 +171,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	}
 	var hs protoHandshake
 	if err := msg.Decode(&hs); err != nil {
+		log.Error("###### protocol handshake decode","error",err)
 		return nil, err
 	}
 	if (hs.ID == discover.NodeID{}) {
@@ -172,23 +180,31 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	return &hs, nil
 }
 
-func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, error) {
+func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, []byte,  []byte, error) {
 	var (
 		sec secrets
 		err error
+		ourRand   []byte
+		thereRand []byte
 	)
+	// todo use real random by hardware
+	ourRand    = make([]byte,RandNonceSize)
+	thereRand  = make([]byte,RandNonceSize)
+	rand.Read(ourRand)
+	//log.Error("###### do enc handshake ","ourRand",ourRand)
+
 	if dial == nil {
-		sec, err = receiverEncHandshake(t.fd, prv, nil)
+		sec, thereRand, err = receiverEncHandshake(t.fd, prv, nil,ourRand)
 	} else {
-		sec, err = initiatorEncHandshake(t.fd, prv, dial.ID, nil)
+		sec, thereRand, err = initiatorEncHandshake(t.fd, prv, dial.ID, nil,ourRand)
 	}
 	if err != nil {
-		return discover.NodeID{}, err
+		return discover.NodeID{}, nil, nil, err
 	}
 	t.wmu.Lock()
 	t.rw = newRLPXFrameRW(t.fd, sec)
 	t.wmu.Unlock()
-	return sec.RemoteID, nil
+	return sec.RemoteID, ourRand, thereRand, nil
 }
 
 // encHandshake contains the state of the encryption handshake.
@@ -220,8 +236,9 @@ type authMsgV4 struct {
 	Nonce           [shaLen]byte
 	Version         uint
 
+	Rand            []byte
 	// Ignore additional fields (forward-compatibility)
-	Rest []rlp.RawValue `rlp:"tail"`
+	Rest            []rlp.RawValue `rlp:"tail"`
 }
 
 // RLPx v4 handshake response (defined in EIP-8).
@@ -230,6 +247,7 @@ type authRespV4 struct {
 	Nonce        [shaLen]byte
 	Version      uint
 
+	Rand         []byte
 	// Ignore additional fields (forward-compatibility)
 	Rest []rlp.RawValue `rlp:"tail"`
 }
@@ -277,30 +295,35 @@ func (h *encHandshake) staticSharedSecret(prv *ecdsa.PrivateKey) ([]byte, error)
 // it should be called on the dialing side of the connection.
 //
 // prv is the local client's private key.
-func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID discover.NodeID, token []byte) (s secrets, err error) {
+func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID discover.NodeID, token []byte, ourRand []byte) (s secrets, t []byte, err error) {
 	h := &encHandshake{initiator: true, remoteID: remoteID}
 	authMsg, err := h.makeAuthMsg(prv, token)
+	authMsg.Rand = append(authMsg.Rand, ourRand...)
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
 	authPacket, err := sealEIP8(authMsg, h)
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
 	if _, err = conn.Write(authPacket); err != nil {
 		log.Debug("initiator io write","err",err)
-		return s, err
+		return s, t, err
 	}
 
 	authRespMsg := new(authRespV4)
 	authRespPacket, err := readHandshakeMsg(authRespMsg, encAuthRespLen, prv, conn)
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
 	if err := h.handleAuthResp(authRespMsg); err != nil {
-		return s, err
+		return s, t, err
 	}
-	return h.secrets(authPacket, authRespPacket)
+	s, err = h.secrets(authPacket, authRespPacket)
+	//copy(t[:], authRespMsg.Rand)
+	t = append(t, authRespMsg.Rand...)
+	log.Debug("Initiator Enc Handshake","outRand",authMsg.Rand,"thereRand",authRespMsg.Rand,"err",err)
+	return s, t, err
 }
 
 // makeAuthMsg creates the initiator handshake message.
@@ -351,20 +374,24 @@ func (h *encHandshake) handleAuthResp(msg *authRespV4) (err error) {
 //
 // prv is the local client's private key.
 // token is the token from a previous session with this node.
-func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byte) (s secrets, err error) {
+func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byte, ourRand []byte) (s secrets, t []byte,err error) {
 	authMsg := new(authMsgV4)
 	authPacket, err := readHandshakeMsg(authMsg, encAuthMsgLen, prv, conn)
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
+	t = append(t, authMsg.Rand...)
+	//log.Error("###### receive handshake message","msg",authMsg)
 	h := new(encHandshake)
 	if err := h.handleAuthMsg(authMsg, prv); err != nil {
-		return s, err
+		return s, t, err
 	}
 
 	authRespMsg, err := h.makeAuthResp()
+	authRespMsg.Rand = append(authRespMsg.Rand, ourRand...)
+
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
 	var authRespPacket []byte
 	if authMsg.gotPlain {
@@ -373,12 +400,14 @@ func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byt
 		authRespPacket, err = sealEIP8(authRespMsg, h)
 	}
 	if err != nil {
-		return s, err
+		return s, t, err
 	}
 	if _, err = conn.Write(authRespPacket); err != nil {
-		return s, err
+		return s, t, err
 	}
-	return h.secrets(authPacket, authRespPacket)
+	s , err = h.secrets(authPacket, authRespPacket)
+	log.Debug("Receiver Enc Handshake","outRand",authRespMsg.Rand,"thereRand",authMsg.Rand,"err",err)
+	return s, t, err
 }
 
 func (h *encHandshake) handleAuthMsg(msg *authMsgV4, prv *ecdsa.PrivateKey) error {

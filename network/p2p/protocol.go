@@ -126,6 +126,8 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	///////////////////////////////////////////
 	///////////////////////////////////////////
+
+
 	our := &exchangeData{
 		Version: 0xFFAA,
 	}
@@ -136,6 +138,8 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return err
 	}
 	p.log.Info("Do hpb exchange data OK.","there",there)
+
+
 
 	//TODO bonding hardware info
 	//p.log.Info("Do do bond hardware OK.")

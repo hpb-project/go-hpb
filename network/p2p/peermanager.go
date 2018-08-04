@@ -114,12 +114,6 @@ func (prm *PeerManager)Start() error {
 	prm.server.localType = discover.PreNode
 	if config.Network.RoleType == "bootnode" {
 		prm.server.localType = discover.BootNode
-
-		//input cid&hib from json
-		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
-		log.Debug("bootnode load bindings","filename",filename)
-		parseBindInfo(filename)
-
 	}
 
 
@@ -156,6 +150,11 @@ func (prm *PeerManager)Start() error {
 	//	go prm.randomTestBW()
 	//}
 
+	if prm.server.localType == discover.BootNode{
+		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
+		log.Debug("bootnode load bindings","filename",filename)
+		prm.parseBindInfo(filename)
+	}
 
 	return nil
 }
@@ -490,20 +489,17 @@ const  bindInfoFileName  = "binding.json"
 type BindInfo struct {
 	CID    string     `json:"cid"`
 	HIB    string     `json:"hib"`
-	ADR    string     `json:"address"`
+	ADR    string     `json:"coinbase"`
 	AUT    string     `json:"-"`
 }
-func parseBindInfo(filename string) error{
+func (prm *PeerManager) parseBindInfo(filename string) error{
 
 	// Load the nodes from the config file.
-	var bindings [] BindInfo
-
-	if err := common.LoadJSON(filename, &bindings); err != nil {
+	if err := common.LoadJSON(filename, &prm.server.hdtab); err != nil {
 		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
 		return nil
 	}
-
-	log.Debug("parse binding","information",bindings)
+	log.Info("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
 
 	return nil
 }
