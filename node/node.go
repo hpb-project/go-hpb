@@ -107,7 +107,7 @@ type Node struct {
 	stop chan struct{} // Channel to wait for termination notifications
 }
 
-
+/*
 // CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
 func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
 	if &chainConfig.Prometheus == nil {
@@ -115,7 +115,7 @@ func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainCo
 	}
 	return prometheus.New(chainConfig.Prometheus, db)
 }
-
+*/
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){
 
@@ -240,7 +240,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		//}
 		hpbnode.Hpbsyncctr = syncctr
 
-		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine)
+		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
 
 		// Rewind the chain in case of an incompatible config upgrade.
 		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
