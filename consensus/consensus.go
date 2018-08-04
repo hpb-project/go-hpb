@@ -24,7 +24,7 @@ import (
 	//"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/config"
-	
+	 
 )
 
 // ChainReader defines a small collection of methods needed to access the local
