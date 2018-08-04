@@ -62,7 +62,7 @@ const (
 	DiscNetworkError
 	DiscProtocolError
 	DiscUselessPeer
-	DiscTooManyPeers
+	DiscPeerBySyn
 	DiscAlreadyConnected
 	DiscIncompatibleVersion
 	DiscInvalidIdentity
@@ -72,6 +72,7 @@ const (
 	DiscReadTimeout
 	DiscUnknownNode
 	DiscUnexpectedConnected
+	DiscHwSignError
 	DiscSubprotocolError = 0x10
 )
 
@@ -80,7 +81,7 @@ var discReasonToString = [...]string{
 	DiscNetworkError:        "network error",
 	DiscProtocolError:       "breach of protocol",
 	DiscUselessPeer:         "useless peer",
-	DiscTooManyPeers:        "too many peers",
+	DiscPeerBySyn:           "disconnect peer by syn",
 	DiscAlreadyConnected:    "already connected peer",
 	DiscIncompatibleVersion: "incompatible p2p protocol version",
 	DiscInvalidIdentity:     "invalid node identity",
@@ -90,6 +91,7 @@ var discReasonToString = [...]string{
 	DiscReadTimeout:         "read timeout",
 	DiscUnknownNode:         "unknown node type",
 	DiscUnexpectedConnected: "unexpected connected",
+	DiscHwSignError:         "hardware sign error",
 	DiscSubprotocolError:    "subprotocol error",
 }
 
