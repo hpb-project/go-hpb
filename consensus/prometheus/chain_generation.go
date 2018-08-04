@@ -125,7 +125,7 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
 
 	//获取Coinbase
-	header.Coinbase = common.Address{}
+	//header.Coinbase = common.Address{}
 	//获取Nonce
 	header.Nonce = types.BlockNonce{}
 	//获得块号
@@ -213,6 +213,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
+	
+	log.Info("PrepareBlockHeader-------------+++++ signer's address","signer", header.CandAddress.Hex())
 	return nil
 }
 
@@ -236,7 +238,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("signer's address","signer", signer.Hex())
+	log.Info("GenBlockWithSig-------------+++++ signer's address","signer", signer.Hex())
 
 	c.lock.RUnlock()
 
@@ -389,6 +391,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	
+	log.Info("Finalize-------------+++++ signer's address","signer", header.CandAddress.Hex())
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
