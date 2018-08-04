@@ -162,6 +162,7 @@ type transport interface {
 	// The two handshakes.
 	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, []byte, []byte, error)
 	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
+	doHardwareTable(our *hardwareTable) (*hardwareTable, error)
 	// The MsgReadWriter can only be used after the encryption
 	// handshake has completed. The code uses conn.id to track this
 	// by setting it to a non-nil value after the encryption handshake.
@@ -346,7 +347,7 @@ func (srv *Server) Start() (err error) {
 	srv.ntab = ntab
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseMsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
+	srv.ourHandshake = &protoHandshake{Version: MsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -682,8 +683,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(errServerStopped)
 		return
 	}
-	//outRand := make([]byte,RandNonceSize)
-	//rand.Read(outRand)
+
 	// Run the encryption handshake.
 	var err error
 	var ourRand, theirRand []byte
@@ -718,6 +718,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	log.Info("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
 
+
+
 	their, err := c.doProtoHandshake(&c.our)
 	if err != nil {
 		clog.Info("Failed proto handshake", "err", err)
@@ -745,6 +747,18 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	//	c.close(DiscHwSignError)
 	//	return
 	//}
+
+
+	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
+	log.Error("######Get remote hardware table","ourtable",ourHdtable)
+	theirHdtable, err := c.doHardwareTable(ourHdtable)
+	if err != nil {
+		clog.Info("Failed hardware table handshake", "err", err)
+		c.close(err)
+		return
+	}
+	log.Error("######Get remote hardware table","theirtable",theirHdtable)
+
 
 	/////////////////////////////////////////////////////////////////////////////////
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {

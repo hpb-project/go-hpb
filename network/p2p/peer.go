@@ -33,6 +33,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"errors"
+	//"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/boe"
 )
 
@@ -88,6 +89,11 @@ type statusData struct {
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
 }
+type hardwareTable struct {
+	Version uint32
+	Hdtab   [] BindInfo
+}
+
 
 
 // Peer represents a connected remote node.

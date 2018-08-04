@@ -782,3 +782,57 @@ func putInt24(v uint32, b []byte) {
 	b[1] = byte(v >> 8)
 	b[2] = byte(v)
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err error) {
+
+	werr := make(chan error, 1)
+	go func() {
+		err := send(t.rw, hardwareMsg, our)
+		if err != nil{
+			log.Error("send hardware table message","err",err)
+		}
+		werr <- err
+	}()
+	if their, err = readHardwareTable(t.rw, our); err != nil {
+		log.Error("read hardware table message","err",err)
+		<-werr // make sure the write terminates too
+		return nil, err
+	}
+	if err := <-werr; err != nil {
+		return nil, fmt.Errorf("do hardware table write error: %v", err)
+	}
+
+
+	return their, nil
+}
+
+func readHardwareTable(rw MsgReader, our *hardwareTable) (*hardwareTable, error) {
+	msg, err := rw.ReadMsg()
+	if err != nil {
+		return nil, err
+	}
+
+	if msg.Size > baseProtocolMaxMsgSize {
+		log.Error("Message too big when read protocol handshake.")
+		return nil, fmt.Errorf("message too big in read hardware table")
+	}
+
+	if msg.Code == discMsg {
+		var reason [1]DiscReason
+		rlp.Decode(msg.Payload, &reason)
+		log.Error("Hardware message to disconnect.")
+		return nil, reason[0]
+	}
+
+	if msg.Code != hardwareMsg {
+		return nil, fmt.Errorf("expected hardware message, got %x", msg.Code)
+	}
+	var hdtab hardwareTable
+	if err := msg.Decode(&hdtab); err != nil {
+		log.Error("Do hardware table decode","error",err)
+		return nil, err
+	}
+
+	return &hdtab, nil
+}
