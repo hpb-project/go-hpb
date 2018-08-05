@@ -174,8 +174,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return err
 	}
 	
-	log.Info("header.CandAddress-------------","CandAddress", header.CandAddress.Hex())
-	log.Info("header.ComdAddress-------------","ComdAddress", header.ComdAddress.Hex())
+	//log.Info("header.CandAddress-------------","CandAddress", header.CandAddress.Hex())
+	//log.Info("header.ComdAddress-------------","ComdAddress", header.ComdAddress.Hex())
 	
 	c.lock.RUnlock()
 	
@@ -408,8 +408,8 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 // 计算奖励
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) (error) {
 	// Select the correct block reward based on chain progression
-	hobBlockReward := big.NewInt(5e+18)
-	//canBlockReward := big.NewInt(5e+18)
+	hobBlockReward := big.NewInt(300000000)
+	canBlockReward := big.NewInt(100000000)
 
 	
 	// 将来的接口，调整奖励，调整奖励与配置有关系
@@ -420,7 +420,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	
 	// Accumulate the rewards for the miner and any included uncles
 	hpbReward := new(big.Int).Set(hobBlockReward)
-	//canReward := new(big.Int).Set(canBlockReward)
+	canReward := new(big.Int).Set(canBlockReward)
 	
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -429,28 +429,28 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	state.AddBalance(header.Coinbase, hpbReward)
 	
 	// reward on hpb nodes
+	
 	/*
 	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil); err == nil{
 		// 奖励所有的高性能节点
 		for _, signer := range snap.GetHpbNodes() {
-			state.AddBalance(signer, hpbReward)
+			//state.AddBalance(signer, hpbReward)
 		}
 	}else{
 		return err
 	}
 	*/
-	
 	// reward on Cad nodes
-	/*
-	if csnap, err :=  voting.GetCadNodeSnap(c.db,chain, number-1, header.ParentHash);err == nil{
-		
-		for _, csigner := range csnap.CadWinners {
-			state.AddBalance(csigner.Address, canReward)
+	if csnap, err :=  voting.GetCadNodeSnap(c.db,c.recents,chain, number,header.ParentHash);err == nil{
+		if(csnap != nil){
+			for _,caddress := range csnap.CanAddresses {
+					state.AddBalance(caddress, canReward)
+			}
 		}
 	}else{
 		return err
 	}
-	*/
+	
 	/*
 	r := new(big.Int)
 	for _, uncle := range uncles {

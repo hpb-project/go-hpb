@@ -22,15 +22,14 @@ import (
 	//"sort"
 	//"fmt"
 	"encoding/json"
-	//"math/big"
+	"math/big"
 	
 	"github.com/hpb-project/go-hpb/common"
-	//"github.com/hpb-project/ghpb/core/types"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	//"github.com/hpb-project/ghpb/common/constant"
 	//"github.com/hashicorp/golang-lru"
-	//"github.com/hpb-project/ghpb/common/log"
-	//"github.com/hpb-project/ghpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus"
     "github.com/hpb-project/go-hpb/common/log"
 	//"strconv"
 	//"errors"
@@ -42,7 +41,7 @@ import (
 type CadNodeSnap struct {
 	Number  uint64                      `json:"number"`  // 生成快照的时间点
 	Hash    common.Hash                 `json:"hash"`    // 生成快照的Block hash
-	CadWinners  []CadWinner `json:"winners"`   // 当前的授权用户
+	CanAddresses  []common.Address `json:"cadaddresses"`   // 当前的授权用户
 }
 
 //定义结构体
@@ -53,13 +52,40 @@ type CadWinner struct {
 }
 
 // 创建对象
-func NewCadNodeSnap(number uint64, hash common.Hash, CadWinners []CadWinner) *CadNodeSnap {
+func NewCadNodeSnap(number uint64, hash common.Hash, addresses []common.Address) *CadNodeSnap {
 	cadNodeSnap := &CadNodeSnap{
 		Number:   number,
 		Hash:     hash,
-		CadWinners: CadWinners,
+		CanAddresses: addresses,
 	}
 	return cadNodeSnap
+}
+
+// Get snap in community by elections,
+func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, headers []*types.Header,chain consensus.ChainReader) (*CadNodeSnap, error) {
+		addresses := []common.Address{} 
+		
+		addressesmap := make(map[common.Address]string)
+		
+		for _, header := range headers {
+			addressesmap[header.ComdAddress] = "ok"
+			log.Info("new headers", "headers", header.Number)
+		}
+		
+		bigaddrtemp, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+	    addresstemp := common.BigToAddress(bigaddrtemp)
+	    
+		for k, _ := range addressesmap{
+			if(k != addresstemp){
+				addresses = append(addresses,k)
+			}
+		}
+		
+		log.Info("new candAddress", "number", number, "addresses", len(addresses))
+		cadNodeSnap := NewCadNodeSnap(number,hash,addresses)
+		
+		log.Trace("Stored genesis voting CadNodeSnap to disk")
+		return cadNodeSnap,nil
 }
 
 //加载快照，直接去数据库中读取
@@ -78,10 +104,10 @@ func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) 
 }
 
 // store inserts the snapshot into the database.
-func (s *CadNodeSnap) Store(db hpbdb.Database) error {
-	blob, err := json.Marshal(s)
+func (c *CadNodeSnap) StoreCadNodeSnap(db hpbdb.Database,hash common.Hash) error {
+	blob, err := json.Marshal(c)
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("codnodesnap-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("codnodesnap-"), hash[:]...), blob)
 }
