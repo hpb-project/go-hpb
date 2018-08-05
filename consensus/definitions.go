@@ -29,8 +29,8 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
-const HpbNodeCheckpointInterval   = 200 // 社区投票间隔
-
+const HpbNodeCheckpointInterval   = 200 // 高性能投票间隔
+const CadNodeCheckpointInterval   = 300 // 社区投票间隔
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor
 	// that is unknown.

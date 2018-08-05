@@ -139,10 +139,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	
 	// get andidate node snap
-	csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number, header.ParentHash)
-	if cerr != nil {
-		return err
-	}
+	//csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number, header.ParentHash)
+	//if cerr != nil {
+	//	return err
+	//}
 
 	if number <= consensus.HpbNodeCheckpointInterval {
 		SetNetNodeType(snap)
@@ -155,22 +155,28 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
 	
-	if (csnap==nil || len(csnap.CadWinners) < 2){
-	    header.CandAddress = address
-	}else{
-		// Get the best peer from the network
-		if cadWinner,err := voting.GetBestCadNodeFromNetwork(snap,csnap); err == nil {
-			if(cadWinner == nil){
-				 header.CandAddress = address
-			}else{
-				header.CandAddress = cadWinner.Address // 设置地址
-				header.VoteIndex = new(big.Int).SetUint64(cadWinner.VoteIndex)   // 设置最新的计算结果
-				copy(header.Nonce[:], consensus.NonceAuthVote)
-			}
+	// Get the best peer from the network
+	if cadWinner,err := voting.GetCadNodeFromNetwork(); err == nil {
+		
+		log.Info("len(cadWinner)-------------","len(cadWinner)", len(cadWinner))
+		
+		if(cadWinner == nil || len(cadWinner) !=2){
+			 header.CandAddress = address
+			 header.ComdAddress = address 
+			 header.VoteIndex = new(big.Int).SetUint64(0)   
 		}else{
-			return err
+			header.CandAddress = cadWinner[0].Address // 设置地址
+			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)  
+			copy(header.Nonce[:], consensus.NonceAuthVote)
+			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
+	}else{
+		return err
 	}
+	
+	log.Info("header.CandAddress-------------","CandAddress", header.CandAddress.Hex())
+	log.Info("header.ComdAddress-------------","ComdAddress", header.ComdAddress.Hex())
+	
 	c.lock.RUnlock()
 	
 
@@ -214,7 +220,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.Time = big.NewInt(time.Now().Unix())
 	}
 	
-	log.Info("PrepareBlockHeader-------------+++++ signer's address","signer", header.CandAddress.Hex())
+	
 	return nil
 }
 
