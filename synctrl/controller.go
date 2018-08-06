@@ -212,8 +212,10 @@ func (this *SynCtrl) Start() {
 }
 
 func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
+	// start new peer syn
+	this.newPeerCh <- peer
+
 	ps := &PeerSyn{peer}
-	//ps.Log().Debug("Register network peer in syncer.")
 	this.syncTransactions(peer)
 	return this.syner.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
 }
