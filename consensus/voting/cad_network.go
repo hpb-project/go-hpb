@@ -104,7 +104,12 @@ func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
 	        }
 	    }
 		winners = append(winners,lastCadWinnerToChain) //返回最优的
-		winners = append(winners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
+		
+		if(len(bestCadWinners) > 1){
+				winners = append(winners,bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
+		}else{
+				winners = append(winners,bestCadWinners[0]) //返回随机
+		}
 		return winners,nil
 }
 
