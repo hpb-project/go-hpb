@@ -16,4 +16,5 @@ var (
     ErrGetAccountFailed      = errors.New("get bind account failed")
     ErrSetAccountFailed      = errors.New("set bind account failed")
     ErrGetNextHashFailed     = errors.New("get next hash failed")
+    ErrGetSNFailed           = errors.New("get sn failed")
 )

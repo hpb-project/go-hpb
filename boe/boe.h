@@ -28,7 +28,6 @@ typedef struct BoeErr{
 
 BoeErr *BOE_OK;
 typedef int (*BoeUpgradeCallback)(int,char*);
-typedef int (*BoeRecoverPubCallback)(int,unsigned char*);
 typedef unsigned char TVersion;
 
 void boe_err_free(BoeErr *e);
@@ -36,21 +35,81 @@ void boe_err_free(BoeErr *e);
 BoeErr* boe_init(void);
 BoeErr* boe_release(void);
 BoeErr* boe_reg_update_callback(BoeUpgradeCallback func);
-BoeErr* boe_reg_resign_callback(BoeRecoverPubCallback func);
 BoeErr* boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu);
 BoeErr* boe_get_hw_version(TVersion *hw);
 BoeErr* boe_get_fw_version(TVersion *fw);
 BoeErr* boe_get_axu_version(TVersion *axu);
 BoeErr* boe_upgrade(unsigned char *image, int imagelen);
 BoeErr* boe_upgrade_abort(void);
-BoeErr* boe_reset(void);
-BoeErr* boe_set_boeid(unsigned int id);
+/*
+ * check board is connected.
+ */
+BoeErr* boe_hw_check(void);
+/*
+ * let board reboot.
+ */
+BoeErr* boe_reboot(void);
+/*
+ * bind serial number to board.
+ * in: 20 bytes serial number.
+ */
+BoeErr* boe_set_boesn(unsigned char *sn);
+/*
+ *
+ * bind account to board.
+ * in: 42 bytes account address.
+ */
 BoeErr* boe_set_bind_account(unsigned char *baccount);
-BoeErr* boe_get_random(unsigned int *val);
-BoeErr* boe_get_boeid(unsigned int *id);
-BoeErr* boe_get_bind_account(unsigned char *baccount);
-BoeErr* boe_hw_sign(char *p_data, unsigned char *sig);
+
+
+/*
+ * get random from board.
+ * out: r, 32 bytes random.
+ */
+BoeErr* boe_get_random(unsigned char *r);
+
+/*
+ * get sn from board.
+ * out: sn, 20 bytes sn.
+ */
+BoeErr* boe_get_boesn(unsigned char *sn);
+
+/*
+ * get account info from board.
+ * out: account, 42 bytes account address.
+ */
+BoeErr* boe_get_bind_account(unsigned char *account);
+
+/*
+ * do signature for hardware authentication.
+ * in: p_random, 32 bytes random
+ * out: sig,    64 bytes signature.
+ * return :
+ *  BOE_OK is sign successed.
+ *
+ */
+BoeErr* boe_hw_sign(unsigned char *p_random, unsigned char *sig);
+/*
+ * do signature verify.
+ * p_random:    32 bytes random.
+ * hid     :    string.
+ * pubkey  :    64 bytes pubkey.
+ * sig     :    64 bytes signature.
+ *
+ * return:
+ *  BOE_OK is verify passed.
+ *
+ */
+BoeErr* boe_p256_verify(unsigned char *p_random, unsigned char *hid, unsigned char *pubkey, unsigned char *sig);
+/*
+ * get a random for consensus.
+ * in: hash, 32 bytes hash.
+ * out: nexthash. 32 bytes hash.
+ */
 BoeErr* boe_get_s_random(unsigned char *hash, unsigned char *nexthash);
+/*
+ * recover pubkey. if boe board is working, use hardware to do it. else will use soft alghorim.
+ */
 BoeErr* boe_valid_sign(unsigned char *sig, unsigned char *pub);
 
 #endif  /*BOE_H*/

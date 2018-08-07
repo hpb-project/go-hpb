@@ -34,7 +34,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"errors"
 	//"github.com/hpb-project/go-hpb/boe"
-	"github.com/hpb-project/go-hpb/boe"
+	//"github.com/hpb-project/go-hpb/boe"
 )
 
 const (
@@ -78,7 +78,7 @@ type protoHandshake struct {
 
 	DefaultAddr  common.Address
 	RandNonce    []byte
-	Sign         *boe.SignResult
+	Sign         []byte
 }
 
 // statusData is the network packet for the status message.
