@@ -112,7 +112,7 @@ func (this *fullSync) registerPeer(id string, version uint, peer Peer) error {
 	logger := log.New("peer", id)
 	logger.Trace("Registering sync peer")
 	if err := this.syncer.peers.Register(newPeerConnection(id, version, peer, logger)); err != nil {
-		logger.Error("Failed to register sync peer", "err", err)
+		logger.Warn("Failed to register sync peer", "err", err)
 		return err
 	}
 	this.qosReduceConfidence()
