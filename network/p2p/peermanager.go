@@ -24,7 +24,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"net"
@@ -52,7 +51,6 @@ type PeerManager struct {
 	lock   sync.RWMutex
 	closed bool
 
-	rpcmgr *RpcMgr
 	server *Server
 	hpbpro *HpbProto
 
@@ -68,7 +66,6 @@ func PeerMgrInst() *PeerManager {
 			peers:  make(map[string]*Peer),
 			boots:  make(map[string]*Peer),
 			server: &Server{},
-			rpcmgr: &RpcMgr{},
 			hpbpro: NewProtos(),
 		}
 		INSTANCE.Store(pm)
@@ -130,27 +127,6 @@ func (prm *PeerManager)Start() error {
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////
-
-
-	// for-test
-	log.Debug("Para from config.","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
-
-	prm.rpcmgr    = &RpcMgr{
-		ipcEndpoint:  config.Network.IpcEndpoint,
-		httpEndpoint: config.Network.HttpEndpoint,
-		wsEndpoint:   config.Network.WsEndpoint,
-
-		httpCors:     config.Network.HTTPCors,
-		httpModules:  config.Network.HTTPModules,
-
-		wsOrigins:    config.Network.WSOrigins,
-		wsModules:    config.Network.WSModules,
-		wsExposeAll:  config.Network.WSExposeAll,
-	}
-	prm.rpcmgr.startRPC(config.Node.RpcAPIs)
-
-
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	prm.iport = add.Port+100
 	log.Info("Iperf server start", "port",prm.iport)
@@ -177,17 +153,11 @@ func (prm *PeerManager)Stop(){
 
 	prm.close()
 
-	prm.rpcmgr.stopRPC()
-
 	//iperf.KillSever()
 }
 
 func (prm *PeerManager)P2pSvr() *Server {
 	return prm.server
-}
-
-func (prm *PeerManager)IpcHandle() *rpc.Server {
-	return prm.rpcmgr.inprocHandler
 }
 
 // Register injects a new peer into the working set, or returns an error if the
