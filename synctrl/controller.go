@@ -361,8 +361,8 @@ func routingBlock(block *types.Block, propagate bool) {
 			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					//sendNewBlock(peer, block, td)
-					sendNewHashBlock(peer, block, td)
+					sendNewBlock(peer, block, td)
+					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -371,12 +371,12 @@ func routingBlock(block *types.Block, propagate bool) {
 			case discover.HpNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					//sendNewBlock(peer, block, td)
-					sendNewHashBlock(peer, block, td)
+					sendNewBlock(peer, block, td)
+					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.HpNode:
-					//sendNewBlock(peer, block, td)
-					sendNewHashBlock(peer, block, td)
+					sendNewBlock(peer, block, td)
+					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
