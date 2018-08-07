@@ -122,6 +122,16 @@ func (prm *PeerManager)Start() error {
 		log.Error("Hpb protocol","error",err)
 		return err
 	}
+	////////////////////////////////////////////////////////////////////////////////////////
+	self := prm.server.Self()
+	for _, n := range config.Network.BootstrapNodes {
+		if self.ID == n.ID && prm.server.localType!=discover.BootNode{
+			panic("Need BOOTNODE flag.")
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////
+
 
 	// for-test
 	log.Debug("Para from config.","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
