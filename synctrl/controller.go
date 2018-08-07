@@ -357,20 +357,12 @@ func routingBlock(block *types.Block, propagate bool) {
 			return
 		}
 		// Send the block to a subset of our peers
-		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
-		for _, peer := range transfer {
+		for _, peer := range peers {
 			switch peer.LocalType() {
 			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
-					//TODO test sendNewHashBlock
-					//sendNewHashBlock(peer, block, td)
-					break
-				case discover.HpNode://todo xjl :when local type can change, then delete
-					sendNewBlock(peer, block, td)
-					//TODO test sendNewHashBlock
-					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -380,13 +372,9 @@ func routingBlock(block *types.Block, propagate bool) {
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
-					//TODO test sendNewHashBlock
-					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.HpNode:
 					sendNewBlock(peer, block, td)
-					//TODO test sendNewHashBlock
-					//sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -396,7 +384,7 @@ func routingBlock(block *types.Block, propagate bool) {
 				break
 			}
 		}
-		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		log.Trace("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
@@ -406,9 +394,6 @@ func routingBlock(block *types.Block, propagate bool) {
 			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
-					break
-				case discover.HpNode://todo xjl :when local type can change, then delete
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
 				default:
@@ -442,10 +427,6 @@ func (this *SynCtrl) removePeer(id string) {
 		return
 	}
 	log.Debug("Removing Hpb peer", "peer", id)
-
-	//log.Error("###### SYN DO REMOVER PEER DISABLE ######","peer", id)
-	//return
-
 
 	// Unregister the peer from the downloader and Hpb peer set
 	this.syner.UnregisterPeer(id)
