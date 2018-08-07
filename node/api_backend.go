@@ -153,7 +153,7 @@ func (b *HpbApiBackend) GetPoolTransactions() (types.Transactions, error) {
 }
 
 func (b *HpbApiBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
-	return b.hpb.TxPool().Get(hash)
+	return b.hpb.TxPool().GetTxByHash(hash)
 }
 
 func (b *HpbApiBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {

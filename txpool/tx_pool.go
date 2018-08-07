@@ -40,6 +40,7 @@ var (
 	statsReportInterval = 5 * time.Second // Time interval to report transaction pool stats
 	chanHeadBuffer      = 10
 	maxTransactionSize  = common.StorageSize(32 * 1024)
+	tmpQEvictionInterval = 3 * time.Minute     // Time interval to check for evictable tmpQueue transactions
 )
 
 var INSTANCE = atomic.Value{}
@@ -86,6 +87,8 @@ type TxPool struct {
 	queue   map[common.Address]*txList         // Queued but non-processable transactions
 	beats   map[common.Address]time.Time       // Last heartbeat from each known account
 	all     map[common.Hash]*types.Transaction // All transactions to allow lookups
+	tmpqueue     map[common.Hash]*types.Transaction // delete transactions to tmpqueue
+	tmpbeats   map[common.Hash]time.Time       // Last heartbeat from each known tmpqueue account
 }
 const (
 	TxpoolEventtype     event.EventType = 0x01
@@ -107,6 +110,8 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
 		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
 		stopCh:      make(chan struct{}),
+		tmpbeats:    make(map[common.Hash]time.Time),
+		tmpqueue:     make(map[common.Hash]*types.Transaction),
 	}
 	INSTANCE.Store(pool)
 	return pool
@@ -170,6 +175,9 @@ func (pool *TxPool) loop() {
 	report := time.NewTicker(statsReportInterval)
 	defer report.Stop()
 
+	evictTmpQueue := time.NewTicker(tmpQEvictionInterval)
+	defer evictTmpQueue.Stop()
+
 	// Track the previous head headers for transaction reorgs
 	head := pool.chain.CurrentBlock()
 
@@ -205,6 +213,17 @@ func (pool *TxPool) loop() {
 					for _, tx := range pool.queue[addr].Flatten() {
 						pool.removeTx(tx.Hash())
 					}
+				}
+			}
+			pool.mu.Unlock()
+			//stop signal
+		case <-evictTmpQueue.C:   // time removed tmpTx
+			pool.mu.Lock()
+			// Any old enough should be removed
+			for txTmphash ,tmpBeatsV:= range pool.tmpbeats {
+				if time.Since(tmpBeatsV) > pool.config.Lifetime {
+					delete(pool.tmpqueue, txTmphash)
+					//log.Info("delete(pool.tmpqueue)","txTmphash",txTmphash,"tmpBeatsV",tmpBeatsV,"tmphash value time",time.Since(pool.tmpbeats[txTmphash]),"cmptime",pool.config.Lifetime)
 				}
 			}
 			pool.mu.Unlock()
@@ -450,6 +469,7 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 			delete(pool.all, old.Hash())
 		}
 		pool.all[tx.Hash()] = tx
+		pool.tmpqueue[tx.Hash()] = tx
 
 		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
@@ -607,6 +627,12 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	if pool.all[hash] == nil {
 		pool.all[hash] = tx
 	}
+	// pending transactions inserts tmpqueue
+	if pool.tmpqueue[hash] == nil {
+		pool.tmpqueue[hash] = tx
+	}
+	pool.tmpbeats[hash] = time.Now()
+
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats[addr] = time.Now()
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
@@ -795,11 +821,21 @@ func (pool *TxPool) Stats() (int, int) {
 
 // Get returns a transaction if it is contained in the pool
 // and nil otherwise.
-func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
+func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
+	tx, ok := pool.all[hash]
+	if !ok {
+		tmptx, okflag := pool.tmpqueue[hash]
+		if !okflag{
+			log.Trace("not Finding already known tmptx transaction", "hash", hash)
+			return nil
+		}
+		//log.Info("-----GetTxByHash","tmpqueue_hash",hash,"tmptx=",tmptx)
+		return tmptx
+	}
+	return tx
 
-	return pool.all[hash]
 }
 
 // Pending retrieves all currently processable transactions, groupped by origin
