@@ -17,7 +17,6 @@
 package synctrl
 
 import (
-	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
