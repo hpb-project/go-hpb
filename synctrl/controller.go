@@ -361,7 +361,8 @@ func routingBlock(block *types.Block, propagate bool) {
 			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					sendNewBlock(peer, block, td)
+					//sendNewBlock(peer, block, td)
+					sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -370,10 +371,12 @@ func routingBlock(block *types.Block, propagate bool) {
 			case discover.HpNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					sendNewBlock(peer, block, td)
+					//sendNewBlock(peer, block, td)
+					sendNewHashBlock(peer, block, td)
 					break
 				case discover.HpNode:
-					sendNewBlock(peer, block, td)
+					//sendNewBlock(peer, block, td)
+					sendNewHashBlock(peer, block, td)
 					break
 				default:
 					break
@@ -764,11 +767,11 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	log.Error("######<<<<<< OOOKKKK","msg",msg)
 	txs := make([]*types.Transaction,0,len(request.BlockH.TxsHash))
 	//TODO GetTxByHash
-	//for _, txhs := range request.txsHash {
-	//	//get tx data from txpool
-	//	tx := txpool.GetTxPool().GetTxByHash(txhs)
-	//	txs = append(txs,tx)
-	//}
+	for _, txhs := range request.BlockH.TxsHash {
+		//get tx data from txpool
+		tx := txpool.GetTxPool().GetTxByHash(txhs)
+		txs = append(txs,tx)
+	}
 	newBlock := types.BuildBlock(request.BlockH.Header,txs,request.BlockH.Uncles,request.BlockH.Td)
 	log.Warn("######Build new block.","newHash",newBlock.Hash(),"orgHash",request.BlockH.BlockHash)
 	//newBlock := types.NewBlock(request.header, txs, request.uncles, nil)
