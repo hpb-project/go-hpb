@@ -42,8 +42,8 @@ var (
 )
 
 const (
-	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //for testnet
-	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)  //for testnet
+	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
 )
 
 type PeerManager struct {

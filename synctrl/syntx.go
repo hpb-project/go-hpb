@@ -132,17 +132,10 @@ func (this *SynCtrl) txRoutingLoop() {
 		})
 	event.Subscribe(txPreReceiver, event.TxPreTopic)*/
 
-
 	for {
 		select {
 		case event := <-this.txCh:
-			//log.Error("-----------receive txpre event--------")
 			this.routingTx(event.Tx.Hash(), event.Tx)
-
-		// Err() channel will be closed when unsubscribing.
-		// todo by xjl
-		//case <-this.   txSub.Err():
-		//	return
 		}
 	}
 }
