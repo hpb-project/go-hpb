@@ -222,9 +222,9 @@ func (boe *BoeHandle) FWUpdateAbort() error{
 func (boe *BoeHandle) HWCheck() {
     var ret = C.boe_hw_check()
     if ret == C.BOE_OK {
-        log.Debug("boe board is ok.")
+        log.Info("boe board is ok.")
     }else {
-        log.Debug("boe board not find.")
+        log.Info("boe board not find.")
     }
 }
 
