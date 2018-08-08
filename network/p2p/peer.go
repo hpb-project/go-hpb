@@ -91,7 +91,7 @@ type statusData struct {
 }
 type hardwareTable struct {
 	Version uint32
-	Hdtab   [] BindInfo
+	Hdtab   [] HwPair
 }
 
 

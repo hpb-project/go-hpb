@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"encoding/hex"
 )
 
 var (
@@ -466,18 +467,38 @@ func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
 
 ////////////////////////////////////////////////////////////////////
 const  bindInfoFileName  = "binding.json"
-type BindInfo struct {
+type bindInfo struct {
 	CID    string     `json:"cid"`
-	HIB    string     `json:"hib"`
+	HID    string     `json:"hid"`
 	ADR    string     `json:"coinbase"`
-	AUT    string     `json:"-"`
 }
-func (prm *PeerManager) parseBindInfo(filename string) error{
 
+type HwPair struct {
+	Adr    string
+	Cid    []byte
+	Hid    []byte
+}
+
+
+func (prm *PeerManager) parseBindInfo(filename string) error{
 	// Load the nodes from the config file.
-	if err := common.LoadJSON(filename, &prm.server.hdtab); err != nil {
+	var binding []bindInfo
+	if err := common.LoadJSON(filename, &binding); err != nil {
 		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
+		panic("Hardware Info Parse Error. Can't load node file.")
 		return nil
+	}
+	log.Debug("Boot node parse binding hardware table.","binding",binding)
+	prm.server.hdtab = make([]HwPair,0,len(binding))
+	for _,b := range binding {
+		cid, cerr:= hex.DecodeString(b.CID)
+		hid, herr:= hex.DecodeString(b.HID)
+		if cerr != nil || herr != nil {
+			panic("Hardware Info Parse Error.")
+		}
+		//todo check cid hid adr
+
+		prm.server.hdtab = append(prm.server.hdtab,HwPair{Adr:b.ADR,Cid:cid,Hid:hid})
 	}
 	log.Info("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
 
