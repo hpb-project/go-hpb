@@ -21,7 +21,24 @@ import (
 )
 var (
     boe = BoeGetInstance()
+
 )
+
+func TestCheck(t *testing.T) {
+    err := boe.Init()
+    if err != nil {
+        log.Error("boe init failed")
+    }
+    boe.HWCheck()
+}
+
+func TestUpgrade(t *testing.T) {
+    err := boe.FWUpdate()
+    if err != nil {
+        log.Error("boe upgrade failed")
+    }
+    log.Debug("boe upgrade successful.")
+}
 
 func TestValidateSign(t *testing.T) {
     var (

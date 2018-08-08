@@ -117,7 +117,7 @@ type Server struct {
 	hpflag       bool // block num > 100  this should be false
 	hptype       [] RemotePeerType
 
-	hdtab        [] BindInfo
+	hdtab        [] HwPair
 
 }
 
