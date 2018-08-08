@@ -93,7 +93,8 @@ func (boe *BoeHandle) Init()(error) {
     }
     log.Error("Init ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
     C.boe_err_free(ret)
-    return ErrInitFailed
+    return nil 
+    //return ErrInitFailed
 }
 
 func (boe *BoeHandle) Release() (error) {
@@ -221,9 +222,9 @@ func (boe *BoeHandle) FWUpdateAbort() error{
 func (boe *BoeHandle) HWCheck() {
     var ret = C.boe_hw_check()
     if ret == C.BOE_OK {
-        log.Debug("boe board is ok.")
+        log.Info("boe board is ok.")
     }else {
-        log.Debug("boe board not find.")
+        log.Info("boe board not find.")
     }
 }
 

@@ -55,6 +55,7 @@ import (
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/node/gasprice"
+	"github.com/hpb-project/go-hpb/boe"
 )
 
 // Node is a container on which services can be registered.
@@ -70,7 +71,7 @@ type Node struct {
 	Hpbtxpool 		*txpool.TxPool
 	Hpbbc           *bc.BlockChain
 	//Hpbworker       *Worker
-	//Hpbboe			*boe.BoeHandle
+	Hpbboe			*boe.BoeHandle
 	//HpbDb
 	HpbDb  	    hpbdb.Database
 
@@ -175,6 +176,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if err != nil {
 		return nil, err
 	}
+	hpbnode.Hpbboe = boe.BoeGetInstance()
 	hpbnode.accman = am
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
@@ -272,8 +274,14 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
+	//boe init
+	error := hpbnode.Hpbboe.Init()
+	if error != nil{
+		log.Error("boe init error:"," ",error)
+		return error
+	}
 
-	error := hpbnode.WorkerInit(conf)
+	error = hpbnode.WorkerInit(conf)
 	if error != nil{
 		log.Error("Worker init failed",":", error)
 		return error
@@ -363,6 +371,7 @@ func (n *Node) Stop() error {
 	defer n.lock.Unlock()
 
 	//stop all modules
+	n.Hpbboe.Release()
 	n.Hpbsyncctr.Stop()
 	n.Hpbtxpool.Stop()
 	n.worker.Stop()
