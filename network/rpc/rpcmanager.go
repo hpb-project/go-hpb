@@ -1,33 +1,93 @@
-package p2p
+package rpc
 
 import (
 	"fmt"
 	"net"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/log"
+	"sync/atomic"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 ////////////////////////////////////////////////////////////////////////////
+type RpcManager struct {
+	rpcmgr *RpcMgr
+}
 
+
+var INSTANCE = atomic.Value{}
+
+func RpcMgrInst() *RpcManager {
+	if INSTANCE.Load() == nil {
+		pm :=&RpcManager{
+			rpcmgr: &RpcMgr{},
+		}
+		INSTANCE.Store(pm)
+	}
+
+	return INSTANCE.Load().(*RpcManager)
+}
+
+func (prm *RpcManager)Start(apis []API ) error {
+
+	config, err :=config.GetHpbConfigInstance()
+	if err != nil {
+		log.Error("Peer manager get config error","error",err)
+		return err
+	}
+
+	// for-test
+	log.Debug("Para from config.","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
+
+	prm.rpcmgr    = &RpcMgr{
+		ipcEndpoint:  config.Network.IpcEndpoint,
+		httpEndpoint: config.Network.HttpEndpoint,
+		wsEndpoint:   config.Network.WsEndpoint,
+
+		httpCors:     config.Network.HTTPCors,
+		httpModules:  config.Network.HTTPModules,
+
+		wsOrigins:    config.Network.WSOrigins,
+		wsModules:    config.Network.WSModules,
+		wsExposeAll:  config.Network.WSExposeAll,
+	}
+	prm.rpcmgr.startRPC(apis)
+
+
+	return nil
+}
+
+
+
+func (prm *RpcManager)Stop(){
+	prm.rpcmgr.stopRPC()
+}
+
+
+func (prm *RpcManager)IpcHandle() * Server {
+	return prm.rpcmgr.inprocHandler
+}
+
+
+////////////////////////////////////////////////////////////////////////////
 // Node is a container on which services can be registered.
 type RpcMgr struct {
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
-	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
+	rpcAPIs       []API   // List of APIs currently provided by the node
+	inprocHandler *Server // In-process RPC request handler to process the API requests
 
 
 	ipcListener net.Listener // IPC RPC listener socket to serve API requests
-	ipcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
+	ipcHandler  *Server  // IPC RPC request handler to process the API requests
 
 
 	httpWhitelist []string     // HTTP RPC modules to allow through this endpoint
 	httpListener  net.Listener // HTTP RPC listener socket to server API requests
-	httpHandler   *rpc.Server  // HTTP RPC request handler to process the API requests
+	httpHandler   *Server  // HTTP RPC request handler to process the API requests
 
 
 	wsListener net.Listener // Websocket RPC listener socket to server API requests
-	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
+	wsHandler  *Server  // Websocket RPC request handler to process the API requests
 
 	lock sync.RWMutex
 
@@ -49,7 +109,7 @@ type RpcMgr struct {
 // startRPC is a helper method to start all the various RPC endpoint during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
-func (n *RpcMgr) startRPC(apis []rpc.API) error {
+func (n *RpcMgr) startRPC(apis []API) error {
 	n.rpcAPIs = apis
 
 	// Start the various API endpoints, terminating all in case of errors
@@ -83,9 +143,9 @@ func (n *RpcMgr) stopRPC() {
 
 
 // startInProc initializes an in-process RPC endpoint.
-func (n *RpcMgr) startInProc(apis []rpc.API) error {
+func (n *RpcMgr) startInProc(apis []API) error {
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
@@ -105,13 +165,13 @@ func (n *RpcMgr) stopInProc() {
 }
 
 // startIPC initializes and starts the IPC RPC endpoint.
-func (n *RpcMgr) startIPC(apis []rpc.API) error {
+func (n *RpcMgr) startIPC(apis []API) error {
 	// Short circuit if the IPC endpoint isn't being exposed
 	if n.ipcEndpoint == "" {
 		return nil
 	}
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
@@ -123,7 +183,7 @@ func (n *RpcMgr) startIPC(apis []rpc.API) error {
 		listener net.Listener
 		err      error
 	)
-	if listener, err = rpc.CreateIPCListener(n.ipcEndpoint); err != nil {
+	if listener, err = CreateIPCListener(n.ipcEndpoint); err != nil {
 		return err
 	}
 	go func() {
@@ -143,7 +203,7 @@ func (n *RpcMgr) startIPC(apis []rpc.API) error {
 				log.Error(fmt.Sprintf("IPC accept failed: %v", err))
 				continue
 			}
-			go handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+			go handler.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
 		}
 	}()
 	// All listeners booted successfully
@@ -168,7 +228,7 @@ func (n *RpcMgr) stopIPC() {
 }
 
 // startHTTP initializes and starts the HTTP RPC endpoint.
-func (n *RpcMgr) startHTTP(endpoint string, apis []rpc.API, modules []string, cors []string) error {
+func (n *RpcMgr) startHTTP(endpoint string, apis []API, modules []string, cors []string) error {
 	// Short circuit if the HTTP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -179,7 +239,7 @@ func (n *RpcMgr) startHTTP(endpoint string, apis []rpc.API, modules []string, co
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := NewServer()
 	for _, api := range apis {
 		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
@@ -196,7 +256,7 @@ func (n *RpcMgr) startHTTP(endpoint string, apis []rpc.API, modules []string, co
 	if listener, err = net.Listen("tcp", endpoint); err != nil {
 		return err
 	}
-	go rpc.NewHTTPServer(cors, handler).Serve(listener)
+	go NewHTTPServer(cors, handler).Serve(listener)
 	log.Info(fmt.Sprintf("HTTP endpoint opened: http://%s", endpoint))
 
 	// All listeners booted successfully
@@ -222,7 +282,7 @@ func (n *RpcMgr) stopHTTP() {
 }
 
 // startWS initializes and starts the websocket RPC endpoint.
-func (n *RpcMgr) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
+func (n *RpcMgr) startWS(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) error {
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -233,7 +293,7 @@ func (n *RpcMgr) startWS(endpoint string, apis []rpc.API, modules []string, wsOr
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := NewServer()
 	for _, api := range apis {
 		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
@@ -250,7 +310,7 @@ func (n *RpcMgr) startWS(endpoint string, apis []rpc.API, modules []string, wsOr
 	if listener, err = net.Listen("tcp", endpoint); err != nil {
 		return err
 	}
-	go rpc.NewWSServer(wsOrigins, handler).Serve(listener)
+	go NewWSServer(wsOrigins, handler).Serve(listener)
 	log.Info(fmt.Sprintf("WebSocket endpoint opened: ws://%s", listener.Addr()))
 
 	// All listeners booted successfully

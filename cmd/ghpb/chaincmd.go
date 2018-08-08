@@ -44,6 +44,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/boe"
 )
 
 var (
@@ -171,8 +172,8 @@ Use "hpb dump 0" to dump the genesis block.`,
 Update the firmwre of BOE.`,
 	}
 	boeDetectCommand = cli.Command{
-		Action:    utils.MigrateFlags(boedetect),
-		Name:      "boedetect",
+		Action:    utils.MigrateFlags(boecheck),
+		Name:      "boecheck",
 		Usage:     "detect boe",
 		ArgsUsage: "",
 		Flags: []cli.Flag{
@@ -184,12 +185,37 @@ Detect BOE.`,
 
 )
 func boeupdate(ctx *cli.Context) error {
-	log.Info("-----start boe update-----")
+	 boehandle := boe.BoeGetInstance()
+	 error := boehandle.Init()
+	 if error != nil{
+	 	log.Error("boe init failed"," ",error)
+	 	return error
+	 }
+	 log.Trace("start boe fw update")
+	 error = boehandle.FWUpdate()
+	 if error != nil{
+	 	log.Error("boe fw update failed"," ",error)
+	 	return error
+	 }
+	 log.Trace("boe fw update complete")
+	 error = boehandle.Release()
+	if error != nil{
+		log.Error("boe release failed"," ",error)
+		return error
+	}
 	return nil
 }
 
-func boedetect(ctx *cli.Context) error {
-	log.Info("-----start boe detect-----")
+func boecheck(ctx *cli.Context) error {
+	boehandle := boe.BoeGetInstance()
+	error := boehandle.Init()
+	if error != nil{
+		log.Error("boe init failed"," ",error)
+		return error
+	}
+	log.Trace("start boe hardware check")
+	boehandle.HWCheck()
+	log.Trace("boe hardware check complete")
 	return nil
 }
 

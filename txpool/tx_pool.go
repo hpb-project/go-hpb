@@ -223,6 +223,7 @@ func (pool *TxPool) loop() {
 			for txTmphash ,tmpBeatsV:= range pool.tmpbeats {
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					delete(pool.tmpqueue, txTmphash)
+					delete(pool.tmpbeats, txTmphash)
 					//log.Info("delete(pool.tmpqueue)","txTmphash",txTmphash,"tmpBeatsV",tmpBeatsV,"tmphash value time",time.Since(pool.tmpbeats[txTmphash]),"cmptime",pool.config.Lifetime)
 				}
 			}

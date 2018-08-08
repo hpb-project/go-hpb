@@ -55,6 +55,7 @@ import (
 	"github.com/hpb-project/go-hpb/worker"
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/node/gasprice"
+	"github.com/hpb-project/go-hpb/boe"
 )
 
 // Node is a container on which services can be registered.
@@ -65,11 +66,12 @@ type Node struct {
 
 	Hpbconfig       *config.HpbConfig
 	Hpbpeermanager  *p2p.PeerManager
+	Hpbrpcmanager   *rpc.RpcManager
 	Hpbsyncctr      *synctrl.SynCtrl
 	Hpbtxpool 		*txpool.TxPool
 	Hpbbc           *bc.BlockChain
 	//Hpbworker       *Worker
-	//Hpbboe			*boe.BoeHandle
+	Hpbboe			*boe.BoeHandle
 	//HpbDb
 	HpbDb  	    hpbdb.Database
 
@@ -103,6 +105,8 @@ type Node struct {
 
 	lock sync.RWMutex
 	ApiBackend *HpbApiBackend
+
+	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
 	stop chan struct{} // Channel to wait for termination notifications
 }
@@ -172,12 +176,14 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if err != nil {
 		return nil, err
 	}
+	hpbnode.Hpbboe = boe.BoeGetInstance()
 	hpbnode.accman = am
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
+	hpbnode.Hpbrpcmanager = rpc.RpcMgrInst()
 	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
 	hpbnode.HpbDb = hpbdb
 
@@ -268,14 +274,22 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
+	//boe init
+	error := hpbnode.Hpbboe.Init()
+	if error != nil{
+		log.Error("boe init error:"," ",error)
+		return error
+	}
 
-	error := hpbnode.WorkerInit(conf)
+	error = hpbnode.WorkerInit(conf)
 	if error != nil{
 		log.Error("Worker init failed",":", error)
 		return error
 	}
+	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
 	hpbnode.Hpbtxpool.Start()
+	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	retval := hpbnode.Hpbpeermanager.Start()
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
@@ -357,6 +371,7 @@ func (n *Node) Stop() error {
 	defer n.lock.Unlock()
 
 	//stop all modules
+	n.Hpbboe.Release()
 	n.Hpbsyncctr.Stop()
 	n.Hpbtxpool.Stop()
 	n.worker.Stop()
@@ -590,5 +605,11 @@ func (s *Node) StartMining(local bool) error {
 
 // get all rpc api from modules
 func (n *Node) GetAPI() error{
+	return nil
+}
+
+func (n *Node)SetNodeAPI() error {
+	n.RpcAPIs = n.APIs()
+	n.RpcAPIs = append(n.RpcAPIs, n.Nodeapis()...)
 	return nil
 }

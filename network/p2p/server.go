@@ -711,9 +711,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our = *srv.ourHandshake
 	c.our.RandNonce = ourRand
 
-	if c.our.Sign, err = boe.BoeGetInstance().HWSign(theirRand); err!=nil{
+	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err!=nil{
 		log.Error("Do hardware sign  error.","err",err)
-		c.our.Sign = &boe.SignResult{R:make([]byte,32),S:make([]byte,32),V:0xFF}
 		//todo close and return
 	}
 	log.Info("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
