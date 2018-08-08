@@ -231,6 +231,9 @@ func (boe *BoeHandle) HWCheck() {
 
 func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
     var signature = make([]byte, 64)
+    if len(random) != 32 {
+        return nil, ErrHWSignFailed
+    }
     var ret = C.boe_hw_sign((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
     if ret == C.BOE_OK {
         return signature, nil
@@ -239,6 +242,9 @@ func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
 }
 
 func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid[]byte, signature []byte) bool {
+    if len(random) != 32 || len(hid) != 32 || len(cid) != 64 || len(signature) != 64 {
+        return false
+    }
     var ret = C.boe_p256_verify((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&hid[0])),
 (*C.uchar)(unsafe.Pointer(&cid[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
     if ret == C.BOE_OK {
@@ -285,6 +291,9 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
 
 func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
     var result = make([]byte, 32)
+    if len(hash) != 32 {
+        return nil, ErrGetNextHashFailed
+    }
     var ret = C.boe_get_s_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
     if ret == C.BOE_OK {
         return result, nil
