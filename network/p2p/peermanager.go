@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"encoding/hex"
+	"strings"
 )
 
 var (
@@ -485,8 +486,8 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 	var binding []bindInfo
 	if err := common.LoadJSON(filename, &binding); err != nil {
 		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
-		panic("Hardware Info Parse Error. Can't load node file.")
-		return nil
+		//panic("Hardware Info Parse Error. Can't load node file.")
+		//return nil
 	}
 	log.Debug("Boot node parse binding hardware table.","binding",binding)
 	prm.server.hdtab = make([]HwPair,0,len(binding))
@@ -494,11 +495,12 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 		cid, cerr:= hex.DecodeString(b.CID)
 		hid, herr:= hex.DecodeString(b.HID)
 		if cerr != nil || herr != nil {
-			panic("Hardware Info Parse Error.")
+			//panic("Hardware Info Parse Error.")
+			//return nil
 		}
 		//todo check cid hid adr
 
-		prm.server.hdtab = append(prm.server.hdtab,HwPair{Adr:b.ADR,Cid:cid,Hid:hid})
+		prm.server.hdtab = append(prm.server.hdtab,HwPair{Adr:strings.ToLower(b.ADR),Cid:cid,Hid:hid})
 	}
 	log.Info("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
 

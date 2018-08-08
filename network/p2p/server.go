@@ -35,6 +35,7 @@ import (
 	"path/filepath"
 	"os"
 	"github.com/hpb-project/go-hpb/boe"
+	"strings"
 )
 
 const (
@@ -735,6 +736,39 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
+	flag := false
+
+	for _, n := range srv.BootstrapNodes {
+		if n.ID == c.id {
+			log.Info("remote node is boot.","id",c.id)
+			flag = true
+		}
+	}
+
+	if !flag {
+		remoteCoinbase := strings.ToLower(c.their.DefaultAddr.String())
+		//log.Error("###### hdtable","c.their.DefaultAddr.String()",remoteCoinbase)
+		for _,hw := range srv.hdtab {
+			//log.Error("###### hdtable","hw.add",hw.Adr)
+			if hw.Adr == remoteCoinbase {
+				//log.Error("###### Find the hw","hw",hw,"rand",c.our.RandNonce,"sign",c.their.Sign)
+				if len(c.their.Sign) == 0 || c.our.RandNonce == nil {
+					continue
+				}
+				flag = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
+				log.Error("###### Find the hw flag.","HW_Auth_Verify",flag)
+			}
+		}
+	}
+
+	//log.Error("###### Find the hw flag.","flag",flag)
+	if !flag {
+		log.Error("Find the hw false.")
+		//todo remove the peer
+		//c.close(DiscHwSignError)
+		//return
+	}
+
 	//their.DefaultAddr--> mhid,mcid
 	//mhid := make([]byte,32)
 	//hash, err := boe.BoeGetInstance().Hash(append(ourRand,mhid...))
@@ -749,14 +783,14 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 
 	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
-	log.Error("######Get remote hardware table","ourtable",ourHdtable)
+	log.Debug("######Get remote hardware table","ourtable",ourHdtable)
 	theirHdtable, err := c.doHardwareTable(ourHdtable)
 	if err != nil {
-		clog.Info("Failed hardware table handshake", "err", err)
+		clog.Error("Failed hardware table handshake", "err", err)
 		c.close(err)
 		return
 	}
-	log.Error("######Get remote hardware table","theirtable",theirHdtable)
+	log.Debug("######Get remote hardware table","ourtable",ourHdtable, "theirtable",theirHdtable)
 
 
 	/////////////////////////////////////////////////////////////////////////////////
