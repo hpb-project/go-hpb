@@ -116,7 +116,7 @@ func (prm *PeerManager)Start() error {
 	}
 
 
-	log.Info("Peer manager start server with type.","NodeType",prm.server.localType.ToString())
+
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
 		return err
