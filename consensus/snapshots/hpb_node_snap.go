@@ -14,45 +14,41 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package snapshots
 
 import (
 	"bytes"
-	"sort"
-	"fmt"
 	"encoding/json"
-	"math/big"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/config"
+	"math/big"
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 
 	"strconv"
 	//"errors"
 	"math/rand"
-	//"github.com/hpb-project/go-hpb/common/log"
 )
 
 type Tally struct {
-	CandAddress    common.Address  `json:"candAddress"`     // 通过投票的个数
-	VoteNumbers    *big.Int  `json:"voteNumbers"`     // 通过投票的个数
-	VoteIndexs     *big.Int   `json:"voteIndexs"`     // 通过投票的个数
-	VotePercent    *big.Int  `json:"votePercent"`     // 通过投票的个数
+	CandAddress common.Address `json:"candAddress"` // 通过投票的个数
+	VoteNumbers *big.Int       `json:"voteNumbers"` // 通过投票的个数
+	VoteIndexs  *big.Int       `json:"voteIndexs"`  // 通过投票的个数
+	VotePercent *big.Int       `json:"votePercent"` // 通过投票的个数
 }
 
 type HpbNodeSnap struct {
-	config   *config.PrometheusConfig 
-	sigcache *lru.ARCCache       
+	config   *config.PrometheusConfig
+	sigcache *lru.ARCCache
 	//Number  uint64                      `json:"number"`  // 生成快照的时间点
-	CheckPointNum  uint64               `json:"checkPointNum"`  // 最近的检查点
-	CheckPointHash    common.Hash       `json:"checkPointHash"`    // 生成快照的Block hash
-	Signers map[common.Address]struct{} `json:"signers"` // 当前的授权用户
-	Recents map[uint64]common.Address   `json:"recents"` // 最近签名者 spam
-	Tally   map[common.Address]Tally    `json:"tally"`   // 目前的计票情况
+	CheckPointNum  uint64                      `json:"checkPointNum"`  // 最近的检查点
+	CheckPointHash common.Hash                 `json:"checkPointHash"` // 生成快照的Block hash
+	Signers        map[common.Address]struct{} `json:"signers"`        // 当前的授权用户
+	Recents        map[uint64]common.Address   `json:"recents"`        // 最近签名者 spam
+	Tally          map[common.Address]Tally    `json:"tally"`          // 目前的计票情况
 }
 
 // 为创世块使用
@@ -61,13 +57,13 @@ func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, num
 		config:   config,
 		sigcache: sigcache,
 		//Number:   number,
-		CheckPointNum: checkPointNum,
+		CheckPointNum:  checkPointNum,
 		CheckPointHash: checkPointHash,
-		Signers:  make(map[common.Address]struct{}),
-		Recents:  make(map[uint64]common.Address),
-		Tally:    make(map[common.Address]Tally),
+		Signers:        make(map[common.Address]struct{}),
+		Recents:        make(map[uint64]common.Address),
+		Tally:          make(map[common.Address]Tally),
 	}
-	if(number ==0){
+	if number == 0 {
 		for _, signerHash := range signersHash {
 			snap.Signers[signerHash] = struct{}{}
 		}
@@ -91,14 +87,13 @@ func LoadHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, db
 }
 
 // store inserts the snapshot into the database.
-func (s *HpbNodeSnap) Store(hash common.Hash ,db hpbdb.Database) error {
+func (s *HpbNodeSnap) Store(hash common.Hash, db hpbdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
 	return db.Put(append([]byte("prometheus-"), hash[:]...), blob)
 }
-
 
 // 判断投票的有效性
 func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
@@ -112,9 +107,9 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 	//if !s.ValidVote(address) {
 	//	return false
 	//}
-	
+
 	//fmt.Println("length Test: ", len(s.Tally))
-	
+
 	if old, ok := s.Tally[candAddress]; ok {
 		s.Tally[candAddress] = Tally{
 	        VoteNumbers: old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1)),
@@ -137,10 +132,10 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 
 // 判断当前的次序
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address) bool {
-	
+
 	// 实际开发中，从硬件中获取
 	//rand := rand.Uint64()
-	
+
 	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
@@ -171,7 +166,7 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	for signer := range s.Signers {
 		signers = append(signers, signer)
 	}
-	
+
 	for i := 0; i < len(signers); i++ {
 		for j := i + 1; j < len(signers); j++ {
 			if bytes.Compare(signers[i][:], signers[j][:]) > 0 {
@@ -182,7 +177,7 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, headers []*types.Header,chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, headers []*types.Header, chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
 
 	// 如果头部为空，直接返回
@@ -196,77 +191,87 @@ func  CalculateHpbSnap(signatures *lru.ARCCache,config *config.PrometheusConfig,
 			return nil, consensus.ErrInvalidVotingChain
 		}
 	}
-	
-	signers := make([]common.Address,3)
-	
-	snap := NewHistorysnap(config, signatures, number,latestCheckPointNum,latestCheckPointHash, signers)
-	
+
+	signers := make([]common.Address, 3)
+
+	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, signers)
+
 	snap.Tally = make(map[common.Address]Tally)
-	
+
 	//开始投票
 	//fmt.Println(" ****************************************headers length ++++********************************* ", len(headers))
 
 	//for _, header := range headers {
 	//	snap.cast(header.CandAddress, header.VoteIndex);
 	//}
-	
+
 	for _, header := range headers {
-		
+
 		VoteNumberstemp := big.NewInt(0)
 		VoteIndexstemp := big.NewInt(0)
 		VotePercenttemp := big.NewInt(0)
-		
+		//票的数量与性能之间的关系，获取票的数量表示在线时间长度，所以应该选择在线时间长性能又好的节点。
 		if old, ok := snap.Tally[header.CandAddress]; ok {
 			VoteNumberstemp.Add(old.VoteNumbers, big.NewInt(1))
 			VoteIndexstemp.Add(old.VoteIndexs, header.VoteIndex)
 			VotePercenttemp.Div(VoteIndexstemp, VoteNumberstemp)
 			snap.Tally[header.CandAddress] = Tally{
-		        VoteNumbers: VoteNumberstemp,
-		        VoteIndexs:  VoteIndexstemp,
-		        VotePercent: VotePercenttemp,
-		        CandAddress: header.CandAddress,
+				VoteNumbers: VoteNumberstemp,
+				VoteIndexs:  VoteIndexstemp,
+				VotePercent: VotePercenttemp,
+				CandAddress: header.CandAddress,
 			}
 		} else {
 			snap.Tally[header.CandAddress] = Tally{
 				VoteNumbers: big.NewInt(1),
-				VoteIndexs: header.VoteIndex,
+				VoteIndexs:  header.VoteIndex,
 				VotePercent: header.VoteIndex,
 				CandAddress: header.CandAddress,
 			}
 		}
 	}
 
-	var keys []float64
-	indexTally := make(map[float64]Tally,len(snap.Tally))
-	
-	for _, v := range snap.Tally{
-		indexTally[float64(v.VotePercent.Uint64())] = v;
-		keys = append(keys,float64(v.VotePercent.Uint64()))
+	var tallytemp []Tally
+	for _, v := range snap.Tally {
+		tallytemp = append(tallytemp, v)
+		//log.Info("FUHY---------before---------tallytemp--------------------", "tallytemp[i].CandAddress", v.CandAddress.Hex(),"VotePercent.Int64()", v.VotePercent.Int64())
 	}
-	
-	sort.Float64s(keys) //对结果今昔那个排序
-	
-	//fmt.Println("Sorted Test: ", sort.Float64sAreSorted(keys))
-	fmt.Println("Sorted len: ", len(keys))
-	
-	//设置config长度
-	hpbNodeNum := 0
-	for i := len(keys) - 1; i >= 0 ; i-- {
-		fmt.Printf("test 1 %d", i)
-		fmt.Printf("test 2 %f", keys[i])
-		if cands, ok := indexTally[keys[i]]; ok {
-			hpbNodeNum = hpbNodeNum + 1 
-			snap.Signers[cands.CandAddress] = struct{}{}
-			//选举出2个
-			if(hpbNodeNum == 3){
-				break
+
+	for i := 0; i < len(snap.Tally); i++ {
+		for j := 0; j < len(snap.Tally)-i-1; j++ {
+			if bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0 {
+				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
 			}
 		}
 	}
+
+	for i := 0; i < len(snap.Tally); i++ {
+		for j := 0; j < len(snap.Tally)-i-1; j++ {
+			if tallytemp[j].VotePercent.Int64() > tallytemp[j+1].VotePercent.Int64() {
+				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
+			} else if (tallytemp[j].VotePercent.Int64() == tallytemp[j+1].VotePercent.Int64()) && (bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0) {
+				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
+			}
+		}
+	}
+
+	var hpnodeNO int
+	if len(tallytemp) >= 3 {
+		hpnodeNO = 3
+	} else {
+		hpnodeNO = len(tallytemp)
+	}
+	for i := len(tallytemp) - 1; i > len(tallytemp)-hpnodeNO-1; i-- {
+		snap.Signers[tallytemp[i].CandAddress] = struct{}{}
+		//log.Info("FUHY------------------CalculateHpbSnap--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex())
+	}
+
+	//for i:=0; i<len(tallytemp); i++  {
+	//	log.Info("FUHY--------after----------tallytemp--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex(), "tallytemp[i].VotePercent", tallytemp[i].VotePercent.Int64())
+	//}
 
 	//等待完善
 	//snap.Number += uint64(len(headers))
 	//snap.Hash = latestCheckPointHash
 	return snap, nil
 }
-

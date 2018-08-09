@@ -75,6 +75,10 @@ func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
 			
 		}
 		
+		if (len(bestCadWinners) ==0){
+			return nil, nil
+		}
+		
 		// 先获取长度，然后进行随机获取
 		//lnlen := int(math.Log2(float64(len(bestCadWinners))))
 		
@@ -98,7 +102,7 @@ func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
 		voteIndexTemp := uint64(0)
 		
 		for _, lastCadWinner := range lastCadWinners {
-	        if(lastCadWinner.VoteIndex > voteIndexTemp){
+	        if(lastCadWinner.VoteIndex >= voteIndexTemp){
 	        	  voteIndexTemp = lastCadWinner.VoteIndex
 	        	  lastCadWinnerToChain = lastCadWinner 
 	        }
