@@ -363,7 +363,7 @@ func (srv *Server) Start() (err error) {
 
 	//todo: only for test
 	srv.parseRemoteHpType()
-	log.Error("######Server start","hpflag",srv.hpflag)
+	log.Debug("######Server start","hpflag",srv.hpflag)
 
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 	srv.loopWG.Add(1)
@@ -522,18 +522,18 @@ running:
 				//////////////////////////////////////////////////////////
 				// todo only for test
 				if srv.hpflag {
-					log.Info("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
+					log.Debug("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
 					for _, hp := range srv.hptype {
 						if hp.PID == p.ID().TerminalString() {
 							p.remoteType = discover.HpNode
-							p.log.Warn("Set remote type.", "remoteType",p.remoteType.ToString())
+							p.log.Info("Set remote type.", "remoteType",p.remoteType.ToString())
 						}
 					}
 				}
 
 				//////////////////////////////////////////////////////////
 
-				log.Info("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
+				log.Debug("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -566,7 +566,7 @@ running:
 		}
 	}
 
-	log.Error("P2P networking is spinning down")
+	log.Debug("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
 	if srv.ntab != nil {
@@ -705,7 +705,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
-	log.Info("Do enc handshake OK.","id",c.id)
+	log.Debug("Do enc handshake OK.","id",c.id)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	// Run the protocol handshake
@@ -713,10 +713,10 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our.RandNonce = ourRand
 
 	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err!=nil{
-		log.Error("Do hardware sign  error.","err",err)
+		log.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Info("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
+	log.Debug("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
 
 
 
@@ -732,7 +732,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	c.their = *their
-	log.Info("Do protocol handshake OK.","id",c.id)
+	log.Debug("Do protocol handshake OK.","id",c.id)
 	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -763,7 +763,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 	//log.Error("###### Find the hw flag.","flag",flag)
 	if !flag {
-		log.Error("Find the hw false.")
+		//log.Error("Find the hw false.")
 		//todo remove the peer
 		//c.close(DiscHwSignError)
 		//return

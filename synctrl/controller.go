@@ -321,7 +321,7 @@ func (this *SynCtrl) Syncer() *Syncer {
 }
 
 func (this *SynCtrl) Stop() {
-	log.Info("Stopping Hpb data sync")
+	log.Debug("Stopping Hpb data sync")
 
 	//this.txSub.Unsubscribe()         // quits txRoutingLoop
 	this.minedBlockSub.Unsubscribe() // quits minedRoutingLoop

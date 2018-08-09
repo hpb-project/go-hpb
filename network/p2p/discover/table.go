@@ -158,7 +158,7 @@ func (tab *Table) RemoveNode(nid NodeID) {
 	for _, bucket := range tab.buckets {
 		for i := range bucket.entries {
 			if bucket.entries[i].ID == nid {
-				log.Warn("Remove node from table","ID",nid,"Node",bucket.entries[i])
+				log.Debug("Remove node from table","ID",nid,"Node",bucket.entries[i])
 				bucket.entries = append(bucket.entries[:i], bucket.entries[i+1:]...)
 				return
 			}

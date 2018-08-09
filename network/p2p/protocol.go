@@ -128,16 +128,16 @@ func (hp *HpbProto) handle(p *Peer) error {
 	///////////////////////////////////////////
 
 
-	our := &exchangeData{
-		Version: 0xFFAA,
-	}
-	p.log.Debug("Do hpb exchange data.","ours",our)
-	there,err := p.Exchange(our)
-	if  err != nil {
-		p.log.Debug("Hpb exchange data failed in peer.", "err", err)
-		return err
-	}
-	p.log.Info("Do hpb exchange data OK.","there",there)
+	//our := &exchangeData{
+	//	Version: 0xFFAA,
+	//}
+	//p.log.Debug("Do hpb exchange data.","ours",our)
+	//there,err := p.Exchange(our)
+	//if  err != nil {
+	//	p.log.Debug("Hpb exchange data failed in peer.", "err", err)
+	//	return err
+	//}
+	//p.log.Info("Do hpb exchange data OK.","there",there)
 
 
 
@@ -155,7 +155,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.log.Error("Handshake failed in handle peer.", "err", err)
 		return err
 	}
-	p.log.Info("Do hpb handshake OK.")
+	p.log.Debug("Do hpb handshake OK.")
 
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
@@ -178,12 +178,12 @@ func (hp *HpbProto) handle(p *Peer) error {
 	p.log.Info("Start hpb message loop.")
 	for {
 		if err := hp.handleMsg(p); err != nil {
-			p.log.Debug("Message handling failed", "err", err)
+
 			//if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
 			//	hp.onDropPeer(p)
 			//	p.log.Debug("Network has drop peer to notify syncer")
 			//}
-			p.log.Error("Stop hpb message loop.","error",err)
+			p.log.Debug("Stop hpb message loop.","error",err)
 			return err
 		}
 	}
@@ -210,7 +210,7 @@ func (hp *HpbProto) regOnDropPeer(cb OnDropPeerCB) {
 func (hp *HpbProto) handleMsg(p *Peer) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
-		log.Error("Hpb protocol read msg error","error",err)
+		log.Debug("Hpb protocol read msg error","error",err)
 		return err
 	}
 	p.log.Trace("Protocol handle massage","Msg",msg.String())

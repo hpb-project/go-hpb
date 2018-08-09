@@ -266,26 +266,26 @@ loop:
 			// there was no error.
 			if err != nil {
 				reason = DiscNetworkError
-				p.log.Error("PeerBase run Write DiscNetwork Error")
+				p.log.Debug("PeerBase run Write DiscNetwork Error")
 				break loop
 			}
 			writeStart <- struct{}{}
 		case err = <-readErr:
 			if r, ok := err.(DiscReason); ok {
 				remoteRequested = true
-				p.log.Error("PeerBase run Read Remote Requested DISCONNECTION","error",err)
+				p.log.Debug("PeerBase run Read Remote Requested DISCONNECTION","error",err)
 				reason = r
 			} else {
-				p.log.Error("PeerBase run Read DiscNetwork Error","error",err)
+				p.log.Debug("PeerBase run Read DiscNetwork Error","error",err)
 				reason = DiscNetworkError
 			}
 			break loop
 		case err = <-p.protoErr:
 			reason = discReasonForError(err)
-			p.log.Error("PeerBase run proto Error","reason",reason,"error",err)
+			p.log.Debug("PeerBase run proto Error","reason",reason,"error",err)
 			break loop
 		case err = <-p.disc:
-			p.log.Error("PeerBase run peer disc Error","error",err)
+			p.log.Debug("PeerBase run peer disc Error","error",err)
 			break loop
 		}
 	}
@@ -305,17 +305,17 @@ func (p *PeerBase) pingLoop() {
 		select {
 		case <-pingTime.C:
 			if err := sendItems(p.rw, pingMsg); err != nil {
-				p.log.Error("PeerBase Send heartbeat ERROR","error",err)
+				p.log.Debug("PeerBase Send heartbeat ERROR","error",err)
 				p.protoErr <- err
 				return
 			}
 			pingTime.Reset(pingInterval)
 		case <-p.closed:
-			p.log.Error("PeerBase pingLoop CLOSED")
+			p.log.Debug("PeerBase pingLoop CLOSED")
 			return
 		}
 	}
-	p.log.Error("PeerBase pingLoop STOP")
+	p.log.Debug("PeerBase pingLoop STOP")
 }
 
 
@@ -337,14 +337,14 @@ func (p *PeerBase) updateNodesLoop() {
 			}
 
 			if err := sendItems(p.rw, ReqNodesMsg); err != nil {
-				p.log.Error("PeerBase Send ReqNodesMsg ERROR","error",err)
+				p.log.Debug("PeerBase Send ReqNodesMsg ERROR","error",err)
 				p.protoErr <- err
 				return
 			}
 			//p.log.Info("######Update nodes form BootNode start.")
 			nodeTime.Reset(nodereqInterval)
 		case <-p.closed:
-			p.log.Error("PeerBase update nodes loop CLOSED")
+			p.log.Debug("PeerBase update nodes loop CLOSED")
 			return
 		}
 	}
@@ -435,7 +435,7 @@ func (p *PeerBase) startProtocols(writeStart <-chan struct{}, writeErr chan<- er
 		} else if err != io.EOF {
 			p.log.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 		}
-		p.log.Warn("######Protocol returned","error",err)
+		p.log.Debug("######Protocol returned","error",err)
 		p.protoErr <- err
 		p.wg.Done()
 	}()
@@ -460,7 +460,7 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 		// otherwise. The calling protocol code should exit for errors
 		// as well but we don't want to rely on that.
 		if err != nil{
-			log.Info("protoRW WriteMsg","error",err)
+			log.Debug("protoRW WriteMsg","error",err)
 		}
 		rw.werr <- err
 	case <-rw.closed:

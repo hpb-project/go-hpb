@@ -131,7 +131,7 @@ func (prm *PeerManager)Start() error {
 
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	prm.iport = add.Port+100
-	log.Info("Iperf server start", "port",prm.iport)
+	log.Debug("Iperf server start", "port",prm.iport)
 	go iperf.StartSever(prm.iport)
 
 	//if prm.server.localType != discover.BootNode {
@@ -174,7 +174,7 @@ func (prm *PeerManager) Register(p *Peer) error {
 	if p.remoteType == discover.BootNode{
 		if _, ok := prm.boots[p.id]; !ok {
 			prm.boots[p.id] = p
-			log.Info("Peer with bootnode is listed.")
+			log.Debug("Peer with bootnode is listed.")
 		}
 		return nil
 	}
@@ -233,13 +233,13 @@ func (prm *PeerManager) GetLocalType()  discover.NodeType {
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	if prm.server.localType != nt{
-		log.Info("######Change server local type","from",prm.server.localType.ToString(),"to",nt.ToString())
+		log.Debug("######Change server local type","from",prm.server.localType.ToString(),"to",nt.ToString())
 		prm.server.localType = nt
 
 		for _, p := range prm.peers {
 			p.localType = nt
 		}
-		log.Info("######Set all peer local type","nodetype",nt.ToString())
+		log.Debug("######Set all peer local type","nodetype",nt.ToString())
 
 		return true
 	}
@@ -502,7 +502,7 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 
 		prm.server.hdtab = append(prm.server.hdtab,HwPair{Adr:strings.ToLower(b.ADR),Cid:cid,Hid:hid})
 	}
-	log.Info("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
+	log.Debug("Boot node parse binding hardware table.","hdtab",prm.server.hdtab)
 
 	return nil
 }
