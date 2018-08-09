@@ -788,7 +788,7 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 
 	werr := make(chan error, 1)
 	go func() {
-		log.Error("@@@@@@send hardware table message","our",our)
+		//log.Error("@@@@@@send hardware table message","our",our)
 		err := send(t.rw, hardwareMsg, our)
 		if err != nil{
 			log.Error("send hardware table message","err",err)
@@ -800,7 +800,7 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
-	log.Error("@@@@@@Read hardware table message","their",their)
+	//log.Error("@@@@@@Read hardware table message","their",their)
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("do hardware table write error: %v", err)
 	}
