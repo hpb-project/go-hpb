@@ -546,6 +546,10 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			hash := tx.Hash()
 			log.Trace("Promoting queued transaction", "hash", hash)
 			pool.promoteTx(addr, hash, tx)
+			// Delete a single queue transaction
+			if list != nil {
+				list.Remove(tx)
+			}
 		}
 		// Drop all transactions over the allowed limit
 		for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
