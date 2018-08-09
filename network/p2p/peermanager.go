@@ -250,7 +250,7 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 
 func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
 	if prm.server.hpflag != flag {
-		log.Info("######Change hp remote flag","from",prm.server.hpflag,"to",flag)
+		log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)
 		prm.server.hpflag = flag
 	}
 }
