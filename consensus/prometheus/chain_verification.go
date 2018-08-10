@@ -23,7 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	//"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 )
 
@@ -182,14 +182,23 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	if _, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents);err != nil {
+	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents);err != nil {
 		return err
+	}else{
+		// 已经投票结束
+		if (number% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+			// 轮转
+			SetNetNodeType(snap)
+			log.Info("SetNetNodeType ***********************")
+		}
 	}
 
 	// Resolve the authorization key and check against signers
 	if _, err := consensus.Ecrecover(header, c.signatures); err != nil {
 		return err
 	}
+	
+	
 	
 	/*
 	if _, ok := snap.Signers[signer]; !ok {
