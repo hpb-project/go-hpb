@@ -252,7 +252,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 
 	// 已经投票结束
-	if ((number-1)% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+	if (number% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
 		// 轮转
 		SetNetNodeType(snap)
 		log.Info("SetNetNodeType ***********************")
