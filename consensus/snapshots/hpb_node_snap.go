@@ -247,9 +247,9 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 
 	for i := 0; i < len(snap.Tally); i++ {
 		for j := 0; j < len(snap.Tally)-i-1; j++ {
-			if tallytemp[j].VotePercent.Int64() > tallytemp[j+1].VotePercent.Int64() {
+			if tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) > 0 {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
-			} else if (tallytemp[j].VotePercent.Int64() == tallytemp[j+1].VotePercent.Int64()) && (bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0) {
+			} else if (tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) == 0) && (bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0) {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
 			}
 		}
