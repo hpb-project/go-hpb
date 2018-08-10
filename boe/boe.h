@@ -28,17 +28,15 @@ typedef struct BoeErr{
 
 BoeErr *BOE_OK;
 typedef int (*BoeUpgradeCallback)(int,char*);
-typedef unsigned char TVersion;
 
 void boe_err_free(BoeErr *e);
 
 BoeErr* boe_init(void);
 BoeErr* boe_release(void);
 BoeErr* boe_reg_update_callback(BoeUpgradeCallback func);
-BoeErr* boe_get_all_version(TVersion *hw, TVersion *fw, TVersion *axu);
-BoeErr* boe_get_hw_version(TVersion *hw);
-BoeErr* boe_get_fw_version(TVersion *fw);
-BoeErr* boe_get_axu_version(TVersion *axu);
+BoeErr* boe_get_hw_version(unsigned char *H);
+BoeErr* boe_get_m_version(unsigned char *M);
+BoeErr* boe_get_version(unsigned char *H, unsigned char *M, unsigned char *F, unsigned char *D);
 BoeErr* boe_upgrade(unsigned char *image, int imagelen);
 BoeErr* boe_upgrade_abort(void);
 /*

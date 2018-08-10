@@ -23,9 +23,15 @@ package boe
 #include <stdio.h>
 int upgrade_call_back_cgo(int progress, char *msg)
 {
+    static int lp = 0;
+    
     if(progress >= 0 && progress <= 100)
     {
-        printf("[I] upgrade %d%%, msg:%s\r\n", progress, msg);
+        if(lp != progress)
+        {
+            printf("Upgrade %d%%, msg:%s\r\n", progress, msg);
+        }
+        lp = progress;
     }
     return 0;
 }
@@ -34,10 +40,9 @@ int upgrade_call_back_cgo(int progress, char *msg)
 import "C"
 import (
     "unsafe"
+    "fmt"
     "sync/atomic"
-    "time"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/common/crypto"
 )
@@ -49,7 +54,10 @@ type BoeHandle struct {
 
 
 type TVersion struct {
-    ver   uint8 
+    H int
+    M int
+    F int 
+    D int
 }
 
 const (
@@ -62,18 +70,6 @@ var (
     bcontinue                = false
     boeHandle                = &BoeHandle{boeEvent:event.NewEvent(), boeInit:false}
 )
-
-func innerResetCounter() {
-    timestamp1 := time.Now().UTC().UnixNano()
-    var zero int32 = 0
-    for ;bcontinue==true; {
-        timestamp2 := time.Now().UTC().UnixNano()
-        if(500 <= (timestamp2 - timestamp1)/1000/1000) {
-            boeRecoverPubTps = atomic.LoadInt32(&zero)
-            timestamp1 = timestamp2
-        }
-    }
-}
 
 func BoeGetInstance() (*BoeHandle) {
     return boeHandle
@@ -88,10 +84,9 @@ func (boe *BoeHandle) Init()(error) {
     if ret == C.BOE_OK {
         boe.boeInit = true
         bcontinue = true
-        go innerResetCounter()
         return nil
     }
-    log.Error("Init ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("Init ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return nil 
     //return ErrInitFailed
@@ -104,7 +99,7 @@ func (boe *BoeHandle) Release() (error) {
     if ret == C.BOE_OK {
         return nil
     }
-    log.Error("Release ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("Release ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return ErrInitFailed
 }
@@ -125,44 +120,24 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
         var str string = string(acc[:])
         return str,nil
     }
-    log.Error("GetBindAccount ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("GetBindAccount ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return "",ErrGetAccountFailed
 
 }
 
-func (boe *BoeHandle) GetHWVersion() TVersion {
+func (boe *BoeHandle) GetVersion() TVersion {
     var v TVersion
-    ret := C.boe_get_hw_version((*C.TVersion)(unsafe.Pointer(&v)))
+    var H,M,F,D C.uchar
+    ret := C.boe_get_version(&H, &M, &F, &D)
     if ret == C.BOE_OK {
         return v
     }
-    log.Error("GetHWVersion ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("GetVersion ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return v
 }
 
-func (boe *BoeHandle) GetFWVersion() TVersion {
-    var v TVersion
-    ret := C.boe_get_fw_version((*C.TVersion)(unsafe.Pointer(&v)))
-    if ret == C.BOE_OK {
-        return v
-    }
-    log.Error("GetFWVersion ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
-    C.boe_err_free(ret)
-    return v
-}
-
-func (boe *BoeHandle) GetAXUVersion() TVersion {
-    var v TVersion
-    ret := C.boe_get_axu_version((*C.TVersion)(unsafe.Pointer(&v)))
-    if ret == C.BOE_OK {
-        return v
-    }
-    log.Error("GetAXUVersion ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
-    C.boe_err_free(ret)
-    return v
-}
 
 func (boe *BoeHandle) GetRandom() ([]byte){
     var ran = make([]byte, 32)
@@ -174,7 +149,7 @@ func (boe *BoeHandle) GetBoeId() (string,error){
     var sn string
     ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
     if ret != C.BOE_OK{
-        log.Error("ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+        fmt.Printf("ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
         C.boe_err_free(ret)
         return "", ErrGetSNFailed
     }
@@ -187,24 +162,22 @@ func (boe *BoeHandle) FWUpdate() error{
     // get correct update image url.
     // download update image.
     // call C api to update.
-	config, err :=config.GetHpbConfigInstance()
-    var datadir = config.Node.DataDir
-    log.Debug("Start download firmware file.")
-    var release_url = "https://github.com/hpb-project/boe_release_firmware"
-    err = Gitclone(release_url, datadir)
+    var version = boe.GetVersion()
+    image, err := downloadrelease(version.H, version.M, version.F, version.D)
     if err != nil {
         log.Error("download firmware failed.")
         return err
     }
-    var image = make([]byte, 1024*10*1024)
-    var len = 1024*10*1024
+    var len = len(image)
+    fmt.Println("image len = %d", len)
 
     C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
     var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(len))
     if ret == C.BOE_OK {
+        fmt.Println("upgrade successed.")
         return nil
     }
-    log.Error("Upgrade ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("UpgradeAbort ecode:%d, emsg:%s\n",uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return ErrUpdateFailed
 }
@@ -214,7 +187,7 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     if ret == C.BOE_OK {
         return nil
     }
-    log.Error("UpgradeAbort ecode:",uint32(ret.ecode),",emsg:", ret.emsg)
+    fmt.Printf("UpgradeAbort ecode:%d, emsg:%s\n",uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
     return ErrUpdateAbortFailed
 }
