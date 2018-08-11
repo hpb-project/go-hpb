@@ -235,9 +235,9 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
         m_sig  = make([]byte, 97)
         c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
     )
-    copy(m_sig[32-len(hash):32], hash)
-    copy(m_sig[64-len(r):64], r)
-    copy(m_sig[96-len(s):96], s)
+    copy(m_sig[32-len(r):32], r)
+    copy(m_sig[64-len(s):64], s)
+    copy(m_sig[96-len(hash):96], hash)
     m_sig[96] = v
 
     c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[0])))
