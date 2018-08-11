@@ -30,6 +30,8 @@ import (
 
 	"strconv"
 	//"errors"
+	"errors"
+	"github.com/hpb-project/go-hpb/common/log"
 	"math/rand"
 )
 
@@ -162,6 +164,10 @@ func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
 
 // 已经授权的signers, 无需进行排序
 func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
+	if len(s.Signers) == 0 {
+		log.Error("FUHY GetHpbNodes() HpbNodeSnap`s Signers is nil", "HpbNodeSnap.Signers", s.Signers)
+		return nil
+	}
 	signers := make([]common.Address, 0, len(s.Signers))
 	for signer := range s.Signers {
 		signers = append(signers, signer)
@@ -182,7 +188,8 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 
 	// 如果头部为空，直接返回
 	if len(headers) == 0 {
-		return nil, nil
+		log.Error("FUHY Calculate Hpb Snap headers is 0")
+		return nil, errors.New("Calculate Hpb Snap headers is 0 ")
 	}
 
 	// 检查所有的头部，检查连续性
@@ -234,7 +241,7 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 	var tallytemp []Tally
 	for _, v := range snap.Tally {
 		tallytemp = append(tallytemp, v)
-		//log.Info("FUHY---------before---------tallytemp--------------------", "tallytemp[i].CandAddress", v.CandAddress.Hex(),"VotePercent.Int64()", v.VotePercent.Int64())
+		//log.Info("FUHY---------before---------tallytemp--------------------", "tallytemp[i].CandAddress", v.CandAddress.Hex(),"VotePercent.Int64()", v.VotePercent)
 	}
 
 	for i := 0; i < len(snap.Tally); i++ {
@@ -267,7 +274,7 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 	}
 
 	//for i:=0; i<len(tallytemp); i++  {
-	//	log.Info("FUHY--------after----------tallytemp--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex(), "tallytemp[i].VotePercent", tallytemp[i].VotePercent.Int64())
+	//	log.Info("FUHY--------after----------tallytemp--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex(), "tallytemp[i].VotePercent", tallytemp[i].VotePercent)
 	//}
 
 	//等待完善

@@ -14,153 +14,204 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package voting
 
 import (
 	"math"
 	//"strconv"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"errors"
 	"github.com/hashicorp/golang-lru"
-	
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
 
-func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	var (
 		headers []*types.Header
 		//snap    *snapshots.HpbNodeSnap
 	)
-	
+
 	// 首次要创建
 	if number == 0 {
-		if snapg,err := GenGenesisSnap(db,recents,signatures,config,chain); err == nil{
+		if snapg, err := GenGenesisSnap(db, recents, signatures, config, chain); err == nil {
 			return snapg, err
 		}
 	}
-	
+
 	//前十轮不会进行投票，前10轮采用区块0时候的数据
 	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
 	//if(true){
-	if(number <= consensus.HpbNodeCheckpointInterval){
+	if number <= consensus.HpbNodeCheckpointInterval {
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
 		// 从缓存中获取
-		if snapcd, err := GetDataFromCacheAndDb(db, recents,signatures,config,hash); err == nil {
+		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config, hash); err == nil {
 			log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
-		}else{
-			if snapg,err := GenGenesisSnap(db, recents,signatures ,config ,chain); err == nil{
+		} else {
+			if snapg, err := GenGenesisSnap(db, recents, signatures, config, chain); err == nil {
 				log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form genesis snap", "number", number, "hash", hash)
 				return snapg, err
 			}
 		}
 	}
-	
+
 	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
 	// 开始计算最后一次的确认区块
-	latestCheckPointNumber :=  uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
+	latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
 	//log.Error("Current latestCheckPointNumber in hpb voting:",strconv.FormatUint(latestCheckPointNumber, 10))
 
 	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
 	latestCheckPointHash := header.Hash()
-	
-	
-	if(number % consensus.HpbNodeCheckpointInterval != 0){
-		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures,config,latestCheckPointHash); err == nil {
+
+	if number%consensus.HpbNodeCheckpointInterval != 0 {
+		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config, latestCheckPointHash); err == nil {
 			//log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			return snapcd, err
-		}else{
+		} else {
 			// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++{
+			for i := latestCheckPointNumber - consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
 				//log.Info("Header:",strconv.FormatUint(i, 10))
 				header := chain.GetHeaderByNumber(uint64(i))
 				if header != nil {
 					headers = append(headers, header)
+				} else {
+					log.Error("fuhy number % not equal 0 and missing header", "miss header number", i)
+					return nil, errors.New("get hpb snap but missing header")
 				}
 			}
-			
-			if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,latestCheckPointNumber,latestCheckPointHash,headers,chain); err == nil {
-				    log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
-					if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
-						return nil, err
-		 			}
-					return snapa, err
+
+			if snapa, err := snapshots.CalculateHpbSnap(signatures, config, number, latestCheckPointNumber, latestCheckPointHash, headers, chain); err == nil {
+				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
+					return nil, err
+				}
+				return snapa, err
 			}
 		}
-	}else{
+	} else {
 		// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++{
-				//log.Info("Header:",strconv.FormatUint(i, 10))
-				header := chain.GetHeaderByNumber(uint64(i))
-				if header != nil {
-					headers = append(headers, header)
-				}
+		for i := latestCheckPointNumber - consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
+			//log.Info("Header:",strconv.FormatUint(i, 10))
+			header := chain.GetHeaderByNumber(uint64(i))
+			if header != nil {
+				headers = append(headers, header)
+			} else {
+				log.Error("FUHY number % equal 0 and missing header", "miss header number", i)
+				return nil, errors.New("get hpb snap but missing header")
 			}
-			
-			
-			if snapa, err := snapshots.CalculateHpbSnap(signatures,config,number,latestCheckPointNumber,latestCheckPointHash,headers,chain); err == nil {
-				    log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
-					if err := StoreDataToCacheAndDb(recents,db, snapa,latestCheckPointHash); err != nil {
-						return nil, err
-		 			}
-					return snapa, err
+		}
+
+		if snapa, err := snapshots.CalculateHpbSnap(signatures, config, number, latestCheckPointNumber, latestCheckPointHash, headers, chain); err == nil {
+			log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			//新轮次计算完高性能节点立即更新节点类型---fuhy
+			//prometheus.SetNetNodeType(snapa)
+			if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
+				return nil, err
 			}
+			return snapa, err
+		}
 	}
-	
+
 	return nil, nil
 }
 
-//生成初始化的区块
-func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache,signatures *lru.ARCCache,config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
+// 设置网络节点类型
+//func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
+//	addresses := snapa.GetHpbNodes()
+//
+//	newlocaltyp := discover.PreNode
+//	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag{
+//		newlocaltyp = discover.HpNode
+//	}
+//	if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
+//		p2p.PeerMgrInst().SetLocalType(newlocaltyp)
+//	}
+//
+//
+//	peers := p2p.PeerMgrInst().PeersAll()
+//	for _, peer := range peers {
+//		switch peer.RemoteType() {
+//		case discover.PreNode:
+//			if flag := FindHpbNode(peer.Address(), addresses); flag{
+//				//log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+//				peer.SetRemoteType(discover.HpNode)
+//			}
+//		case discover.HpNode:
+//			if flag := FindHpbNode(peer.Address(), addresses); !flag{
+//				//log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
+//				peer.SetRemoteType(discover.PreNode)
+//			}
+//		default:
+//			break
+//		}
+//	}
+//	return nil
+//}
+//
+//func FindHpbNode(address common.Address, addresses []common.Address) bool{
+//	for _, addresstemp := range addresses{
+//		if(addresstemp == address){
+//			return true
+//		}
+//	}
+//	return false
+//}
 
-		genesis := chain.GetHeaderByNumber(0)
-		/*if err := c.VerifyHeader(chain, genesis, false); err != nil {
-			return nil, err
-		}*/
-		signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-		for i := 0; i < len(signers); i++ {
-			//log.Info("miner initialization", "i:",i)
-			copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
-		}
-		snap := snapshots.NewHistorysnap(config, signatures,0,0, genesis.Hash(), signers)
-		// 存入缓存和数据库中
-		if err := StoreDataToCacheAndDb(recents,db, snap,genesis.Hash()); err != nil {
-			return nil, err
-		}
-		log.Trace("Stored genesis voting getHpbNodeSnap to disk")
-		return snap, nil
+//生成初始化的区块
+func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
+
+	genesis := chain.GetHeaderByNumber(0)
+	/*if err := c.VerifyHeader(chain, genesis, false); err != nil {
+		return nil, err
+	}*/
+	signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
+	for i := 0; i < len(signers); i++ {
+		//log.Info("miner initialization", "i:",i)
+		copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
+	}
+	snap := snapshots.NewHistorysnap(config, signatures, 0, 0, genesis.Hash(), signers)
+	// 存入缓存和数据库中
+	if err := StoreDataToCacheAndDb(recents, db, snap, genesis.Hash()); err != nil {
+		return nil, err
+	}
+	log.Trace("Stored genesis voting getHpbNodeSnap to disk")
+	return snap, nil
 }
 
 // 从数据库和缓存中获取数据
 func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, hash common.Hash) (*snapshots.HpbNodeSnap, error) {
-		
-		if s, ok := recents.Get(hash); ok {
-			snapcache := s.(*snapshots.HpbNodeSnap)
-			return snapcache, nil
-		}else{
-			// 从数据库中获取
-			if snapdb, err := snapshots.LoadHistorysnap(config, signatures, db, hash); err == nil {
-				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				return snapdb, nil
-			}else{
-				return nil, err
-			}
+
+	if s, ok := recents.Get(hash); ok {
+		snapcache := s.(*snapshots.HpbNodeSnap)
+		return snapcache, nil
+	} else {
+		// 从数据库中获取
+		if snapdb, err := snapshots.LoadHistorysnap(config, signatures, db, hash); err == nil {
+			//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			return snapdb, nil
+		} else {
+			return nil, err
 		}
-		return nil, nil
+	}
+	return nil, nil
 }
 
 //将数据存入到缓存和数据库中
-func StoreDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.HpbNodeSnap,latestCheckPointHash common.Hash) error {
-		// 存入到缓存中
-		recents.Add(latestCheckPointHash, snap)
-		// 存入数据库
-		err := snap.Store(latestCheckPointHash,db)
-		return err
+func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.HpbNodeSnap, latestCheckPointHash common.Hash) error {
+	// 存入到缓存中
+	recents.Add(latestCheckPointHash, snap)
+	// 存入数据库
+	err := snap.Store(latestCheckPointHash, db)
+	if err != nil {
+		log.Error("fuhy------------------StoreDataToCacheAndDb hpb err---------------------------", "err", err)
+	}
+
+	return err
 }
