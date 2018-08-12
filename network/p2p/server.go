@@ -717,7 +717,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Info("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
+	log.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
 
 
 
@@ -734,14 +734,14 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.their = *their
 	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Info("Do protocol handshake.","our",c.our,"their",c.their)
+	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	remoteBoe := false
 
 	for _, n := range srv.BootstrapNodes {
 		if n.ID == c.id {
-			log.Info("remote node is boot.","id",c.id)
+			log.Info("Remote node is boot.","id",c.id)
 			remoteBoe = true
 		}
 	}
@@ -753,7 +753,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 			if hw.Adr == remoteCoinbase {
 				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				log.Info("Boe verify the remote.","result",remoteBoe)
+				log.Debug("Boe verify the remote.","result",remoteBoe)
 			}
 		}
 	}
