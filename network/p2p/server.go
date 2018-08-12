@@ -717,7 +717,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Debug("Hw has signed there rand.","theirRand",theirRand,"sign",c.our.Sign)
+	log.Info("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
 
 
 
@@ -734,36 +734,32 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.their = *their
 	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
+	log.Info("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
-	flag := false
+	remoteBoe := false
 
 	for _, n := range srv.BootstrapNodes {
 		if n.ID == c.id {
 			log.Info("remote node is boot.","id",c.id)
-			flag = true
+			remoteBoe = true
 		}
 	}
 
-	if !flag {
+	if !remoteBoe {
 		remoteCoinbase := strings.ToLower(c.their.DefaultAddr.String())
-		//log.Error("###### hdtable","c.their.DefaultAddr.String()",remoteCoinbase)
+		log.Trace("Remote coinbase","address",remoteCoinbase)
 		for _,hw := range srv.hdtab {
-			//log.Error("###### hdtable","hw.add",hw.Adr)
 			if hw.Adr == remoteCoinbase {
-				//log.Error("###### Find the hw","hw",hw,"rand",c.our.RandNonce,"sign",c.their.Sign)
-				if len(c.their.Sign) == 0 || c.our.RandNonce == nil {
-					continue
-				}
-				flag = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				log.Error("###### Find the hw flag.","HW_Auth_Verify",flag)
+				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
+				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
+				log.Info("Boe verify the remote.","result",remoteBoe)
 			}
 		}
 	}
 
-	//log.Error("###### Find the hw flag.","flag",flag)
-	if !flag {
+	log.Info("Verify the remote hardware.","result",remoteBoe)
+	if !remoteBoe {
 		//log.Error("Find the hw false.")
 		//todo remove the peer
 		//c.close(DiscHwSignError)
