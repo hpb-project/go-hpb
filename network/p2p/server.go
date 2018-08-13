@@ -717,13 +717,13 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Info("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
+	log.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
 
 
 
 	their, err := c.doProtoHandshake(&c.our)
 	if err != nil {
-		clog.Info("Failed proto handshake", "err", err)
+		clog.Debug("Failed proto handshake", "err", err)
 		c.close(err)
 		return
 	}
@@ -734,7 +734,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.their = *their
 	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Info("Do protocol handshake.","our",c.our,"their",c.their)
+	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	remoteBoe := false
@@ -753,14 +753,14 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Trace("Remote coinbase","address",remoteCoinbase)
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {
-				log.Info("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
+				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
 				log.Info("Boe verify the remote.","result",remoteBoe)
 			}
 		}
 	}
 
-	log.Info("Verify the remote hardware.","result",remoteBoe)
+	//log.Info("Verify the remote hardware.","result",remoteBoe)
 	if !remoteBoe {
 		//log.Error("Find the hw false.")
 		//todo remove the peer
@@ -782,19 +782,18 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 
 	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
-	log.Debug("######Get remote hardware table","ourtable",ourHdtable)
+	//log.Debug("######Get remote hardware table","ourtable",ourHdtable)
 	theirHdtable, err := c.doHardwareTable(ourHdtable)
 	if err != nil {
 		clog.Error("Failed hardware table handshake", "err", err)
 		c.close(err)
 		return
 	}
-	log.Info("######Get remote hardware table","ourtable",ourHdtable, "theirtable",theirHdtable)
+	log.Debug("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
 
 	if isBootnode {
 		srv.hdtab = theirHdtable.Hdtab
-		//srv.hdtab = append(srv.hdtab, theirHdtable.Hdtab...)
-		log.Info("Update hardware table from boot.","srv hdtab", srv.hdtab )
+		log.Debug("Update hardware table from boot.","srv hdtab", srv.hdtab )
 	}
 
 
