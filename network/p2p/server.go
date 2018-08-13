@@ -717,7 +717,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
+	log.Info("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
 
 
 
@@ -734,15 +734,17 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.their = *their
 	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
+	log.Info("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	remoteBoe := false
+	isBootnode := false
 
 	for _, n := range srv.BootstrapNodes {
 		if n.ID == c.id {
 			log.Info("Remote node is boot.","id",c.id)
 			remoteBoe = true
+			isBootnode = true
 		}
 	}
 
@@ -751,9 +753,9 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Trace("Remote coinbase","address",remoteCoinbase)
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {
-				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
+				log.Info("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				log.Debug("Boe verify the remote.","result",remoteBoe)
+				log.Info("Boe verify the remote.","result",remoteBoe)
 			}
 		}
 	}
@@ -787,7 +789,13 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
-	log.Debug("######Get remote hardware table","ourtable",ourHdtable, "theirtable",theirHdtable)
+	log.Info("######Get remote hardware table","ourtable",ourHdtable, "theirtable",theirHdtable)
+
+	if isBootnode {
+		srv.hdtab = theirHdtable.Hdtab
+		//srv.hdtab = append(srv.hdtab, theirHdtable.Hdtab...)
+		log.Info("Update hardware table from boot.","srv hdtab", srv.hdtab )
+	}
 
 
 	/////////////////////////////////////////////////////////////////////////////////
