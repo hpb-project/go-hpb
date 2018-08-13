@@ -209,7 +209,7 @@ func (t *dialTask) Do(srv *Server) {
 		return
 	}
 	if srv.delHist.contains(t.dest.ID){
-		log.Warn("###### Do task: recently delete node.")
+		log.Debug("Do task: recently delete node.")
 		return
 	}
 	success := t.dial(srv, t.dest)
