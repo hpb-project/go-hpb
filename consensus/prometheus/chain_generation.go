@@ -20,43 +20,46 @@ import (
 	"math/big"
 	"sync"
 	"time"
-	
 
 	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/consensus"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/consensus/voting"
-	"github.com/hpb-project/go-hpb/node/db"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/node/db"
+	//"strconv"
+	"errors"
+	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/common/hexutil"
 )
 
 const (
-	checkpointInterval   = 1024 // 投票间隔
-	inmemoryHistorysnaps = 128  // 内存中的快照个数
-	inmemorySignatures   = 4096 // 内存中的签名个数
-	wiggleTime = 500 * time.Millisecond // 延时单位
-	comCheckpointInterval   = 2 // 社区投票间隔
-	cadCheckpointInterval   = 2 // 社区投票间隔
+	checkpointInterval    = 1024                   // 投票间隔
+	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
+	inmemorySignatures    = 4096                   // 内存中的签名个数
+	wiggleTime            = 500 * time.Millisecond // 延时单位
+	comCheckpointInterval = 2                      // 社区投票间隔
+	cadCheckpointInterval = 2                      // 社区投票间隔
 )
 
 // Prometheus protocol constants.
 var (
-	epochLength = uint64(30000) // 充值投票的时的间隔，默认 30000个
-	blockPeriod = uint64(15)    // 两个区块之间的默认时间 15 秒
-	uncleHash = types.CalcUncleHash(nil) //
-	diffInTurn = big.NewInt(2) // 当轮到的时候难度值设置 2
-	diffNoTurn = big.NewInt(1) // 当非轮到的时候难度设置 1
-	reentryMux sync.Mutex
+	epochLength   = uint64(30000)            // 充值投票的时的间隔，默认 30000个
+	blockPeriod   = uint64(15)               // 两个区块之间的默认时间 15 秒
+	uncleHash     = types.CalcUncleHash(nil) //
+	diffInTurn    = big.NewInt(2)            // 当轮到的时候难度值设置 2
+	diffNoTurn    = big.NewInt(1)            // 当非轮到的时候难度设置 1
+	reentryMux    sync.Mutex
 	insPrometheus *Prometheus
 )
 
@@ -70,10 +73,11 @@ type Prometheus struct {
 
 	proposals map[common.Address]bool // 当前的proposals
 
-	signer     common.Address     // 签名的 Key
-	randomStr  string             // 产生的随机数
-	signFn     SignerFn           // 回调函数
-	lock       sync.RWMutex       // Protects the signerHash fields
+	signer    common.Address // 签名的 Key
+	randomStr string         // 产生的随机数
+	signFn    SignerFn       // 回调函数
+	lock      sync.RWMutex   // Protects the signerHash fields
+	hboe      *boe.BoeHandle //boe handle for using boe
 }
 
 // 新创建,在backend中调用
@@ -95,18 +99,19 @@ func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 		recents:    recents,
 		signatures: signatures,
 		proposals:  make(map[common.Address]bool),
+		hboe:       boe.BoeGetInstance(),
 	}
 }
 
 // InstanceBlockChain returns the singleton of BlockChain.
-func InstancePrometheus() (*Prometheus) {
+func InstancePrometheus() *Prometheus {
 	if nil == insPrometheus {
 		reentryMux.Lock()
-		if  nil == insPrometheus {
+		if nil == insPrometheus {
 			intanconf, err := config.GetHpbConfigInstance()
-			
-			proIns := New(&intanconf.Prometheus ,db.GetHpbDbInstance())
-			
+
+			proIns := New(&intanconf.Prometheus, db.GetHpbDbInstance())
+
 			///*consensus.engine.InstanceEngine()*/nil
 			if err != nil {
 				insPrometheus = nil
@@ -131,13 +136,12 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
-
-    // get hpb node snap
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, nil)
+	// get hpb node snap
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
-	
+
 	// get andidate node snap
 	//csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number, header.ParentHash)
 	//if cerr != nil {
@@ -147,49 +151,83 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if number <= consensus.HpbNodeCheckpointInterval {
 		SetNetNodeType(snap)
 		p2p.PeerMgrInst().SetHpRemoteFlag(true)
-	}else {
+	} else {
 		p2p.PeerMgrInst().SetHpRemoteFlag(false)
 	}
 
 	c.lock.RLock()
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
-	
+
 	// Get the best peer from the network
-	if cadWinner,err := voting.GetCadNodeFromNetwork(); err == nil {
-		
-		log.Info("len(cadWinner)-------------","len(cadWinner)", len(cadWinner))
-		
-		if(cadWinner == nil || len(cadWinner) !=2){
-			 header.CandAddress = address
-			 header.ComdAddress = address 
-			 header.VoteIndex = new(big.Int).SetUint64(0)   
-		}else{
+	if cadWinner, err := voting.GetCadNodeFromNetwork(); err == nil {
+
+		log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
+
+		if cadWinner == nil || len(cadWinner) != 2 {
+			header.CandAddress = address
+			header.ComdAddress = address
+			header.VoteIndex = new(big.Int).SetUint64(0)
+		} else {
 			header.CandAddress = cadWinner[0].Address // 设置地址
-			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)  
+			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
 			copy(header.Nonce[:], consensus.NonceAuthVote)
 			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
-	}else{
+	} else {
 		return err
 	}
-	
+
 	//log.Info("header.CandAddress-------------","CandAddress", header.CandAddress.Hex())
 	//log.Info("header.ComdAddress-------------","ComdAddress", header.ComdAddress.Hex())
-	
+
 	c.lock.RUnlock()
-	
+
+	//TODO:在区块头中设置boehwrand,通过获取父节点header的HardwareRandom通过调用boe的GetNextHash获取当前区块的rand
+	// set hardware random
+	//header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
+	if number == 1 {
+		header.HardwareRandom = "0x0000000000000000000000000000000000000000000000000000000000111111"
+	} else {
+		parentnum := number - 1
+		parentheader := chain.GetHeaderByNumber(parentnum)
+		if parentheader == nil {
+			log.Error("PrepareBlockHeader chain.GetHeaderByNumber(parentnum) is nil")
+			return errors.New("-----PrepareBlockHeader chain.GetHeaderByNumber(parentnum)------ is nil")
+		}
+		parenthwrandstr := parentheader.HardwareRandom
+		//parenthwrand, err := hexutil.Decode(chain.GetHeaderByNumber(number - 1).HardwareRandom)
+		parenthwrand, err := hexutil.Decode(parenthwrandstr)
+		if err != nil {
+			log.Error("FUHY PrepareBlockHeader HardwareRandom Decode", "err", err, "unmber", number)
+			return err
+		}
+
+		//if c.hboe == nil {
+		//	c.hboe = boe.BoeGetInstance()
+		//	if c.hboe == nil {
+		//		log.Error("FUHY boe.BoeGetInstance()", "c.hboe", "instance is nil")
+		//	}
+		//}
+
+		//log.Error("FUHY parenthwrand", "parenthwrand", parenthwrand)
+		header.HardwareRandom = hexutil.Encode(parenthwrand)
+
+		//if boehwrand , err := c.hboe.GetNextHash(parenthwrand); err != nil {
+		//	return err
+		//}else {
+		//	header.HardwareRandom  = hexutil.Encode(boehwrand)
+		//	log.Error("FUHY PrepareBlockHeader HardwareRandom encode", "HardwareRandom", header.HardwareRandom, "unmber", number)
+		//}
+	}
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer) {
+	if snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header) {
 		header.Difficulty = diffInTurn
 	}
-	
-	// set hardware random
-	header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
-	
+
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
@@ -197,13 +235,13 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	header.Extra = header.Extra[:consensus.ExtraVanity]
 
-    //在投票周期的时候，放入全部的Address
-	if number% consensus.HpbNodeCheckpointInterval == 0 {
+	//在投票周期的时候，放入全部的Address
+	if number%consensus.HpbNodeCheckpointInterval == 0 {
 		for _, signer := range snap.GetHpbNodes() {
 			header.Extra = append(header.Extra, signer[:]...)
 		}
 	}
-	
+
 	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
@@ -212,27 +250,25 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	
+
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
-	
+
 	//设置时间点，如果函数太小则，设置为当前的时间
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
-	
-	
+
 	return nil
 }
-
 
 //生成区块
 func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
 	log.Info("HPB Prometheus Seal is starting")
-	
+
 	number := header.Number.Uint64()
-	
+
 	if number == 0 {
 		return nil, consensus.ErrUnknownBlock
 	}
@@ -240,19 +276,18 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if c.config.Period == 0 && len(block.Transactions()) == 0 {
 		return nil, consensus.ErrWaitTransactions
 	}
-	
+
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("GenBlockWithSig-------------+++++ signer's address","signer", signer.Hex())
+	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
 
 	c.lock.RUnlock()
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil)
-
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 
 	// 已经投票结束
-	if (number% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+	if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
 		// 轮转
 		SetNetNodeType(snap)
 		log.Info("SetNetNodeType ***********************")
@@ -271,17 +306,17 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序
 	/*
-	for seen, recent := range snap.Recents {
-		if recent == signerHash {
-			// 签名者在recents缓存中，等待被移除
-			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				log.Info("Prometheus： Signed recently, must wait for others")
-				<-stop
-				return nil, nil
+		for seen, recent := range snap.Recents {
+			if recent == signerHash {
+				// 签名者在recents缓存中，等待被移除
+				if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
+					log.Info("Prometheus： Signed recently, must wait for others")
+					<-stop
+					return nil, nil
+				}
 			}
-		}
-	}*/
-	
+		}*/
+
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	// 比较难度值，确定是否为适合的时间
@@ -290,28 +325,28 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
 		//log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 
-		midIndex := uint64(len(snap.Signers)/2)                  //中间位置，一般的个数为奇数个
-		currentIndex := number % uint64(len(snap.Signers))	     //挖矿的机器位置
+		midIndex := uint64(len(snap.Signers) / 2)                //中间位置，一般的个数为奇数个
+		currentIndex := number % uint64(len(snap.Signers))       //挖矿的机器位置
 		offset := snap.GetOffset(header.Number.Uint64(), signer) //当前的位置
 
-        //在一定范围内延迟8分,当前的currentIndex往前的没有超过
-        if(currentIndex <= midIndex){
-	        if(offset < currentIndex + midIndex/2){
-			 	wiggle = time.Duration(1000) * wiggleTime
-				delay += wiggle;
-			}else{
-				//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
-				delay += time.Duration(offset - currentIndex - midIndex)* wiggleTime
-			}
-        }else{
-       	    if(offset < currentIndex - midIndex/2){
+		//在一定范围内延迟8分,当前的currentIndex往前的没有超过
+		if currentIndex <= midIndex {
+			if offset < currentIndex+midIndex/2 {
 				wiggle = time.Duration(1000) * wiggleTime
-				delay += wiggle;
-			}else{
-				delay += time.Duration(offset - currentIndex - midIndex)* wiggleTime
+				delay += wiggle
+			} else {
+				//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
+				delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
 			}
-        }
-	 }
+		} else {
+			if offset < currentIndex-midIndex/2 {
+				wiggle = time.Duration(1000) * wiggleTime
+				delay += wiggle
+			} else {
+				delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
+			}
+		}
+	}
 
 	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 
@@ -320,10 +355,10 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, nil
 	case <-time.After(delay):
 	}
-	
+
 	// 地址赋值
 	header.Coinbase = signer
-	
+
 	// 签名交易，signFn为回掉函数
 	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
 	if err != nil {
@@ -336,44 +371,41 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	return block.WithSeal(header), nil
 }
 
-
 // 设置网络节点类型
-func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
+func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 	addresses := snapa.GetHpbNodes()
 
 	newlocaltyp := discover.PreNode
-	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag{
+	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag {
 		newlocaltyp = discover.HpNode
 	}
 	if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
 		p2p.PeerMgrInst().SetLocalType(newlocaltyp)
 	}
 
-
 	peers := p2p.PeerMgrInst().PeersAll()
 	for _, peer := range peers {
 		switch peer.RemoteType() {
-			case discover.PreNode:
-				if flag := FindHpbNode(peer.Address(), addresses); flag{
-					log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
-					peer.SetRemoteType(discover.HpNode)
-				}
-			case discover.HpNode:
-				if flag := FindHpbNode(peer.Address(), addresses); !flag{
-					log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
-					peer.SetRemoteType(discover.PreNode)
-				}
-			default:
-				break
+		case discover.PreNode:
+			if flag := FindHpbNode(peer.Address(), addresses); flag {
+				log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				peer.SetRemoteType(discover.HpNode)
+			}
+		case discover.HpNode:
+			if flag := FindHpbNode(peer.Address(), addresses); !flag {
+				log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
+				peer.SetRemoteType(discover.PreNode)
+			}
+		default:
+			break
 		}
 	}
 	return nil
 }
 
-
-func FindHpbNode(address common.Address, addresses []common.Address) bool{
-	for _, addresstemp := range addresses{
-		if(addresstemp == address){
+func FindHpbNode(address common.Address, addresses []common.Address) bool {
+	for _, addresstemp := range addresses {
+		if addresstemp == address {
 			return true
 		}
 	}
@@ -396,8 +428,8 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 }
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	
-	log.Info("Finalize-------------+++++ signer's address","signer", header.CandAddress.Hex())
+
+	log.Info("Finalize-------------+++++ signer's address", "signer", header.CandAddress.Hex())
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -406,68 +438,114 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 }
 
 // 计算奖励
-func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) (error) {
+func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) error {
 	// Select the correct block reward based on chain progression
-	hobBlockReward := big.NewInt(300000000)
-	canBlockReward := big.NewInt(100000000)
+	//hobBlockReward := big.NewInt(300000000)
+	//canBlockReward := big.NewInt(100000000)
+	const (
+		nodenumfirst int = 151
+		//nodenumsecond int = 151
+		nodenumthird int = 100000
+	)
 
-	
-	// 将来的接口，调整奖励，调整奖励与配置有关系
-	//config *params.ChainConfig
-	//if config(header.Number) {
-	//	blockReward = ByzantiumBlockReward
-	//}
-	
-	// Accumulate the rewards for the miner and any included uncles
-	hpbReward := new(big.Int).Set(hobBlockReward)
-	canReward := new(big.Int).Set(canBlockReward)
-	
+	var bigIntblocksoneyear = new(big.Int)
+	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)
+	secondsoneyesr.Quo(secondsoneyesr, big.NewFloat(float64(c.config.Period)))
+	secondsoneyesr.Int(bigIntblocksoneyear)
+
+	bigrewards := big.NewFloat(float64(100000000 * 0.03))
+	bigrewards.Mul(bigrewards, big.NewFloat(float64(nodenumfirst)))
+	bigrewards.Quo(bigrewards, big.NewFloat(float64(nodenumfirst)))
+
+	bigIntblocksoneyearfloat := new(big.Float)
+	bigIntblocksoneyearfloat.SetInt(bigIntblocksoneyear)
+	A := bigrewards.Quo(bigrewards, bigIntblocksoneyearfloat)
+
+	A.Mul(A, big.NewFloat(2))
+	A.Quo(A, big.NewFloat(3))
+	var bigA23 = new(big.Float)
+	var bigA13 = new(big.Float)
+	bigA23.Set(A) //为了cad奖励的时候使用
+	bigA13.Set(A) //为了cad奖励的时候使用
+	bighobBlockReward := A.Mul(A, big.NewFloat(0.35))
+
+	ether2weis := big.NewInt(10)
+	ether2weis.Exp(ether2weis, big.NewInt(18), nil)
+
+	ether2weisfloat := new(big.Float)
+	ether2weisfloat.SetInt(ether2weis)
+	bighobBlockRewardwei := bighobBlockReward.Mul(bighobBlockReward, ether2weisfloat)
+
+	finalhpbrewards := new(big.Int)
+	bighobBlockRewardwei.Int(finalhpbrewards)
+
 	number := header.Number.Uint64()
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
-	state.AddBalance(header.Coinbase, hpbReward)
-	
-	// reward on hpb nodes
-	
-	/*
-	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config, chain, number, header.ParentHash, nil); err == nil{
-		// 奖励所有的高性能节点
-		for _, signer := range snap.GetHpbNodes() {
-			//state.AddBalance(signer, hpbReward)
-		}
-	}else{
-		return err
-	}
-	*/
-	// reward on Cad nodes
-	if csnap, err :=  voting.GetCadNodeSnap(c.db,c.recents,chain, number,header.ParentHash);err == nil{
-		if(csnap != nil){
-			for _,caddress := range csnap.CanAddresses {
-					state.AddBalance(caddress, canReward)
+	state.AddBalance(header.Coinbase, finalhpbrewards)
+
+	//候选节点奖励，等高性能节点奖励测试通过在测试候选节点奖励
+	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
+		if csnap != nil {
+			bigA23.Mul(bigA23, big.NewFloat(0.65))
+			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents))))
+
+			bigcadRewardwei := new(big.Float)
+			bigcadRewardwei.SetInt(ether2weis)
+			bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward)
+
+			cadReward := new(big.Int)
+			bigcadRewardwei.Int(cadReward)
+			//for _,caddress := range csnap.CanAddresses  {
+			//	log.Info("FUHY CalculateRewards csnap.CanAddresses","caddress", caddress)
+			//}
+			//获取所有cad的总票数
+			votecounts := new(big.Float)
+			for _, votes := range csnap.VotePercents {
+				votecounts.Add(votecounts, big.NewFloat(votes))
+			}
+			//log.Info("FUHY ---------------------CalculateRewards csnap.VotePercents-----------------------","number", number)
+			for caddress, votes := range csnap.VotePercents {
+				var tempfloat = new(big.Float)
+				var tempInt = new(big.Int)
+				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","bigA13", bigA13)
+				tempfloat.Quo(bigA13, big.NewFloat(3))
+				votepercent := new(big.Float)
+				bigvotes := big.NewFloat(votes)
+				//计算获得的投票率
+				votepercent = bigvotes.Quo(bigvotes, votecounts)
+				tempfloat.Mul(tempfloat, votepercent)
+				tempfloat.Mul(tempfloat, ether2weisfloat)
+				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","tempfloat", tempfloat)
+				tempfloat.Int(tempInt)
+				tempInt.Add(cadReward, tempInt)
+				state.AddBalance(caddress, tempInt)
+				//state.GetBalance(caddress)
+				//log.Info("FUHY CalculateRewards csnap.VotePercents","caddress", caddress, "cadReward", tempInt)
+				//log.Info("FUHY CalculateRewards csnap.VotePercents","big.NewFloat(votepercent)", big.NewFloat(votepercent), "votepercent", votepercent)
 			}
 		}
-	}else{
+	} else {
 		return err
 	}
-	
+
+	// Accumulate the rewards for the miner and any included uncles
 	/*
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
-	}
+		r := new(big.Int)
+		for _, uncle := range uncles {
+			r.Add(uncle.Number, big8)
+			r.Sub(r, header.Number)
+			r.Mul(r, blockReward)
+			r.Div(r, big8)
+			state.AddBalance(uncle.Coinbase, r)
+			r.Div(blockReward, big32)
+			reward.Add(reward, r)
+		}
 	*/
 	//state.AddBalance(header.Coinbase, reward)
-	
 	return nil
 }
-
 
 // 返回的API
 func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {

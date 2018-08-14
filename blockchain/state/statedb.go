@@ -23,8 +23,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
@@ -501,6 +501,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 		return self.validRevisions[i].id >= revid
 	})
 	if idx == len(self.validRevisions) || self.validRevisions[idx].id != revid {
+		log.Error("------------RevertToSnapshot-------------", "idx", idx, "validRevisions[idx].id", self.validRevisions[idx].id)
 		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
 	}
 	snapshot := self.validRevisions[idx].journalIndex
