@@ -27,7 +27,6 @@ import (
 	"math/big"
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
-
 	"strconv"
 	//"errors"
 	"errors"
@@ -147,14 +146,14 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	}
 
 	var randBigInt *big.Int
-	if len(header.HardwareRandom[2:]) == 64 {
+	//if len(header.HardwareRandom) == 64 {
 		//log.Error("FUHY len(header.HardwareRandom[2:]) == 32", "rand decide by", "hardware")
-		randBigInt = math.MustParseBig256(header.HardwareRandom[2:])
-		currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
-	} else {
-		log.Error("FUHY len(header.HardwareRandom[2:]) != 32", "rand decide by", "number")
-		panic("FUHY len(header.HardwareRandom[2:]) != 32")
-	}
+		randBigInt = math.MustParseBig256("0000000000000000000000000000000000000000000000000000000000111111")
+		//currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
+	//} else {
+	//	log.Error("FUHY len(header.HardwareRandom[2:]) != 32", "rand decide by", "number")
+	//	panic("FUHY len(header.HardwareRandom[2:]) != 32")
+	//}
 
 	var partheadersstart uint64
 	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，

@@ -40,7 +40,7 @@ import (
 	//"strconv"
 	"errors"
 	"github.com/hpb-project/go-hpb/boe"
-	"github.com/hpb-project/go-hpb/common/hexutil"
+	//"github.com/hpb-project/go-hpb/common/hexutil"
 )
 
 const (
@@ -187,7 +187,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	// set hardware random
 	//header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
 	if number == 1 {
-		header.HardwareRandom = "0x0000000000000000000000000000000000000000000000000000000000111111"
+		//header.HardwareRandom = "0x0000000000000000000000000000000000000000000000000000000000111111"
 	} else {
 		parentnum := number - 1
 		parentheader := chain.GetHeaderByNumber(parentnum)
@@ -195,9 +195,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			log.Error("PrepareBlockHeader chain.GetHeaderByNumber(parentnum) is nil")
 			return errors.New("-----PrepareBlockHeader chain.GetHeaderByNumber(parentnum)------ is nil")
 		}
-		parenthwrandstr := parentheader.HardwareRandom
+		//parenthwrandstr := parentheader.HardwareRandom
 		//parenthwrand, err := hexutil.Decode(chain.GetHeaderByNumber(number - 1).HardwareRandom)
-		parenthwrand, err := hexutil.Decode(parenthwrandstr)
+		//parenthwrand := header.HardwareRandom
 		if err != nil {
 			log.Error("FUHY PrepareBlockHeader HardwareRandom Decode", "err", err, "unmber", number)
 			return err
@@ -211,7 +211,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		//}
 
 		//log.Error("FUHY parenthwrand", "parenthwrand", parenthwrand)
-		header.HardwareRandom = hexutil.Encode(parenthwrand)
+		//header.HardwareRandom = hexutil.Encode(parenthwrand)
 
 		//if boehwrand , err := c.hboe.GetNextHash(parenthwrand); err != nil {
 		//	return err
@@ -301,7 +301,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, consensus.ErrUnauthorized
 	}
 
-	log.Info("Proposed the hardware random number in current round:" + header.HardwareRandom)
+	//log.Info("Proposed the hardware random number in current round:" + header.HardwareRandom)
 
 	// If we're amongst the recent signers, wait for the next block
 	// 如果最近已经签名，则需要等待时序

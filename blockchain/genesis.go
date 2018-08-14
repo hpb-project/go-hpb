@@ -59,6 +59,7 @@ type Genesis struct {
 	Number     uint64              `json:"number"`
 	GasUsed    uint64              `json:"gasUsed"`
 	ParentHash common.Hash         `json:"parentHash"`
+	HardwareRandom []byte          `json:"hardwareRandom"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -96,6 +97,7 @@ type genesisSpecMarshaling struct {
 	Number     math.HexOrDecimal64
 	Difficulty *math.HexOrDecimal256
 	Alloc      map[common.UnprefixedAddress]GenesisAccount
+	HardwareRandom hexutil.Bytes
 }
 
 type genesisAccountMarshaling struct {
@@ -242,6 +244,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		//VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
 		//CandAddress: g.CandAddress,
 		Root:       root,
+		HardwareRandom: g.HardwareRandom,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = config.GenesisGasLimit
@@ -310,6 +313,7 @@ func DefaultGenesisBlock() *Genesis {
 		Config:     config.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
+		HardwareRandom: hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
@@ -322,6 +326,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 		Config:     config.MainnetChainConfig,
 		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		HardwareRandom: hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      decodePrealloc(testnetAllocData),
