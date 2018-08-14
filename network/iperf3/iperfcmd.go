@@ -23,7 +23,6 @@ func exec_shell(s string) (string, error){
 
 func IperfServer() string {
 	cmd := exec.Command("/bin/bash", "-c", "./iperf3 -s -p 5188")
-	//显示运行的命令
 	fmt.Println(cmd.Args)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -32,22 +31,13 @@ func IperfServer() string {
 	}
 	cmd.Start()
 	reader := bufio.NewReader(stdout)
-	//实时循环读取输出流中的一行内容
 	var count uint64
 	for {
 		line, err2 := reader.ReadString('\n')
 		if err2 != nil || io.EOF == err2 {
 			break
 		}
-		//fmt.Println(line)
-		//reg := regexp.MustCompile("\\d{1,3}.\\d{1,3}.\\d{1,3}.\\d{1,3}") //六位连续的数字
-		////返回str中第一个匹配reg的字符串
-		//data := reg.Find([]byte(line))
-		//if data != nil {
-		//	result = string(data)
-		//	//fmt.Println(result)
-		//	break
-		//}
+
 		count = count +1
 		fmt.Println(line)
 		log.Info("Read","Num",count,"Out",line)
@@ -57,13 +47,13 @@ func IperfServer() string {
 	return "Over"
 }
 
-func StartSever(port int) (*Cmd,error) {
+func StartSever(port int) (error) {
 
 	cmd := exec.Command("./iperf3", " -s ", " -p "+string(port))
 	stdout, err := os.OpenFile("./iperf_server.log", os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Error("open iperf_server.log","err",err)
-		return nil,err
+		return err
 
 	}
 	defer stdout.Close()
@@ -71,10 +61,10 @@ func StartSever(port int) (*Cmd,error) {
 
 	if err := cmd.Start(); err != nil {
 		log.Error("start iperf server","err",err)
-		return nil,err
+		return err
 	}
 
-	return cmd,nil
+	return nil
 }
 
 func StartTest(host string, port string) (float64) {
