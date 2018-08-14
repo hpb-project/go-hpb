@@ -26,10 +26,5 @@ export GOPATH
 cd "$hpbdir/go-hpb"
 PWD="$hpbdir/go-hpb"
 
-mkdir "$hpbdir/go-hpb/build/bin/"
-cp "$hpbdir/go-hpb/network/iperf3/iperf3" "$hpbdir/go-hpb/build/bin/iperf3"
-cp "$hpbdir/go-hpb/network/p2p/binding.json" "$hpbdir/go-hpb/build/bin/binding.json"
-cp "$hpbdir/go-hpb/network/p2p/config.json" "$hpbdir/go-hpb/build/bin/config.json"
-
 # Launch the arguments with the configured environment.
 exec "$@"

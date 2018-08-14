@@ -9,12 +9,16 @@
 .PHONY: geth-windows geth-windows-386 geth-windows-amd64
 
 GOBIN = $(shell pwd)/build/bin
+GOHPB = $(shell pwd)
 GO ?= latest
 
 ghpb:
 	build/env.sh go run build/ci.go install ./cmd/ghpb
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+	cp "$(GOHPB)/network/iperf3/iperf3" "$(GOBIN)/iperf3"
+	cp "$(GOHPB)/network/p2p/binding.json" "$(GOBIN)/binding.json"
+	cp "$(GOHPB)/network/p2p/config.json" "$(GOBIN)/config.json"
 
 promfile:
 	build/env.sh go run build/ci.go install ./consensus/promfile
@@ -29,6 +33,9 @@ all:
 	build/env.sh go run build/ci.go install ./consensus/promfile
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/promfile\" to launch promfile."
+	cp "$(GOHPB)/network/iperf3/iperf3" "$(GOBIN)/iperf3"
+	cp "$(GOHPB)/network/p2p/binding.json" "$(GOBIN)/binding.json"
+	cp "$(GOHPB)/network/p2p/config.json" "$(GOBIN)/config.json"
 
 android:
 	build/env.sh go run build/ci.go aar --local
