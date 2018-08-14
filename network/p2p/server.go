@@ -362,9 +362,12 @@ func (srv *Server) Start() (err error) {
 	}
 
 	//todo: only for test
+	log.Warn("!!! config.json should include your pid of hpnodes in first turn !!!")
 	srv.parseRemoteHpType()
-	log.Debug("######Server start","hpflag",srv.hpflag)
-	log.Info("Peer manager start server with type.","NodeType",srv.localType.ToString())
+	log.Debug("Server start","hpflag",srv.hpflag)
+
+
+	log.Info("Server start with type.","NodeType",srv.localType.ToString())
 
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.NetRestrict)
 	srv.loopWG.Add(1)
