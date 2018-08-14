@@ -31,7 +31,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"math/big"
 	"gopkg.in/fatih/set.v0"
-	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"errors"
 	//"github.com/hpb-project/go-hpb/boe"
 	//"github.com/hpb-project/go-hpb/boe"
@@ -708,36 +707,36 @@ func (p *Peer) readExchange(status *exchangeData) (err error) {
 }
 
 ///////////////////////////////////////////////
-
-func (p *Peer) testBandwidth() (error) {
-
-	ch := make(chan struct{}, 1)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				p.log.Error("Test bandwidth panic.","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
-			}
-		}()
-
-		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
-		result := iperf.StartTest(p.RemoteIP(), p.RemoteListenPort()+100, testBWDuration)
-		p.lock.Lock()
-		defer p.lock.Unlock()
-		p.bandwidth = result
-		p.log.Info("Test bandwidth ok","result",result)
-		ch <- struct{}{}
-
-	}()
-
-	timeout := time.NewTimer(time.Second*5)
-	defer timeout.Stop()
-
-	select {
-	case <-ch:
-	case <-timeout.C:
-		return errPeerBWTestTimeout
-	}
-
-	return nil
-}
+//
+//func (p *Peer) testBandwidth() (error) {
+//
+//	ch := make(chan struct{}, 1)
+//	go func() {
+//		defer func() {
+//			if r := recover(); r != nil {
+//				p.log.Error("Test bandwidth panic.","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
+//			}
+//		}()
+//
+//		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
+//		result := iperf.StartTest(p.RemoteIP(), p.RemoteListenPort()+100, testBWDuration)
+//		p.lock.Lock()
+//		defer p.lock.Unlock()
+//		p.bandwidth = result
+//		p.log.Info("Test bandwidth ok","result",result)
+//		ch <- struct{}{}
+//
+//	}()
+//
+//	timeout := time.NewTimer(time.Second*5)
+//	defer timeout.Stop()
+//
+//	select {
+//	case <-ch:
+//	case <-timeout.C:
+//		return errPeerBWTestTimeout
+//	}
+//
+//	return nil
+//}
 
