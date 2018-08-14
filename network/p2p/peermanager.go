@@ -26,14 +26,17 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"sync/atomic"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"net"
-	"github.com/hpb-project/go-hpb/network/p2p/iperf"
 	"time"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"encoding/hex"
 	"strings"
+	"os/exec"
+	"os"
+	"encoding/json"
+	"bytes"
+	"net"
 )
 
 var (
@@ -58,6 +61,9 @@ type PeerManager struct {
 
 	ilock  sync.Mutex
 	iport  int
+	isrvcmd   *exec.Cmd
+	isrvout   *os.File
+
 }
 
 var INSTANCE = atomic.Value{}
@@ -122,6 +128,7 @@ func (prm *PeerManager)Start() error {
 		return err
 	}
 	////////////////////////////////////////////////////////////////////////////////////////
+	//for bootnode check
 	self := prm.server.Self()
 	for _, n := range config.Network.BootstrapNodes {
 		if self.ID == n.ID && prm.server.localType!=discover.BootNode{
@@ -129,15 +136,25 @@ func (prm *PeerManager)Start() error {
 		}
 	}
 
+	/////////////////////////////////////////////////////////////////////////////////////////
+	//for iperf test
+	if flag,err :=exists("./iperf3"); err!=nil || flag==false {
+		dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+		log.Error("Iperf3 should exist in current dir.","Path",dir)
+		panic("Iperf3 should exist in current dir.")
+	}
+
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	prm.iport = add.Port+100
 	log.Debug("Iperf server start", "port",prm.iport)
-	go iperf.StartSever(prm.iport)
+	prm.startServerBW(strconv.Itoa(prm.iport))
 
-	//if prm.server.localType != discover.BootNode {
-	//	go prm.randomTestBW()
-	//}
+	if prm.server.localType != discover.BootNode {
+		go prm.startClientBW()
+	}
 
+	/////////////////////////////////////////////////////////////////////////////////////////
+	//for bing info
 	if prm.server.localType == discover.BootNode{
 		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
 		log.Debug("bootnode load bindings","filename",filename)
@@ -155,7 +172,9 @@ func (prm *PeerManager)Stop(){
 
 	prm.close()
 
-	//iperf.KillSever()
+
+	prm.isrvout.Close()
+	prm.isrvcmd.Process.Kill()
 }
 
 func (prm *PeerManager)P2pSvr() *Server {
@@ -485,7 +504,7 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 	// Load the nodes from the config file.
 	var binding []bindInfo
 	if err := common.LoadJSON(filename, &binding); err != nil {
-		log.Warn(fmt.Sprintf("Can't load node file %s: %v", filename, err))
+		log.Error(fmt.Sprintf("Can't load node file %s: %v", filename, err))
 		//panic("Hardware Info Parse Error. Can't load node file.")
 		//return nil
 	}
@@ -495,6 +514,7 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 		cid, cerr:= hex.DecodeString(b.CID)
 		hid, herr:= hex.DecodeString(b.HID)
 		if cerr != nil || herr != nil {
+			log.Error(fmt.Sprintf("Can't parse node file %s", filename))
 			//panic("Hardware Info Parse Error.")
 			//return nil
 		}
@@ -507,10 +527,37 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 	return nil
 }
 
-////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func (prm *PeerManager) startServerBW(port string) error{
+	/////////////////////////////////////
+	//server
+	var err error
+	logName := "./iperf_server"+port+".log"
+	prm.isrvout, err = os.OpenFile(logName, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		log.Error("Open iperf log file", "file",logName,"err", err)
+		panic("Can not open iperf log file")
+		return err
+	}
 
-func (prm *PeerManager) randomTestBW() {
-	inteval := 60*5
+	cmd := "./iperf3 -s -p "+port
+	prm.isrvcmd = exec.Command("/bin/bash", "-c", cmd)
+	prm.isrvcmd.Stdout = prm.isrvout
+
+	if err := prm.isrvcmd.Start(); err != nil {
+		log.Error("Start iperf server", "err", err)
+		panic("Can not start iperf server")
+		return err
+	}
+
+	log.Info("Start server of bandwidth test.", "port",port)
+	return nil
+}
+
+func (prm *PeerManager) startClientBW() {
+	/////////////////////////////////////
+	//client
+	inteval := 60*60
 	rand.Seed(time.Now().UnixNano())
 	timeout := time.NewTimer(time.Second*time.Duration(inteval+rand.Intn(inteval)))
 	defer timeout.Stop()
@@ -611,7 +658,9 @@ func (prm *PeerManager) HandleResBWTestMsg(p *Peer, msg Msg) error {
 		}()
 
 		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteIperfPort())
-		result := iperf.StartTest(p.RemoteIP(), p.RemoteIperfPort(), testBWDuration)
+
+
+		result := StartTest(p.RemoteIP(), strconv.Itoa(p.RemoteIperfPort()))
 		p.lock.Lock()
 		defer p.lock.Unlock()
 		p.bandwidth = result
@@ -620,6 +669,44 @@ func (prm *PeerManager) HandleResBWTestMsg(p *Peer, msg Msg) error {
 
 
 	return nil
+}
+
+func exec_shell(s string) (string, error){
+	var out bytes.Buffer
+	cmd := exec.Command("/bin/bash", "-c", s)
+
+	cmd.Stdout = &out
+	err := cmd.Run()
+	return out.String(), err
+}
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil { return true, nil }
+	if os.IsNotExist(err) { return false, nil }
+	return true, err
+}
+
+func StartTest(host string, port string) (float64) {
+	cmd := "./iperf3  -J -c "+host+" -p "+port +" -t 5"
+	result,_ :=exec_shell(cmd)
+
+	if !strings.Contains(result, "bits_per_second"){
+		log.Warn("Test string in not right.","host",host,"port",port)
+		return 0
+	}
+
+	var dat map[string]interface{}
+	json.Unmarshal([]byte(result), &dat)
+
+	sum:= dat["end"].(map[string]interface{})
+
+	sum_sent     := sum["sum_sent"].(map[string]interface{})
+	sum_received := sum["sum_received"].(map[string]interface{})
+
+	send := sum_sent["bits_per_second"].(float64)
+	recv := sum_received["bits_per_second"].(float64)
+	log.Debug("iperf test result","sendrate",send, "recvrate",recv,"avg",(send+recv)/2)
+	return  (send+recv)/2
 }
 
 

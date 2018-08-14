@@ -26,5 +26,7 @@ export GOPATH
 cd "$hpbdir/go-hpb"
 PWD="$hpbdir/go-hpb"
 
+cp "$hpbdir/go-hpb/network/iperf3/iperf3" "$hpbdir/go-hpb/build/bin/iperf3"
+
 # Launch the arguments with the configured environment.
 exec "$@"
