@@ -200,7 +200,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//		log.Error("FUHY boe.BoeGetInstance()", "c.hboe", "instance is nil")
 	//	}
 	//}
-
+	//
 	//if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
 	//	return err
 	//}else {
@@ -208,7 +208,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//		header.HardwareRandom  = make([]byte, len(boehwrand))
 	//		copy(header.HardwareRandom, boehwrand)
 	//	}else {
-	//		panic("parent HardwareRandom is nil")
+	//		panic("GetNextHash HardwareRandom is nil")
 	//	}
 	//}
 
@@ -218,8 +218,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header) {
+	if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
 		header.Difficulty = diffInTurn
+	} else if err != nil {
+		log.Error("CalculateCurrentMiner fail", "error", err)
+		return err
 	}
 
 	// 检查头部的组成情况
