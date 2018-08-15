@@ -44,10 +44,10 @@ import (
 )
 
 var (
-	reentryMux sync.Mutex
-	bcInstance *BlockChain
+	reentryMux       sync.Mutex
+	bcInstance       *BlockChain
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
-	errNoGenesis = errors.New("Genesis is not found in the chain.")
+	errNoGenesis     = errors.New("Genesis is not found in the chain.")
 )
 
 const (
@@ -116,10 +116,10 @@ type BlockChain struct {
 }
 
 // InstanceBlockChain returns the singleton of BlockChain.
-func InstanceBlockChain() (*BlockChain) {
+func InstanceBlockChain() *BlockChain {
 	if nil == bcInstance {
 		reentryMux.Lock()
-		if  nil == bcInstance {
+		if nil == bcInstance {
 			intan, _ := config.GetHpbConfigInstance()
 			bcI := NewBlockChain(db.GetHpbDbInstance(), &intan.BlockChain)
 			if bcI != nil {
@@ -159,7 +159,7 @@ func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, erro
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Hpb Validator and
 // Processor.
-func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig) (*BlockChain) {
+func NewBlockChain(chainDb hpbdb.Database, config *config.ChainConfig) *BlockChain {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -201,7 +201,7 @@ func NewBlockChainWithEngine(chainDb hpbdb.Database, config *config.ChainConfig,
 		blockCache:   blockCache,
 		futureBlocks: futureBlocks,
 		badBlocks:    badBlocks,
-		engine:        engine,
+		engine:       engine,
 	}
 
 	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
@@ -850,7 +850,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-    //获取本地的
+	//获取本地的
 	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
@@ -1026,7 +1026,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		// Write the block to the chain and get the status.
-		log.Info("----> Write Block and State From Outside", "number", block.Number(), "hash", block.Hash(),"difficulty",block.Difficulty())
+		log.Info("----> Write Block and State From Outside", "number", block.Number(), "hash", block.Hash(), "difficulty", block.Difficulty())
 		status, err := bc.WriteBlockAndState(block, receipts, state)
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1037,7 +1037,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
 			log.Info("Inserted new block", "number", block.Number(), "hash", block.Hash())
-			
+
 			coalescedLogs = append(coalescedLogs, logs...)
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainEvent{block, block.Hash(), logs})
@@ -1054,9 +1054,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		stats.usedGas += usedGas.Uint64()
 		stats.report(chain, i)
 	}
-	
-	
-	
+
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.LastBlockHash() == lastCanon.Hash() {
 		events = append(events, ChainHeadEvent{lastCanon})
@@ -1190,6 +1188,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
+		log.Error("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
 	var addedTxs types.Transactions
@@ -1411,8 +1410,6 @@ func (bc *BlockChain) GetRandom() string {
 	return bc.hc.GetRandom()
 }
 
-
-
 // Config retrieves the blockchain's chain configuration.
 func (bc *BlockChain) Config() *config.ChainConfig { return bc.config }
 
@@ -1443,4 +1440,3 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) sub.Subs
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) sub.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
-

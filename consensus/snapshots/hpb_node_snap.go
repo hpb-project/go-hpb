@@ -168,7 +168,12 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 
 	//获取部分区块头，为了获取这些区块头中都那些signer进行了签名操作
 	for i := partheadersstart; i < number; i++ {
+	loop:
 		partheaders[i-partheadersstart] = chain.GetHeaderByNumber(i)
+		if partheaders[i-partheadersstart] == nil || &partheaders[i-partheadersstart].Coinbase == nil {
+			log.Error("before GetOffsethw---------------chain.GetHeaderByNumber(i) &partheaders[i-partheadersstart].Coinbase == nil")
+			goto loop
+		}
 	}
 	//log.Error("before GetOffsethw number","number",number, "len partheaders", len(partheaders))
 	//mappartheaders,是这些区块头中signer的map，包含了对应signer签署区块的个数，暂时没什么用
@@ -216,7 +221,8 @@ func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers 
 
 	var headersignaddr = make(map[common.Address]uint64)
 	for _, header := range headers {
-		//log.Error("FUHY----------header.Coinbase------------","header.Coinbase", header.Coinbase)
+		log.Info("FUHY----------GetOffsethw header.Coinbase------------", "header.Coinbase", header.Coinbase)
+		log.Info("FUHY----------GetOffsethw header.Number------------", "header.Number", header.Number)
 		if _, ok := headersignaddr[header.Coinbase]; ok {
 			headersignaddr[header.Coinbase] = headersignaddr[header.Coinbase] + 1
 		} else {
