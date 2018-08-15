@@ -14,54 +14,64 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package voting
 
 import (
 	"math"
-	//"math/big"
-	//"strconv"
-	//"math/rand"
-   // "fmt"
-    "bytes"
-    
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/consensus/snapshots"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+
 	"github.com/hashicorp/golang-lru"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	//"github.com/hpb-project/go-hpb/network/p2p"
 	//"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"bytes"
 )
 
 // 获取候选选举的快照
-func GetCadNodeSnap(db hpbdb.Database,recents *lru.ARCCache,chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
-	
+func GetCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
+
 	hpbAddressMap := make(map[common.Address]string)
-	
-	if snap, err := GetHpbNodeSnap(db,recents,nil,nil, chain, number, hash, nil); err == nil{
+
+	if snap, err := GetHpbNodeSnap(db, recents, nil, nil, chain, number, hash, nil); err == nil {
 		// 去重
 		for _, signer := range snap.GetHpbNodes() {
 			hpbAddressMap[signer] = "ok"
 		}
-	}else{
+	} else {
 		return nil, err
 	}
-	
+
 	// reward on Cad nodes
-	
-	addresses := []common.Address{}
-	if csnap, err :=  GetAllCadNodeSnap(db,recents,chain, number,hash);err == nil{
-		if(csnap != nil){
-			for _,caddress := range csnap.CanAddresses {
-				if(hpbAddressMap[caddress] != "ok"){
-					addresses = append(addresses,caddress)
+	var Cadvotepercents map[common.Address]float64
+	Cadvotepercents = make(map[common.Address]float64)
+
+	//addresses := []common.Address{}
+	if csnap, err := GetAllCadNodeSnap(db, recents, chain, number, hash); err == nil {
+		if csnap != nil {
+			for caddress, votepercent := range csnap.VotePercents {
+				if hpbAddressMap[caddress] != "ok" {
+					Cadvotepercents[caddress] = votepercent
 				}
 			}
 		}
-	}else{
+	} else {
+		return nil, err
+	}
+
+	addresses := []common.Address{}
+	if csnap, err := GetAllCadNodeSnap(db, recents, chain, number, hash); err == nil {
+		if csnap != nil {
+			for _, caddress := range csnap.CanAddresses {
+				if hpbAddressMap[caddress] != "ok" {
+					addresses = append(addresses, caddress)
+				}
+			}
+		}
+	} else {
 		return nil, err
 	}
 	// 排序
@@ -72,99 +82,106 @@ func GetCadNodeSnap(db hpbdb.Database,recents *lru.ARCCache,chain consensus.Chai
 			}
 		}
 	}
-	cadNodeSnap := snapshots.NewCadNodeSnap(number,hash,addresses)
-	
-	
-	
-    return cadNodeSnap, nil
+	cadNodeSnap := snapshots.NewCadNodeSnapvote(number, hash, addresses, Cadvotepercents)
+
+	return cadNodeSnap, nil
 }
 
 // 获取候选选举的快照
-func GetAllCadNodeSnap(db hpbdb.Database,recents *lru.ARCCache,chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
+func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {
 	//业务逻辑
 	var (
-	 headers []*types.Header
+		headers []*types.Header
 	)
-	
+
 	// 开始直接返回nil
-	if(number <= consensus.CadNodeCheckpointInterval){
-		return nil,nil
+	if number <= consensus.CadNodeCheckpointInterval {
+		return nil, nil
 	}
-	
+
 	//不在投票点开始获取数据库中的内容
-	latestCheckPointNumber :=  uint64(math.Floor(float64(number/consensus.CadNodeCheckpointInterval)))*consensus.CadNodeCheckpointInterval
+	latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.CadNodeCheckpointInterval))) * consensus.CadNodeCheckpointInterval
 	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
 	latestCadCheckPointHash := header.Hash()
-	
-	if(number % consensus.CadNodeCheckpointInterval != 0){
-		if snapcd, err := GetCandDataFromCacheAndDb(db, recents,latestCadCheckPointHash); err == nil {
+
+	if number%consensus.CadNodeCheckpointInterval != 0 {
+		if snapcd, err := GetCandDataFromCacheAndDb(db, recents, latestCadCheckPointHash); err == nil {
 			return snapcd, err
-		}else{
+		} else {
 			// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++{
+			for i := latestCheckPointNumber - consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
 				header := chain.GetHeaderByNumber(uint64(i))
 				if header != nil {
 					headers = append(headers, header)
 				}
 			}
-			
-			if snapa, err := snapshots.CalcuCadNodeSnap(db,number,latestCadCheckPointHash,headers,chain); err == nil {
-				    log.Info("HPB_CAD： Loaded voting Cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
-					if err := StoreCanDataToCacheAndDb(recents,db, snapa,latestCadCheckPointHash); err != nil {
-						return nil, err
-		 			}
-					return snapa, err
+			//for _ , h := range headers {
+			//	log.Info("GetAllCadNodeSnap headers", "headers", h.Hash(), h.Number)
+			//}
+
+			if snapa, err := snapshots.CalcuCadNodeSnap(db, number, latestCadCheckPointHash, headers, chain); err == nil {
+				log.Info("HPB_CAD： Loaded voting Cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				if err := StoreCanDataToCacheAndDb(recents, db, snapa, latestCadCheckPointHash); err != nil {
+					return nil, err
+				}
+				return snapa, err
 			}
 		}
-	}else{
+	} else {
 		// 开始获取之前的所有header
-			for i := latestCheckPointNumber-consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++{
-				header := chain.GetHeaderByNumber(uint64(i))
-				if header != nil {
-					headers = append(headers, header)
-				}
+		for i := latestCheckPointNumber - consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
+			header := chain.GetHeaderByNumber(uint64(i))
+			if header != nil {
+				headers = append(headers, header)
 			}
-			
-			if snapa, err := snapshots.CalcuCadNodeSnap(db,number,latestCadCheckPointHash,headers,chain); err == nil {
-				    log.Info("HPB_CAD： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
-					if err := StoreCanDataToCacheAndDb(recents,db, snapa,latestCadCheckPointHash); err != nil {
-						return nil, err
-		 			}
-					return snapa, err
+		}
+		//for _ , h := range headers {
+		//	log.Info("GetAllCadNodeSnap headers", "headers", h.Hash(), h.Number)
+		//}
+
+		if snapa, err := snapshots.CalcuCadNodeSnap(db, number, latestCadCheckPointHash, headers, chain); err == nil {
+			log.Info("HPB_CAD： Loaded voting cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			if err := StoreCanDataToCacheAndDb(recents, db, snapa, latestCadCheckPointHash); err != nil {
+				return nil, err
 			}
+			return snapa, err
+		}
 	}
-	return nil,nil
+	return nil, nil
 }
 
 // 从数据库和缓存中获取数据
 func GetCandDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, hash common.Hash) (*snapshots.CadNodeSnap, error) {
-		/*if s, ok := recents.Get(string(hash)+"cand"); ok {
-			cadNodeSnap := s.(*snapshots.CadNodeSnap)
-			return cadNodeSnap, nil
-		}else{
-			// 从数据库中获取
-			if snapdb, err := snapshots.LoadCadNodeSnap(db, hash); err == nil {
-				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				return snapdb, nil
-			}else{
-				return nil, err
-			}
-		}*/
-		
+	/*if s, ok := recents.Get(string(hash)+"cand"); ok {
+		cadNodeSnap := s.(*snapshots.CadNodeSnap)
+		return cadNodeSnap, nil
+	}else{
+		// 从数据库中获取
 		if snapdb, err := snapshots.LoadCadNodeSnap(db, hash); err == nil {
-				//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-				return snapdb, nil
-			}else{
-				return nil, err
-			}
-		return nil, nil
+			//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+			return snapdb, nil
+		}else{
+			return nil, err
+		}
+	}*/
+	if snapdb, err := snapshots.LoadCadNodeSnap(db, hash); err == nil {
+		//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
+		return snapdb, nil
+	} else {
+		return nil, err
+	}
+	return nil, nil
 }
 
 //将数据存入到缓存和数据库中
-func StoreCanDataToCacheAndDb(recents *lru.ARCCache,db hpbdb.Database,snap *snapshots.CadNodeSnap,latestCheckPointHash common.Hash) error {
-		// 存入到缓存中
-		//recents.Add(string(latestCheckPointHash)+"cand", snap)
-		// 存入数据库
-		err := snap.StoreCadNodeSnap(db,latestCheckPointHash)
-		return err
+func StoreCanDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.CadNodeSnap, latestCheckPointHash common.Hash) error {
+	// 存入到缓存中
+	//recents.Add(string(latestCheckPointHash)+"cand", snap)
+	// 存入数据库
+	err := snap.StoreCadNodeSnap(db, latestCheckPointHash)
+	if err != nil {
+		log.Info("fuhy--------------cadidate StoreCanDataToCacheAndDb error--------------------------", "err", err)
+	}
+
+	return err
 }

@@ -27,11 +27,11 @@ import (
 	"math/big"
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
-
 	"strconv"
 	//"errors"
 	"errors"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/math"
 	"math/rand"
 )
 
@@ -133,21 +133,72 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 */
 
 // 判断当前的次序
-func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address) bool {
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chain consensus.ChainReader, header *types.Header) bool {
 
 	// 实际开发中，从硬件中获取
 	//rand := rand.Uint64()
-
-	signers, offset := s.GetHpbNodes(), 0
-	for offset < len(signers) && signers[offset] != signer {
-		offset++
+	//TODO：硬件随机数相关，直接使用的低16字节对应的uint64对uint64(len(snap.Signers)取余确定,每次都从区块头中获取轮次内的signer集合，然后作排除操作后，在进行确定offset
+	var currentIndex uint64
+	signers := s.GetHpbNodes()
+	var hpbsignersmap = make(map[common.Address]int)
+	for offset, signeradrr := range signers {
+		hpbsignersmap[signeradrr] = offset //offset为signer对应的offset
 	}
-	return (number % uint64(len(signers))) == uint64(offset)
+
+	var randBigInt *big.Int
+	//if len(header.HardwareRandom) == 64 {
+		//log.Error("FUHY len(header.HardwareRandom[2:]) == 32", "rand decide by", "hardware")
+		randBigInt = math.MustParseBig256("0000000000000000000000000000000000000000000000000000000000111111")
+		//currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
+	//} else {
+	//	log.Error("FUHY len(header.HardwareRandom[2:]) != 32", "rand decide by", "number")
+	//	panic("FUHY len(header.HardwareRandom[2:]) != 32")
+	//}
+
+	var partheadersstart uint64
+	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
+	if number%uint64(len(s.Signers)) == 1 {
+		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == currentIndex {
+			return true
+		} else {
+			return false
+		}
+	} else { //如果不为1，则作如下处理
+		partheadersstart = number - (number-1)%uint64(len(s.Signers))
+		//log.Error("before GetOffsethw partheadersstart","partheadersstart",partheadersstart, "len(s.Signers)", len(s.Signers))
+	}
+
+	var partheaders = make([]*types.Header, (number-1)%uint64(len(s.Signers)))
+	//offset := s.GetOffset(number, signer) //当前的位置
+
+	//获取部分区块头，为了获取这些区块头中都那些signer进行了签名操作
+	for i := partheadersstart; i < number; i++ {
+		partheaders[i-partheadersstart] = chain.GetHeaderByNumber(i)
+	}
+	//log.Error("before GetOffsethw number","number",number, "len partheaders", len(partheaders))
+	//mappartheaders,是这些区块头中signer的map，包含了对应signer签署区块的个数，暂时没什么用
+	_, _, mappartheaders := s.GetOffsethw(number, signer, partheaders)
+
+	for recentsignaddr, _ := range mappartheaders {
+		if _, ok := mappartheaders[recentsignaddr]; ok { //因为mappartheaders这个map的alue是int，所以只有通过这种办法才能确定这个key是否真正存在
+			delete(hpbsignersmap, recentsignaddr) //存在就在之前保存的高性能节点的map中删除这个key，剩下的就是在这一轮次还没有签过名的高性能节点map
+		}
+	}
+	currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
+
+	unsigner, ok := hpbsignersmap[signer]                                                       //在未签名的高性能map中查找对应的signer是否存在
+	if _, noseen := mappartheaders[signer]; !noseen && ok && currentIndex == uint64(unsigner) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
+		return true
+	} else {
+		return false
+	}
+	//return (number % uint64(len(signers))) == uint64(offset)
 }
 
 // 判断当前的次序
 func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {
 	// 实际开发中，从硬件中获取
+	//TODO：硬件随机数调用,暂时不使用
 	rand := rand.Uint64()
 	str := strconv.FormatUint(rand, 10)
 	return str
@@ -160,6 +211,25 @@ func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
 		offset++
 	}
 	return uint64(offset)
+}
+
+func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers []*types.Header) (uint64, uint64, map[common.Address]uint64) {
+	signers, offset := s.GetHpbNodes(), 0
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
+	}
+
+	var headersignaddr = make(map[common.Address]uint64)
+	for _, header := range headers {
+		//log.Error("FUHY----------header.Coinbase------------","header.Coinbase", header.Coinbase)
+		if _, ok := headersignaddr[header.Coinbase]; ok {
+			headersignaddr[header.Coinbase] = headersignaddr[header.Coinbase] + 1
+		} else {
+			headersignaddr[header.Coinbase] = 1
+		}
+	}
+
+	return uint64(offset), uint64(len(signers) - len(headersignaddr)), headersignaddr
 }
 
 // 已经授权的signers, 无需进行排序

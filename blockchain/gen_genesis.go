@@ -31,6 +31,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Number     math.HexOrDecimal64                         `json:"number"`
 		GasUsed    math.HexOrDecimal64                         `json:"gasUsed"`
 		ParentHash common.Hash                                 `json:"parentHash"`
+		HardwareRandom hexutil.Bytes                           `json:"hardwareRandom"`
 	}
 	
 	
@@ -48,6 +49,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Difficulty = (*math.HexOrDecimal256)(g.Difficulty)
 	enc.Mixhash = g.Mixhash
 	enc.Coinbase = g.Coinbase
+	enc.HardwareRandom = g.HardwareRandom
 	
 	
 	if g.Alloc != nil {
@@ -80,6 +82,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Number     *math.HexOrDecimal64                        `json:"number"`
 		GasUsed    *math.HexOrDecimal64                        `json:"gasUsed"`
 		ParentHash *common.Hash                                `json:"parentHash"`
+		HardwareRandom hexutil.Bytes                           `json:"hardwareRandom"`
 	}
 	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -99,6 +102,10 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	//}
 	if dec.ExtraData != nil {
 		g.ExtraData = dec.ExtraData
+	}
+	
+	if dec.HardwareRandom != nil {
+		g.HardwareRandom = dec.HardwareRandom
 	}
 	
 	if dec.GasLimit == nil {

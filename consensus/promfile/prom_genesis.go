@@ -109,6 +109,15 @@ func (p *prometh) makeGenesis() {
 		break
 	}
 	
+	
+	fmt.Println()
+	fmt.Println("Please input the initialization hardware random")
+	
+	genesis.HardwareRandom = make([]byte, 32)
+	if hardwareRandom := p.readAddress(); hardwareRandom != nil {
+		copy(genesis.HardwareRandom[0:], hardwareRandom[:])
+	}
+	
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainId = new(big.Int).SetUint64(uint64(p.readDefaultInt(rand.Intn(65536))))
@@ -137,7 +146,7 @@ func (p *prometh) manageGenesis() {
 		fmt.Printf("Which file to save the genesis into? (default = %s.json)\n", p.network)
 		out, _ := json.MarshalIndent(p.conf.genesis, "", "  ")
 
-		//fmt.Printf("%s", out)
+		fmt.Printf("%s", out)
 		if err := ioutil.WriteFile(p.readDefaultString(fmt.Sprintf("%s.json", p.network)), out, 0644); err != nil {
 			log.Error("Failed to save genesis file", "err", err)
 		}
