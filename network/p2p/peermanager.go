@@ -137,13 +137,6 @@ func (prm *PeerManager)Start() error {
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////
-	//for iperf test
-	if flag,err :=exists("./iperf3"); err!=nil || flag==false {
-		dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-		log.Error("Iperf3 should exist in current dir.","Path",dir)
-		panic("Iperf3 should exist in current dir.")
-	}
-
 	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	prm.iport = add.Port+100
 	log.Debug("Iperf server start", "port",prm.iport)
@@ -530,9 +523,19 @@ func (prm *PeerManager) parseBindInfo(filename string) error{
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (prm *PeerManager) startServerBW(port string) error{
 	/////////////////////////////////////
+	//for iperf test
+	hpbbin, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	ipfbin    := filepath.Join(hpbbin, "iperf3")
+
+	if flag,err :=exists(ipfbin); err!=nil || flag==false {
+		log.Error("Iperf3 should exist in correct dir.","Path",ipfbin)
+		panic("Iperf3 should exist in correct dir.")
+	}
+
 	//server
 	var err error
-	logName := "./iperf_server"+port+".log"
+	logName := "iperf_server_"+port+".log"
+	logName  = filepath.Join(hpbbin, logName)
 	prm.isrvout, err = os.OpenFile(logName, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Error("Open iperf log file", "file",logName,"err", err)
@@ -540,7 +543,7 @@ func (prm *PeerManager) startServerBW(port string) error{
 		return err
 	}
 
-	cmd := "./iperf3 -s -p "+port
+	cmd := ipfbin+" -s -p "+port
 	prm.isrvcmd = exec.Command("/bin/bash", "-c", cmd)
 	prm.isrvcmd.Stdout = prm.isrvout
 
@@ -552,6 +555,32 @@ func (prm *PeerManager) startServerBW(port string) error{
 
 	log.Info("Start server of bandwidth test.", "port",port)
 	return nil
+}
+
+func (prm *PeerManager) startTest(host string, port string) (float64) {
+	hpbbin, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	ipfbin    := filepath.Join(hpbbin, "iperf3")
+
+	cmd := ipfbin +" -J -c "+host+" -p "+port +" -t 5"
+	result,_ :=exec_shell(cmd)
+
+	if !strings.Contains(result, "bits_per_second"){
+		log.Warn("Test string in not right.","host",host,"port",port)
+		return 0
+	}
+
+	var dat map[string]interface{}
+	json.Unmarshal([]byte(result), &dat)
+
+	sum:= dat["end"].(map[string]interface{})
+
+	sum_sent     := sum["sum_sent"].(map[string]interface{})
+	sum_received := sum["sum_received"].(map[string]interface{})
+
+	send := sum_sent["bits_per_second"].(float64)
+	recv := sum_received["bits_per_second"].(float64)
+	log.Debug("iperf test result","sendrate",send, "recvrate",recv,"avg",(send+recv)/2)
+	return  (send+recv)/2
 }
 
 func (prm *PeerManager) startClientBW() {
@@ -660,7 +689,7 @@ func (prm *PeerManager) HandleResBWTestMsg(p *Peer, msg Msg) error {
 		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteIperfPort())
 
 
-		result := StartTest(p.RemoteIP(), strconv.Itoa(p.RemoteIperfPort()))
+		result := prm.startTest(p.RemoteIP(), strconv.Itoa(p.RemoteIperfPort()))
 		p.lock.Lock()
 		defer p.lock.Unlock()
 		p.bandwidth = result
@@ -684,29 +713,6 @@ func exists(path string) (bool, error) {
 	if err == nil { return true, nil }
 	if os.IsNotExist(err) { return false, nil }
 	return true, err
-}
-
-func StartTest(host string, port string) (float64) {
-	cmd := "./iperf3  -J -c "+host+" -p "+port +" -t 5"
-	result,_ :=exec_shell(cmd)
-
-	if !strings.Contains(result, "bits_per_second"){
-		log.Warn("Test string in not right.","host",host,"port",port)
-		return 0
-	}
-
-	var dat map[string]interface{}
-	json.Unmarshal([]byte(result), &dat)
-
-	sum:= dat["end"].(map[string]interface{})
-
-	sum_sent     := sum["sum_sent"].(map[string]interface{})
-	sum_received := sum["sum_received"].(map[string]interface{})
-
-	send := sum_sent["bits_per_second"].(float64)
-	recv := sum_received["bits_per_second"].(float64)
-	log.Debug("iperf test result","sendrate",send, "recvrate",recv,"avg",(send+recv)/2)
-	return  (send+recv)/2
 }
 
 

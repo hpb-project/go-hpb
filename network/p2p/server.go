@@ -361,11 +361,12 @@ func (srv *Server) Start() (err error) {
 		return err
 	}
 
+	//////////////////////////////////////////////////////////////////////////////////////////////
 	//todo: only for test
 	log.Warn("!!! config.json should include your pid of hpnodes in first turn !!!")
 	srv.parseRemoteHpType()
 	log.Debug("Server start","hpflag",srv.hpflag)
-
+	//////////////////////////////////////////////////////////////////////////////////////////////
 
 	log.Info("Server start with type.","NodeType",srv.localType.ToString())
 
