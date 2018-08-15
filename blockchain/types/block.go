@@ -67,25 +67,25 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Hpb blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	CandAddress common.Address `json:"candAddress"      gencodec:""`
-	ComdAddress common.Address `json:"comdAddress"      gencodec:""`
-	VoteIndex   *big.Int        `json:"voteIndex"        gencodec:""`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
-	HardwareRandom  []byte     `json:"hardwareRandom"           gencodec:""`
+	ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
+	UncleHash      common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase       common.Address `json:"miner"            gencodec:"required"`
+	CandAddress    common.Address `json:"candAddress"      gencodec:""`
+	ComdAddress    common.Address `json:"comdAddress"      gencodec:""`
+	VoteIndex      *big.Int       `json:"voteIndex"        gencodec:""`
+	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
+	Difficulty     *big.Int       `json:"difficulty"       gencodec:"required"`
+	Number         *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
+	GasUsed        *big.Int       `json:"gasUsed"          gencodec:"required"`
+	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra          []byte         `json:"extraData"        gencodec:"required"`
+	MixDigest      common.Hash    `json:"mixHash"          gencodec:"required"`
+	Nonce          BlockNonce     `json:"nonce"            gencodec:"required"`
+	HardwareRandom []byte         `json:"hardwareRandom"           gencodec:""`
 }
 
 // field type overrides for gencodec
@@ -219,8 +219,8 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	return b
 }
 
-func BuildBlock(header *Header, txs []*Transaction, uncles []*Header,td *big.Int) *Block {
-	b := &Block{header: header, uncles:uncles,transactions:txs,td: td}
+func BuildBlock(header *Header, txs []*Transaction, uncles []*Header, td *big.Int) *Block {
+	b := &Block{header: header, uncles: uncles, transactions: txs, td: td}
 	return b
 }
 
@@ -253,6 +253,10 @@ func CopyHeader(h *Header) *Header {
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
+	}
+	if len(h.HardwareRandom) > 0 {
+		cpy.HardwareRandom = make([]byte, len(h.HardwareRandom))
+		copy(cpy.HardwareRandom, h.HardwareRandom)
 	}
 	return &cpy
 }

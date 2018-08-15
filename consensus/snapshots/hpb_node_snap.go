@@ -31,7 +31,6 @@ import (
 	//"errors"
 	"errors"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/math"
 	"math/rand"
 )
 
@@ -145,15 +144,11 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 		hpbsignersmap[signeradrr] = offset //offset为signer对应的offset
 	}
 
-	var randBigInt *big.Int
-	//if len(header.HardwareRandom) == 64 {
-		//log.Error("FUHY len(header.HardwareRandom[2:]) == 32", "rand decide by", "hardware")
-		randBigInt = math.MustParseBig256("0000000000000000000000000000000000000000000000000000000000111111")
-		//currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
-	//} else {
-	//	log.Error("FUHY len(header.HardwareRandom[2:]) != 32", "rand decide by", "number")
-	//	panic("FUHY len(header.HardwareRandom[2:]) != 32")
-	//}
+	randBigInt := new(big.Int)
+	if len(header.HardwareRandom) == 0 {
+		log.Error("---------------CalculateCurrentMiner header.HardwareRandom----------", "len(header.HardwareRandom)", "0")
+	}
+	randBigInt.SetBytes(header.HardwareRandom)
 
 	var partheadersstart uint64
 	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
