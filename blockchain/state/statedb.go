@@ -504,6 +504,8 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 		log.Error("------------RevertToSnapshot-------------", "idx", idx, "validRevisions[idx].id", self.validRevisions[idx].id)
 		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
 	}
+	//测试revert失败问题，如果在panic前出现了下面的log信息，并且revid比panic的revid小，则表示之前已经进行了revert，所以本次revert肯定不会成功
+	log.Info("------------RevertToSnapshot-------------", "revid", revid)
 	snapshot := self.validRevisions[idx].journalIndex
 
 	// Replay the journal to undo changes.

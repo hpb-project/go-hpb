@@ -40,7 +40,6 @@ import (
 	//"strconv"
 	"errors"
 	"github.com/hpb-project/go-hpb/boe"
-	//"github.com/hpb-project/go-hpb/common/hexutil"
 )
 
 const (
@@ -184,42 +183,37 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	c.lock.RUnlock()
 
 	//TODO:在区块头中设置boehwrand,通过获取父节点header的HardwareRandom通过调用boe的GetNextHash获取当前区块的rand
-	// set hardware random
-	//header.HardwareRandom  = snap.GetHardwareRandom(header.Number.Uint64())
-	if number == 1 {
-		//header.HardwareRandom = "0x0000000000000000000000000000000000000000000000000000000000111111"
-	} else {
-		parentnum := number - 1
-		parentheader := chain.GetHeaderByNumber(parentnum)
-		if parentheader == nil {
-			log.Error("PrepareBlockHeader chain.GetHeaderByNumber(parentnum) is nil")
-			return errors.New("-----PrepareBlockHeader chain.GetHeaderByNumber(parentnum)------ is nil")
-		}
-		//parenthwrandstr := parentheader.HardwareRandom
-		//parenthwrand, err := hexutil.Decode(chain.GetHeaderByNumber(number - 1).HardwareRandom)
-		//parenthwrand := header.HardwareRandom
-		if err != nil {
-			log.Error("FUHY PrepareBlockHeader HardwareRandom Decode", "err", err, "unmber", number)
-			return err
-		}
-
-		//if c.hboe == nil {
-		//	c.hboe = boe.BoeGetInstance()
-		//	if c.hboe == nil {
-		//		log.Error("FUHY boe.BoeGetInstance()", "c.hboe", "instance is nil")
-		//	}
-		//}
-
-		//log.Error("FUHY parenthwrand", "parenthwrand", parenthwrand)
-		//header.HardwareRandom = hexutil.Encode(parenthwrand)
-
-		//if boehwrand , err := c.hboe.GetNextHash(parenthwrand); err != nil {
-		//	return err
-		//}else {
-		//	header.HardwareRandom  = hexutil.Encode(boehwrand)
-		//	log.Error("FUHY PrepareBlockHeader HardwareRandom encode", "HardwareRandom", header.HardwareRandom, "unmber", number)
-		//}
+	parentnum := number - 1
+	parentheader := chain.GetHeaderByNumber(parentnum)
+	if parentheader == nil {
+		log.Info("PrepareBlockHeader parentheader is nil", "number", number)
+		return errors.New("-----PrepareBlockHeader parentheader------ is nil")
 	}
+	if len(parentheader.HardwareRandom) == 0 {
+		log.Error("PrepareBlockHeader parentheader.HardwareRandom is nil", "number", number)
+		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
+	}
+
+	//if c.hboe == nil {
+	//	c.hboe = boe.BoeGetInstance()
+	//	if c.hboe == nil {
+	//		log.Error("FUHY boe.BoeGetInstance()", "c.hboe", "instance is nil")
+	//	}
+	//}
+
+	//if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
+	//	return err
+	//}else {
+	//	if len(boehwrand) != 0 {
+	//		header.HardwareRandom  = make([]byte, len(boehwrand))
+	//		copy(header.HardwareRandom, boehwrand)
+	//	}else {
+	//		panic("parent HardwareRandom is nil")
+	//	}
+	//}
+
+	header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+	copy(header.HardwareRandom, parentheader.HardwareRandom)
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
