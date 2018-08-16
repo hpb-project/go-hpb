@@ -126,16 +126,16 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
 
 }
 
-func (boe *BoeHandle) GetVersion() TVersion {
+func (boe *BoeHandle) GetVersion() (TVersion,error) {
     var v TVersion
     var H,M,F,D C.uchar
     ret := C.boe_get_version(&H, &M, &F, &D)
     if ret == C.BOE_OK {
-        return v
+        return v,nil
     }
-    fmt.Printf("GetVersion ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    //fmt.Printf("GetVersion ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
-    return v
+    return v,ErrInitFailed
 }
 
 
@@ -162,10 +162,18 @@ func (boe *BoeHandle) FWUpdate() error{
     // get correct update image url.
     // download update image.
     // call C api to update.
-    var version = boe.GetVersion()
-    image, err := downloadrelease(version.H, version.M, version.F, version.D)
+    version,err := boe.GetVersion()
     if err != nil {
-        log.Error("download firmware failed.")
+        fmt.Println("board connect failed, update abort.")
+        return ErrUpdateFailed
+    }
+    image, err := downloadrelease(version.H, version.M, version.F, version.D)
+    if err == ErrNoNeedUpdate {
+        fmt.Println("There are no newer release firmware.")
+        return nil
+    }
+    if err != nil {
+        fmt.Println("download firmware failed.")
         return err
     }
     var len = len(image)

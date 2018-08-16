@@ -152,7 +152,10 @@ func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
             
             fmt.Printf("download finished.")
             return ioutil.ReadFile(binpath)
+        }else {
+            return nil, ErrNoNeedUpdate 
         }
+
     }else{
         fmt.Printf("download release.json failed\r\n")
     }
