@@ -126,7 +126,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 // 实现引擎的Prepare函数
-func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header) error {
+func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header,state *state.StateDB) error {
 
 	//获取Coinbase
 	//header.Coinbase = common.Address{}
@@ -159,7 +159,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	address := common.BigToAddress(bigaddr)
 
 	// Get the best peer from the network
-	if cadWinner, err := voting.GetCadNodeFromNetwork(); err == nil {
+	if cadWinner, err := voting.GetCadNodeFromNetwork(state); err == nil {
 
 		log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
 

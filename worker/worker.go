@@ -459,7 +459,10 @@ func (self *worker) startNewMinerRound() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-	if err := self.engine.PrepareBlockHeader(self.chain, header); err != nil {
+	
+	pstate, _ := self.chain.StateAt(parent.Root())
+	
+	if err := self.engine.PrepareBlockHeader(self.chain, header,pstate); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}

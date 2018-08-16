@@ -78,7 +78,7 @@ type Engine interface {
 
 	
 	// 生成区块链的区块链头部为实际的挖矿做准备
-	PrepareBlockHeader(chain ChainReader, header *types.Header) error
+	PrepareBlockHeader(chain ChainReader, header *types.Header,state *state.StateDB) error
 
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.

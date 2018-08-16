@@ -34,12 +34,13 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
     "github.com/hpb-project/go-hpb/common"
+    "github.com/hpb-project/go-hpb/blockchain/state"
 	
 )
 
 
 // 从网络中获取最优化的
-func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
+func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error) {
 		//str := strconv.FormatUint(number, 10)
 		// 模拟从外部获取		
 		//type CadWinners []*snapshots.CadWinner
@@ -63,11 +64,16 @@ func GetCadNodeFromNetwork() ([]*snapshots.CadWinner, error) {
 			//VoteIndex := networkBandwidth + transactionNum
 			
 			if(peer.LocalType() != discover.BootNode){
-				//因缺乏linux环境，先随机模拟
-				networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
-				transactionNum := float64(rand.Intn(1000)) * float64(0.7)
-				VoteIndex := networkBandwidth + transactionNum
-			    
+				//networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
+				//transactionNum := float64(rand.Intn(1000)) * float64(0.7)
+				
+				transactionNum := peer.TxsRate() * float64(0.6)
+				networkBandwidth := peer.Bandwidth() * float64(0.3)
+				bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
+		        val64, _ := bigval.Float64()
+		        balanceIndex := val64 * float64(0.1)
+				
+				VoteIndex := networkBandwidth + transactionNum + balanceIndex
 			    if(peer.Address() != address){
 				    bestCadWinners = append(bestCadWinners,&snapshots.CadWinner{peer.GetID(),peer.Address(),uint64(VoteIndex)})
 			    }
