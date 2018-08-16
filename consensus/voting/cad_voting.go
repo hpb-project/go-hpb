@@ -29,6 +29,7 @@ import (
 	//"github.com/hpb-project/go-hpb/network/p2p"
 	//"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"bytes"
+	"errors"
 )
 
 // 获取候选选举的快照
@@ -110,9 +111,19 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 		} else {
 			// 开始获取之前的所有header
 			for i := latestCheckPointNumber - consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
+				count := 0
+			GetAllCadNodeSnaploop:
 				header := chain.GetHeaderByNumber(uint64(i))
 				if header != nil {
 					headers = append(headers, header)
+				} else {
+					if count > 20 {
+						log.Error("loop 20 times, return err")
+						return nil, errors.New("GetAllCadNodeSnap get headers loop 20 times, return err")
+					}
+					log.Error("----------number%consensus.CadNodeCheckpointInterval != 0----------before CalcuCadNodeSnap get header err----------------------", "number", i)
+					count = count + 1
+					goto GetAllCadNodeSnaploop
 				}
 			}
 			//for _ , h := range headers {

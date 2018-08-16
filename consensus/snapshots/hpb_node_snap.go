@@ -138,7 +138,7 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//rand := rand.Uint64()
 	//TODO：硬件随机数相关，直接使用的低16字节对应的uint64对uint64(len(snap.Signers)取余确定,每次都从区块头中获取轮次内的signer集合，然后作排除操作后，在进行确定offset
 	var currentIndex uint64
-	signers := s.GetHpbNodes()
+	signers := s.GetHpbNodes() //hpb节点，是排序过的
 	var hpbsignersmap = make(map[common.Address]int)
 	for offset, signeradrr := range signers {
 		hpbsignersmap[signeradrr] = offset //offset为signer对应的offset
@@ -152,18 +152,18 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 
 	var partheadersstart uint64
 	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
-	if number%uint64(len(s.Signers)) == 1 {
-		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == currentIndex {
+	if number%uint64(len(signers)) == 1 {
+		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == randBigInt.Uint64()%uint64(len(hpbsignersmap)) {
 			return true, nil
 		} else {
 			return false, nil
 		}
 	} else { //如果不为1，则作如下处理
-		partheadersstart = number - (number-1)%uint64(len(s.Signers))
+		partheadersstart = number - (number-1)%uint64(len(signers))
 		//log.Error("before GetOffsethw partheadersstart","partheadersstart",partheadersstart, "len(s.Signers)", len(s.Signers))
 	}
 
-	var partheaders = make([]*types.Header, (number-1)%uint64(len(s.Signers)))
+	var partheaders = make([]*types.Header, (number-1)%uint64(len(signers)))
 	//offset := s.GetOffset(number, signer) //当前的位置
 
 	var gethbynumcount int = 0
@@ -187,12 +187,33 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	for recentsignaddr, _ := range mappartheaders {
 		if _, ok := mappartheaders[recentsignaddr]; ok { //因为mappartheaders这个map的alue是int，所以只有通过这种办法才能确定这个key是否真正存在
 			delete(hpbsignersmap, recentsignaddr) //存在就在之前保存的高性能节点的map中删除这个key，剩下的就是在这一轮次还没有签过名的高性能节点map
-		}
+		} //hpbsignersmap 是高性能节点的差集
 	}
 	currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
 
-	unsigner, ok := hpbsignersmap[signer]                                                       //在未签名的高性能map中查找对应的signer是否存在
-	if _, noseen := mappartheaders[signer]; !noseen && ok && currentIndex == uint64(unsigner) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
+	_, ok := hpbsignersmap[signer] //在未签名的高性能map中查找对应的signer是否存在
+	//差集合放入数组，然后进行排序，
+	hpbsignerarray := make([]common.Address, 0, len(hpbsignersmap))
+	for addr, _ := range hpbsignersmap {
+		hpbsignerarray = append(hpbsignerarray, addr)
+	}
+	for i := 0; i < len(hpbsignerarray); i++ {
+		for j := 0; j < len(hpbsignerarray)-i-1; j++ {
+			if bytes.Compare(hpbsignerarray[j][:], hpbsignerarray[j+1][:]) > 0 {
+				hpbsignerarray[j], hpbsignerarray[j+1] = hpbsignerarray[j+1], hpbsignerarray[j]
+			}
+		}
+	}
+
+	//确定offset
+	var unsigneroffset = 0
+	for i := 0; i < len(hpbsignerarray); i++ {
+		if hpbsignerarray[i] == signer {
+			unsigneroffset = i
+			break
+		}
+	}
+	if ok && currentIndex == uint64(unsigneroffset) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
 		return true, nil
 	} else {
 		return false, nil
@@ -224,6 +245,7 @@ func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers 
 		offset++
 	}
 
+	//从一部分区块头中确定签过名的高性能节点结合
 	var headersignaddr = make(map[common.Address]uint64)
 	log.Info("FUHY----------GetOffsethw number------------", "number", number)
 	for _, header := range headers {
