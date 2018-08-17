@@ -247,10 +247,10 @@ func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers 
 
 	//从一部分区块头中确定签过名的高性能节点结合
 	var headersignaddr = make(map[common.Address]uint64)
-	log.Info("FUHY----------GetOffsethw number------------", "number", number)
+	//log.Info("FUHY----------GetOffsethw number------------", "number", number)
 	for _, header := range headers {
-		log.Info("FUHY----------GetOffsethw header.Coinbase------------", "header.Coinbase", header.Coinbase)
-		log.Info("FUHY----------GetOffsethw header.Number------------", "header.Number", header.Number)
+		//log.Info("FUHY----------GetOffsethw header.Coinbase------------", "header.Coinbase", header.Coinbase)
+		//log.Info("FUHY----------GetOffsethw header.Number------------", "header.Number", header.Number)
 		if _, ok := headersignaddr[header.Coinbase]; ok {
 			headersignaddr[header.Coinbase] = headersignaddr[header.Coinbase] + 1
 		} else {
@@ -298,7 +298,7 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 		}
 	}
 
-	signers := make([]common.Address, 3)
+	signers := make([]common.Address, 0, consensus.HpbNodenumber)
 
 	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, signers)
 
@@ -362,8 +362,8 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 	}
 
 	var hpnodeNO int
-	if len(tallytemp) >= 3 {
-		hpnodeNO = 3
+	if len(tallytemp) >= consensus.HpbNodenumber {
+		hpnodeNO = consensus.HpbNodenumber
 	} else {
 		hpnodeNO = len(tallytemp)
 	}
