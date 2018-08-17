@@ -209,6 +209,14 @@ func (boe *BoeHandle) HWCheck() {
     }
 }
 
+func (boe *BoeHandle) BoardConnected() bool {
+    var ret = C.boe_hw_connect()
+    if ret == C.BOE_OK {
+        return true
+    }else {
+        return false
+    }
+}
 
 func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
     var signature = make([]byte, 64)
