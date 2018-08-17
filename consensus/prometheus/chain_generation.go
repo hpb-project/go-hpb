@@ -126,7 +126,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 // 实现引擎的Prepare函数
-func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header,state *state.StateDB) error {
+func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
 
 	//获取Coinbase
 	//header.Coinbase = common.Address{}
@@ -155,8 +155,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	c.lock.RLock()
-	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
-	address := common.BigToAddress(bigaddr)
+	//bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
+	//address := common.BigToAddress(bigaddr)
 
 	// Get the best peer from the network
 	if cadWinner, err := voting.GetCadNodeFromNetwork(state); err == nil {
@@ -164,8 +164,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
 
 		if cadWinner == nil || len(cadWinner) != 2 {
-			header.CandAddress = address
-			header.ComdAddress = address
+			//if no peers, add itself Coinbase to CandAddress and ComdAddress, or when candidate nodes is less len(hpbsnap.signers), the zero address will become the hpb node
+			header.CandAddress = header.Coinbase
+			header.ComdAddress = header.Coinbase
 			header.VoteIndex = new(big.Int).SetUint64(0)
 		} else {
 			header.CandAddress = cadWinner[0].Address // 设置地址
@@ -194,26 +195,36 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
 
-	//if c.hboe == nil {
-	//	c.hboe = boe.BoeGetInstance()
-	//	if c.hboe == nil {
-	//		log.Error("FUHY boe.BoeGetInstance()", "c.hboe", "instance is nil")
-	//	}
-	//}
-	//
-	//if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
-	//	return err
-	//}else {
-	//	if len(boehwrand) != 0 {
-	//		header.HardwareRandom  = make([]byte, len(boehwrand))
-	//		copy(header.HardwareRandom, boehwrand)
-	//	}else {
-	//		panic("GetNextHash HardwareRandom is nil")
-	//	}
-	//}
+	if c.hboe == nil {
+		log.Error("boe.BoeGetInstance() fail", "c.hboe", "instance is nil")
+		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+		copy(header.HardwareRandom, parentheader.HardwareRandom)
+	} else {
+		if c.hboe.HWCheck() {
+			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
+				log.Error("c.hboe.GetNextHash", "err", err)
+				log.Info("GetNextHash err, using the gensis.json hardwarerandom")
+				header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+				copy(header.HardwareRandom, parentheader.HardwareRandom)
+				//return err
+			} else {
+				if len(boehwrand) != 0 {
+					header.HardwareRandom = make([]byte, len(boehwrand))
+					copy(header.HardwareRandom, boehwrand)
+				} else {
+					log.Error("c.hboe.GetNextHash success", "err", "GetNextHash output random length is 0")
+					log.Info("GetNextHash err, using the gensis.json hardwarerandom")
+					header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+					copy(header.HardwareRandom, parentheader.HardwareRandom)
+				}
+			}
+		} else {
+			log.Info("no boe device, using the gensis.json hardwarerandom")
+			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+			copy(header.HardwareRandom, parentheader.HardwareRandom)
+		}
 
-	header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-	copy(header.HardwareRandom, parentheader.HardwareRandom)
+	}
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
@@ -439,42 +450,40 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	// Select the correct block reward based on chain progression
 	//hobBlockReward := big.NewInt(300000000)
 	//canBlockReward := big.NewInt(100000000)
-	const (
-		nodenumfirst int = 151
-		//nodenumsecond int = 151
-		nodenumthird int = 100000
-	)
 
 	var bigIntblocksoneyear = new(big.Int)
-	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)
-	secondsoneyesr.Quo(secondsoneyesr, big.NewFloat(float64(c.config.Period)))
-	secondsoneyesr.Int(bigIntblocksoneyear)
+	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)                         //seconds in one year
+	secondsoneyesr.Quo(secondsoneyesr, big.NewFloat(float64(c.config.Period))) //blocks mined by miners in one year
+	secondsoneyesr.Int(bigIntblocksoneyear)                                    //from big.Float to big.Int
 
-	bigrewards := big.NewFloat(float64(100000000 * 0.03))
-	bigrewards.Mul(bigrewards, big.NewFloat(float64(nodenumfirst)))
-	bigrewards.Quo(bigrewards, big.NewFloat(float64(nodenumfirst)))
+	bigrewards := big.NewFloat(float64(100000000 * 0.03)) //hpb coins additional issue one year
+	bigrewards.Mul(bigrewards, big.NewFloat(float64(consensus.Nodenumfirst)))
+	bigrewards.Quo(bigrewards, big.NewFloat(float64(consensus.Nodenumfirst)))
 
 	bigIntblocksoneyearfloat := new(big.Float)
-	bigIntblocksoneyearfloat.SetInt(bigIntblocksoneyear)
-	A := bigrewards.Quo(bigrewards, bigIntblocksoneyearfloat)
+	bigIntblocksoneyearfloat.SetInt(bigIntblocksoneyear)      //from big.Int to big.Float
+	A := bigrewards.Quo(bigrewards, bigIntblocksoneyearfloat) //calc reward mining one block
 
+	//mul 2/3
 	A.Mul(A, big.NewFloat(2))
 	A.Quo(A, big.NewFloat(3))
-	var bigA23 = new(big.Float)
-	var bigA13 = new(big.Float)
-	bigA23.Set(A) //为了cad奖励的时候使用
-	bigA13.Set(A) //为了cad奖励的时候使用
-	bighobBlockReward := A.Mul(A, big.NewFloat(0.35))
+
+	//new two vars using below codes
+	var bigA23 = new(big.Float)                       //2/3 one block reward
+	var bigA13 = new(big.Float)                       //1/3 one block reward
+	bigA23.Set(A)                                     //为了cad奖励的时候使用
+	bigA13.Set(A)                                     //为了cad奖励的时候使用
+	bighobBlockReward := A.Mul(A, big.NewFloat(0.35)) //reward hpb coin for hpb nodes
 
 	ether2weis := big.NewInt(10)
-	ether2weis.Exp(ether2weis, big.NewInt(18), nil)
+	ether2weis.Exp(ether2weis, big.NewInt(18), nil) //one hpb coin to weis
 
 	ether2weisfloat := new(big.Float)
 	ether2weisfloat.SetInt(ether2weis)
-	bighobBlockRewardwei := bighobBlockReward.Mul(bighobBlockReward, ether2weisfloat)
+	bighobBlockRewardwei := bighobBlockReward.Mul(bighobBlockReward, ether2weisfloat) //reward weis for hpb nodes
 
 	finalhpbrewards := new(big.Int)
-	bighobBlockRewardwei.Int(finalhpbrewards)
+	bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -486,14 +495,14 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {
 			bigA23.Mul(bigA23, big.NewFloat(0.65))
-			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents))))
+			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
 
 			bigcadRewardwei := new(big.Float)
 			bigcadRewardwei.SetInt(ether2weis)
-			bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward)
+			bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward) //calc average reward weis part about candidate nodes
 
 			cadReward := new(big.Int)
-			bigcadRewardwei.Int(cadReward)
+			bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
 			//for _,caddress := range csnap.CanAddresses  {
 			//	log.Info("FUHY CalculateRewards csnap.CanAddresses","caddress", caddress)
 			//}
@@ -507,16 +516,16 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				var tempfloat = new(big.Float)
 				var tempInt = new(big.Int)
 				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","bigA13", bigA13)
-				tempfloat.Quo(bigA13, big.NewFloat(3))
+				tempfloat.Quo(bigA13, big.NewFloat(3)) //calc all candidate nodes rewards coin about votepercent
 				votepercent := new(big.Float)
 				bigvotes := big.NewFloat(votes)
 				//计算获得的投票率
-				votepercent = bigvotes.Quo(bigvotes, votecounts)
-				tempfloat.Mul(tempfloat, votepercent)
-				tempfloat.Mul(tempfloat, ether2weisfloat)
+				votepercent = bigvotes.Quo(bigvotes, votecounts) //calc vote percent
+				tempfloat.Mul(tempfloat, votepercent)            //every candidate node rewards coin about vote percent
+				tempfloat.Mul(tempfloat, ether2weisfloat)        //every candidate node rewards weis about vote percent
 				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","tempfloat", tempfloat)
-				tempfloat.Int(tempInt)
-				tempInt.Add(cadReward, tempInt)
+				tempfloat.Int(tempInt)          //from big.Float to big.Int
+				tempInt.Add(cadReward, tempInt) //average rewards add votepercent rewards is the final rewards for every candidate node
 				state.AddBalance(caddress, tempInt)
 				//state.GetBalance(caddress)
 				//log.Info("FUHY CalculateRewards csnap.VotePercents","caddress", caddress, "cadReward", tempInt)

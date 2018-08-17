@@ -43,6 +43,7 @@ BoeErr* boe_upgrade_abort(void);
  * check board is connected.
  */
 BoeErr* boe_hw_check(void);
+BoeErr* boe_hw_connect(void);
 /*
  * let board reboot.
  */

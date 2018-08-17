@@ -200,15 +200,16 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     return ErrUpdateAbortFailed
 }
 
-func (boe *BoeHandle) HWCheck() {
+func (boe *BoeHandle) HWCheck() bool {
     var ret = C.boe_hw_check()
     if ret == C.BOE_OK {
         log.Info("boe board is ok.")
+        return true
     }else {
         log.Info("boe board not find.")
+        return false
     }
 }
-
 
 func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
     var signature = make([]byte, 64)

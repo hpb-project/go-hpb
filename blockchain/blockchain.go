@@ -44,7 +44,7 @@ import (
 )
 
 var (
-	reentryMux       sync.Mutex
+	once             sync.Once
 	bcInstance       *BlockChain
 	blockInsertTimer = metrics.NewTimer("chain/inserts")
 	errNoGenesis     = errors.New("Genesis is not found in the chain.")
@@ -91,7 +91,6 @@ type BlockChain struct {
 	mu      sync.RWMutex // global mutex for locking chain operations
 	chainmu sync.RWMutex // blockchain insertion lock
 	procmu  sync.RWMutex // block processor lock
-
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     *types.Block // Current head of the block chain
 	currentFastBlock *types.Block // Current head of the fast-sync chain (may be above the block chain!)
@@ -117,19 +116,13 @@ type BlockChain struct {
 
 // InstanceBlockChain returns the singleton of BlockChain.
 func InstanceBlockChain() *BlockChain {
-	if nil == bcInstance {
-		reentryMux.Lock()
-		if nil == bcInstance {
-			intan, _ := config.GetHpbConfigInstance()
-			bcI := NewBlockChain(db.GetHpbDbInstance(), &intan.BlockChain)
-			if bcI != nil {
-				bcInstance = nil
-			}
-			bcInstance = bcI
+	once.Do(func() {
+		c, err := config.GetHpbConfigInstance()
+		if err != nil {
+			log.Error("Failed to GetHpbConfigInstance in InstanceBlockChain() SynCtrl", "err", err)
 		}
-		reentryMux.Unlock()
-	}
-
+		bcInstance = NewBlockChain(db.GetHpbDbInstance(), &c.BlockChain)
+	})
 	return bcInstance
 }
 

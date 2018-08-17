@@ -49,7 +49,7 @@ const (
 )
 
 var (
-	reentryMux   sync.Mutex
+	once         sync.Once
 	syncInstance *SynCtrl
 )
 
@@ -91,22 +91,16 @@ type SynCtrl struct {
 
 // InstanceSynCtrl returns the singleton of SynCtrl.
 func InstanceSynCtrl() *SynCtrl {
-	if nil == syncInstance {
-		reentryMux.Lock()
-		if nil == syncInstance {
-
-			intan, err := config.GetHpbConfigInstance()
-			if err != nil {
-				return nil
-			}
-			syncInstance, err = newSynCtrl(&intan.BlockChain, intan.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
-			if err != nil {
-				syncInstance = nil
-			}
+	once.Do(func() {
+		c, err := config.GetHpbConfigInstance()
+		if err != nil {
+			log.Error("Failed to GetHpbConfigInstance in InstanceSynCtrl() SynCtrl", "err", err)
 		}
-		reentryMux.Unlock()
-	}
-
+		syncInstance, err = newSynCtrl(&c.BlockChain, c.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
+		if err != nil {
+			log.Error("Failed to instance SynCtrl", "err", err)
+		}
+	})
 	return syncInstance
 }
 
@@ -169,12 +163,6 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
 	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
 
-	//subcrier txch event
-	//synctrl.txchreciver = txpoolins.Txchevent
-	//synctrl.txchreciver.Subscribe(txpool.TxpoolEvent)
-
-
-
 	return synctrl, nil
 }
 
@@ -185,18 +173,6 @@ func (this *SynCtrl) NewBlockMux() *sub.TypeMux{
 func (this *SynCtrl) Start() {
 	// broadcast transactions
 	this.txCh = make(chan bc.TxPreEvent, txChanSize)
-	/*txPreReceiver := event.RegisterReceiver("synctrl_tx_pre_receiver",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.TxPreEvent:
-				if ! msg.Message.IsFromP2P() {
-					this.txCh <- bc.TxPreEvent{Tx: msg.Message}
-				}
-			}
-		})*/
-
-	//TOD new event system
-	//event.Subscribe(txPreReceiver, event.TxPreTopic)
 	this.txSub = this.txpool.SubscribeTxPreEvent(this.txCh)
 
 	go this.txRoutingLoop()
@@ -220,7 +196,6 @@ func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 }
 
 func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
-	//peer.Log().Debug("Unregister network peer in syncer.")
 	return this.syner.UnregisterPeer(peer.GetID())
 }
 
@@ -758,23 +733,17 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 // HandleNewBlockMsg deal received NewBlockMsg
 func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Retrieve and decode the propagated block
-	log.Warn("######<<<<<< Handle new hash block msg.","peerid",p.ID())
 	var request newBlockHashData
 	if err := msg.Decode(&request); err != nil {
-		log.Error("######<<<<<< ","msg",msg,"err",err)
 		return p2p.ErrResp(p2p.ErrDecode, "%v: %v", msg, err)
 	}
-	log.Error("######<<<<<< OOOKKKK","msg",msg)
 	txs := make([]*types.Transaction,0,len(request.BlockH.TxsHash))
-	//TODO GetTxByHash
 	for _, txhs := range request.BlockH.TxsHash {
 		//get tx data from txpool
 		tx := txpool.GetTxPool().GetTxByHash(txhs)
 		txs = append(txs,tx)
 	}
 	newBlock := types.BuildBlock(request.BlockH.Header,txs,request.BlockH.Uncles,request.BlockH.Td)
-	log.Warn("######Build new block.","newHash",newBlock.Hash(),"orgHash",request.BlockH.BlockHash)
-	//newBlock := types.NewBlock(request.header, txs, request.uncles, nil)
 
 	newBlock.ReceivedAt   = msg.ReceivedAt
 	newBlock.ReceivedFrom = p

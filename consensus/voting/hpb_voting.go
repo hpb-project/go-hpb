@@ -122,48 +122,6 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	return nil, nil
 }
 
-// 设置网络节点类型
-//func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error{
-//	addresses := snapa.GetHpbNodes()
-//
-//	newlocaltyp := discover.PreNode
-//	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag{
-//		newlocaltyp = discover.HpNode
-//	}
-//	if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
-//		p2p.PeerMgrInst().SetLocalType(newlocaltyp)
-//	}
-//
-//
-//	peers := p2p.PeerMgrInst().PeersAll()
-//	for _, peer := range peers {
-//		switch peer.RemoteType() {
-//		case discover.PreNode:
-//			if flag := FindHpbNode(peer.Address(), addresses); flag{
-//				//log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
-//				peer.SetRemoteType(discover.HpNode)
-//			}
-//		case discover.HpNode:
-//			if flag := FindHpbNode(peer.Address(), addresses); !flag{
-//				//log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
-//				peer.SetRemoteType(discover.PreNode)
-//			}
-//		default:
-//			break
-//		}
-//	}
-//	return nil
-//}
-//
-//func FindHpbNode(address common.Address, addresses []common.Address) bool{
-//	for _, addresstemp := range addresses{
-//		if(addresstemp == address){
-//			return true
-//		}
-//	}
-//	return false
-//}
-
 //生成初始化的区块
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
