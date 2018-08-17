@@ -200,20 +200,13 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     return ErrUpdateAbortFailed
 }
 
-func (boe *BoeHandle) HWCheck() {
+func (boe *BoeHandle) HWCheck() bool {
     var ret = C.boe_hw_check()
     if ret == C.BOE_OK {
         log.Info("boe board is ok.")
-    }else {
-        log.Info("boe board not find.")
-    }
-}
-
-func (boe *BoeHandle) BoardConnected() bool {
-    var ret = C.boe_hw_connect()
-    if ret == C.BOE_OK {
         return true
     }else {
+        log.Info("boe board not find.")
         return false
     }
 }
