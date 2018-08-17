@@ -244,15 +244,13 @@ func (prm *PeerManager) GetLocalType()  discover.NodeType {
 }
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
-	if prm.server.localType != nt{
-		log.Debug("######Change server local type","from",prm.server.localType.ToString(),"to",nt.ToString())
-		prm.server.localType = nt
+	log.Info("Change node local type","from",prm.server.localType.ToString(),"to",nt.ToString())
 
+	if prm.server.localType != nt{
+		prm.server.localType = nt
 		for _, p := range prm.peers {
 			p.localType = nt
 		}
-		log.Debug("######Set all peer local type","nodetype",nt.ToString())
-
 		return true
 	}
 
@@ -261,8 +259,8 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 
 
 func (prm *PeerManager) SetHpRemoteFlag(flag bool)  {
+	log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)
 	if prm.server.hpflag != flag {
-		log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)
 		prm.server.hpflag = flag
 	}
 }
