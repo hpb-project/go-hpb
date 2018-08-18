@@ -107,15 +107,7 @@ func InstancePrometheus() *Prometheus {
 	if nil == insPrometheus {
 		reentryMux.Lock()
 		if nil == insPrometheus {
-			intanconf, err := config.GetHpbConfigInstance()
-
-			proIns := New(&intanconf.Prometheus, db.GetHpbDbInstance())
-
-			///*consensus.engine.InstanceEngine()*/nil
-			if err != nil {
-				insPrometheus = nil
-			}
-			insPrometheus = proIns
+			insPrometheus = New(&config.GetHpbConfigInstance().Prometheus, db.GetHpbDbInstance())
 		}
 		reentryMux.Unlock()
 	}

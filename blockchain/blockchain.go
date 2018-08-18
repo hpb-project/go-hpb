@@ -117,11 +117,7 @@ type BlockChain struct {
 // InstanceBlockChain returns the singleton of BlockChain.
 func InstanceBlockChain() *BlockChain {
 	once.Do(func() {
-		c, err := config.GetHpbConfigInstance()
-		if err != nil {
-			log.Error("Failed to GetHpbConfigInstance in InstanceBlockChain() SynCtrl", "err", err)
-		}
-		bcInstance = NewBlockChain(db.GetHpbDbInstance(), &c.BlockChain)
+		bcInstance = NewBlockChain(db.GetHpbDbInstance(), &config.GetHpbConfigInstance().BlockChain)
 	})
 	return bcInstance
 }
