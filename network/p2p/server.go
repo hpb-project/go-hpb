@@ -523,7 +523,7 @@ running:
 				p.localType  = srv.localType
 
 				p.remoteType = discover.SynNode
-				if c.isboe {
+				if c.isboe || srv.TestMode {
 					p.remoteType = discover.PreNode
 				}
 				for _, n := range srv.BootstrapNodes {
