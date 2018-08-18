@@ -251,7 +251,7 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
 
     c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
     if c_ret == C.BOE_OK {
-    	log.Error("----------------boe validate sign")
+    	log.Trace("boe validate sign success")
         result[0] = 4
         return result,nil
     }
@@ -269,7 +269,7 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     }
 
     copy(result[:], pub[1:])
-    log.Error("-----------------------software validate sign")
+    log.Trace("software validate sign success")
 
     return result, nil
 }

@@ -208,7 +208,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 
 	pub , err := boe.BoeGetInstance().ValidateSign(sighash.Bytes(), r, s, V)
 	if err != nil {
-		log.Error("-------------------boe validatesign error")
+		log.Trace("boe validatesign error")
 		return common.Address{}, err
 	}
 	// recover the public key from the snature
@@ -221,7 +221,6 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
-	log.Error("-------------------boe validatesign success")
 	return addr, nil
 }
 

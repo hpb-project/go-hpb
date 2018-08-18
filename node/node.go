@@ -93,7 +93,7 @@ type Node struct {
 
 	//ApiBackend      *HpbApiBackend
 
-	worker     *worker.Miner
+	miner     *worker.Miner
 	gasPrice        *big.Int
 	hpberbase       common.Address
 
@@ -125,6 +125,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	confCopy := *conf
 	conf = &confCopy
+
 	if conf.Node.DataDir != "" {
 		absdatadir, err := filepath.Abs(conf.Node.DataDir)
 		if err != nil {
@@ -162,7 +163,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		Hpbengine:		   nil,
 
 		gasPrice:       conf.Node.GasPrice,
-		hpberbase:      conf.Node.Hpberbase,
+		hpberbase:      common.Address{},
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   nil,
 		stop:           make(chan struct{}),
@@ -177,6 +178,15 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		return nil, err
 	}
 	hpbnode.Hpbboe = boe.BoeGetInstance()
+	//Get coinbase from boe and set it to node.hperbase
+	coinbasestring, error := hpbnode.Hpbboe.GetBindAccount()
+	if error != nil {
+		log.Warn("Get coinbase from boe error and get coinbase from account","Error: ", error)
+	}else {
+		copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
+		log.Trace("set coinbase of node",": ", hpbnode.hpberbase)
+	}
+
 	hpbnode.accman = am
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
@@ -193,11 +203,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.Hpbbc = bc.InstanceBlockChain()
 
 	peermanager.RegChanStatus(hpbnode.Hpbbc.Status)
-	//Hpbworker       *Worker
-	//Hpbboe			*boe.BoeHandle
-	//txpool.NewTxPool(conf.TxPool, &conf.BlockChain, block)
-
-	//hpbnode.Hpbbc, err = bc.NewBlockChain(db, &conf.BlockChain, engine)
 
 
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
@@ -213,11 +218,6 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
 	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
-
-
-
-
-
 	return hpbnode, nil
 }
 func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
@@ -254,7 +254,7 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 		//}
 		hpbnode.Hpbsyncctr = syncctr
 
-		hpbnode.worker = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
+		hpbnode.miner = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
 		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
 
@@ -274,13 +274,23 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
+
+
 	//boe init
+	config := config.HpbConfigIns
 	error := hpbnode.Hpbboe.Init()
 	if error != nil{
 		log.Error("boe init error:"," ",error)
+		config.Node.Boeflag = 0
 		return error
 	}
 
+
+
+	if error != nil {
+		log.Error("Read Boe bingding account error", ":",error)
+		return error
+	}
 	error = hpbnode.WorkerInit(conf)
 	if error != nil{
 		log.Error("Worker init failed",":", error)
@@ -374,7 +384,7 @@ func (n *Node) Stop() error {
 	n.Hpbboe.Release()
 	n.Hpbsyncctr.Stop()
 	n.Hpbtxpool.Stop()
-	n.worker.Stop()
+	n.miner.Stop()
 	n.Hpbpeermanager.Stop()
 
 	// Release instance directory lock.
@@ -589,7 +599,7 @@ func (s *Node) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.Hpbsyncctr.AcceptTxs, 1)
 	}
-	go s.worker.Start(eb)
+	go s.miner.Start(eb)
 	return nil
 }
 

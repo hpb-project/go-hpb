@@ -58,7 +58,7 @@ func (b *HpbApiBackend) SetHead(number uint64) {
 func (b *HpbApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.hpb.worker.PendingBlock()
+		block := b.hpb.miner.PendingBlock()
 		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
@@ -71,7 +71,7 @@ func (b *HpbApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 func (b *HpbApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.hpb.worker.PendingBlock()
+		block := b.hpb.miner.PendingBlock()
 		return block, nil
 	}
 	// Otherwise resolve and return the block
@@ -84,7 +84,7 @@ func (b *HpbApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumb
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.hpb.worker.Pending()
+		block, state := b.hpb.miner.Pending()
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state

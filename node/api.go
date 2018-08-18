@@ -69,7 +69,7 @@ func (api *PublicHpbAPI) Coinbase() (common.Address, error) {
 
 // Mining returns the miner is mining
 func (api *PublicHpbAPI) Mining() bool {
-	return api.e.worker.Mining()
+	return api.e.miner.Mining()
 }
 
 // PrivateMinerAPI provides private RPC methods tso control the miner.
@@ -262,7 +262,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.hpb.worker.Pending()
+		_, stateDb := api.hpb.miner.Pending()
 		return stateDb.RawDump(), nil
 	}
 	var block *types.Block
@@ -343,7 +343,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *
 	switch blockNr {
 	case rpc.PendingBlockNumber:
 		// Pending block is only known by the miner
-		block = api.hpb.worker.PendingBlock()
+		block = api.hpb.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		block = api.hpb.Hpbbc.CurrentBlock()
 	default:

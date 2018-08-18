@@ -104,9 +104,9 @@ func (s *Node) APIs() []rpc.API {
 	return apis
 }
 
-func (s *Node) StopMining()         { s.worker.Stop() }
-func (s *Node) IsMining() bool      { return s.worker.Mining() }
-func (s *Node) Miner() *worker.Miner { return s.worker }
+func (s *Node) StopMining()         { s.miner.Stop() }
+func (s *Node) IsMining() bool      { return s.miner.Mining() }
+func (s *Node) Miner() *worker.Miner { return s.miner }
 
 func (s *Node) APIAccountManager() *accounts.Manager  { return s.accman }
 func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
