@@ -72,6 +72,8 @@ type Config struct {
 	EnableMsgEvents bool
 	NetworkId       uint64
 	DefaultAddr     common.Address
+
+	TestMode        bool
 }
 
 // Server manages all peer connections.
@@ -524,9 +526,7 @@ running:
 				if c.isboe {
 					p.remoteType = discover.PreNode
 				}
-
 				for _, n := range srv.BootstrapNodes {
-					//log.Info("Compare to boot nodes peer id","bootid",n.ID,"peerid",p.ID())
 					if n.ID == p.ID() {
 						p.remoteType = discover.BootNode
 					}
@@ -748,29 +748,29 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
-	remoteBoe := false
 	isBootnode := false
 
 	for _, n := range srv.BootstrapNodes {
-		if n.ID == c.id {
+		if c.id == n.ID {
 			log.Info("Remote node is boot.","id",c.id)
-			remoteBoe = true
+			c.isboe    = true
 			isBootnode = true
 		}
 	}
 
-	if !remoteBoe {
+	if !c.isboe {
 		remoteCoinbase := strings.ToLower(c.their.DefaultAddr.String())
 		log.Trace("Remote coinbase","address",remoteCoinbase)
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {
 				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
-				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				c.isboe   = remoteBoe
-				log.Info("Boe verify the remote.","result",remoteBoe)
+				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
+				log.Info("Boe verify the remote.","result",c.isboe)
 			}
 		}
 	}
+
+	log.Info("Verify the remote hardware.","result",c.isboe)
 
 	///////////////////////////////////////////////////////////////////////////
 	//for _, hp := range srv.hptype {
@@ -781,25 +781,6 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	//	}
 	//}
 	///////////////////////////////////////////////////////////////////////////
-	//log.Info("Verify the remote hardware.","result",remoteBoe)
-	if !remoteBoe {
-		//log.Error("Find the hw false.")
-		//todo remove the peer
-		//c.close(DiscHwSignError)
-		//return
-	}
-
-	//their.DefaultAddr--> mhid,mcid
-	//mhid := make([]byte,32)
-	//hash, err := boe.BoeGetInstance().Hash(append(ourRand,mhid...))
-	//rcid, err := boe.BoeGetInstance().ValidateSign(hash, c.their.Sign.R, c.their.Sign.S, c.their.Sign.V)
-	//log.Debug("Validate by hardware","hash",hash,"rcid",rcid)
-
-	//if mcid != rcid {
-	//	clog.Error("Hardware signed err", "err", rcid)
-	//	c.close(DiscHwSignError)
-	//	return
-	//}
 
 
 	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
