@@ -43,12 +43,12 @@ import (
     "fmt"
     "sync/atomic"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/event"
+	//"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 type BoeHandle struct {
-    boeEvent *event.SyncEvent
+   // boeEvent *event.SyncEvent
     boeInit  bool
 }
 
@@ -60,15 +60,15 @@ type TVersion struct {
     D int
 }
 
-const (
-    BoeEventBase event.EventType = iota+100
+/*const (
+   // BoeEventBase event.EventType = iota+100
     BoeEventMax
-)
+)*/
 
 var (
     boeRecoverPubTps         = int32(0)
     bcontinue                = false
-    boeHandle                = &BoeHandle{boeEvent:event.NewEvent(), boeInit:false}
+    boeHandle                = &BoeHandle{ boeInit:false}
 )
 
 func BoeGetInstance() (*BoeHandle) {
@@ -104,13 +104,13 @@ func (boe *BoeHandle) Release() (error) {
     return ErrInitFailed
 }
 
-func (boe *BoeHandle) SubscribeEvent(event event.EventType) (event.Subscriber,error) {
+/*func (boe *BoeHandle) SubscribeEvent(event event.EventType) (event.Subscriber,error) {
     if (event < BoeEventMax) && (event > BoeEventBase) {
         sub := boe.boeEvent.Subscribe(event)
         return sub, nil
     }
     return nil,ErrUnknownEvent
-}
+}*/
 
 
 func (boe *BoeHandle) GetBindAccount()(string, error){
@@ -238,7 +238,7 @@ func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid[]byte, signa
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
 
     atomic.AddInt32(&boeRecoverPubTps, 1)
-    var result = make([]byte, 64)
+    var result = make([]byte, 65)
 
     var (
         m_sig  = make([]byte, 97)
@@ -249,8 +249,10 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     copy(m_sig[96-len(hash):96], hash)
     m_sig[96] = v
 
-    c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[0])))
+    c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
     if c_ret == C.BOE_OK {
+    	log.Error("----------------boe validate sign")
+        result[0] = 4
         return result,nil
     }
 
@@ -265,7 +267,9 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     if(err != nil) {
         return nil, ErrSignCheckFailed
     }
+
     copy(result[:], pub[1:])
+    log.Error("-----------------------software validate sign")
 
     return result, nil
 }
