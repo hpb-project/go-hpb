@@ -89,6 +89,7 @@ func (prm *PeerManager)Start() error {
 	prm.server.Config = Config{
 		NAT:        config.Network.NAT,
 		Name:       config.Network.Name,
+		TestMode:   config.Node.TestMode == 1,
 		PrivateKey: config.Node.PrivateKey,
 		NetworkId:  config.Node.NetworkId,
 		DefaultAddr:config.Node.DefaultAddress,
