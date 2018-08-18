@@ -131,6 +131,18 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 }
 */
 
+func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) bool {
+
+	// 实际开发中，从硬件中获取
+	//rand := rand.Uint64()
+
+	signers, offset := s.GetHpbNodes(), 0
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
+	}
+	return (number % uint64(len(signers))) == uint64(offset)
+}
+
 // 判断当前的次序
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chain consensus.ChainReader, header *types.Header) (bool, error) {
 
@@ -213,6 +225,10 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 			break
 		}
 	}
+	//for i := 0; i < len(hpbsignerarray); i++ {
+	//	log.Error("chaji hpb nodes","hpbsignerarray",hpbsignerarray[i] )
+	//}
+	//log.Error("rand % len(hpbsignerarray)", "currentIndex", currentIndex, "signer", signer)
 	if ok && currentIndex == uint64(unsigneroffset) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
 		return true, nil
 	} else {

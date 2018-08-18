@@ -199,6 +199,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		log.Error("boe.BoeGetInstance() fail", "c.hboe", "instance is nil")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, parentheader.HardwareRandom)
+		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 	} else {
 		if c.hboe.HWCheck() {
 			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
@@ -206,6 +207,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				log.Info("GetNextHash err, using the gensis.json hardwarerandom")
 				header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 				copy(header.HardwareRandom, parentheader.HardwareRandom)
+				header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 				//return err
 			} else {
 				if len(boehwrand) != 0 {
@@ -216,12 +218,15 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					log.Info("GetNextHash err, using the gensis.json hardwarerandom")
 					header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 					copy(header.HardwareRandom, parentheader.HardwareRandom)
+					header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 				}
 			}
 		} else {
 			log.Info("no boe device, using the gensis.json hardwarerandom")
 			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 			copy(header.HardwareRandom, parentheader.HardwareRandom)
+			header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+			//log.Error("header.HardwareRandom[len(header.HardwareRandom)-1]", "value", header.HardwareRandom[len(header.HardwareRandom)-1])
 		}
 
 	}
@@ -229,12 +234,16 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
 	header.Difficulty = diffNoTurn
-	if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
-	} else if err != nil {
-		log.Error("CalculateCurrentMiner fail", "error", err)
-		return err
 	}
+	//header.Difficulty = diffNoTurn
+	//if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	//	header.Difficulty = diffInTurn
+	//} else if err != nil {
+	//	log.Error("CalculateCurrentMiner fail", "error", err)
+	//	return err
+	//}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -437,7 +446,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	log.Info("Finalize-------------+++++ signer's address", "signer", header.CandAddress.Hex())
+	log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
