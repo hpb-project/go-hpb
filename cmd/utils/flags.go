@@ -440,6 +440,10 @@ var (
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
 		Value: config.DefaultConfig.GPO.Percentile,
 	}
+	TestModeFlag = cli.BoolFlag{
+		Name:  "testmode",
+		Usage: "Run ghpb with testmode and boe don't need",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -864,7 +868,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.Node.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
-
+	if ctx.GlobalBool(TestModeFlag.Name) {
+		cfg.Node.TestMode = 1
+	}
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):

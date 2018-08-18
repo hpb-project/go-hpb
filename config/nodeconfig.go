@@ -182,8 +182,10 @@ type Nodeconfig struct {
 	//RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
 	DefaultAddress    common.Address
-
-
+	//1:boe init ok  0: boe init fail
+	Boeflag			uint8
+	//1:testmode and don't nedd boe  0:standard mode and need boe
+	TestMode		uint8
 }
 // NodeDB returns the path to the discovery node database.
 func (c *Nodeconfig) NodeDB() string {

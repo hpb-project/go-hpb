@@ -25,6 +25,8 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 var (
@@ -194,22 +196,32 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	if !crypto.ValidateSignatureValues(V, R, S, true) {
 		return common.Address{}, ErrInvalidSig
 	}
+
+
+
 	// encode the snature in uncompressed format
 	r, s := R.Bytes(), S.Bytes()
-	sig := make([]byte, 65)
-	copy(sig[32-len(r):32], r)
+	//sig := make([]byte, 65)
+	/*copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = V
-	// recover the public key from the snature
-	pub, err := crypto.Ecrecover(sighash[:], sig)
+	sig[64] = V*/
+
+	pub , err := boe.BoeGetInstance().ValidateSign(sighash.Bytes(), r, s, V)
 	if err != nil {
+		log.Error("-------------------boe validatesign error")
 		return common.Address{}, err
 	}
+	// recover the public key from the snature
+	/*pub, err := crypto.Ecrecover(sighash[:], sig)
+	if err != nil {
+		return common.Address{}, err
+	}*/
 	if len(pub) == 0 || pub[0] != 4 {
 		return common.Address{}, errors.New("invalid public key")
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+	log.Error("-------------------boe validatesign success")
 	return addr, nil
 }
 
