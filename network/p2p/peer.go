@@ -195,19 +195,15 @@ func (p *PeerBase) LocalAddr() net.Addr {
 
 //  RemoteType returns the remote type of the node.
 func (p *PeerBase) RemoteType() discover.NodeType {
-	//p.typelock.Lock()
-	//defer p.typelock.Unlock()
-
 	return p.remoteType
 }
 
 func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
-	//p.typelock.Lock()
-	//defer p.typelock.Unlock()
 
+	p.log.Debug("Set peer remote type","from",p.remoteType,"to",nt.ToString())
 	if p.remoteType != nt {
+		p.log.Info("Set peer remote type","to",nt.ToString())
 		p.remoteType = nt
-		p.log.Info("Set peer's remote type","nodetype",nt.ToString())
 		return true
 	}
 
@@ -216,9 +212,6 @@ func (p *PeerBase) SetRemoteType(nt discover.NodeType) bool {
 
 // LocalType returns the local type of the node.
 func (p *PeerBase) LocalType() discover.NodeType {
-	//p.typelock.Lock()
-	//defer p.typelock.Unlock()
-
 	return p.localType
 }
 
@@ -705,38 +698,3 @@ func (p *Peer) readExchange(status *exchangeData) (err error) {
 
 	return nil
 }
-
-///////////////////////////////////////////////
-//
-//func (p *Peer) testBandwidth() (error) {
-//
-//	ch := make(chan struct{}, 1)
-//	go func() {
-//		defer func() {
-//			if r := recover(); r != nil {
-//				p.log.Error("Test bandwidth panic.","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
-//			}
-//		}()
-//
-//		p.log.Debug("Test bandwidth start","ip",p.RemoteIP(),"port",p.RemoteListenPort()+100)
-//		result := iperf.StartTest(p.RemoteIP(), p.RemoteListenPort()+100, testBWDuration)
-//		p.lock.Lock()
-//		defer p.lock.Unlock()
-//		p.bandwidth = result
-//		p.log.Info("Test bandwidth ok","result",result)
-//		ch <- struct{}{}
-//
-//	}()
-//
-//	timeout := time.NewTimer(time.Second*5)
-//	defer timeout.Stop()
-//
-//	select {
-//	case <-ch:
-//	case <-timeout.C:
-//		return errPeerBWTestTimeout
-//	}
-//
-//	return nil
-//}
-

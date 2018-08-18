@@ -31,12 +31,7 @@ func RpcMgrInst() *RpcManager {
 
 func (prm *RpcManager)Start(apis []API ) error {
 
-	config, err :=config.GetHpbConfigInstance()
-	if err != nil {
-		log.Error("Peer manager get config error","error",err)
-		return err
-	}
-
+	config :=config.GetHpbConfigInstance()
 	// for-test
 	log.Debug("Para from config.","IpcEndpoint",config.Network.IpcEndpoint,"HttpEndpoint",config.Network.HttpEndpoint,"WsEndpoint",config.Network.WsEndpoint)
 
