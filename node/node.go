@@ -300,7 +300,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 	hpbnode.startBloomHandlers()
 	hpbnode.Hpbtxpool.Start()
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
-	retval := hpbnode.Hpbpeermanager.Start()
+	retval := hpbnode.Hpbpeermanager.Start(hpbnode.hpberbase)
 	if retval != nil{
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
