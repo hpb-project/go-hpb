@@ -116,12 +116,14 @@ func (prm *PeerManager)Start() error {
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
 
-	prm.server.localType = discover.PreNode
+	localType := discover.PreNode
 	if config.Network.RoleType == "bootnode" {
-		prm.server.localType = discover.BootNode
+		localType = discover.BootNode
+	}else if config.Network.RoleType == "synnode" {
+		localType = discover.SynNode
 	}
-
-
+	log.Info("Set Init Local Type by p2p")
+	prm.SetLocalType(localType)
 
 	if err := prm.server.Start(); err != nil {
 		log.Error("Hpb protocol","error",err)
@@ -234,6 +236,11 @@ func (prm *PeerManager) PeersAll() []*Peer {
 
 	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
+
+		if p.remoteType == discover.SynNode {
+			continue
+		}
+
 		list = append(list, p)
 	}
 	return list
@@ -245,6 +252,11 @@ func (prm *PeerManager) GetLocalType()  discover.NodeType {
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	log.Info("Change node local type","from",prm.server.localType.ToString(),"to",nt.ToString())
+
+	if prm.server.localType == discover.SynNode {
+		log.Info("SynNode need not allow to change","to",nt.ToString())
+		return true
+	}
 
 	if prm.server.localType != nt{
 		prm.server.localType = nt

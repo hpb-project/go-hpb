@@ -339,6 +339,9 @@ func routingBlock(block *types.Block, propagate bool) {
 					sendNewBlock(peer, block, td)
 					//sendNewHashBlock(peer, block, td)
 					break
+				case discover.SynNode:
+					sendNewBlock(peer, block, td)
+					break
 				default:
 					break
 				}
@@ -352,6 +355,10 @@ func routingBlock(block *types.Block, propagate bool) {
 				case discover.HpNode:
 					sendNewBlock(peer, block, td)
 					//sendNewHashBlock(peer, block, td)
+					break
+				case discover.SynNode:
+					//ONLY FOR TEST
+					sendNewBlock(peer, block, td)
 					break
 				default:
 					break

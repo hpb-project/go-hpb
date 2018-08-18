@@ -41,7 +41,7 @@ const NodeIDBits    = 512
 type NodeType  uint8
 const(
 	SynNode    NodeType = 0x10
-	PreNode    NodeType = 0x31
+	PreNode    NodeType = 0x30
 	HpNode     NodeType = 0x60
 	BootNode   NodeType = 0xA0
 )

@@ -154,6 +154,8 @@ type conn struct {
 	our   protoHandshake  // valid after the protocol handshake
 	their protoHandshake  // valid after the protocol handshake
 
+	isboe bool            // valid after the protocol handshake
+
 	//rport  int            // valid after the protocol handshake
 	//raddr  common.Address // valid after the protocol handshake
 	//rrand  []byte         // valid after the protocol handshake
@@ -517,7 +519,12 @@ running:
 
 				p.beatStart  = time.Now()
 				p.localType  = srv.localType
-				p.remoteType = discover.PreNode
+
+				p.remoteType = discover.SynNode
+				if c.isboe {
+					p.remoteType = discover.PreNode
+				}
+
 				for _, n := range srv.BootstrapNodes {
 					//log.Info("Compare to boot nodes peer id","bootid",n.ID,"peerid",p.ID())
 					if n.ID == p.ID() {
@@ -759,11 +766,21 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 			if hw.Adr == remoteCoinbase {
 				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				remoteBoe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
+				c.isboe   = remoteBoe
 				log.Info("Boe verify the remote.","result",remoteBoe)
 			}
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////
+	//for _, hp := range srv.hptype {
+	//	if hp.PID == c.id.TerminalString() {
+	//		remoteBoe = true
+	//		c.isboe   = remoteBoe
+	//		log.Warn("###### ONLY FOR TEST SYN TO SET BOE TRUE ######", "isboe",remoteBoe)
+	//	}
+	//}
+	///////////////////////////////////////////////////////////////////////////
 	//log.Info("Verify the remote hardware.","result",remoteBoe)
 	if !remoteBoe {
 		//log.Error("Find the hw false.")
