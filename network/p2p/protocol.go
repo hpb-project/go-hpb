@@ -171,7 +171,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
-		p.log.Debug("Network has register peer to syncer")
+		p.log.Info("Network has register peer to syncer")
 	}
 
 	// main loop. handle incoming messages.

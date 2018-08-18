@@ -62,41 +62,22 @@ web3._extend({
 	]
 });
 `
-
-const Prometheus_JS = `
-web3._extend({
-	property: 'prometheus',
-	methods: [
-		new web3._extend.Method({
-			name: 'getHpbNodeSnap',
-			call: 'prometheus_getHpbNodeSnap',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'getHpbNodes',
-			call: 'prometheus_getHpbNodes',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
+/*
+new web3._extend.Method({
 			name: 'getHpbNodeSnapAtHash',
 			call: 'prometheus_getHpbNodeSnapAtHash',
 			params: 1
 		}),
-		new web3._extend.Method({
-			name: 'getCandidateNodes',
-			call: 'prometheus_getCandidateNodes',
-			params: 1,
-			inputFormatter: [null]
+		
+		,
+	properties: [
+		new web3._extend.Property({
+			name: 'proposals',
+			getter: 'prometheus_proposals'
 		}),
-		new web3._extend.Method({
-			name: 'getCandidateNodeSnap',
-			call: 'prometheus_getCandidateNodeSnap',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
+	]
+	
+	new web3._extend.Method({
 			name: 'propose',
 			call: 'prometheus_propose',
 			params: 3
@@ -106,12 +87,37 @@ web3._extend({
 			call: 'prometheus_discard',
 			params: 2
 		}),
-	],
-	properties: [
-		new web3._extend.Property({
-			name: 'proposals',
-			getter: 'prometheus_proposals'
+*/
+
+const Prometheus_JS = `
+web3._extend({
+	property: 'prometheus',
+	methods: [
+		new web3._extend.Method({
+			name: 'getHpbNodeSnap',
+			call: 'prometheus_getHpbNodeSnap',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
+		new web3._extend.Method({
+			name: 'getHpbNodes',
+			call: 'prometheus_getHpbNodes',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		
+		new web3._extend.Method({
+			name: 'getCandidateNodes',
+			call: 'prometheus_getCandidateNodes',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getCandidateNodeSnap',
+			call: 'prometheus_getCandidateNodeSnap',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		})
 	]
 });
 `

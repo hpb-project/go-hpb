@@ -204,9 +204,9 @@ func  New() (*HpbConfig) {
 	return HpbConfigIns
 
 }
-func GetHpbConfigInstance() (*HpbConfig, error) {
+func GetHpbConfigInstance() (*HpbConfig) {
 	if INSTANCE.Load() != nil {
-		return INSTANCE.Load().(*HpbConfig), nil
+		return INSTANCE.Load().(*HpbConfig)
 	}
 	HpbConfigIns := &HpbConfig{
 		Node: 		defaultNodeConfig() ,
@@ -225,5 +225,5 @@ func GetHpbConfigInstance() (*HpbConfig, error) {
 	}
 	log.Info("Create New HpbConfig object")
 	INSTANCE.Store(HpbConfigIns)
-	return INSTANCE.Load().(*HpbConfig), nil
+	return INSTANCE.Load().(*HpbConfig)
 }

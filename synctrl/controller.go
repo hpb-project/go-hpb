@@ -92,14 +92,11 @@ type SynCtrl struct {
 // InstanceSynCtrl returns the singleton of SynCtrl.
 func InstanceSynCtrl() *SynCtrl {
 	once.Do(func() {
-		c, err := config.GetHpbConfigInstance()
-		if err != nil {
-			log.Error("Failed to GetHpbConfigInstance in InstanceSynCtrl() SynCtrl", "err", err)
-		}
-		syncInstance, err = newSynCtrl(&c.BlockChain, c.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
+		i, err := newSynCtrl(&config.GetHpbConfigInstance().BlockChain, config.GetHpbConfigInstance().Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
 		if err != nil {
 			log.Error("Failed to instance SynCtrl", "err", err)
 		}
+		syncInstance = i
 	})
 	return syncInstance
 }
@@ -339,6 +336,9 @@ func routingBlock(block *types.Block, propagate bool) {
 					sendNewBlock(peer, block, td)
 					//sendNewHashBlock(peer, block, td)
 					break
+				case discover.SynNode:
+					sendNewBlock(peer, block, td)
+					break
 				default:
 					break
 				}
@@ -352,6 +352,10 @@ func routingBlock(block *types.Block, propagate bool) {
 				case discover.HpNode:
 					sendNewBlock(peer, block, td)
 					//sendNewHashBlock(peer, block, td)
+					break
+				case discover.SynNode:
+					//ONLY FOR TEST
+					sendNewBlock(peer, block, td)
 					break
 				default:
 					break
