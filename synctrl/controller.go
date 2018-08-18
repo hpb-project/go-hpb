@@ -92,14 +92,11 @@ type SynCtrl struct {
 // InstanceSynCtrl returns the singleton of SynCtrl.
 func InstanceSynCtrl() *SynCtrl {
 	once.Do(func() {
-		c, err := config.GetHpbConfigInstance()
-		if err != nil {
-			log.Error("Failed to GetHpbConfigInstance in InstanceSynCtrl() SynCtrl", "err", err)
-		}
-		syncInstance, err = newSynCtrl(&c.BlockChain, c.Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
+		i, err := newSynCtrl(&config.GetHpbConfigInstance().BlockChain, config.GetHpbConfigInstance().Node.SyncMode, txpool.GetTxPool(), prometheus.InstancePrometheus())
 		if err != nil {
 			log.Error("Failed to instance SynCtrl", "err", err)
 		}
+		syncInstance = i
 	})
 	return syncInstance
 }

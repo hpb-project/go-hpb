@@ -56,7 +56,7 @@ func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 		return DBINSTANCE.Load().(*hpbdb.LDBDatabase),nil
 	}
 
-	var cfg, _ = config.GetHpbConfigInstance()
+	var cfg = config.GetHpbConfigInstance()
 	if cfg.Node.DataDir == ""{
 		return hpbdb.NewMemDatabase()
 	}

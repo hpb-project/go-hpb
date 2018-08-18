@@ -84,11 +84,7 @@ func PeerMgrInst() *PeerManager {
 
 func (prm *PeerManager)Start() error {
 
-	config, err :=config.GetHpbConfigInstance()
-	if err != nil {
-		log.Error("Peer manager get config error","error",err)
-		return err
-	}
+	config :=config.GetHpbConfigInstance()
 
 	prm.server.Config = Config{
 		NAT:        config.Network.NAT,
@@ -139,7 +135,7 @@ func (prm *PeerManager)Start() error {
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////
-	add,err:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
+	add,_:=net.ResolveUDPAddr("udp",prm.server.ListenAddr)
 	prm.iport = add.Port+100
 	log.Debug("Iperf server start", "port",prm.iport)
 	prm.startServerBW(strconv.Itoa(prm.iport))
