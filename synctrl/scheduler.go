@@ -490,6 +490,8 @@ func (this *scheduler) reserveHeaders(p *peerConnection, count int, taskPool map
 		index := int(header.Number.Int64() - int64(this.resultOffset))
 		if index >= len(this.resultCache) || index < 0 {
 			common.Report("index allocation went beyond available resultCache space")
+			//todo add log by xjl
+			log.Error("errInvalidChain occur in reserveHeaders()", "index", index, "len(this.resultCache)", len(this.resultCache))
 			return nil, false, errInvalidChain
 		}
 		if this.resultCache[index] == nil {
@@ -822,6 +824,8 @@ func (this *scheduler) deliver(id string, taskPool map[common.Hash]*types.Header
 		// Reconstruct the next result if contents match up
 		index := int(header.Number.Int64() - int64(this.resultOffset))
 		if index >= len(this.resultCache) || index < 0 || this.resultCache[index] == nil {
+			//todo add log by xjl
+			log.Error("errInvalidChain occur in deliver()", "index", index, "len(this.resultCache)", len(this.resultCache), "this.resultCache[index]", this.resultCache[index])
 			failure = errInvalidChain
 			break
 		}
@@ -851,6 +855,8 @@ func (this *scheduler) deliver(id string, taskPool map[common.Hash]*types.Header
 	// If none of the data was good, it's a stale delivery
 	switch {
 	case failure == nil || failure == errInvalidChain:
+		//todo add log by xjl
+		log.Error("errInvalidChain occur in deliver() in case failure == nil || failure == errInvalidChain:")
 		return accepted, failure
 	case useful:
 		return accepted, fmt.Errorf("partial failure: %v", failure)
