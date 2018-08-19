@@ -109,6 +109,9 @@ type Node struct {
 	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
 	stop chan struct{} // Channel to wait for termination notifications
+
+	//1:boe init ok  0: boe init fail
+	Boeflag			uint8
 }
 
 /*
@@ -123,8 +126,7 @@ func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainCo
 // New creates a hpb node, create all object and start
 func New(conf  *config.HpbConfig) (*Node, error){
 
-	confCopy := *conf
-	conf = &confCopy
+	var coinbasestring string
 
 	if conf.Node.DataDir != "" {
 		absdatadir, err := filepath.Abs(conf.Node.DataDir)
@@ -178,10 +180,20 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		return nil, err
 	}
 	hpbnode.Hpbboe = boe.BoeGetInstance()
+
+	err = hpbnode.Hpbboe.Init()
+	if err != nil{
+		log.Warn("boe init error:"," ",err)
+		hpbnode.Boeflag = 0
+	}else {
+		hpbnode.Boeflag = 1
+	}
+
+
 	//Get coinbase from boe and set it to node.hperbase
-	coinbasestring, error := hpbnode.Hpbboe.GetBindAccount()
-	if error != nil {
-		log.Warn("Get coinbase from boe error and get coinbase from account","Error: ", error)
+	coinbasestring, err = hpbnode.Hpbboe.GetBindAccount()
+	if err != nil {
+		log.Warn("Get coinbase from boe ","Error: ", err)
 	}else {
 		copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
 		log.Trace("set coinbase of node",": ", hpbnode.hpberbase)
@@ -194,8 +206,8 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
 	hpbnode.Hpbrpcmanager = rpc.RpcMgrInst()
-	hpbdb, _      := db.CreateDB(&conf.Node, "chaindata")
-	hpbnode.HpbDb = hpbdb
+	hpbdatabase, _ := db.CreateDB(&conf.Node, "chaindata")
+	hpbnode.HpbDb = hpbdatabase
 
 
 	hpbnode.newBlockMux = new(sub.TypeMux)
@@ -217,7 +229,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 
 	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
-	hpbnode.bloomIndexer = NewBloomIndexer(hpbdb, params.BloomBitsBlocks)
+	hpbnode.bloomIndexer = NewBloomIndexer(hpbdatabase, params.BloomBitsBlocks)
 	return hpbnode, nil
 }
 func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
@@ -274,27 +286,10 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
-
-
-	//boe init
-	config := config.HpbConfigIns
-	error := hpbnode.Hpbboe.Init()
-	if error != nil{
-		log.Error("boe init error:"," ",error)
-		config.Node.Boeflag = 0
-		return error
-	}
-
-
-
-	if error != nil {
-		log.Error("Read Boe bingding account error", ":",error)
-		return error
-	}
-	error = hpbnode.WorkerInit(conf)
-	if error != nil{
-		log.Error("Worker init failed",":", error)
-		return error
+	err := hpbnode.WorkerInit(conf)
+	if err != nil{
+		log.Error("Worker init failed",":", err)
+		return err
 	}
 	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
