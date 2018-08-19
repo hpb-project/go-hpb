@@ -202,8 +202,9 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		log.Warn("Get coinbase from boe fail, and set coinbase with account[0]")
 
 	}else {
-		copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
-		log.Trace("set coinbase of node",": ", hpbnode.hpberbase)
+		hpbnode.hpberbase = common.HexToAddress(coinbasestring)
+		//copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
+		log.Info("set coinbase of node",": ", hpbnode.hpberbase)
 	}
 
 
