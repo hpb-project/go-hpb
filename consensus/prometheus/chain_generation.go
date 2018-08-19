@@ -384,12 +384,14 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 	addresses := snapa.GetHpbNodes()
 
-	newlocaltyp := discover.PreNode
-	if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag {
-		newlocaltyp = discover.HpNode
-	}
-	if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
-		p2p.PeerMgrInst().SetLocalType(newlocaltyp)
+	if p2p.PeerMgrInst().GetLocalType() == discover.PreNode || p2p.PeerMgrInst().GetLocalType() == discover.HpNode {
+		newlocaltyp := discover.PreNode
+		if flag := FindHpbNode(p2p.PeerMgrInst().DefaultAddr(), addresses); flag {
+			newlocaltyp = discover.HpNode
+		}
+		if p2p.PeerMgrInst().GetLocalType() != newlocaltyp {
+			p2p.PeerMgrInst().SetLocalType(newlocaltyp)
+		}
 	}
 
 	peers := p2p.PeerMgrInst().PeersAll()
