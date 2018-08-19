@@ -297,7 +297,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
 	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
-	hpbnode.Hpbtxpool.Start()
+
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	retval := hpbnode.Hpbpeermanager.Start(hpbnode.hpberbase)
 	if retval != nil{
@@ -313,6 +313,9 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 		log.Error("Worker init failed",":", err)
 		return err
 	}
+
+	hpbnode.Hpbtxpool.Start()
+
 	return nil
 
 }

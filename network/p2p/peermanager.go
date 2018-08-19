@@ -121,7 +121,7 @@ func (prm *PeerManager)Start(coinbase common.Address) error {
 	}else if config.Network.RoleType == "synnode" {
 		localType = discover.SynNode
 	}
-	log.Info("Set Init Local Type by p2p","type",localType)
+	log.Info("Set Init Local Type by p2p","type",localType.ToString())
 	prm.SetLocalType(localType)
 
 	if err := prm.server.Start(); err != nil {
