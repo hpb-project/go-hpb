@@ -103,6 +103,7 @@ func (prm *PeerManager)Start(coinbase common.Address) error {
 		Protocols: prm.hpbpro.Protocols(),
 	}
 	prm.server.Config.CoinBase = coinbase
+	log.Info("Set coinbase address by start","address",coinbase)
 
 	prm.hpbpro.networkId   = prm.server.NetworkId
 	prm.hpbpro.regMsgProcess(ReqNodesMsg,HandleReqNodesMsg)
