@@ -18,21 +18,19 @@ package prometheus
 import (
 	"bytes"
 	"errors"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/voting"
 	"math/big"
 	"time"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/consensus/voting"
 )
 
 // 验证头部，对外调用接口
 func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return c.verifyHeader(chain, header, nil)
 }
-
-
 
 // 批量验证
 func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
@@ -61,7 +59,8 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
+	//if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
+	if header.Time.Cmp(new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(c.config.Period))) > 0 {
 		//todo add log by xjl
 		log.Error("errInvalidChain occur in (c *Prometheus) verifyHeader()", "header.Time", header.Time, "big.NewInt(time.Now().Unix())", big.NewInt(time.Now().Unix()))
 		return consensus.ErrFutureBlock
@@ -82,7 +81,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	if len(header.Extra) < consensus.ExtraVanity {
 		return consensus.ErrMissingVanity
 	}
-	if len(header.Extra) < consensus.ExtraVanity+ consensus.ExtraSeal {
+	if len(header.Extra) < consensus.ExtraVanity+consensus.ExtraSeal {
 		return consensus.ErrMissingSignature
 	}
 	// Ensure that the extra-data contains a signerHash list on checkpoint, but none otherwise
@@ -138,23 +137,23 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
 	/*
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
-	// If the block is a checkpoint block, verify the signerHash list
-	if number%consensus.HpbNodeCheckpointInterval == 0 {
-		//获取出当前快照的内容, snap.Signers 实际为hash
-		log.Info("the block is at epoch checkpoint", "block number",number)
-		signers := make([]byte, len(snap.Signers)*common.AddressLength)
-		for i, signerHash := range snap.GetHpbNodes() {
-			copy(signers[i*common.AddressLength:], signerHash[:])
+		snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
+		if err != nil {
+			return err
 		}
-		extraSuffix := len(header.Extra) - consensus.ExtraSeal
-		if !bytes.Equal(header.Extra[consensus.ExtraVanity:extraSuffix], signers) {
-			return consensus.ErrInvalidCheckpointSigners
+		// If the block is a checkpoint block, verify the signerHash list
+		if number%consensus.HpbNodeCheckpointInterval == 0 {
+			//获取出当前快照的内容, snap.Signers 实际为hash
+			log.Info("the block is at epoch checkpoint", "block number",number)
+			signers := make([]byte, len(snap.Signers)*common.AddressLength)
+			for i, signerHash := range snap.GetHpbNodes() {
+				copy(signers[i*common.AddressLength:], signerHash[:])
+			}
+			extraSuffix := len(header.Extra) - consensus.ExtraSeal
+			if !bytes.Equal(header.Extra[consensus.ExtraVanity:extraSuffix], signers) {
+				return consensus.ErrInvalidCheckpointSigners
+			}
 		}
-	}
 	*/
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
@@ -178,17 +177,17 @@ func (c *Prometheus) VerifySeal(chain consensus.ChainReader, header *types.Heade
 // 验证封装的正确性，判断是否满足共识算法的需求
 func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
-    
+
 	number := header.Number.Uint64()
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents);err != nil {
+	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents); err != nil {
 		return err
-	}else{
+	} else {
 		// 已经投票结束
-		if (number% consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+		if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
 			// 轮转
 			SetNetNodeType(snap)
 			log.Info("SetNetNodeType ***********************")
@@ -199,34 +198,32 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if _, err := consensus.Ecrecover(header, c.signatures); err != nil {
 		return err
 	}
-	
-	
-	
+
 	/*
-	if _, ok := snap.Signers[signer]; !ok {
-		return consensus.ErrUnauthorized
-	}
+		if _, ok := snap.Signers[signer]; !ok {
+			return consensus.ErrUnauthorized
+		}
 	*/
 	/*
-	for seen, recent := range snap.Recents {
-		if recent == signerHash {
-			// Signer is among recents, only fail if the current block doesn't shift it out
-			if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-				return errUnauthorized
+		for seen, recent := range snap.Recents {
+			if recent == signerHash {
+				// Signer is among recents, only fail if the current block doesn't shift it out
+				if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
+					return errUnauthorized
+				}
 			}
 		}
-	}
 	*/
 	//Ensure that the difficulty corresponds to the turn-ness of the signerHash
-	
+
 	/*
-	inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
-	if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-		return consensus.ErrInvalidDifficulty
-	}
-	if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
-		return consensus.ErrInvalidDifficulty
-	}
+		inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
+		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
+			return consensus.ErrInvalidDifficulty
+		}
+		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+			return consensus.ErrInvalidDifficulty
+		}
 	*/
 	return nil
 }
