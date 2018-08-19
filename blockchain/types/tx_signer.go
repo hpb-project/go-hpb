@@ -221,6 +221,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+	log.Trace("boe validatesign success")
 	return addr, nil
 }
 

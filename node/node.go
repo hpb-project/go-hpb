@@ -250,13 +250,6 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 			}
 			bc.WriteBlockChainVersion(hpbnode.HpbDb, bc.BlockChainVersion)
 		}
-		// Rewind the chain in case of an incompatible config upgrade.
-		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
-			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-			hpbnode.Hpbbc.SetHead(compat.RewindTo)
-			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
-		}*/
-
 		engine      :=  prometheus.InstancePrometheus()
 		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
@@ -265,26 +258,11 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 			log.Error("add engine to blockchain error")
 			return err
 		}
-		//syncctr, err     := synctrl.NewSynCtrl(&conf.BlockChain, config.SyncMode(conf.Node.SyncMode), hpbtxpool, hpbnode.Hpbengine)
-		syncctr := synctrl.InstanceSynCtrl()
-		hpbnode.newBlockMux = syncctr.NewBlockMux()
-		//if err != nil {
-		//	log.Error("crete synctrl object error")
-		//	return nil, err
-		//}
-		hpbnode.Hpbsyncctr = syncctr
+		hpbnode.Hpbsyncctr = synctrl.InstanceSynCtrl()
+		hpbnode.newBlockMux = hpbnode.Hpbsyncctr.NewBlockMux()
 
 		hpbnode.miner = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
 		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
-
-
-		// Rewind the chain in case of an incompatible config upgrade.
-		/*if compat, ok := genesisErr.(*config.ConfigCompatError); ok {
-			log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-			hpbnode.Hpbbc.SetHead(compat.RewindTo)
-			bc.WriteChainConfig(hpbdb, genesisHash, chainConfig)
-		}*/
-
 
 	}else{
 		return errors.New(`The genesis block is not inited`)
@@ -298,22 +276,24 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
 
-	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
-	retval := hpbnode.Hpbpeermanager.Start(hpbnode.hpberbase)
-	if retval != nil{
-		log.Error("Start hpbpeermanager error")
-		return errors.New(`start peermanager error ".ipc"`)
-	}
-	if hpbnode.Hpbsyncctr != nil {
-		hpbnode.Hpbsyncctr.Start()
-	}
+
 
 	err := hpbnode.WorkerInit(conf)
 	if err != nil{
 		log.Error("Worker init failed",":", err)
 		return err
 	}
-
+	if hpbnode.Hpbsyncctr == nil {
+		log.Error("syncctrl is nil")
+		return errors.New("synctrl is nil")
+	}
+	hpbnode.Hpbsyncctr.Start()
+	retval := hpbnode.Hpbpeermanager.Start(hpbnode.hpberbase)
+	if retval != nil{
+		log.Error("Start hpbpeermanager error")
+		return errors.New(`start peermanager error ".ipc"`)
+	}
+	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	hpbnode.Hpbtxpool.Start()
 
 	return nil
