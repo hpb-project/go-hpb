@@ -71,7 +71,7 @@ type Config struct {
 
 	EnableMsgEvents bool
 	NetworkId       uint64
-	DefaultAddr     common.Address
+	CoinBase        common.Address
 
 	TestMode        bool
 }
@@ -356,7 +356,7 @@ func (srv *Server) Start() (err error) {
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
-	srv.ourHandshake.DefaultAddr = srv.DefaultAddr
+	srv.ourHandshake.CoinBase = srv.CoinBase
 
 	if srv.ListenAddr == "" {
 		log.Error("P2P server start, listen address is nil")
@@ -759,7 +759,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 
 	if !c.isboe {
-		remoteCoinbase := strings.ToLower(c.their.DefaultAddr.String())
+		remoteCoinbase := strings.ToLower(c.their.CoinBase.String())
 		log.Trace("Remote coinbase","address",remoteCoinbase)
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {

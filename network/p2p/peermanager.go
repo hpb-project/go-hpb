@@ -82,7 +82,7 @@ func PeerMgrInst() *PeerManager {
 	return INSTANCE.Load().(*PeerManager)
 }
 
-func (prm *PeerManager)Start() error {
+func (prm *PeerManager)Start(coinbase common.Address) error {
 
 	config :=config.GetHpbConfigInstance()
 
@@ -92,7 +92,7 @@ func (prm *PeerManager)Start() error {
 		TestMode:   config.Node.TestMode == 1,
 		PrivateKey: config.Node.PrivateKey,
 		NetworkId:  config.Node.NetworkId,
-		DefaultAddr:config.Node.DefaultAddress,
+		//DefaultAddr:config.Node.DefaultAddress,
 		ListenAddr: config.Network.ListenAddr,
 
 		NetRestrict:    config.Network.NetRestrict,
@@ -102,6 +102,7 @@ func (prm *PeerManager)Start() error {
 
 		Protocols: prm.hpbpro.Protocols(),
 	}
+	prm.server.Config.CoinBase = coinbase
 
 	prm.hpbpro.networkId   = prm.server.NetworkId
 	prm.hpbpro.regMsgProcess(ReqNodesMsg,HandleReqNodesMsg)
@@ -224,7 +225,7 @@ func (prm *PeerManager) Peer(id string) *Peer {
 }
 
 func (prm *PeerManager) DefaultAddr() common.Address {
-	return prm.server.DefaultAddr
+	return prm.server.CoinBase
 }
 
 func (prm *PeerManager) PeersAll() []*Peer {
