@@ -86,10 +86,9 @@ func (boe *BoeHandle) Init()(error) {
         bcontinue = true
         return nil
     }
-    fmt.Printf("Init ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    //fmt.Printf("Init ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
-    return nil 
-    //return ErrInitFailed
+    return ErrInitFailed
 }
 
 func (boe *BoeHandle) Release() (error) {
@@ -127,14 +126,15 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
 }
 
 func (boe *BoeHandle) GetVersion() (TVersion,error) {
-    var v TVersion
     var H,M,F,D C.uchar
     ret := C.boe_get_version(&H, &M, &F, &D)
     if ret == C.BOE_OK {
+        var v TVersion = TVersion{H:int(H), M:int(M), F:int(F), D:int(D)}
         return v,nil
     }
     //fmt.Printf("GetVersion ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
     C.boe_err_free(ret)
+    var v TVersion
     return v,ErrInitFailed
 }
 
@@ -169,7 +169,7 @@ func (boe *BoeHandle) FWUpdate() error{
     }
     image, err := downloadrelease(version.H, version.M, version.F, version.D)
     if err == ErrNoNeedUpdate {
-        fmt.Println("There are no newer release firmware.")
+        fmt.Println("You are using the newest firmware.")
         return nil
     }
     if err != nil {
