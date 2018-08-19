@@ -294,11 +294,7 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
-	err := hpbnode.WorkerInit(conf)
-	if err != nil{
-		log.Error("Worker init failed",":", err)
-		return err
-	}
+
 	hpbnode.SetNodeAPI()
 	hpbnode.startBloomHandlers()
 	hpbnode.Hpbtxpool.Start()
@@ -312,6 +308,11 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 		hpbnode.Hpbsyncctr.Start()
 	}
 
+	err := hpbnode.WorkerInit(conf)
+	if err != nil{
+		log.Error("Worker init failed",":", err)
+		return err
+	}
 	return nil
 
 }
