@@ -2512,6 +2512,7 @@ var Hpb = require('./web3/methods/hpb');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
 var Net = require('./web3/methods/net');
+var Prometheus = require('./web3/methods/prometheus');
 var Personal = require('./web3/methods/personal');
 var Swarm = require('./web3/methods/swarm');
 var Settings = require('./web3/settings');
@@ -2534,6 +2535,7 @@ function Web3 (provider) {
     this.db = new DB(this);
     this.shh = new Shh(this);
     this.net = new Net(this);
+    this.prometheus = new Prometheus(this);
     this.personal = new Personal(this);
     this.bzz = new Swarm(this);
     this.settings = new Settings();
@@ -13632,6 +13634,46 @@ module.exports = transfer;
 }(this));
 
 },{}],86:[function(require,module,exports){
+
+var formatters = require('../formatters');
+var Method = require('../method');
+
+var Prometheus = function (web3) {
+    this._requestManager = web3._requestManager;
+
+    var self = this;
+
+    methods().forEach(function(method) {
+        method.attachToObject(self);
+        method.setRequestManager(self._requestManager);
+    });
+
+};
+
+var methods = function () {
+    var getHpbNodes = new Method({
+        name: 'getHpbNodes',
+        call: 'prometheus_getHpbNodes',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter]
+    });
+
+    var getCandidateNodes = new Method({
+        name: 'getCandidateNodes',
+        call: 'prometheus_getCandidateNodes',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter]
+    });
+
+    return [
+        getHpbNodes,
+        getCandidateNodes
+    ];
+};
+
+module.exports = Prometheus;
+
+},{"../formatters":30,"../method":36}],87:[function(require,module,exports){
 module.exports = XMLHttpRequest;
 
 },{}],"bignumber.js":[function(require,module,exports){

@@ -61,7 +61,7 @@ web3._extend({
 		}),
 	]
 });
-`
+` 
 /*
 new web3._extend.Method({
 			name: 'getHpbNodeSnapAtHash',
@@ -75,7 +75,7 @@ new web3._extend.Method({
 			name: 'proposals',
 			getter: 'prometheus_proposals'
 		}),
-	]
+	] 
 	
 	new web3._extend.Method({
 			name: 'propose',
