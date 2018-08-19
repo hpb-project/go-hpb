@@ -1301,8 +1301,6 @@ Error: %v
 func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
 	start := time.Now()
 	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
-		//todo add log by xjl
-		log.Error("errInvalidChain occur in (bc *BlockChain) InsertHeaderChain()", "chain", chain, "checkFreq", checkFreq, "start := time.Now()", start)
 		return i, err
 	}
 
