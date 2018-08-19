@@ -176,6 +176,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
 	am, _, err := makeAccountManager(&conf.Node)
+	hpbnode.accman = am
 	if err != nil {
 		return nil, err
 	}
@@ -193,13 +194,19 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	//Get coinbase from boe and set it to node.hperbase
 	coinbasestring, err = hpbnode.Hpbboe.GetBindAccount()
 	if err != nil {
-		log.Warn("Get coinbase from boe ","Error: ", err)
+		if wallets := hpbnode.AccountManager().Wallets(); len(wallets) > 0 {
+			if account := wallets[0].Accounts(); len(account) > 0 {
+				hpbnode.hpberbase = account[0].Address
+			}
+		}
+		log.Warn("Get coinbase from boe fail, and set coinbase with account[0]")
+
 	}else {
 		copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
 		log.Trace("set coinbase of node",": ", hpbnode.hpberbase)
 	}
 
-	hpbnode.accman = am
+
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
@@ -572,18 +579,16 @@ func (self *Node) SetHpberbase(hpberbase common.Address) {
 }
 
 func (s *Node) StartMining(local bool) error {
-	eb, err := s.Hpberbase()
-	if err != nil {
-		log.Error("Cannot start mining without hpberbase", "err", err)
-		return fmt.Errorf("hpberbase missing: %v", err)
-	}
-	if prometheus, ok := s.Hpbengine.(*prometheus.Prometheus); ok {
+	//read coinbase from node
+	eb := s.hpberbase
+
+	if promeengine, ok := s.Hpbengine.(*prometheus.Prometheus); ok {
 		wallet, err := s.accman.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
 			log.Error("Hpberbase account unavailable locally", "err", err)
 			return fmt.Errorf("signer missing: %v", err)
 		}
-		prometheus.Authorize(eb, wallet.SignHash)
+		promeengine.Authorize(eb, wallet.SignHash)
 	} else {
 		log.Error("Cannot start mining without prometheus", "err", s.Hpbengine)
 	}
