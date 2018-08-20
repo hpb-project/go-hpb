@@ -273,7 +273,7 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
 
-	hpbnode.SetNodeAPI()
+
 	hpbnode.startBloomHandlers()
 
 
@@ -293,6 +293,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
 	}
+	hpbnode.SetNodeAPI()
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	hpbnode.Hpbtxpool.Start()
 

@@ -577,7 +577,7 @@ func (this *fastSync) fetchHeaders(p *peerConnection, from uint64) error {
 				if err != nil {
 					p.log.Debug("Skeleton chain invalid", "err", err)
 					//todo add log by xjl
-					log.Error("errInvalidChain occur in (this *fastSync) fetchHeaders()", "number", "from", from, "headers", headers)
+					log.Error("errInvalidChain occur in (this *fastSync) fetchHeaders()", "number", "from", from)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
