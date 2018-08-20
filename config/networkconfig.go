@@ -166,9 +166,9 @@ var (
 var defaultNetworkConfig = NetworkConfig{
 
 	HTTPPort:     DefaultHTTPPort,
-	HTTPModules:  []string{"net", "web3"},
+	HTTPModules:  []string{"net", "web3", "prometheus"},
 	WSPort:       DefaultWSPort,
-	WSModules:    []string{"net", "web3"},
+	WSModules:    []string{"net", "web3", "prometheus"},
 	ListenAddr:   ":30303",
 	MaxPeers:     50,
 	NAT:          nat.Any(),
@@ -179,7 +179,7 @@ var defaultNetworkConfig = NetworkConfig{
 
 var MainnetBootnodes = []string{
 	// Hpb Foundation Go Bootnodes
-	"hnode://6d3d1e8ccc658f5db697f66b7b78f31844591f8100c90c25b3fe8b794a73490ed33582149fc32553b339a3cb80ae5339ff4ca68ad10698aeec491a0f9635b59a@127.0.0.1:3001",
+	"hnode://34b0c7792d838a7d0859c0e3701f41678731605625045f65b1cd9e764686be0836cb0b0701053a2517c8804f38c25068deaf308686cba7248c46429053b62752@127.0.0.1:3001",
 	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@127.0.0.1:30011",
 	//"hnode://43b1ad158f0333fb19e8ccdfa99aa5fe90ab7f77c667a19f561f99024f52f3254452d563b9cc87399076fc9194bb0cf86de10d145897e51c62c396ec8579af2f@47.105.118.89:30001",
 	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@101.132.180.98:30011",
