@@ -91,7 +91,7 @@ var discReasonToString = [...]string{
 	DiscReadTimeout:         "read timeout",
 	DiscUnknownNode:         "unknown node type",
 	DiscUnexpectedConnected: "unexpected connected",
-	DiscHwSignError:         "hardware sign error",
+	DiscHwSignError:         "hardware sign error or synnode",
 	DiscSubprotocolError:    "subprotocol error",
 }
 
