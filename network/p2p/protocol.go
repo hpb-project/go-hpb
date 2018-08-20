@@ -300,7 +300,7 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 	go func() {
 		errc <- SendData(p,ResNodesMsg, &resp)
 	}()
-	timeout := time.NewTimer(time.Second)
+	timeout := time.NewTimer(time.Second*5)
 	defer timeout.Stop()
 	select {
 	case err := <-errc:

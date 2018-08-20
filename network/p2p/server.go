@@ -122,6 +122,8 @@ type Server struct {
 
 	hdtab        [] HwPair
 
+	setupLock    sync.Mutex
+
 }
 
 type peerOpFunc func(map[discover.NodeID]*PeerBase)
@@ -571,7 +573,7 @@ running:
 
 			srv.ntab.RemoveNode(nid)
 
-			expire := time.Second*time.Duration(1+rand.Intn(60))
+			expire := time.Second*time.Duration(10+rand.Intn(20))
 			srv.delHist.add(nid, time.Now().Add(expire))
 			log.Debug("Server running: add node to history.","expire",expire)
 
@@ -697,6 +699,9 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
+	srv.setupLock.Lock()
+	defer  srv.setupLock.Unlock()
+
 	// Run the encryption handshake.
 	var err error
 	var ourRand, theirRand []byte
@@ -765,12 +770,12 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 			if hw.Adr == remoteCoinbase {
 				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				log.Info("Boe verify the remote.","result",c.isboe)
+				log.Info("Boe verify the remote.","id",c.id.TerminalString(),"result",c.isboe)
 			}
 		}
 	}
 
-	log.Info("Verify the remote hardware.","result",c.isboe)
+	log.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe,)
 
 	///////////////////////////////////////////////////////////////////////////
 	//for _, hp := range srv.hptype {
