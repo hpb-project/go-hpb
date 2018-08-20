@@ -168,6 +168,18 @@ func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
 				break
 			}
 			break
+		case discover.SynNode:
+			switch peer.RemoteType() {
+			case discover.PreNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			default:
+				break
+			}
+			break
 		default:
 			break
 		}

@@ -377,6 +377,9 @@ func routingBlock(block *types.Block, propagate bool) {
 				case discover.PreNode:
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
+				case discover.SynNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
 				default:
 					break
 				}
@@ -387,6 +390,9 @@ func routingBlock(block *types.Block, propagate bool) {
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
 				case discover.HpNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
+				case discover.SynNode:
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
 				default:
