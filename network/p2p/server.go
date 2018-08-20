@@ -674,7 +674,7 @@ func (srv *Server) listenLoop() {
 		}
 
 		fd = newMeteredConn(fd, true)
-		log.Trace("Accepted connection", "addr", fd.RemoteAddr())
+		log.Info("Accepted connection", "addr", fd.RemoteAddr())
 
 		// Spawn the handler. It will give the slot back when the connection
 		// has been established.
@@ -775,7 +775,13 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		}
 	}
 
-	log.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe,)
+	log.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe)
+
+	if c.isboe == false && srv.localType == discover.SynNode{
+		clog.Error("SynNode peer SynNode, dorp peer.")
+		c.close(DiscHwSignError)
+		return
+	}
 
 	///////////////////////////////////////////////////////////////////////////
 	//for _, hp := range srv.hptype {
