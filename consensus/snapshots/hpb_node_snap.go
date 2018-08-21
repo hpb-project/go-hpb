@@ -32,6 +32,7 @@ import (
 	"errors"
 	"github.com/hpb-project/go-hpb/common/log"
 	"math/rand"
+	"math"
 )
 
 type Tally struct {
@@ -298,8 +299,21 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	return signers
 }
 
-func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, headers []*types.Header, chain consensus.ChainReader) (*HpbNodeSnap, error) {
+func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
+	
+	var headers []*types.Header
+	
+	// 开始获取之前的所有header
+	for i := latestCheckPointNum - index * consensus.HpbNodeCheckpointInterval; i < latestCheckPointNum- 100; i++ {
+		header := chain.GetHeaderByNumber(uint64(i))
+		if header != nil {
+			headers = append(headers, header)
+		} else {
+			log.Error("fuhy number % not equal 0 and missing header", "miss header number", i)
+			return nil, errors.New("get hpb snap but missing header")
+		}
+	}
 
 	// 如果头部为空，直接返回
 	if len(headers) == 0 {
@@ -381,7 +395,18 @@ func CalculateHpbSnap(signatures *lru.ARCCache, config *config.PrometheusConfig,
 	if len(tallytemp) >= consensus.HpbNodenumber {
 		hpnodeNO = consensus.HpbNodenumber
 	} else {
-		hpnodeNO = len(tallytemp)
+		index = index + 1
+		if(index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval)))){ // 往前回溯
+		    log.Info("-------- go back, and new start is ------------------------", "start", index)
+			snaptemp,_ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
+			if(len(snaptemp.Signers) == consensus.HpbNodenumber){ // 满足条件，直接返回
+				log.Info("-------- return  snaptemp------------------------", "len", len(snaptemp.Signers))
+				return snap, nil
+			}
+		}else{ // 到最后依然依然不够，选择当前最终的结果
+		    log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
+			hpnodeNO = len(tallytemp)
+		}
 	}
 	for i := len(tallytemp) - 1; i > len(tallytemp)-hpnodeNO-1; i-- {
 		snap.Signers[tallytemp[i].CandAddress] = struct{}{}

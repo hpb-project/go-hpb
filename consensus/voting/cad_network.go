@@ -120,7 +120,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	if len(bestCadWinners) > 1 {
 		winners = append(winners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
 	} else {
-		winners = append(winners, bestCadWinners[0]) //返回随机
+		winners = append(winners, bestCadWinners[0]) // 获取第一个
 	}
 	return winners, nil
 }

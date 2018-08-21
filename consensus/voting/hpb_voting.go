@@ -19,7 +19,7 @@ package voting
 import (
 	"math"
 	//"strconv"
-	"errors"
+	//"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -32,10 +32,10 @@ import (
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
-	var (
-		headers []*types.Header
+	//var (
+	//	headers []*types.Header
 		//snap    *snapshots.HpbNodeSnap
-	)
+	//)
 
 	// 首次要创建
 	if number == 0 {
@@ -75,19 +75,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 			//log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			return snapcd, err
 		} else {
-			// 开始获取之前的所有header
-			for i := latestCheckPointNumber - consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
-				//log.Info("Header:",strconv.FormatUint(i, 10))
-				header := chain.GetHeaderByNumber(uint64(i))
-				if header != nil {
-					headers = append(headers, header)
-				} else {
-					log.Error("fuhy number % not equal 0 and missing header", "miss header number", i)
-					return nil, errors.New("get hpb snap but missing header")
-				}
-			}
-
-			if snapa, err := snapshots.CalculateHpbSnap(signatures, config, number, latestCheckPointNumber, latestCheckPointHash, headers, chain); err == nil {
+			if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
 				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 				if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
 					return nil, err
@@ -96,19 +84,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 			}
 		}
 	} else {
-		// 开始获取之前的所有header
-		for i := latestCheckPointNumber - consensus.HpbNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
-			//log.Info("Header:",strconv.FormatUint(i, 10))
-			header := chain.GetHeaderByNumber(uint64(i))
-			if header != nil {
-				headers = append(headers, header)
-			} else {
-				log.Error("FUHY number % equal 0 and missing header", "miss header number", i)
-				return nil, errors.New("get hpb snap but missing header")
-			}
-		}
-
-		if snapa, err := snapshots.CalculateHpbSnap(signatures, config, number, latestCheckPointNumber, latestCheckPointHash, headers, chain); err == nil {
+		if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
 			log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			//新轮次计算完高性能节点立即更新节点类型---fuhy
 			//prometheus.SetNetNodeType(snapa)
