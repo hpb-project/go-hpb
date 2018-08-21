@@ -118,20 +118,6 @@ func (this *SynCtrl) txsyncLoop() {
 }
 
 func (this *SynCtrl) txRoutingLoop() {
-
-	//TODO new event system
-	/*txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.TxPreEvent:
-				this.routingTx(msg.Message.Hash(), msg.Message)
-
-				//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
-				break
-			}
-		})
-	event.Subscribe(txPreReceiver, event.TxPreTopic)*/
-
 	for {
 		select {
 		case event := <-this.txCh:

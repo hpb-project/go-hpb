@@ -394,8 +394,6 @@ func (this *fastSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in (this *fastSync) findAncestor()", "number", number, "from", from, "i", i, "from+int64(i)*16", from+int64(i)*16)
 					return 0, errInvalidChain
 				}
 			}
@@ -576,8 +574,6 @@ func (this *fastSync) fetchHeaders(p *peerConnection, from uint64) error {
 				filled, proced, err := this.fillHeaderSkeleton(from, headers)
 				if err != nil {
 					p.log.Debug("Skeleton chain invalid", "err", err)
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in (this *fastSync) fetchHeaders()", "number", "from", from)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -752,8 +748,6 @@ func (this *fastSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 				// Deliver the received chunk of data and check chain validity
 				accepted, err := deliver(packet)
 				if err == errInvalidChain {
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in (this *fastSync) fetchParts() call deliver(packet)", "accepted", "from", accepted, "packet", packet)
 					return err
 				}
 				// Unless a peer delivered something completely else than requested (usually
@@ -1012,8 +1006,6 @@ func (this *fastSync) processHeaders(origin uint64, td *big.Int) error {
 						rollback = append(rollback, chunk[:n]...)
 					}
 					log.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in (this *fastSync) processHeaders()", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
 					return errInvalidChain
 				}
 				// All verifications passed, store newly found uncertain headers
@@ -1025,8 +1017,6 @@ func (this *fastSync) processHeaders(origin uint64, td *big.Int) error {
 				if this.fsPivotLock != nil && chunk[0].Number.Uint64() <= pivot && chunk[len(chunk)-1].Number.Uint64() >= pivot {
 					if pivot := chunk[int(pivot-chunk[0].Number.Uint64())]; pivot.Hash() != this.fsPivotLock.Hash() {
 						log.Warn("Pivot doesn't match locked in one", "remoteNumber", pivot.Number, "remoteHash", pivot.Hash(), "localNumber", this.fsPivotLock.Number, "localHash", this.fsPivotLock.Hash())
-						//todo add log by xjl
-						log.Error("errInvalidChain occur in (this *fastSync) processHeaders()", "remoteNumber", pivot.Number, "remoteHash", pivot.Hash(), "localNumber", this.fsPivotLock.Number, "localHash", this.fsPivotLock.Hash())
 						return errInvalidChain
 					}
 				}
@@ -1080,8 +1070,6 @@ func (this *fastSync) importBlockResults(results []*fetchResult) error {
 		}
 		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("fast synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
-			//todo add log by xjl
-			log.Error("errInvalidChain occur in (this *fastSync) importBlockResults()", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
@@ -1170,8 +1158,6 @@ func (this *fastSync) commitFastSyncData(results []*fetchResult, stateSync *stat
 		}
 		if index, err := bc.InstanceBlockChain().InsertReceiptChain(blocks, receipts); err != nil {
 			log.Debug("fast synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
-			//todo add log by xjl
-			log.Error("errInvalidChain occur in commitFastSyncData()", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
