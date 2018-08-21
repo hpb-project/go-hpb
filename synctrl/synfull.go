@@ -366,8 +366,6 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in findAncestor()", "number", number, "from+int64(i)*16", from+int64(i)*16, "from", from, "i", i)
 					return 0, errInvalidChain
 				}
 			}
@@ -548,8 +546,6 @@ func (this *fullSync) fetchHeaders(p *peerConnection, from uint64) error {
 				filled, proced, err := this.fillHeaderSkeleton(from, headers)
 				if err != nil {
 					p.log.Debug("Skeleton chain invalid", "err", err)
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in fetchHeaders()", "from", from)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -724,8 +720,6 @@ func (this *fullSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 				// Deliver the received chunk of data and check chain validity
 				accepted, err := deliver(packet)
 				if err == errInvalidChain {
-					//todo add log by xjl
-					log.Error("errInvalidChain occur in fetchParts() when call deliver(packet)", "packet", packet)
 					return err
 				}
 				// Unless a peer delivered something completely else than requested (usually
@@ -1003,8 +997,6 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 		}
 		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
-			//todo add log by xjl
-			log.Error("errInvalidChain occur in importBlockResults()", "index", index, "blocks", blocks)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
