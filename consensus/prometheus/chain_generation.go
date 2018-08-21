@@ -407,6 +407,8 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 				log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.PreNode)
 			}
+		case discover.SynNode:
+			peer.SetRemoteType(discover.SynNode)
 		default:
 			break
 		}

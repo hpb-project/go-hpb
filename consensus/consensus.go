@@ -18,13 +18,12 @@
 package consensus
 
 import (
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	//"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/config"
-	 
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -47,7 +46,6 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
-
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -68,6 +66,9 @@ type Engine interface {
 	// the input slice).
 	VerifyHeaders(chain ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
 
+	//set net node type
+	SetNetTopology(chain ChainReader, headers []*types.Header)
+
 	// VerifyUncles verifies that the given block's uncles conform to the consensus
 	// rules of a given engine.
 	VerifyUncles(chain ChainReader, block *types.Block) error
@@ -76,9 +77,8 @@ type Engine interface {
 	// the consensus rules of the given engine.
 	VerifySeal(chain ChainReader, header *types.Header) error
 
-	
 	// 生成区块链的区块链头部为实际的挖矿做准备
-	PrepareBlockHeader(chain ChainReader, header *types.Header,state *state.StateDB) error
+	PrepareBlockHeader(chain ChainReader, header *types.Header, state *state.StateDB) error
 
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.

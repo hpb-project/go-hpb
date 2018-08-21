@@ -88,9 +88,9 @@ type BlockChain struct {
 	scope         sub.SubscriptionScope
 	genesisBlock  *types.Block
 
-	mu      sync.RWMutex // global mutex for locking chain operations
-	chainmu sync.RWMutex // blockchain insertion lock
-	procmu  sync.RWMutex // block processor lock
+	mu               sync.RWMutex // global mutex for locking chain operations
+	chainmu          sync.RWMutex // blockchain insertion lock
+	procmu           sync.RWMutex // block processor lock
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     *types.Block // Current head of the block chain
 	currentFastBlock *types.Block // Current head of the fast-sync chain (may be above the block chain!)
@@ -901,6 +901,15 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	n, events, logs, err := bc.insertChain(chain)
+	if err == nil {
+		// Start the parallel header verifier
+		headers := make([]*types.Header, len(chain))
+
+		for i, block := range chain {
+			headers[i] = block.Header()
+		}
+		bc.engine.SetNetTopology(bc, headers)
+	}
 	bc.PostChainEvents(events, logs)
 	return n, err
 }
@@ -1319,7 +1328,11 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 		return err
 	}
 
-	return bc.hc.InsertHeaderChain(chain, whFunc, start)
+	n, err := bc.hc.InsertHeaderChain(chain, whFunc, start)
+	if err == nil {
+		bc.engine.SetNetTopology(bc, chain)
+	}
+	return n, err
 }
 
 // writeHeader writes a header into the local chain, given that its parent is

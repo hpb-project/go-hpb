@@ -51,6 +51,25 @@ func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types
 	return abort, results
 }
 
+func (c *Prometheus) SetNetTopology(chain consensus.ChainReader, headers []*types.Header) {
+	for i, header := range headers {
+		if (i%consensus.HpbNodeCheckpointInterval == 0) && (i != 1) {
+			c.SetNetTypeByOneHeader(chain, header, headers[:i])
+		}
+	}
+}
+
+func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) {
+	number := header.Number.Uint64()
+	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents)
+	if err != nil || len(snap.Signers) == 0 {
+		log.Warn("-------------------snap retrieve fail-------------------------")
+		return
+	}
+	SetNetNodeType(snap)
+}
+
 // 批量验证，为了避免，支持批量传入
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
@@ -182,17 +201,18 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
+
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	if snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents); err != nil {
-		return err
-	} else {
-		// 已经投票结束
-		if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
-			// 轮转
-			SetNetNodeType(snap)
-			log.Info("SetNetNodeType ***********************")
-		}
-	}
+	//if snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents); err != nil {
+	//	return err
+	//} else {
+	//	// 已经投票结束
+	//	if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+	//		// 轮转
+	//		SetNetNodeType(snap)
+	//		log.Error("****************************SetNetNodeType ***********************")
+	//	}
+	//}
 
 	// Resolve the authorization key and check against signers
 	if _, err := consensus.Ecrecover(header, c.signatures); err != nil {
