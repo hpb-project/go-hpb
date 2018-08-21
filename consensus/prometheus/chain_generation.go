@@ -225,17 +225,17 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
-	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.signer) {
-		header.Difficulty = diffInTurn
-	}
 	//header.Difficulty = diffNoTurn
-	//if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	//if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.signer) {
 	//	header.Difficulty = diffInTurn
-	//} else if err != nil {
-	//	log.Error("CalculateCurrentMiner fail", "error", err)
-	//	return err
 	//}
+	header.Difficulty = diffNoTurn
+	if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+		header.Difficulty = diffInTurn
+	} else if err != nil {
+		log.Error("CalculateCurrentMiner fail", "error", err)
+		return err
+	}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
