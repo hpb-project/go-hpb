@@ -31,8 +31,8 @@ import (
 	//"errors"
 	"errors"
 	"github.com/hpb-project/go-hpb/common/log"
-	"math/rand"
 	"math"
+	"math/rand"
 )
 
 type Tally struct {
@@ -152,6 +152,9 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//TODO：硬件随机数相关，直接使用的低16字节对应的uint64对uint64(len(snap.Signers)取余确定,每次都从区块头中获取轮次内的signer集合，然后作排除操作后，在进行确定offset
 	var currentIndex uint64
 	signers := s.GetHpbNodes() //hpb节点，是排序过的
+	if signers == nil {
+		return false, errors.New("CalculateCurrentMiner GetHpbNodes() return nil snap have no hp signers")
+	}
 	var hpbsignersmap = make(map[common.Address]int)
 	for offset, signeradrr := range signers {
 		hpbsignersmap[signeradrr] = offset //offset为signer对应的offset
@@ -301,11 +304,11 @@ func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 
 func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.PrometheusConfig, number uint64, latestCheckPointNum uint64, latestCheckPointHash common.Hash, chain consensus.ChainReader) (*HpbNodeSnap, error) {
 	// Allow passing in no headers for cleaner code
-	
+
 	var headers []*types.Header
-	
+
 	// 开始获取之前的所有header
-	for i := latestCheckPointNum - index * consensus.HpbNodeCheckpointInterval; i < latestCheckPointNum- 100; i++ {
+	for i := latestCheckPointNum - index*consensus.HpbNodeCheckpointInterval; i < latestCheckPointNum-100; i++ {
 		header := chain.GetHeaderByNumber(uint64(i))
 		if header != nil {
 			headers = append(headers, header)
@@ -396,15 +399,15 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		hpnodeNO = consensus.HpbNodenumber
 	} else {
 		index = index + 1
-		if(index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval)))){ // 往前回溯
-		    log.Info("-------- go back, and new start is ------------------------", "start", index)
-			snaptemp,_ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
-			if(len(snaptemp.Signers) == consensus.HpbNodenumber){ // 满足条件，直接返回
+		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
+			log.Info("-------- go back, and new start is ------------------------", "start", index)
+			snaptemp, _ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
+			if len(snaptemp.Signers) == consensus.HpbNodenumber { // 满足条件，直接返回
 				log.Info("-------- return  snaptemp------------------------", "len", len(snaptemp.Signers))
 				return snap, nil
 			}
-		}else{ // 到最后依然依然不够，选择当前最终的结果
-		    log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
+		} else { // 到最后依然依然不够，选择当前最终的结果
+			log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
 			hpnodeNO = len(tallytemp)
 		}
 	}
