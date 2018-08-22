@@ -813,6 +813,8 @@ func (a addresssByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 // stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
 func (pool *TxPool) Stats() (int, int) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 	pending := 0
 	for _, list := range pool.pending {
 		pending += list.Len()
