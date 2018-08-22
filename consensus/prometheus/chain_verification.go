@@ -52,11 +52,12 @@ func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types
 }
 
 func (c *Prometheus) SetNetTopology(chain consensus.ChainReader, headers []*types.Header) {
-	for i, header := range headers {
-		if (i%consensus.HpbNodeCheckpointInterval == 0) && (i != 1) {
-			c.SetNetTypeByOneHeader(chain, header, headers[:i])
-		}
-	}
+	//for i, header := range headers {
+	//	if (i%consensus.HpbNodeCheckpointInterval == 0) && (i != 1) {
+	//		c.SetNetTypeByOneHeader(chain, header, headers[:i])
+	//	}
+	//}
+	c.SetNetTypeByOneHeader(chain, headers[len(headers)-1], nil)
 }
 
 func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) {
