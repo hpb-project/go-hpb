@@ -31,6 +31,7 @@ import (
 
 const HpbNodeCheckpointInterval = 200 // 高性能投票间隔
 const CadNodeCheckpointInterval = 200 // 社区投票间隔
+const HpbNodeBacktrackingNumber = 100 // 往前回溯的个数
 const HpbNodenumber = 31              //hpb nodes number
 const Nodenumfirst = 151
 

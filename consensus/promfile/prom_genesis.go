@@ -102,7 +102,7 @@ func (p *prometh) makeGenesis() {
 		// Read the address of the account to fund
 		if address := p.readAddress(); address != nil {
 			genesis.Alloc[*address] = bc.GenesisAccount{
-				Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+				Balance: new(big.Int).Lsh(big.NewInt(1), 3), // 2^256 / 128 (allow many pre-funds without balance overflows)
 			}
 			continue
 		}

@@ -72,11 +72,11 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 
 	if number%consensus.HpbNodeCheckpointInterval != 0 {
 		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config, latestCheckPointHash); err == nil {
-			//log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			log.Info("##########################HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			return snapcd, err
 		} else {
 			if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
-				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： CalculateHpbSnap", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 				if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
 					return nil, err
 				}
@@ -85,7 +85,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 		}
 	} else {
 		if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
-			log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： CalculateHpbSnap", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			//新轮次计算完高性能节点立即更新节点类型---fuhy
 			//prometheus.SetNetNodeType(snapa)
 			if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
