@@ -398,16 +398,13 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	if len(tallytemp) >= consensus.HpbNodenumber {
 		hpnodeNO = consensus.HpbNodenumber
 	} else {
-		if(index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval)))-1){ // 往前回溯
-		    log.Info("-------- go back, and new start is ------------------------", "index", index)
-		    index = index + 1
-			snaptemp,_ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
-			if(len(snaptemp.Signers) == consensus.HpbNodenumber){ // 满足条件，直接返回
-				log.Info("-------- return  snaptemp------------------------", "len", len(snaptemp.Signers))
-				return snap, nil
-			}
-		}else{ // 到最后依然依然不够，选择当前最终的结果
-		    log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
+		index = index + 1
+		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
+			log.Info("-------- go back, and new start is ------------------------", "index", index)
+			snaptemp, _ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
+			return snaptemp, nil
+		} else { // 到最后依然依然不够，选择当前最终的结果
+			log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
 			hpnodeNO = len(tallytemp)
 		}
 	}
@@ -415,10 +412,6 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		snap.Signers[tallytemp[i].CandAddress] = struct{}{}
 		//log.Info("FUHY------------------CalculateHpbSnap--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex())
 	}
-
-	//for i:=0; i<len(tallytemp); i++  {
-	//	log.Info("FUHY--------after----------tallytemp--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex(), "tallytemp[i].VotePercent", tallytemp[i].VotePercent)
-	//}
 
 	//等待完善
 	//snap.Number += uint64(len(headers))
