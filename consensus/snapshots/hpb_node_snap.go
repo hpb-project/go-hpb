@@ -400,7 +400,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	} else {
 		index = index + 1
 		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
-			log.Info("-------- go back, and new start is ------------------------", "index", index)
+			//log.Info("-------- go back, and new start is ------------------------", "index", index)
 			snaptemp, _ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
 			return snaptemp, nil
 		} else { // 到最后依然依然不够，选择当前最终的结果
