@@ -179,11 +179,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	parentnum := number - 1
 	parentheader := chain.GetHeaderByNumber(parentnum)
 	if parentheader == nil {
-		log.Info("PrepareBlockHeader parentheader is nil", "number", number)
 		return errors.New("-----PrepareBlockHeader parentheader------ is nil")
 	}
 	if len(parentheader.HardwareRandom) == 0 {
-		log.Error("PrepareBlockHeader parentheader.HardwareRandom is nil", "number", number)
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
 
@@ -195,22 +193,13 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	} else {
 		if c.hboe.HWCheck() {
 			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
-				log.Error("c.hboe.GetNextHash", "err", err)
-				log.Info("GetNextHash err, using the gensis.json hardwarerandom")
-				header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-				copy(header.HardwareRandom, parentheader.HardwareRandom)
-				header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
-				//return err
+				return err
 			} else {
 				if len(boehwrand) != 0 {
 					header.HardwareRandom = make([]byte, len(boehwrand))
 					copy(header.HardwareRandom, boehwrand)
 				} else {
-					log.Error("c.hboe.GetNextHash success", "err", "GetNextHash output random length is 0")
-					log.Info("GetNextHash err, using the gensis.json hardwarerandom")
-					header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-					copy(header.HardwareRandom, parentheader.HardwareRandom)
-					header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+					return errors.New("c.hboe.GetNextHash success but output random length is 0")
 				}
 			}
 		} else {
@@ -218,7 +207,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 			copy(header.HardwareRandom, parentheader.HardwareRandom)
 			header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
-			//log.Error("header.HardwareRandom[len(header.HardwareRandom)-1]", "value", header.HardwareRandom[len(header.HardwareRandom)-1])
 		}
 
 	}
@@ -289,7 +277,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	//log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
+	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
 
 	c.lock.RUnlock()
 
@@ -299,7 +287,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
 		// 轮转
 		SetNetNodeType(snap)
-		log.Info("SetNetNodeType ***********************")
+		//log.Info("SetNetNodeType ***********************")
 	}
 
 	if err != nil {
@@ -508,19 +496,14 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 			cadReward := new(big.Int)
 			bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
-			//for _,caddress := range csnap.CanAddresses  {
-			//	log.Info("FUHY CalculateRewards csnap.CanAddresses","caddress", caddress)
-			//}
 			//获取所有cad的总票数
 			votecounts := new(big.Float)
 			for _, votes := range csnap.VotePercents {
 				votecounts.Add(votecounts, big.NewFloat(votes))
 			}
-			//log.Info("FUHY ---------------------CalculateRewards csnap.VotePercents-----------------------","number", number)
 			for caddress, votes := range csnap.VotePercents {
 				var tempfloat = new(big.Float)
 				var tempInt = new(big.Int)
-				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","bigA13", bigA13)
 				tempfloat.Quo(bigA13, big.NewFloat(3)) //calc all candidate nodes rewards coin about votepercent
 				votepercent := new(big.Float)
 				bigvotes := big.NewFloat(votes)
@@ -528,13 +511,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				votepercent = bigvotes.Quo(bigvotes, votecounts) //calc vote percent
 				tempfloat.Mul(tempfloat, votepercent)            //every candidate node rewards coin about vote percent
 				tempfloat.Mul(tempfloat, ether2weisfloat)        //every candidate node rewards weis about vote percent
-				//log.Info("------------------FUHY CalculateRewards csnap.VotePercents-----------------------","tempfloat", tempfloat)
-				tempfloat.Int(tempInt)          //from big.Float to big.Int
-				tempInt.Add(cadReward, tempInt) //average rewards add votepercent rewards is the final rewards for every candidate node
+				tempfloat.Int(tempInt)                           //from big.Float to big.Int
+				tempInt.Add(cadReward, tempInt)                  //average rewards add votepercent rewards is the final rewards for every candidate node
 				state.AddBalance(caddress, tempInt)
 				//state.GetBalance(caddress)
-				//log.Info("FUHY CalculateRewards csnap.VotePercents","caddress", caddress, "cadReward", tempInt)
-				//log.Info("FUHY CalculateRewards csnap.VotePercents","big.NewFloat(votepercent)", big.NewFloat(votepercent), "votepercent", votepercent)
 			}
 		}
 	} else {

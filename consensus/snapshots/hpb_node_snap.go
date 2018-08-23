@@ -163,6 +163,7 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	randBigInt := new(big.Int)
 	if len(header.HardwareRandom) == 0 {
 		log.Error("---------------CalculateCurrentMiner header.HardwareRandom----------", "len(header.HardwareRandom)", "0")
+		return false, errors.New("CalculateCurrentMiner header.HardwareRandom is nil")
 	}
 	randBigInt.SetBytes(header.HardwareRandom)
 
@@ -267,10 +268,7 @@ func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers 
 
 	//从一部分区块头中确定签过名的高性能节点结合
 	var headersignaddr = make(map[common.Address]uint64)
-	//log.Info("FUHY----------GetOffsethw number------------", "number", number)
 	for _, header := range headers {
-		//log.Info("FUHY----------GetOffsethw header.Coinbase------------", "header.Coinbase", header.Coinbase)
-		//log.Info("FUHY----------GetOffsethw header.Number------------", "header.Number", header.Number)
 		if _, ok := headersignaddr[header.Coinbase]; ok {
 			headersignaddr[header.Coinbase] = headersignaddr[header.Coinbase] + 1
 		} else {
@@ -284,7 +282,7 @@ func (s *HpbNodeSnap) GetOffsethw(number uint64, signer common.Address, headers 
 // 已经授权的signers, 无需进行排序
 func (s *HpbNodeSnap) GetHpbNodes() []common.Address {
 	if len(s.Signers) == 0 {
-		log.Error("FUHY GetHpbNodes() HpbNodeSnap`s Signers is nil", "HpbNodeSnap.Signers", s.Signers)
+		log.Error(" GetHpbNodes() HpbNodeSnap`s Signers is nil", "HpbNodeSnap.Signers", s.Signers)
 		return nil
 	}
 	signers := make([]common.Address, 0, len(s.Signers))
@@ -308,19 +306,21 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	var headers []*types.Header
 
 	// 开始获取之前的所有header
-	for i := latestCheckPointNum - index*consensus.HpbNodeCheckpointInterval; i < latestCheckPointNum-100; i++ {
+	var from = latestCheckPointNum - index*consensus.HpbNodeCheckpointInterval
+	if from == 0 {
+		from = from + 1
+	}
+	for i := from; i < latestCheckPointNum-100; i++ {
 		header := chain.GetHeaderByNumber(uint64(i))
 		if header != nil {
 			headers = append(headers, header)
 		} else {
-			log.Error("fuhy number % not equal 0 and missing header", "miss header number", i)
 			return nil, errors.New("get hpb snap but missing header")
 		}
 	}
 
 	// 如果头部为空，直接返回
 	if len(headers) == 0 {
-		log.Error("FUHY Calculate Hpb Snap headers is 0")
 		return nil, errors.New("Calculate Hpb Snap headers is 0 ")
 	}
 
@@ -331,18 +331,9 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		}
 	}
 
-	signers := make([]common.Address, 0, consensus.HpbNodenumber)
-
-	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, signers)
-
+	//signers := make([]common.Address, 0, consensus.HpbNodenumber)
+	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, nil)
 	snap.Tally = make(map[common.Address]Tally)
-
-	//开始投票
-	//fmt.Println(" ****************************************headers length ++++********************************* ", len(headers))
-
-	//for _, header := range headers {
-	//	snap.cast(header.CandAddress, header.VoteIndex);
-	//}
 
 	for _, header := range headers {
 
@@ -373,7 +364,6 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	var tallytemp []Tally
 	for _, v := range snap.Tally {
 		tallytemp = append(tallytemp, v)
-		//log.Info("FUHY---------before---------tallytemp--------------------", "tallytemp[i].CandAddress", v.CandAddress.Hex(),"VotePercent.Int64()", v.VotePercent)
 	}
 
 	for i := 0; i < len(snap.Tally); i++ {
@@ -394,24 +384,83 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		}
 	}
 
+	finaltally := make([]common.Address, 0, len(tallytemp))
+	for _, v := range tallytemp {
+		finaltally = append(finaltally, v.CandAddress)
+	}
+
 	var hpnodeNO int
-	if len(tallytemp) >= consensus.HpbNodenumber {
+	if len(finaltally) >= consensus.HpbNodenumber {
 		hpnodeNO = consensus.HpbNodenumber
+		goto END
+
 	} else {
+		if index == 2 {
+			hpnodeNO = len(finaltally)
+			goto END
+		}
+
 		index = index + 1
 		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
-			//log.Info("-------- go back, and new start is ------------------------", "index", index)
-			snaptemp, _ := CalculateHpbSnap(index, signatures, config, number, latestCheckPointNum, latestCheckPointHash, chain)
-			return snaptemp, nil
-		} else { // 到最后依然依然不够，选择当前最终的结果
-			log.Info("--------unfortunately, the number is not enough, the last length is ---------", "len", len(tallytemp))
-			hpnodeNO = len(tallytemp)
+			//log.Error("-------- go back for last snap------------", "index", index)
+			header := chain.GetHeaderByNumber(uint64(latestCheckPointNum - consensus.HpbNodeCheckpointInterval))
+			latestCheckPointHash := header.Hash()
+			snaptemp, err := CalculateHpbSnap(index, signatures, config, number-consensus.HpbNodeCheckpointInterval, latestCheckPointNum-consensus.HpbNodeCheckpointInterval, latestCheckPointHash, chain)
+			if err != nil {
+				log.Error("-------- second CalculateHpbSnap------------", "err", err)
+				hpnodeNO = len(finaltally)
+				goto END
+			}
+			//get last snap hp nodes, set in map
+			hpsmaptemp := make(map[common.Address]struct{})
+			lastsnap := snaptemp.GetHpbNodes()
+			for _, v := range lastsnap {
+				hpsmaptemp[v] = struct{}{}
+			}
+			//delete tallytemp.CandAddress in the map
+			for _, v := range finaltally {
+				if _, ok := hpsmaptemp[v]; ok {
+					delete(hpsmaptemp, v)
+				}
+			}
+			//order the hpsmaptemp by put it into []common.address
+			delhpsmap := make([]common.Address, len(hpsmaptemp))
+			for key, _ := range hpsmaptemp {
+				delhpsmap = append(delhpsmap, key)
+			}
+
+			for i := 0; i < len(delhpsmap); i++ {
+				for j := 0; j < len(delhpsmap)-i-1; j++ {
+					if bytes.Compare(delhpsmap[j][:], delhpsmap[j+1][:]) > 0 {
+						delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+					}
+				}
+			}
+			//calc how many last snap hps needing to add the latest snap
+			if len(finaltally)+len(delhpsmap) > consensus.HpbNodenumber {
+				for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
+					finaltally = append(finaltally, delhpsmap[i])
+				}
+			} else {
+				for i := 0; i < len(delhpsmap); i++ {
+					finaltally = append(finaltally, delhpsmap[i])
+				}
+			}
+
 		}
+		hpnodeNO = len(finaltally)
 	}
-	for i := len(tallytemp) - 1; i > len(tallytemp)-hpnodeNO-1; i-- {
-		snap.Signers[tallytemp[i].CandAddress] = struct{}{}
-		//log.Info("FUHY------------------CalculateHpbSnap--------------------", "tallytemp[i].CandAddress", tallytemp[i].CandAddress.Hex())
+
+END:
+	for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
+		snap.Signers[finaltally[i]] = struct{}{}
 	}
+
+	//if len(snap.Tally) != 0 {
+	//	for k,v := range snap.Tally {
+	//		log.Error("777777777777777777777777777777777777777777777777777snap.Signers k and v", "k", k, "v", v)
+	//	}
+	//}
 
 	//等待完善
 	//snap.Number += uint64(len(headers))

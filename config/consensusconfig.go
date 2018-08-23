@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package config
 
-var DefaultPrometheusConfig = PrometheusConfig {
-	Period:    3,
-	Epoch:	   30000,
+var DefaultPrometheusConfig = PrometheusConfig{
+	//for test,change from 3 to 10 seconds
+	Period: 10,
+	Epoch:  30000,
 }
 
 type PrometheusConfig struct {

@@ -191,7 +191,7 @@ func StoreCanDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *sn
 	// 存入数据库
 	err := snap.StoreCadNodeSnap(db, latestCheckPointHash)
 	if err != nil {
-		log.Info("fuhy--------------cadidate StoreCanDataToCacheAndDb error--------------------------", "err", err)
+		log.Info("--------------cadidate StoreCanDataToCacheAndDb error--------------------------", "err", err)
 	}
 
 	return err

@@ -86,7 +86,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	} else {
 		if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
 			//log.Info("@@@@@@@@@@@@@@@@@@@@@@@@HPB_VOTING： CalculateHpbSnap", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
-			//新轮次计算完高性能节点立即更新节点类型---fuhy
+			//新轮次计算完高性能节点立即更新节点类型
 			//prometheus.SetNetNodeType(snapa)
 			if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
 				return nil, err
@@ -144,7 +144,7 @@ func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snaps
 	// 存入数据库
 	err := snap.Store(latestCheckPointHash, db)
 	if err != nil {
-		log.Error("fuhy------------------StoreDataToCacheAndDb hpb err---------------------------", "err", err)
+		log.Info("------------------StoreDataToCacheAndDb hpb err---------------------------", "err", err)
 	}
 
 	return err

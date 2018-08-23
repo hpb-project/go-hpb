@@ -32,6 +32,7 @@ import (
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
@@ -59,10 +60,12 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 		//transactionNum := float64(peer.TxsRate()) * float64(0.7)
 		//VoteIndex := networkBandwidth + transactionNum
 
-		if peer.LocalType() != discover.BootNode {
+		if peer.LocalType() != discover.BootNode && peer.LocalType() != discover.SynNode {
 			//networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			//transactionNum := float64(rand.Intn(1000)) * float64(0.7)
-
+			if len(peer.Address()) == 0 || peer.Address() == address {
+				continue
+			}
 			transactionNum := peer.TxsRate() * float64(0.6)
 			networkBandwidth := peer.Bandwidth() * float64(0.3)
 			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
@@ -98,7 +101,8 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	//for i := 0 ; i < lnlen; i++{
 	for i := 0; i < len(bestCadWinners); i++ {
 		if len(bestCadWinners) > 1 {
-			lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
+			//lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
+			lastCadWinners = append(lastCadWinners, bestCadWinners[i])
 		} else {
 			lastCadWinners = append(lastCadWinners, bestCadWinners[0])
 		}
@@ -115,6 +119,23 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			lastCadWinnerToChain = lastCadWinner
 		}
 	}
+	//if selectable candidate nodes not enough, rand select one in all candidate nodes,else rand select one in first consensus.HpbNodenumber numbers.
+	if len(lastCadWinners) == 1 {
+		lastCadWinnerToChain = lastCadWinners[0]
+	} else if len(lastCadWinners) <= consensus.HpbNodenumber {
+		lastCadWinnerToChain = lastCadWinners[rand.Intn(len(lastCadWinners))]
+	} else {
+		//order the candidate nodes
+		for i := len(lastCadWinners) - 1; i >= 0; i-- {
+			for j := len(lastCadWinners) - 1; j >= len(lastCadWinners)-i; j-- {
+				if lastCadWinners[j].VoteIndex > lastCadWinners[j-1].VoteIndex {
+					lastCadWinners[j], lastCadWinners[j-1] = lastCadWinners[j-1], lastCadWinners[j]
+				}
+			}
+		}
+		lastCadWinnerToChain = lastCadWinners[rand.Intn(31)]
+	}
+
 	winners = append(winners, lastCadWinnerToChain) //返回最优的
 
 	if len(bestCadWinners) > 1 {
