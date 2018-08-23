@@ -126,7 +126,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) {
 	blob, err := db.Get(append([]byte("codnodesnap-"), hash[:]...))
 	if err != nil {
-		log.Error("Log Read Failed1:", err)
+		log.Error("Log Read Failed1:", "err:", err)
 		return nil, err
 	}
 	cadNodeSnap := new(CadNodeSnap)
