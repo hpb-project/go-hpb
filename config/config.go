@@ -17,18 +17,20 @@
 package config
 
 import (
-	"reflect"
-	"unicode"
 	"bufio"
 	"errors"
+	"reflect"
+	"unicode"
 
-	"github.com/naoina/toml"
-	"github.com/hpb-project/go-hpb/common/log"
 	"fmt"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/naoina/toml"
 	"os"
 	"sync/atomic"
 )
+
 var HpbConfigIns *HpbConfig
+
 const (
 	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	DatadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
@@ -38,13 +40,12 @@ const (
 )
 
 const (
-
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
-	TxGas                 uint64 = 10 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
+	TxGas                 uint64 = 10    // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
 	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
 	TxDataZeroGas         uint64 = 1     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. //for testnet
 	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
@@ -52,28 +53,28 @@ const (
 	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.
 	CallStipend           uint64 = 2300  // Free gas given at beginning of call.
 
-	Sha3Gas               uint64 = 30    // Once per SHA3 operation.
-	Sha3WordGas     	  uint64 = 6     // Once per word of the SHA3 operation's data.
-	SstoreResetGas   	  uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
-	SstoreClearGas   	  uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
-	SstoreRefundGas 	  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
-	JumpdestGas      	  uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
-	EpochDuration    	  uint64 = 30000 // Duration between proof-of-work epochs.
-	CallGas         	  uint64 = 40    // Once per CALL operation & message call transaction.
-	CreateDataGas    	  uint64 = 200   //
-	CallCreateDepth  	  uint64 = 1024  // Maximum depth of call/create stack.
-	ExpGas          	  uint64 = 10    // Once per EXP instruction
-	LogGas           	  uint64 = 375   // Per LOG* operation.
-	CopyGas          	  uint64 = 3     //
-	StackLimit       	  uint64 = 1024  // Maximum size of VM stack allowed.
-	TierStepGas      	  uint64 = 0     // Once per operation, for a selection of them.
-	LogTopicGas      	  uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
-	CreateGas       	  uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
-	SuicideRefundGas 	  uint64 = 24000 // Refunded following a suicide operation.
-	MemoryGas        	  uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
-	TxDataNonZeroGas 	  uint64 = 1    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
+	Sha3Gas          uint64 = 30    // Once per SHA3 operation.
+	Sha3WordGas      uint64 = 6     // Once per word of the SHA3 operation's data.
+	SstoreResetGas   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
+	SstoreClearGas   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
+	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
+	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
+	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
+	CreateDataGas    uint64 = 200   //
+	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
+	ExpGas           uint64 = 10    // Once per EXP instruction
+	LogGas           uint64 = 375   // Per LOG* operation.
+	CopyGas          uint64 = 3     //
+	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
+	TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
+	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
+	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
+	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
+	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
+	TxDataNonZeroGas uint64 = 1     // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
 
-	MaxCodeSize 				 = 24576 // Maximum bytecode to permit for a contract
+	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 
 	// Precompiled contract gas prices
 
@@ -91,7 +92,7 @@ const (
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 )
 const (
-	// These are the multipliers for ether denominations.
+	// These are the multipliers for hpber denominations.
 	// Example: To get the wei value of an amount in 'douglas', use
 	//
 	//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
@@ -102,10 +103,11 @@ const (
 	Shannon  = 1e9
 	Szabo    = 1e12
 	Finney   = 1e15
-	Ether    = 1e18
+	Hpber    = 1e18
 	Einstein = 1e21
 	Douglas  = 1e42
 )
+
 // config instance
 var INSTANCE = atomic.Value{}
 
@@ -117,8 +119,7 @@ type hpbStatsConfig struct {
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
 type HpbConfig struct {
-
-    Node Nodeconfig
+	Node Nodeconfig
 	// Configuration of peer-to-peer networking.
 	Network NetworkConfig
 
@@ -135,9 +136,6 @@ type HpbConfig struct {
 
 	HpbStats hpbStatsConfig
 }
-
-
-
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
 var tomlSettings = toml.Config{
@@ -156,10 +154,6 @@ var tomlSettings = toml.Config{
 	},
 }
 
-
-
-
-
 func loadConfig(file string, cfg *HpbConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
@@ -174,26 +168,26 @@ func loadConfig(file string, cfg *HpbConfig) error {
 	}
 	return err
 }
-func  New() (*HpbConfig) {
+func New() *HpbConfig {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig)
 	}
 
 	if HpbConfigIns == nil {
 		HpbConfigIns := &HpbConfig{
-			Node: 		defaultNodeConfig() ,
+			Node: defaultNodeConfig(),
 			// Configuration of peer-to-peer networking.
-			Network:	DefaultNetworkConfig(),
+			Network: DefaultNetworkConfig(),
 
 			//configuration of txpool
-			TxPool:		DefaultTxPoolConfig,
+			TxPool: DefaultTxPoolConfig,
 
 			//configuration of blockchain
 			BlockChain: DefaultBlockChainConfig,
 			//configuration of consensus
 			Prometheus: DefaultPrometheusConfig,
 
-			Gas:		DefaultGasConfig,
+			Gas: DefaultGasConfig,
 		}
 		log.Info("Create New HpbConfig object")
 		INSTANCE.Store(HpbConfigIns)
@@ -204,24 +198,24 @@ func  New() (*HpbConfig) {
 	return HpbConfigIns
 
 }
-func GetHpbConfigInstance() (*HpbConfig) {
+func GetHpbConfigInstance() *HpbConfig {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig)
 	}
 	HpbConfigIns := &HpbConfig{
-		Node: 		defaultNodeConfig() ,
+		Node: defaultNodeConfig(),
 		// Configuration of peer-to-peer networking.
-		Network:	DefaultNetworkConfig(),
+		Network: DefaultNetworkConfig(),
 
 		//configuration of txpool
-		TxPool:		DefaultTxPoolConfig,
+		TxPool: DefaultTxPoolConfig,
 
 		//configuration of blockchain
 		BlockChain: DefaultBlockChainConfig,
 		//configuration of consensus
 		Prometheus: DefaultPrometheusConfig,
 
-		Gas:		DefaultGasConfig,
+		Gas: DefaultGasConfig,
 	}
 	log.Info("Create New HpbConfig object")
 	INSTANCE.Store(HpbConfigIns)

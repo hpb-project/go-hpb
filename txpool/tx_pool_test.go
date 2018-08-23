@@ -19,17 +19,17 @@ package txpool
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
-	"github.com/hpb-project/go-hpb/config"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk
@@ -130,7 +130,7 @@ func (c *testChain) State() (*state.StateDB, error) {
 		c.statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 		// simulate that the new head block included tx0 and tx1
 		c.statedb.SetNonce(c.address, 2)
-		c.statedb.SetBalance(c.address, new(big.Int).SetUint64(config.Ether))
+		c.statedb.SetBalance(c.address, new(big.Int).SetUint64(config.Hpber))
 		*c.trigger = false
 	}
 	return stdb, nil
@@ -155,7 +155,7 @@ func TestAddTx(t *testing.T) {
 	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
 	defer pool.Stop()
 
-	pool.currentState.AddBalance(address, new(big.Int).SetUint64(config.Ether))
+	pool.currentState.AddBalance(address, new(big.Int).SetUint64(config.Hpber))
 	nonce := pool.State().GetNonce(address)
 	if nonce != 0 {
 		t.Fatalf("Invalid nonce, want 0, got %d", nonce)
@@ -195,7 +195,7 @@ func TestStateChangeDuringPoolReset(t *testing.T) {
 	)
 
 	// setup pool with 2 transaction in it
-	statedb.SetBalance(address, new(big.Int).SetUint64(config.Ether))
+	statedb.SetBalance(address, new(big.Int).SetUint64(config.Hpber))
 	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000)}, address, &trigger}
 
 	tx0 := transaction(0, big.NewInt(100000), key)

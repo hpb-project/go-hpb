@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package main
 
 import (
@@ -30,11 +29,11 @@ import (
 )
 
 var (
-	abiFlag = flag.String("abi", "", "Path to the Ethereum contract ABI json to bind")
-	binFlag = flag.String("bin", "", "Path to the Ethereum contract bytecode (generate deploy method)")
+	abiFlag = flag.String("abi", "", "Path to the HBP contract ABI json to bind")
+	binFlag = flag.String("bin", "", "Path to the HBP contract bytecode (generate deploy method)")
 	typFlag = flag.String("type", "", "Struct name for the binding (default = package name)")
 
-	solFlag  = flag.String("sol", "", "Path to the Ethereum contract Solidity source to build and bind")
+	solFlag  = flag.String("sol", "", "Path to the HBP contract Solidity source to build and bind")
 	solcFlag = flag.String("solc", "solc", "Solidity compiler to use if source builds are requested")
 	excFlag  = flag.String("exc", "", "Comma separated types to exclude from binding")
 

@@ -153,7 +153,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	// Get the best peer from the network
 	if cadWinner, err := voting.GetCadNodeFromNetwork(state); err == nil {
 
-		log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
+		//log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
 
 		if cadWinner == nil || len(cadWinner) != 2 {
 			//if no peers, add itself Coinbase to CandAddress and ComdAddress, or when candidate nodes is less len(hpbsnap.signers), the zero address will become the hpb node
@@ -289,7 +289,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
+	//log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
 
 	c.lock.RUnlock()
 
@@ -442,7 +442,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
+	//log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
 	c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
