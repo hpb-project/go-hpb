@@ -131,7 +131,7 @@ func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) 
 	}
 	cadNodeSnap := new(CadNodeSnap)
 	if err := json.Unmarshal(blob, cadNodeSnap); err != nil {
-		log.Error("Log Read Failed2:", err)
+		log.Error("Log Read Failed2:", "err", err)
 		return nil, err
 	}
 	return cadNodeSnap, nil
