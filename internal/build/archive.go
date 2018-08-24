@@ -29,7 +29,7 @@ import (
 
 type Archive interface {
 	// Directory adds a new directory entry to the archive and sets the
-	// directory for subsequent calls to Header.
+	// directory for subsequent calls to Header.executable
 	Directory(name string) error
 
 	// Header adds a new file to the archive. The file is added to the directory
