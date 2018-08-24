@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -862,7 +861,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && block.Coinbase().Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0 /*mrand.Float64() < 0.5*/) {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -908,7 +907,9 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		for i, block := range chain {
 			headers[i] = block.Header()
 		}
-		bc.engine.SetNetTopology(bc, headers)
+		if headers[len(headers)-1].Number.Uint64()%consensus.HpbNodeCheckpointInterval == 0 {
+			bc.engine.SetNetTopology(bc, headers)
+		}
 	}
 	bc.PostChainEvents(events, logs)
 	return n, err

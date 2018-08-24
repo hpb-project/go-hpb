@@ -40,6 +40,8 @@ import (
 	//"strconv"
 	"errors"
 	"github.com/hpb-project/go-hpb/boe"
+	"math"
+	"math/rand"
 )
 
 const (
@@ -318,30 +320,40 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	// 比较难度值，确定是否为适合的时间
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
-		// It's not our turn explicitly to sign, delay it a bit
+		//	// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		//log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		//	//log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
+		//
+		//	midIndex := uint64(len(snap.Signers) / 2)                //中间位置，一般的个数为奇数个
+		//	currentIndex := number % uint64(len(snap.Signers))       //挖矿的机器位置
+		//	offset := snap.GetOffset(header.Number.Uint64(), signer) //当前的位置
+		//
+		//	//在一定范围内延迟8分,当前的currentIndex往前的没有超过
+		//	if currentIndex <= midIndex {
+		//		if offset < currentIndex+midIndex/2 {
+		//			wiggle = time.Duration(1000) * wiggleTime
+		//			delay += wiggle
+		//		} else {
+		//			//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
+		//			delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
+		//		}
+		//	} else {
+		//		if offset < currentIndex-midIndex/2 {
+		//			wiggle = time.Duration(1000) * wiggleTime
+		//			delay += wiggle
+		//		} else {
+		//			delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
+		//		}
+		//	}
 
-		midIndex := uint64(len(snap.Signers) / 2)                //中间位置，一般的个数为奇数个
-		currentIndex := number % uint64(len(snap.Signers))       //挖矿的机器位置
-		offset := snap.GetOffset(header.Number.Uint64(), signer) //当前的位置
-
-		//在一定范围内延迟8分,当前的currentIndex往前的没有超过
-		if currentIndex <= midIndex {
-			if offset < currentIndex+midIndex/2 {
-				wiggle = time.Duration(1000) * wiggleTime
-				delay += wiggle
-			} else {
-				//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
-				delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
-			}
+		//fix delay calc
+		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers))         //miner position
+		myoffset := snap.GetOffset(header.Number.Uint64(), signer)                                                //my position
+		if int(math.Abs(float64(int64(myoffset)-int64(currentminer)))) < len(snap.Signers)/consensus.StepLength { //if signers length is smaller than 3,  it means myoffset smaller than currentminer have high priority
+			delay += time.Duration(int(myoffset)-int(currentminer)+len(snap.Signers)/consensus.StepLength+4) * wiggleTime
 		} else {
-			if offset < currentIndex-midIndex/2 {
-				wiggle = time.Duration(1000) * wiggleTime
-				delay += wiggle
-			} else {
-				delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
-			}
+			wiggle = time.Duration(1000+rand.Intn(len(snap.Signers))) * wiggleTime
+			delay += wiggle
 		}
 	}
 
