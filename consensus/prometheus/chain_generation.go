@@ -220,7 +220,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//	header.Difficulty = diffInTurn
 	//}
 	header.Difficulty = diffNoTurn
-	if diffbool, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
 		header.Difficulty = diffInTurn
 	} else if err != nil {
 		log.Error("CalculateCurrentMiner fail", "error", err)
@@ -347,7 +347,18 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		//	}
 
 		//fix delay calc
-		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
+		var primemineraddr common.Address
+		if _, tempmineraddr, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); err == nil {
+			primemineraddr = tempmineraddr
+		} else {
+			return nil, err
+		}
+		zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
+		if zeroaddr.Big().Cmp(primemineraddr.Big()) == 0 {
+			return nil, errors.New("primemineraddr is nil")
+		}
+		currentminer := snap.GetOffset(0, primemineraddr)
+		//currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
 		myoffset := snap.GetOffset(header.Number.Uint64(), signer)
 		distance := int(math.Abs(float64(int64(myoffset) - int64(currentminer))))
 		if distance > len(snap.Signers)/2 {

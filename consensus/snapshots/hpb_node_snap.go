@@ -145,15 +145,16 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 }
 
 // 判断当前的次序
-func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chain consensus.ChainReader, header *types.Header) (bool, error) {
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chain consensus.ChainReader, header *types.Header) (bool, common.Address, error) {
 
 	// 实际开发中，从硬件中获取
 	//rand := rand.Uint64()
 	//TODO：硬件随机数相关，直接使用的低16字节对应的uint64对uint64(len(snap.Signers)取余确定,每次都从区块头中获取轮次内的signer集合，然后作排除操作后，在进行确定offset
 	var currentIndex uint64
+	zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
 	signers := s.GetHpbNodes() //hpb节点，是排序过的
 	if signers == nil {
-		return false, errors.New("CalculateCurrentMiner GetHpbNodes() return nil snap have no hp signers")
+		return false, zeroaddr, errors.New("CalculateCurrentMiner GetHpbNodes() return nil snap have no hp signers")
 	}
 	var hpbsignersmap = make(map[common.Address]int)
 	for offset, signeradrr := range signers {
@@ -163,7 +164,7 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	randBigInt := new(big.Int)
 	if len(header.HardwareRandom) == 0 {
 		log.Error("---------------CalculateCurrentMiner header.HardwareRandom----------", "len(header.HardwareRandom)", "0")
-		return false, errors.New("CalculateCurrentMiner header.HardwareRandom is nil")
+		return false, zeroaddr, errors.New("CalculateCurrentMiner header.HardwareRandom is nil")
 	}
 	randBigInt.SetBytes(header.HardwareRandom)
 
@@ -171,9 +172,9 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
 	if number%uint64(len(signers)) == 1 {
 		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == randBigInt.Uint64()%uint64(len(hpbsignersmap)) {
-			return true, nil
+			return true, signer, nil
 		} else {
-			return false, nil
+			return false, signers[offset], nil
 		}
 	} else { //如果不为1，则作如下处理
 		partheadersstart = number - (number-1)%uint64(len(signers))
@@ -192,7 +193,7 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 		if partheaders[i-partheadersstart] == nil || &partheaders[i-partheadersstart].Coinbase == nil {
 			log.Error("before GetOffsethw---------------chain.GetHeaderByNumber(i) &partheaders[i-partheadersstart].Coinbase == nil", "number", number)
 			if gethbynumcount > 20 {
-				return false, errors.New("cannot get header by chain.GetHeaderByNumber")
+				return false, zeroaddr, errors.New("cannot get header by chain.GetHeaderByNumber")
 			}
 			goto loop
 		}
@@ -235,9 +236,9 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//}
 	//log.Error("rand % len(hpbsignerarray)", "currentIndex", currentIndex, "signer", signer)
 	if ok && currentIndex == uint64(unsigneroffset) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
-		return true, nil
+		return true, signer, nil
 	} else {
-		return false, nil
+		return false, hpbsignerarray[currentIndex], nil
 	}
 	//return (number % uint64(len(signers))) == uint64(offset)
 }
