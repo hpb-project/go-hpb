@@ -196,9 +196,9 @@ func (pool *TxPool) loop() {
 			}
 			// Handle stats reporting ticks
 		case <-report.C:
-			pool.mu.RLock()
+			//pool.mu.RLock()
 			pending, queued := pool.Stats()
-			pool.mu.RUnlock()
+			//pool.mu.RUnlock()
 
 			if pending != prevPending || queued != prevQueued {
 				log.Debug("Transaction pool status report", "pending", pending, "queued", queued)
@@ -849,10 +849,8 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
-
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
@@ -869,9 +867,8 @@ func (pool *TxPool) State() *state.ManagedState {
 }
 
 func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
