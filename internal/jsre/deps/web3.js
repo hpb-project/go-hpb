@@ -1756,27 +1756,27 @@ var ETH_UNITS = [
     'Gwei',
     'szabo',
     'finney',
-    'femtohpber',
-    'picohpber',
-    'nanohpber',
-    'microhpber',
-    'millihpber',
+    'femtohpb',
+    'picohpb',
+    'nanohpb',
+    'microhpb',
+    'millihpb',
     'nano',
     'micro',
     'milli',
-    'hpber',
+    'hpb',
     'grand',
-    'Mhpber',
-    'Ghpber',
-    'Thpber',
-    'Phpber',
-    'Ehpber',
-    'Zhpber',
-    'Yhpber',
-    'Nhpber',
-    'Dhpber',
-    'Vhpber',
-    'Uhpber'
+    'Mhpb',
+    'Ghpb',
+    'Thpb',
+    'Phpb',
+    'Ehpb',
+    'Zhpb',
+    'Yhpb',
+    'Nhpb',
+    'Dhpb',
+    'Vhpb',
+    'Uhpb'
 ];
 
 module.exports = {
@@ -1866,33 +1866,33 @@ var sha3 = require('./sha3.js');
 var utf8 = require('utf8');
 
 var unitMap = {
-    'nohpber':      '0',
+    'nohpb':      '0',
     'wei':          '1',
     'kwei':         '1000',
     'Kwei':         '1000',
     'babbage':      '1000',
-    'femtohpber':   '1000',
+    'femtohpb':   '1000',
     'mwei':         '1000000',
     'Mwei':         '1000000',
     'lovelace':     '1000000',
-    'picohpber':    '1000000',
+    'picohpb':    '1000000',
     'gwei':         '1000000000',
     'Gwei':         '1000000000',
     'shannon':      '1000000000',
-    'nanohpber':    '1000000000',
+    'nanohpb':    '1000000000',
     'nano':         '1000000000',
     'szabo':        '1000000000000',
-    'microhpber':   '1000000000000',
+    'microhpb':   '1000000000000',
     'micro':        '1000000000000',
     'finney':       '1000000000000000',
-    'millihpber':    '1000000000000000',
+    'millihpb':    '1000000000000000',
     'milli':         '1000000000000000',
-    'hpber':        '1000000000000000000',
-    'khpber':       '1000000000000000000000',
+    'hpb':        '1000000000000000000',
+    'khpb':       '1000000000000000000000',
     'grand':        '1000000000000000000000',
-    'mhpber':       '1000000000000000000000000',
-    'ghpber':       '1000000000000000000000000000',
-    'thpber':       '1000000000000000000000000000000'
+    'mhpb':       '1000000000000000000000000',
+    'ghpb':       '1000000000000000000000000000',
+    'thpb':       '1000000000000000000000000000000'
 };
 
 /**
@@ -2106,12 +2106,12 @@ var toHex = function (val) {
  * Returns value of unit in Wei
  *
  * @method getValueOfUnit
- * @param {String} unit the unit to convert to, default hpber
+ * @param {String} unit the unit to convert to, default hpb
  * @returns {BigNumber} value of the unit (in Wei)
  * @throws error if the unit is not correct:w
  */
 var getValueOfUnit = function (unit) {
-    unit = unit ? unit.toLowerCase() : 'hpber';
+    unit = unit ? unit.toLowerCase() : 'hpb';
     var unitValue = unitMap[unit];
     if (unitValue === undefined) {
         throw new Error('This unit doesn\'t exists, please use the one of the following units' + JSON.stringify(unitMap, null, 2));
@@ -2120,24 +2120,24 @@ var getValueOfUnit = function (unit) {
 };
 
 /**
- * Takes a number of wei and converts it to any other hpber unit.
+ * Takes a number of wei and converts it to any other hpb unit.
  *
  * Possible units are:
  *   SI Short   SI Full        Effigy       Other
- * - kwei       femtohpber     babbage
- * - mwei       picohpber      lovelace
- * - gwei       nanohpber      shannon      nano
- * - --         microhpber     szabo        micro
- * - --         millihpber     finney       milli
- * - hpber      --             --
- * - khpber                    --           grand
- * - mhpber
- * - ghpber
- * - thpber
+ * - kwei       femtohpb     babbage
+ * - mwei       picohpb      lovelace
+ * - gwei       nanohpb      shannon      nano
+ * - --         microhpb     szabo        micro
+ * - --         millihpb     finney       milli
+ * - hpb      --             --
+ * - khpb                    --           grand
+ * - mhpb
+ * - ghpb
+ * - thpb
  *
  * @method fromWei
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert to, default hpber
+ * @param {String} unit the unit to convert to, default hpb
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var fromWei = function(number, unit) {
@@ -2151,21 +2151,21 @@ var fromWei = function(number, unit) {
  *
  * Possible units are:
  *   SI Short   SI Full        Effigy       Other
- * - kwei       femtohpber     babbage
- * - mwei       picohpber      lovelace
- * - gwei       nanohpber      shannon      nano
- * - --         microhpber     szabo        micro
- * - --         microhpber     szabo        micro
- * - --         millihpber     finney       milli
- * - hpber      --             --
- * - khpber                    --           grand
- * - mhpber
- * - ghpber
- * - thpber
+ * - kwei       femtohpb     babbage
+ * - mwei       picohpb      lovelace
+ * - gwei       nanohpb      shannon      nano
+ * - --         microhpb     szabo        micro
+ * - --         microhpb     szabo        micro
+ * - --         millihpb     finney       milli
+ * - hpb      --             --
+ * - khpb                    --           grand
+ * - mhpb
+ * - ghpb
+ * - thpb
  *
  * @method toWei
  * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert from, default hpber
+ * @param {String} unit the unit to convert from, default hpb
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var toWei = function(number, unit) {
