@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/blockchain/state"
+	//"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -29,6 +29,8 @@ import (
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm/native"
+	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/blockchain/state"
 )
 
 var (
@@ -55,75 +57,103 @@ The state transitioning model does all all the necessary work to work out a vali
 6) Derive new state root
 */
 type StateTransition struct {
-	gp         *hvm.GasPool
+	gp         *GasPool
 	msg        hvm.Message
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas *big.Int
 	value      *big.Int
 	data       []byte
-	state      *state.StateDB
+	state      evm.StateDB
 	native     bool
 	header     *types.Header
 	author     *common.Address
+	evm			*evm.EVM
 }
-
+// IntrinsicGas computes the 'intrinsic gas' for a message
+// with the given data.
+//
+// TODO convert to uint64
+func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
+	igas := new(big.Int)
+	if contractCreation{
+		igas.SetUint64(config.TxGasContractCreation)
+	} else {
+		igas.SetUint64(config.TxGas)
+	}
+	if len(data) > 0 {
+		var nz int64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		m := big.NewInt(nz)
+		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
+		igas.Add(igas, m)
+		m.SetInt64(int64(len(data)) - nz)
+		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
+		igas.Add(igas, m)
+	}
+	return igas
+}
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(msg hvm.Message, gp *hvm.GasPool, db *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
-	nativeCall := msg.To() != nil && db.GetCodeSize(msg.From()) == 0
+func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
+	log.Error("----------msg data is",": ", len(msg.Data()))
+	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
+		evm:        evm,
 		gp:         gp,
 		msg:        msg,
 		gasPrice:   msg.GasPrice(),
 		initialGas: new(big.Int),
 		value:      msg.Value(),
 		data:       msg.Data(),
-		state:      db,
-		native:     nativeCall,
+		//native:     nativeCall,
+		state:      evm.StateDB,
+	}
+}
+func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header) *StateTransition {
+	log.Error("----------msg data is",": ", len(msg.Data()))
+	//nativeCall := len(msg.Data()) == 0
+	return &StateTransition{
+		//evm:        evm,
+		gp:         gp,
+		msg:        msg,
+		gasPrice:   msg.GasPrice(),
+		initialGas: new(big.Int),
+		value:      msg.Value(),
+		data:       msg.Data(),
 		header:     header,
-		author:     author,
+		//native:     nativeCall,
+		state:      statedb,
 	}
 }
 
-// ApplyMessage computes the new state by applying the given message
+// ApplyMessage returns the bytes returned by any EVM execution (if it took place),
+// the gas used (which includes gas refunds) and an error if it failed. An error always
+// indicates a core error meaning that the message would always fail for that particular
+// state and would never be accepted within a block.
+func ApplyMessageNonContract(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
+	st := NewStateTransitionNonEVM( msg, gp, statedb, header)
+
+	ret, _, gasUsed, failed, err := st.TransitionOnNative()
+	return ret, gasUsed, failed, err
+}
+
+//  computes the new state by applying the given message
 // against the old state within the environment.
 //
 // ApplyMessage returns the bytes returned by any EVM execution (if it took place),
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(header *types.Header, db *state.StateDB, author *common.Address, msg hvm.Message, gp *hvm.GasPool) ([]byte, *big.Int, bool, error) {
+func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool) ([]byte, *big.Int, bool, error) {
+	st := NewStateTransition(evm, msg, gp)
 
-
-	st := NewStateTransition(msg, gp, db, header, author)
-
-	if err := st.preCheck(); err != nil {
-		return nil, nil, false, err
-	}
-
-
-	////////////////////////
-	contractCreation := msg.To() == nil
-	// Pay intrinsic gas
-	intrinsicGas := types.IntrinsicGas(st.data, contractCreation)
-	if intrinsicGas.BitLen() > 64 {
-		return nil, nil, false, evm.ErrOutOfGas
-	}
-	if err := st.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, false, err
-	}
-
-	if st.native {
-		//log.Error("--------------------------------------st.native is not null------------------------------------------")
-		ret, _, gasUsed, failed, err := st.TransitionOnNative()
-		return ret, gasUsed, failed, err
-	} else {
-		// Apply the transaction to the current state (included in the env)
-		ret, _, gasUsed, failed, err := st.TransitionOnEVM()
-		return ret, gasUsed, failed, err
-	}
+	ret, _, gasUsed, failed, err := st.TransitionDb()
+	return ret, gasUsed, failed, err
 }
-
 func (st *StateTransition) from() evm.AccountRef {
 	f := st.msg.From()
 	if !st.state.Exist(f) {
@@ -176,7 +206,6 @@ func (st *StateTransition) buyGas() error {
 		return err
 	}
 	st.gas += mgas.Uint64()
-
 	st.initialGas.Set(mgas)
 	state.SubBalance(sender.Address(), mgval)
 	return nil
@@ -199,6 +228,10 @@ func (st *StateTransition) preCheck() error {
 }
 
 func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+
+	if err = st.preCheck(); err != nil {
+		return nil, nil, nil,false, err
+	}
 	msg := st.msg
 	from := st.msg.From()
 	to := st.to().Address()
@@ -229,52 +262,57 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 
 	return ret, requiredGas, st.gasUsed(), false, err
 }
-
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
-func (st *StateTransition) TransitionOnEVM() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
-	// Create a new context to be used in the EVM environment
-	context := hvm.NewEVMContext(st.msg, st.header, InstanceBlockChain(), st.author)
-	// Create a new environment which holds all relevant information
-	// about the transaction and calling mechanisms.
-	ethereum_vm := evm.NewEVM(context, st.state, config.MainnetChainConfig, evm.Config{})
-
+func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+	if err = st.preCheck(); err != nil {
+		return
+	}
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
 
 	contractCreation := msg.To() == nil
 
+	// Pay intrinsic gas
+	// TODO convert to uint64
+	intrinsicGas := IntrinsicGas(st.data, contractCreation)
+	if intrinsicGas.BitLen() > 64 {
+		return nil, nil, nil, false, hvm.ErrOutOfGas
+	}
+	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		return nil, nil, nil, false, err
+	}
 	var (
+		evm = st.evm
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error.
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = ethereum_vm.Create(sender, st.data, st.gas, st.value)
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
-		ret, st.gas, vmerr = ethereum_vm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
+		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
-		if vmerr == evm.ErrInsufficientBalance {
+		if vmerr == hvm.ErrInsufficientBalance {
 			return nil, nil, nil, false, vmerr
 		}
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
 
 	st.refundGas()
-	st.state.AddBalance(ethereum_vm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
-
 func (st *StateTransition) refundGas() {
 	// Return eth for remaining gas to the sender account,
 	// exchanged at the original rate.

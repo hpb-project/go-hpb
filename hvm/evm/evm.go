@@ -23,6 +23,8 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/consensus"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -101,6 +103,39 @@ type EVM struct {
 	abort int32
 }
 
+// ChainContext supports retrieving headers and consensus parameters from the
+// current blockchain to be used during transaction processing.
+type ChainContext interface {
+	// Engine retrieves the chain's consensus engine.
+	Engine() consensus.Engine
+
+	// GetHeader returns the hash corresponding to their hash.
+	GetHeader(common.Hash, uint64) *types.Header
+}
+
+// GetHashFn returns a GetHashFunc which retrieves header hashes by number
+func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash {
+	return func(n uint64) common.Hash {
+		for header := chain.GetHeader(ref.ParentHash, ref.Number.Uint64()-1); header != nil; header = chain.GetHeader(header.ParentHash, header.Number.Uint64()-1) {
+			if header.Number.Uint64() == n {
+				return header.Hash()
+			}
+		}
+
+		return common.Hash{}
+	}
+}
+
+// CanTransfer checks wether there are enough funds in the address' account to make a transfer.
+// This does not take the necessary gas in to account to make the transfer valid.
+func CanTransfer(db StateDB, addr common.Address, amount *big.Int) bool {
+	return db.GetBalance(addr).Cmp(amount) >= 0
+}
+// Transfer subtracts amount from sender and adds amount to recipient using the given Db
+func Transfer(db StateDB, sender, recipient common.Address, amount *big.Int) {
+	db.SubBalance(sender, amount)
+	db.AddBalance(recipient, amount)
+}
 // NewEVM retutrns a new EVM . The returned EVM is not thread safe and should
 // only ever be used *once*.
 func NewEVM(ctx Context, statedb StateDB, chainConfig *config.ChainConfig, vmConfig Config) *EVM {
@@ -157,7 +192,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// only.
 	contract := NewContract(caller, to, value, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-
 	ret, err = run(evm, snapshot, contract, input)
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -318,12 +352,13 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// E The contract is a scoped evmironment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
-	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
 
+	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil
 	}
 	ret, err = run(evm, snapshot, contract, nil)
+
 	// check whether the max code size has been exceeded
 	maxCodeSizeExceeded := len(ret) > config.MaxCodeSize
 	// if the contract creation ran successfully and no errors were returned

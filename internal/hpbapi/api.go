@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	defaultGas      = 90000
+	defaultGas      = 90000000
 	defaultGasPrice = 50 * params.Shannon
 )
 
@@ -564,6 +564,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+
 	if state == nil || err != nil {
 		return nil, common.Big0, false, err
 	}
@@ -601,8 +602,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func() { cancel() }()
 
 	// Get a new instance of the EVM.
-	evm, _, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
-	//evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg) //TODO
+	vm, _, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
 		return nil, common.Big0, false, err
 	}
@@ -610,24 +610,21 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// EVM has finished, cancelling may be done (repeatedly)
 	go func() {
 		<-ctx.Done()
-		evm.Cancel()
+		vm.Cancel()
 	}()
 
 
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	//gp := new(node.GasPool).AddGas(math.MaxBig256) //TODO
+	gp := new(bc.GasPool).AddGas(math.MaxBig256)
 
-	//blockchain := bc.InstanceBlockChain() //TODO
-	//header := bc. //TODO
-	//TODO
-	/*res, gas, failed, err := bc.ApplyMessage(blockchain, evm, msg, gp)
-	if err := vmError(); err != nil {
+	res, gas, failed, err := bc.ApplyMessage(vm, msg, gp)
+	if  err != nil {
 		return nil, common.Big0, false, err
-	}*/
-	//TODO
-	//return res, gas, failed, err
-	return nil,gas,false,err
+	}
+
+	return res, gas, failed, err
+
 }
 
 // Call executes the given transaction on the state for the given block number.
@@ -1113,6 +1110,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
+	log.Error("@@@@@@@@@@@@@@@@args limit is ",": ",args.Gas)
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 

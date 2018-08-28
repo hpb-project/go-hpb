@@ -25,8 +25,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
-	//"github.com/hpb-project/go-hpb/consensus/prometheus"
-	"github.com/hpb-project/go-hpb/hvm"
 )
 
 // So we can deterministically seed different blockchains
@@ -44,7 +42,7 @@ type BlockGen struct {
 	header  *types.Header
 	statedb *state.StateDB
 
-	gasPool  *hvm.GasPool
+	gasPool  *GasPool
 	txs      []*types.Transaction
 	receipts []*types.Receipt
 	uncles   []*types.Header
@@ -62,7 +60,7 @@ func (b *BlockGen) SetCoinbase(addr common.Address) {
 		panic("coinbase can only be set once")
 	}
 	b.header.Coinbase = addr
-	b.gasPool = new(hvm.GasPool).AddGas(b.header.GasLimit)
+	b.gasPool = new(GasPool).AddGas(b.header.GasLimit)
 }
 
 // SetExtra sets the extra data field of the generated block.
@@ -83,7 +81,21 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 		b.SetCoinbase(common.Address{})
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config,&b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
+	bc := InstanceBlockChain()
+
+	var receipt *types.Receipt
+	var err      error
+
+	if len(tx.Data()) != 0 {
+		receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
+		if err != nil {
+
+		}
+	}else{
+		receipt, _, err = ApplyTransactionNonContract(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
+		if err != nil {
+		}
+	}
 	if err != nil {
 	}
 	b.txs = append(b.txs, tx)

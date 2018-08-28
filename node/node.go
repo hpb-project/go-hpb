@@ -172,14 +172,15 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
 
-
+	hpbdatabase, _ := db.CreateDB(&conf.Node, "chaindata")
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/geth.
 	am, _, err := makeAccountManager(&conf.Node)
-	hpbnode.accman = am
 	if err != nil {
 		return nil, err
 	}
+	hpbnode.accman = am
+
 	hpbnode.Hpbboe = boe.BoeGetInstance()
 
 	err = hpbnode.Hpbboe.Init()
@@ -214,7 +215,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	peermanager := p2p.PeerMgrInst()
     hpbnode.Hpbpeermanager = peermanager
 	hpbnode.Hpbrpcmanager = rpc.RpcMgrInst()
-	hpbdatabase, _ := db.CreateDB(&conf.Node, "chaindata")
+
 	hpbnode.HpbDb = hpbdatabase
 
 

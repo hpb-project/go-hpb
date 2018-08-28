@@ -30,7 +30,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain"
@@ -537,7 +536,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 
 func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address) {
 	//log.Error("----------------committransactions--------------")
-	gp := new(hvm.GasPool).AddGas(env.header.GasLimit)
+	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
 
@@ -615,14 +614,26 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 	}
 }
 
-func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Address, gp *hvm.GasPool) (error, []*types.Log) {
+func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Address, gp *bc.GasPool) (error, []*types.Log) {
+	var receipt *types.Receipt
+	var err      error
 	snap := env.state.Snapshot()
+	blockchain := bc.InstanceBlockChain()
 
-	receipt, _, err := bc.ApplyTransaction(env.config, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
-	if err != nil {
-		env.state.RevertToSnapshot(snap)
-		return err, nil
+	if len(tx.Data()) != 0 {
+		receipt, _, err = bc.ApplyTransaction(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+		if err != nil {
+			env.state.RevertToSnapshot(snap)
+			return err, nil
+		}
+	}else{
+		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+		if err != nil {
+			env.state.RevertToSnapshot(snap)
+			return err, nil
+		}
 	}
+
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 

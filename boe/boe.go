@@ -250,7 +250,8 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     m_sig[96] = v
 
     c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-    if c_ret == C.BOE_OK {
+    //loushl change to debug
+    if false && c_ret == C.BOE_OK {
     	log.Trace("boe validate sign success")
         result[0] = 4
         return result,nil
