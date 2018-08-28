@@ -179,10 +179,10 @@ func (hp *HpbProto) handle(p *Peer) error {
 	for {
 		if err := hp.handleMsg(p); err != nil {
 
-			//if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
-			//	hp.onDropPeer(p)
-			//	p.log.Debug("Network has drop peer to notify syncer")
-			//}
+			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
+				hp.onDropPeer(p)
+				p.log.Debug("Network has drop peer to notify syncer")
+			}
 			p.log.Debug("Stop hpb message loop.","error",err)
 			return err
 		}

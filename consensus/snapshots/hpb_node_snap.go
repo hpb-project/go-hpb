@@ -172,8 +172,20 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
 	if number%uint64(len(signers)) == 1 {
 		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == randBigInt.Uint64()%uint64(len(hpbsignersmap)) {
+			if zeroaddr.Big().Cmp(signer.Big()) == 0 {
+				for _, signer := range signers {
+					log.Error("===========true number%uint64(len(signers)) == 1=========print signers================", "signer", signer)
+				}
+				log.Error("===============true number%uint64(len(signers)) == 1 signer is nil========================")
+			}
 			return true, signer, nil
 		} else {
+			if zeroaddr.Big().Cmp(signers[offset].Big()) == 0 {
+				for _, signer := range signers {
+					log.Error("-----------false number%uint64(len(signers)) == 1-----------print signers-----------------------", "signer", signer)
+				}
+				log.Error("--------------------false number%uint64(len(signers)) == 1 signer is nil------------------------")
+			}
 			return false, signers[offset], nil
 		}
 	} else { //如果不为1，则作如下处理
@@ -236,8 +248,26 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	//}
 	//log.Error("rand % len(hpbsignerarray)", "currentIndex", currentIndex, "signer", signer)
 	if ok && currentIndex == uint64(unsigneroffset) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
+		if zeroaddr.Big().Cmp(signer.Big()) == 0 {
+			for _, signer := range signers {
+				log.Error("===========true number%uint64(len(signers)) != 1=========print signers================", "signer", signer)
+			}
+			for _, signer2 := range hpbsignerarray {
+				log.Error("===========true number%uint64(len(signers)) != 1=========print signers================", "signer2", signer2)
+			}
+			log.Error("===============true number%uint64(len(signers)) != 1 signer is nil========================")
+		}
 		return true, signer, nil
 	} else {
+		if zeroaddr.Big().Cmp(hpbsignerarray[currentIndex].Big()) == 0 {
+			for _, signer := range signers {
+				log.Error("---------------false number%uint64(len(signers)) != 1-----------print signers-------------------", "signer", signer)
+			}
+			for _, signer2 := range hpbsignerarray {
+				log.Error("-------------false number%uint64(len(signers)) != 1----------------print signers-------------------", "signer2", signer2)
+			}
+			log.Error("--------------------false number%uint64(len(signers)) != 1 signer is nil-----------------------")
+		}
 		return false, hpbsignerarray[currentIndex], nil
 	}
 	//return (number % uint64(len(signers))) == uint64(offset)
@@ -455,6 +485,10 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 END:
 	for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
 		snap.Signers[finaltally[i]] = struct{}{}
+	}
+	zeroaddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
+	if _, ok := snap.Signers[zeroaddr]; ok {
+		delete(snap.Signers, zeroaddr)
 	}
 
 	//if len(snap.Tally) != 0 {

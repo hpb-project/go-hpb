@@ -121,62 +121,7 @@ func (this *SynCtrl) txRoutingLoop() {
 	for {
 		select {
 		case event := <-this.txCh:
-			this.routingTx(event.Tx.Hash(), event.Tx)
+			routTx(event.Tx.Hash(), event.Tx)
 		}
 	}
-}
-
-// routingTx will propagate a transaction to peers by type which are not known to
-// already have the given transaction.
-func (this *SynCtrl) routingTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	for _, peer := range peers {
-		switch peer.LocalType() {
-		case discover.PreNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.HpNode:
-			switch peer.RemoteType() {
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.SynNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		default:
-			break
-		}
-	}
-
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
-}
-
-func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
-	for _, tx := range txs {
-		peer.KnownTxsAdd(tx.Hash())
-	}
-	return p2p.SendData(peer,p2p.TxMsg, txs)
 }
