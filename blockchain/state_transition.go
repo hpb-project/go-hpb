@@ -99,7 +99,6 @@ func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 }
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
-	log.Error("----------msg data is",": ", len(msg.Data()))
 	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
 		evm:        evm,
@@ -114,7 +113,6 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 	}
 }
 func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header) *StateTransition {
-	log.Error("----------msg data is",": ", len(msg.Data()))
 	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
 		//evm:        evm,
