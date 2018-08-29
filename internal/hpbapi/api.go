@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	defaultGas      = 90000000
+	defaultGas      = 90000
 	defaultGasPrice = 50 * params.Shannon
 )
 
@@ -580,7 +580,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Set default gas & gas price if none were set
 	gas, gasPrice := args.Gas.ToInt(), args.GasPrice.ToInt()
 	if gas.Sign() == 0 {
-		gas = big.NewInt(50000000)
+		gas = big.NewInt(defaultGas)
 	}
 	if gasPrice.Sign() == 0 {
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
@@ -1110,7 +1110,6 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	log.Error("@@@@@@@@@@@@@@@@args limit is ",": ",args.Gas)
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
