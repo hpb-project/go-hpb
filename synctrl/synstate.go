@@ -149,6 +149,7 @@ func (s *stateSync) loop() error {
 				// 2 items are the minimum requested, if even that times out, we've no use of
 				// this peer at the moment.
 				log.Warn("Stalling state sync, dropping peer", "peer", req.peer.id)
+				log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", req.peer.id, "state timeout")
 				s.syn.dropPeer(req.peer.id)
 			}
 			// Process all the received blobs and check for stale delivery

@@ -258,7 +258,7 @@ func (this *Syncer) Start(id string, head common.Hash, td *big.Int, mode config.
 	case errTimeout, errBadPeer, errStallingPeer,
 		errEmptyHeaderSet, errPeersUnavailable, errProVLowerBase,
 		errInvalidAncestor, errInvalidChain:
-		log.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
+		log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", id, "err", err)
 		this.dropPeer(id)
 
 	default:
