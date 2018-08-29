@@ -320,7 +320,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	if delay < 0 {
 		delay = 0
-	} else {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
 	// 比较难度值，确定是否为适合的时间
