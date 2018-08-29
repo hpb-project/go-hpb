@@ -318,6 +318,11 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
+	if delay < 0 {
+		delay = 0
+	} else {
+		header.Time = big.NewInt(time.Now().Unix())
+	}
 	// 比较难度值，确定是否为适合的时间
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		//	// It's not our turn explicitly to sign, delay it a bit
