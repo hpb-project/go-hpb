@@ -620,14 +620,13 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err      error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-
 	if len(tx.Data()) != 0 {
 		receipt, _, err = bc.ApplyTransaction(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
 			return err, nil
 		}
-	}else{
+	}else {
 		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
