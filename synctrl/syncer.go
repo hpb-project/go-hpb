@@ -30,8 +30,8 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	hpbinter "github.com/hpb-project/go-hpb/interface"
 	"github.com/hpb-project/go-hpb/event/sub"
+	hpbinter "github.com/hpb-project/go-hpb/interface"
 )
 
 var (
@@ -140,30 +140,28 @@ type BlockChain interface {
 }
 
 type syncStrategy interface {
+	registerPeer(id string, version uint, peer Peer) error
+	registerLightPeer(id string, version uint, peer LightPeer) error
+	unregisterPeer(id string) error
+	syncWithPeer(id string, p *peerConnection, hash common.Hash, td *big.Int) (err error)
+	cancel()
 	deliverHeaders(id string, headers []*types.Header) (err error)
 	deliverBodies(id string, transactions [][]*types.Transaction, uncles [][]*types.Header) (err error)
 	deliverReceipts(id string, receipts [][]*types.Receipt) (err error)
 	deliverNodeData(id string, data [][]byte) (err error)
-
-	syncWithPeer(id string, p *peerConnection, hash common.Hash, td *big.Int) (err error)
-	cancel()
-
-	registerPeer(id string, version uint, peer Peer) error
-	registerLightPeer(id string, version uint, peer LightPeer) error
-	unregisterPeer(id string) error
 }
 
 type Syncer struct {
-	mode         config.SyncMode       // Synchronisation mode defining the strategy used (per sync cycle)
-	strategy     syncStrategy
+	mode     config.SyncMode // Synchronisation mode defining the strategy used (per sync cycle)
+	strategy syncStrategy
 
-	mux     *sub.TypeMux // Event multiplexer to announce sync operation events
-	stateDB hpbdb.Database
+	mux        *sub.TypeMux // Event multiplexer to announce sync operation events
+	stateDB    hpbdb.Database
 	lightchain LightChain
 
-	peers   *peerSet // Set of active peers from which sync can proceed
+	peers    *peerSet   // Set of active peers from which sync can proceed
 	dropPeer peerDropFn // Drops a peer for misbehaving
-	sch     *scheduler   // Scheduler for selecting the hashes to sync
+	sch      *scheduler // Scheduler for selecting the hashes to sync
 
 	// Statistics
 	syncStatsChainOrigin uint64 // Origin block number where syncing started at
@@ -182,7 +180,7 @@ type Syncer struct {
 	synchroniseMock func(id string, hash common.Hash) error // Replacement for synchronise during testing
 	synchronising   int32
 	notified        int32
-	fsPivotFails uint32        // Number of subsequent fast sync failures in the critical section
+	fsPivotFails    uint32 // Number of subsequent fast sync failures in the critical section
 
 	quitLock sync.RWMutex  // Lock to prevent double closes
 	quitCh   chan struct{} // Quit channel to signal termination
@@ -369,7 +367,6 @@ func (this *Syncer) DeliverReceipts(id string, receipts [][]*types.Receipt) (err
 func (this *Syncer) DeliverNodeData(id string, data [][]byte) (err error) {
 	return this.strategy.deliverNodeData(id, data)
 }
-
 
 // qosTuner is the quality of service tuning loop that occasionally gathers the
 // peer latency statistics and updates the estimated request round trip time.
