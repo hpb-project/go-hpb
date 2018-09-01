@@ -304,7 +304,7 @@ func (self *worker) eventListener() {
 				self.currentMu.Lock()
 				acc, _ := types.Sender(types.NewBoeSigner(self.config.ChainId), ev.Tx)
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
+				txset := types.NewTransactionsByPriceAndNonce(types.NewBoeSigner(self.config.ChainId), txs)
 
 				self.current.commitTransactions(self.mux, txset, self.coinbase)
 				self.currentMu.Unlock()
