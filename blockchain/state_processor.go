@@ -87,13 +87,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 				return nil, nil, nil, errs
 			}
 		}
-
+		if receipt == nil {
+			log.Error("----------------------------------receipt.Logs is nil")
+		}
 		receipts = append(receipts, receipt)
 		if allLogs == nil {
 			log.Error("----------------------------------allLogs is nil")
 		}
 		if receipt == nil {
-			log.Error("----------------------------------receipt.Logs is nil")
+			log.Error("----------------------------------receipt.Logs is nil 11")
 		}
 
 		allLogs = append(allLogs, receipt.Logs...)
@@ -172,12 +174,19 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
+	if receipt == nil {
+		log.Error("----------------------------------11")
+	}
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
-
+	if receipt == nil {
+		log.Error("----------------------------------22")
+	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-
+	if receipt == nil {
+		log.Error("----------------------------------33")
+	}
 	return receipt, gas, err
 }
