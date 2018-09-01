@@ -186,7 +186,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	if config.GetHpbConfigInstance().Node.TestMode == 1 {
 		//panic("boe broke, please contact with hpb")
-		log.Info("no boe device, using the gensis.json hardwarerandom")
+		log.Info("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, parentheader.HardwareRandom)
 		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
@@ -203,7 +203,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 		} else {
-			panic("boe broke, please contact with hpb")
+			log.Info("no boe device, using the gensis.json hardwarerandom")
+			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+			copy(header.HardwareRandom, parentheader.HardwareRandom)
+			header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+			//panic("boe broke, please contact with hpb")
 		}
 	}
 
