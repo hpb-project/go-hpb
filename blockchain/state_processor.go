@@ -92,7 +92,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if allLogs == nil {
 			log.Error("----------------------------------allLogs is nil")
 		}
-		if receipt.Logs == nil {
+		if receipt == nil {
 			log.Error("----------------------------------receipt.Logs is nil")
 		}
 
