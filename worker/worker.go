@@ -162,10 +162,7 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	//对以上事件的监听
 	go worker.eventListener()
-	
 	go worker.handlerSelfMinedBlock()
-	
-	worker.startNewMinerRound()
 
 	return worker
 }

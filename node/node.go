@@ -569,6 +569,9 @@ func (self *Node) SetHpberbase(hpberbase common.Address) {
 }
 
 func (s *Node) StartMining(local bool) error {
+	if config.GetHpbConfigInstance().Network.RoleType == "synnode" || config.GetHpbConfigInstance().Network.RoleType == "bootnode" {
+		return fmt.Errorf("Synnode or bootnode can't mine")
+	}
 	//read coinbase from node
 	eb := s.hpberbase
 
