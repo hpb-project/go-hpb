@@ -184,7 +184,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.Hpbboe = boe.BoeGetInstance()
 	err = hpbnode.Hpbboe.Init()
 	if err != nil {
-		panic("Boe init fail.")
+		log.Warn("Boe init fail.")
 		hpbnode.Boeflag = 0
 	}else {
 		hpbnode.Boeflag = 1
