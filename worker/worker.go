@@ -302,7 +302,7 @@ func (self *worker) eventListener() {
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
-				acc, _ := types.Sender(self.current.signer, ev.Tx)
+				acc, _ := types.Sender(types.NewBoeSigner(self.config.ChainId), ev.Tx)
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 
