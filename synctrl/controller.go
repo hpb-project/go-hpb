@@ -181,7 +181,7 @@ func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 
 	ps := &PeerSyn{peer}
 	this.syncTransactions(peer)
-	return this.syner.RegisterPeer(ps.GetID(), ps.GetVersion(), ps)
+	return this.syner.RegisterPeer(peer.GetID(), peer.GetVersion(), ps)
 }
 
 func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
