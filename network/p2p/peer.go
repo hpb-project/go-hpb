@@ -569,11 +569,6 @@ func SendData(p *Peer, msgCode uint64, data interface{}) error {
 		log.Error("P2P SendData para of peer is nil.")
 		return errors.New("send data para of peer is nil")
 	}
-
-	if msgCode != 0x2013 {
-		p.log.Info("Send message to remote","msg",fmt.Sprintf("#0x%x", msgCode))
-	}
-
 	return send(p.rw, msgCode, data)
 }
 

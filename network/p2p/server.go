@@ -755,7 +755,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 
 	if !srv.TestMode && srv.localType == discover.SynNode  && c.isboe == false {
-		clog.Error("SynNode peer SynNode, dorp peer.")
+		clog.Debug("SynNode peer SynNode, dorp peer.")
 		c.close(DiscHwSignError)
 		return
 	}

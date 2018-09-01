@@ -450,7 +450,6 @@ func (this *Puller) loop() {
 					// If the delivered header does not match the promised number, drop the announcer
 					if header.Number.Uint64() != announce.number {
 						log.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
-						log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", announce.origin, "header number err")
 						this.dropPeer(announce.origin)
 						this.forgetHash(hash)
 						continue
@@ -663,7 +662,6 @@ func (this *Puller) insert(peer string, block *types.Block) {
 		default:
 			// Something went very wrong, drop the peer
 			log.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", peer, "insert err", err)
 			this.dropPeer(peer)
 			return
 		}

@@ -152,8 +152,6 @@ func (this *fullSync) unregisterPeer(id string) error {
 // syncWithPeer starts a block synchronization based on the hash chain from the
 // specified peer and head hash.
 func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Hash, td *big.Int) (err error) {
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> syncWithPeer","peer", p.id)
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> syncWithPeer end","peer", p.id)
 	for _, ch := range []chan bool{this.bodyWakeCh, this.receiptWakeCh} {
 		select {
 		case <-ch:
@@ -199,24 +197,20 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 
 	log.Debug("Synchronising with the network", "peer", p.id, "hpb", p.version, "head", hash, "td", td, "mode", config.FullSync)
 	defer func(start time.Time) {
-		log.Error("Synchronisation terminated", "peer", p.id, "elapsed", time.Since(start))
+		log.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())
 
 	// Look up the sync boundaries: the common ancestor and the target block
 	latest, err := this.fetchHeight(p)
 	if err != nil {
-		log.Error("------ ------ ------ ------ fetchHeight ","peer", p.id)
 		return err
 	}
-	log.Error("------ ------ ------ ------ fetchHeight OK ","peer", p.id)
 	height := latest.Number.Uint64()
 
 	origin, err := this.findAncestor(p, height)
 	if err != nil {
-		log.Error("------ ------ ------ ------ findAncestor ","peer", p.id)
 		return err
 	}
-	log.Error("------ ------ ------ ------ findAncestor OK ","peer", p.id)
 	this.syncer.syncStatsLock.Lock()
 	if this.syncer.syncStatsChainHeight <= origin || this.syncer.syncStatsChainOrigin > origin {
 		this.syncer.syncStatsChainOrigin = origin
@@ -304,7 +298,7 @@ func (this *fullSync) fetchHeight(p *peerConnection) (*types.Header, error) {
 			return head, nil
 
 		case <-timeout:
-			p.log.Info("Waiting for head header timed out", "elapsed", ttl)
+			p.log.Debug("Waiting for head header timed out", "elapsed", ttl)
 			return nil, errTimeout
 
 		case <-this.bodyCh:
@@ -396,7 +390,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 			}
 
 		case <-timeout:
-			p.log.Info("Waiting for ancestor timed out", "elapsed", ttl)
+			p.log.Debug("Waiting for head header timed out", "elapsed", ttl)
 			return 0, errTimeout
 
 		case <-this.bodyCh:
@@ -460,7 +454,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 				start = check
 
 			case <-timeout:
-				p.log.Info("Waiting for search header num timed out", "elapsed", ttl)
+				p.log.Debug("Waiting for search header timed out", "elapsed", ttl)
 				return 0, errTimeout
 
 			case <-this.bodyCh:
@@ -496,9 +490,7 @@ func (this *fullSync) fetchHeaders(p *peerConnection, from uint64) error {
 	timeout := time.NewTimer(0) // timer to dump a non-responsive active peer
 	<-timeout.C                 // timeout channel should be initially empty
 	defer timeout.Stop()
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchHeaders ","peer", p.id)
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchHeaders end ","peer", p.id, "elapsed", time.Since(start))
+
 	var ttl time.Duration
 	getHeaders := func(from uint64) {
 		request = time.Now()
@@ -573,9 +565,8 @@ func (this *fullSync) fetchHeaders(p *peerConnection, from uint64) error {
 
 		case <-timeout.C:
 			// Header retrieval timed out, consider the peer bad and drop
-			p.log.Info("Header request timed out and drop peer", "elapsed", ttl)
+			p.log.Debug("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
-			log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", p.id, "fetch header timeout elapsed", ttl)
 			this.syncer.dropPeer(p.id)
 
 			// Finish the sync gracefully instead of dumping the gathered data though
@@ -636,9 +627,6 @@ func (this *fullSync) fillHeaderSkeleton(from uint64, skeleton []*types.Header) 
 // and also periodically checking for timeouts.
 func (this *fullSync) fetchBodies(from uint64) error {
 	log.Debug("syncing block bodies", "origin", from)
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchBodies ")
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchBodies end ", "elapsed", time.Since(start))
 
 	var (
 		deliver = func(packet dataPack) (int, error) {
@@ -663,9 +651,7 @@ func (this *fullSync) fetchBodies(from uint64) error {
 // and also periodically checking for timeouts.
 func (this *fullSync) fetchReceipts(from uint64) error {
 	log.Debug("syncing transaction receipts", "origin", from)
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchReceipts ")
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchReceipts end", "elapsed", time.Since(start))
+
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*receiptPack)
@@ -713,11 +699,6 @@ func (this *fullSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 	expire func() map[string]int, pending func() int, inFlight func() bool, throttle func() bool, reserve func(*peerConnection, int) (*fetchRequest, bool, error),
 	fetchHook func([]*types.Header), fetch func(*peerConnection, *fetchRequest) error, cancel func(*fetchRequest), capacity func(*peerConnection) int,
 	idle func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
-
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchParts ")
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fetchParts end ", "elapsed", time.Since(start))
-
 
 	// Create a ticker to detect expired retrieval tasks
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -801,7 +782,6 @@ func (this *fullSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 						setIdle(peer, 0)
 					} else {
 						peer.log.Debug("Stalling delivery, dropping", "type", kind)
-						log.Warn("###### Synchronisation failed, DROP PEER ######", "peer", pid, "full type", kind)
 						this.syncer.dropPeer(pid)
 					}
 				}
@@ -875,9 +855,6 @@ func (this *fullSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 // keeps processing and scheduling them into the header chain and syncer's
 // sch until the stream ends or a failure occurs.
 func (this *fullSync) processHeaders(origin uint64, td *big.Int) error {
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> processHeaders ")
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> processHeaders end ", "elapsed", time.Since(start))
 	// Keep a count of uncertain headers to roll back
 	rollback := []*types.Header{}
 	defer func() {
@@ -985,9 +962,6 @@ func (this *fullSync) processHeaders(origin uint64, td *big.Int) error {
 
 // processFullSyncContent takes fetch results from the sch and imports them into the chain.
 func (this *fullSync) processFullSyncContent() error {
-	log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> processFullSyncContent ")
-	start := time.Now()
-	defer log.Error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> processFullSyncContent end ", "elapsed", time.Since(start))
 	for {
 		results := this.syncer.sch.WaitResults()
 		if len(results) == 0 {
@@ -1041,26 +1015,14 @@ func (this *fullSync) deliver(id string, destCh chan <- dataPack, packet dataPac
 		}
 	}()
 	// Deliver or abort if the sync is canceled while queuing
-	start := time.Now()
 	this.cancelLock.RLock()
 	cancel := this.cancelCh
 	this.cancelLock.RUnlock()
-	if time.Since(start)>time.Second {
-		log.Info("###### deliver1 ", "peer", id, "elapsed", time.Since(start))
-	}
-
-
 	if cancel == nil {
-		log.Info("###### deliver1 ")
 		return errNoSyncActive
 	}
-
-	start1 := time.Now()
 	select {
 	case destCh <- packet:
-		if time.Since(start)>time.Second {
-			log.Info("###### deliver2 ", "peer", id, "elapsed", time.Since(start1))
-		}
 		return nil
 	case <-cancel:
 		return errNoSyncActive
