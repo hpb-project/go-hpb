@@ -27,7 +27,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -79,27 +78,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if len(msg.Data()) != 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
 			if err != nil {
-				log.Error("----------------------------------applytransaction ","error",errs)
 				return nil, nil, nil, err
 			}
 		}else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
-				log.Error("----------------------------------applytransactionnoncontract ","error",errs)
 				return nil, nil, nil, errs
 			}
 		}
-		if receipt == nil {
-			log.Error("----------------------------------receipt.Logs is nil")
-		}
-		receipts = append(receipts, receipt)
-		if allLogs == nil {
-			log.Error("----------------------------------allLogs is nil")
-		}
-		if receipt == nil {
-			log.Error("----------------------------------receipt.Logs is nil 11")
-		}
 
+		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
@@ -158,14 +146,12 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
-		log.Error("----------------------------------00")
 		return nil, nil, err
 	}
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
 	if err != nil {
-		log.Error("----------------------------------01",":",err)
 		return nil, nil, err
 	}
 
@@ -179,18 +165,15 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
 	if receipt == nil {
-		log.Error("----------------------------------11")
 	}
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
 	if receipt == nil {
-		log.Error("----------------------------------22")
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 	if receipt == nil {
-		log.Error("----------------------------------33")
 	}
 	return receipt, gas, err
 }
