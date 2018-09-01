@@ -278,7 +278,7 @@ func startNode(ctx *cli.Context, stack *node.Node, conf  *config.HpbConfig) {
 	}()
 
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
+	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) && (conf.Network.RoleType == "") {
 		// Set the gas price to the limits from the CLI and start mining
 		stack.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := stack.StartMining(true); err != nil {
