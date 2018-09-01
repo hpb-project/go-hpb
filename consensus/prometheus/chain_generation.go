@@ -213,18 +213,18 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
-	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
-		header.Difficulty = diffInTurn
-	}
 	//header.Difficulty = diffNoTurn
-	//if diffbool, m, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
-	//	log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+	//if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 	//	header.Difficulty = diffInTurn
-	//} else if err != nil {
-	//	log.Error("CalculateCurrentMiner fail", "error", err)
-	//	return err
 	//}
+	header.Difficulty = diffNoTurn
+	if diffbool, m, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+		log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+		header.Difficulty = diffInTurn
+	} else if err != nil {
+		log.Error("CalculateCurrentMiner fail", "error", err)
+		return err
+	}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -537,13 +537,31 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			for caddress, _ := range csnap.VotePercents {
 				state.AddBalance(caddress, cadReward) //reward every cad node average
 			}
+
+			if number%consensus.HpbNodeCheckpointInterval == 0 {
+				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap)
+			}
 		}
 	} else {
 		return err
 	}
+	return nil
+}
+
+// 返回的API
+func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
+	return []rpc.API{{
+		Namespace: "prometheus",
+		Version:   "1.0",
+		Service:   &API{chain: chain, prometheus: c},
+		Public:    false,
+	}}
+}
+
+func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap) error {
 
 	const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"roundNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"contractAddr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"deleteAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"setContractAddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"setFunStr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"funStr\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getContractAddr\",\"outputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getRoundNum\",\"outputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"adminMap\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"setRoundNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getFunStr\",\"outputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"SetContractAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"SetFunStr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"SetRoundNum\",\"type\":\"event\"}]"
-	fechaddr := common.HexToAddress("0x5bd7d60a196a915c8e3bd3e5e922ccce6f437c98")
+	fechaddr := common.HexToAddress("0xe67ac1e2a1848c8a48bd7e466d55a0db8593425a")
 
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
@@ -591,12 +609,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	copy(funparamstr[:], resultfun[66:66+8])
 	funparam := common.Hex2Bytes(string(funparamstr[:]))
 
-	numberparm := big.NewInt(int64(10))
-	paramnum := big.NewInt(int64(0))
-	paramnum.Add(paramnum, header.Number)
-	paramnum.Div(paramnum, numberparm)
-	paramnum.Mul(paramnum, numberparm)
-
+	paramnum := big.NewInt(header.Number.Int64())
 	bufparam := new(bytes.Buffer)
 	bufparam.Write(funparam[:])
 	pendingbc := new([32]byte)
@@ -615,16 +628,8 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		log.Error("realaddr InnerCall success but result length is too short", "length", len(resultvote))
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
-	var number1, number2 *big.Int
-	var rewardsnum uint64
-	number1 = new(big.Int).SetBytes(resultvote[0:32])
-	number2 = new(big.Int).SetBytes(resultvote[32:64])
-	log.Error("two numbers", "first", number1, "second", number2)
-	if number1.Cmp(number2) >= 0 { //number1 >= number2 return , no cad vote percent rewards
-		return nil
-	}
 	resultvote = resultvote[64:]
-	rewardsnum = number2.Uint64() - number1.Uint64() //calc vote percent rewards block numbers
+	rewardsnum := consensus.CadNodeCheckpointInterval
 
 	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
@@ -639,23 +644,29 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		return errors.New("vote contract return addrs and votes number donnot match")
 	}
 	log.Error("addr and vote peer count", "count", addrbigcount)
-	addrs := make([]common.Address, 0, addrbigcount.Int64())
-	addrsvotes := make([]big.Int, 0, addrbigcount.Int64())
+
+	voteres := make(map[common.Address]big.Int)
 	for i := 0; i < int(addrbigcount.Int64()); i++ {
 		var tempaddr common.Address
 		tempaddr.SetBytes(resultvote[64+32+i*32 : 64+32+i*32+32])
-		addrs = append(addrs, tempaddr)
 		log.Error("addr", "tempaddr", common.Bytes2Hex(tempaddr[:]))
 
 		var tempvote big.Int
 		tempvote.SetBytes(resultvote[64+32+(i+5)*32 : 64+32+(i+5)*32+32])
-		addrsvotes = append(addrsvotes, tempvote)
 		log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
+
+		voteres[tempaddr] = tempvote
+	}
+
+	for addr, _ := range voteres {
+		if _, ok := csnap.VotePercents[addr]; ok {
+			delete(voteres, addr)
+		}
 	}
 
 	//获取所有cad的总票数
 	votecounts := new(big.Int)
-	for _, votes := range addrsvotes {
+	for _, votes := range voteres {
 		votecounts.Add(votecounts, &votes)
 	}
 	votecountsfloat := new(big.Float)
@@ -667,10 +678,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	bigA13.Mul(bigA13, big.NewFloat(float64(rewardsnum))) //mul interval number
 	log.Error("one vote period cad percent rewards", "value", bigA13)
 
-	for index, addr := range addrs {
+	for addr, votes := range voteres {
 		tempaddrvotefloat := new(big.Float)
 		tempreward := new(big.Int)
-		tempaddrvotefloat.SetInt(&addrsvotes[index])
+		tempaddrvotefloat.SetInt(&votes)
 		tempaddrvotefloat.Quo(tempaddrvotefloat, votecountsfloat)
 		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
 		tempaddrvotefloat.Int(tempreward)
@@ -679,14 +690,4 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		log.Error("reward cad node by vote percent", "tempreward", tempreward)
 	}
 	return nil
-}
-
-// 返回的API
-func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
-	return []rpc.API{{
-		Namespace: "prometheus",
-		Version:   "1.0",
-		Service:   &API{chain: chain, prometheus: c},
-		Public:    false,
-	}}
 }

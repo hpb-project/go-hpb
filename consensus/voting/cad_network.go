@@ -30,6 +30,7 @@ import (
 	// "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -60,7 +61,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 		//transactionNum := float64(peer.TxsRate()) * float64(0.7)
 		//VoteIndex := networkBandwidth + transactionNum
 
-		if peer.LocalType() != discover.BootNode && peer.LocalType() != discover.SynNode {
+		if peer.RemoteType() != discover.BootNode && peer.RemoteType() != discover.SynNode {
 			//networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
 			//transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			if len(peer.Address()) == 0 || peer.Address() == address {
@@ -68,6 +69,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			}
 			transactionNum := peer.TxsRate() * float64(0.6)
 			networkBandwidth := peer.Bandwidth() * float64(0.3)
+			log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
 			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
 
 			onether2weis := big.NewInt(10)
