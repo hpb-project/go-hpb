@@ -181,18 +181,15 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	hpbnode.accman = am
 
-	if conf.Node.TestMode == 1 || conf.Network.RoleType == "bootnode" || conf.Network.RoleType == "synnode"{
+	hpbnode.Hpbboe = boe.BoeGetInstance()
+	err = hpbnode.Hpbboe.Init()
+	if err != nil {
+		panic("Boe init fail.")
 		hpbnode.Boeflag = 0
 	}else {
-		hpbnode.Hpbboe = boe.BoeGetInstance()
-		err = hpbnode.Hpbboe.Init()
-		if err != nil {
-			panic("Boe init fail.")
-			hpbnode.Boeflag = 0
-		}else {
-			hpbnode.Boeflag = 1
-		}
+		hpbnode.Boeflag = 1
 	}
+
 
 
 	//Get coinbase from boe and set it to node.hperbase
@@ -569,9 +566,6 @@ func (self *Node) SetHpberbase(hpberbase common.Address) {
 }
 
 func (s *Node) StartMining(local bool) error {
-	if config.GetHpbConfigInstance().Network.RoleType == "synnode" || config.GetHpbConfigInstance().Network.RoleType == "bootnode" {
-		return fmt.Errorf("Synnode or bootnode can't mine")
-	}
 	//read coinbase from node
 	eb := s.hpberbase
 

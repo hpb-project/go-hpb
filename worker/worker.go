@@ -285,9 +285,7 @@ func (self *worker) eventListener() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			if config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" {
-				self.startNewMinerRound()
-			}
+			self.startNewMinerRound()
 
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -302,9 +300,9 @@ func (self *worker) eventListener() {
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
-				acc, _ := types.Sender(types.NewBoeSigner(self.config.ChainId), ev.Tx)
+				acc, _ := types.Sender(self.current.signer, ev.Tx)
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-				txset := types.NewTransactionsByPriceAndNonce(types.NewBoeSigner(self.config.ChainId), txs)
+				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 
 				self.current.commitTransactions(self.mux, txset, self.coinbase)
 				self.currentMu.Unlock()
