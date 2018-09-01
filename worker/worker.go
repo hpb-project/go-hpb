@@ -285,7 +285,9 @@ func (self *worker) eventListener() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			self.startNewMinerRound()
+			if config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" {
+				self.startNewMinerRound()
+			}
 
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
