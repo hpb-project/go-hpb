@@ -229,6 +229,7 @@ func (st *StateTransition) preCheck() error {
 func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
 	if err = st.preCheck(); err != nil {
+		log.Error("----------------------------------preCheck ","error",err)
 		return nil, nil, nil,false, err
 	}
 	msg := st.msg
@@ -237,11 +238,13 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 
 	intrinsicGas := new(big.Int).SetUint64(config.TxGas)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		log.Error("----------------------------------useGas ","error",err)
 		return nil, nil, nil, false, err
 	}
 
 	// Fail if we're trying to transfer more than the available balance
 	if !native.CanTransfer(st.state, from, msg.Value()) {
+		log.Error("----------------------------------cantransfer","error",err)
 		return nil, nil, nil, false, ErrInsufficientBalance
 	}
 

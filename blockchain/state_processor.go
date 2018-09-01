@@ -79,11 +79,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if len(msg.Data()) != 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
 			if err != nil {
+				log.Error("----------------------------------applytransaction ","error",errs)
 				return nil, nil, nil, err
 			}
 		}else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
-			if err != nil {
+			if errs != nil {
+				log.Error("----------------------------------applytransactionnoncontract ","error",errs)
 				return nil, nil, nil, errs
 			}
 		}
@@ -156,12 +158,14 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
+		log.Error("----------------------------------00")
 		return nil, nil, err
 	}
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
 	if err != nil {
+		log.Error("----------------------------------01",":",err)
 		return nil, nil, err
 	}
 
