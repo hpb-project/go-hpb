@@ -230,7 +230,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 
 	if err = st.preCheck(); err != nil {
 		log.Error("----------------------------------preCheck ","error",err)
-		return nil, nil, nil,false, err
+		return
 	}
 	msg := st.msg
 	from := st.msg.From()
