@@ -486,6 +486,10 @@ END:
 	for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
 		snap.Signers[finaltally[i]] = struct{}{}
 	}
+	zeroaddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
+	if _, ok := snap.Signers[zeroaddr]; ok {
+		delete(snap.Signers, zeroaddr)
+	}
 
 	//if len(snap.Tally) != 0 {
 	//	for k,v := range snap.Tally {
