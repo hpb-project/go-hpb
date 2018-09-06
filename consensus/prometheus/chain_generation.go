@@ -184,7 +184,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
 
-	if config.GetHpbConfigInstance().Node.TestMode == 1 {
+	if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "synnode" {
 		//panic("boe broke, please contact with hpb")
 		log.Info("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
