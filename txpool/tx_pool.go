@@ -208,7 +208,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			for addr := range pool.queue {
 				// Any old enough should be removed
-				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
+				if false {//time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					for _, tx := range pool.queue[addr].Flatten() {
 						pool.removeTx(tx.Hash())
 					}
@@ -220,6 +220,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			// Any old enough should be removed
 			for txTmphash ,tmpBeatsV:= range pool.tmpbeats {
+				//cancel delete txs
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					delete(pool.tmpqueue, txTmphash)
 					delete(pool.tmpbeats, txTmphash)
@@ -532,11 +533,6 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 	// Gather all the accounts potentially needing updates
-	var accFlag bool
-	if accounts == nil {
-		accFlag=true
-	}
-
 	if accounts == nil {
 		accounts = make([]common.Address, 0, len(pool.queue))
 		for addr := range pool.queue {
@@ -593,13 +589,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.queue, addr)
 		}
 	}
-	if accFlag {
 
-		pool.keepFit()
-	}else{
+	pool.keepFit()
 
-		pool.keepFitSend()
-	}
 }
 
 // demoteUnexecutables removes invalid and processed transactions from the pools
