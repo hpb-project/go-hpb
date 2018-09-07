@@ -467,7 +467,7 @@ running:
 		scheduleTasks()
 
 		srv.delHist.expire(time.Now())
-		log.Debug("###### Server running: expire node from history.","DelHist",srv.delHist.Len())
+		log.Trace("###### Server running: expire node from history.","DelHist",srv.delHist.Len())
 		select {
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
@@ -540,7 +540,8 @@ running:
 			// A peer disconnected.
 			nid := pd.ID()
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Info("Removing p2p peer", "duration", d, "req", pd.requested, "err", pd.err)
+			pd.log.Info("Removing p2p peer", "duration", d)
+			pd.log.Debug("Removing p2p peer", "duration", d, "req", pd.requested, "err", pd.err)
 			delete(peers, nid)
 
 			shortid := fmt.Sprintf("%x", nid[0:8])
@@ -727,7 +728,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.their = *their
 	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Debug("Do protocol handshake.","our",c.our,"their",c.their)
+	log.Trace("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	isBootnode := false
@@ -781,15 +782,15 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	//log.Debug("######Get remote hardware table","ourtable",ourHdtable)
 	theirHdtable, err := c.doHardwareTable(ourHdtable)
 	if err != nil {
-		clog.Warn("Failed hardware table handshake", "reason", err)
+		clog.Debug("Failed hardware table handshake", "reason", err)
 		c.close(err)
 		return
 	}
-	log.Debug("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
+	log.Trace("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
 
 	if isBootnode {
 		srv.hdtab = theirHdtable.Hdtab
-		log.Debug("Update hardware table from boot.","srv hdtab", srv.hdtab )
+		log.Trace("Update hardware table from boot.","srv hdtab", srv.hdtab )
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////
