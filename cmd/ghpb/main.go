@@ -107,6 +107,8 @@ var (
 		utils.ExtraDataFlag,
 		utils.NodeTypeFlag,
 		utils.TestModeFlag,
+		utils.RPCVirtualHostsFlag,
+
 		configFileFlag,
 	}
 

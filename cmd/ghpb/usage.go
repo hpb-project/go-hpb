@@ -147,6 +147,8 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
 			utils.TestModeFlag,
+			utils.RPCVirtualHostsFlag,
+
 		},
 	},
 	{
