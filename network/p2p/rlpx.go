@@ -648,8 +648,8 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 		log.Error("Write message size overflows uint24.")
 		//return errors.New("message size overflows uint24")
 	}
-	putInt24(fsize, headbuf) // TODO: check overflow
-	copy(headbuf[3:], zeroHeader)
+	putInt32(fsize, headbuf) // TODO: check overflow
+	copy(headbuf[4:], zeroHeader)
 	rw.enc.XORKeyStream(headbuf[:16], headbuf[:16]) // first half is now encrypted
 
 	// write header MAC
@@ -701,7 +701,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 		return msg, errors.New("bad header MAC")
 	}
 	rw.dec.XORKeyStream(headbuf[:16], headbuf[:16]) // first half is now decrypted
-	fsize := readInt24(headbuf)
+	fsize := readInt32(headbuf)
 	// ignore protocol type for now
 
 	// read the frame content
@@ -773,14 +773,15 @@ func updateMAC(mac hash.Hash, block cipher.Block, seed []byte) []byte {
 	return mac.Sum(nil)[:16]
 }
 
-func readInt24(b []byte) uint32 {
-	return uint32(b[2]) | uint32(b[1])<<8 | uint32(b[0])<<16
+func readInt32(b []byte) uint32 {
+	return uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 }
 
-func putInt24(v uint32, b []byte) {
-	b[0] = byte(v >> 16)
-	b[1] = byte(v >> 8)
-	b[2] = byte(v)
+func putInt32(v uint32, b []byte) {
+	b[0] = byte(v >> 24)
+	b[1] = byte(v >> 16)
+	b[2] = byte(v >> 8)
+	b[3] = byte(v)
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
