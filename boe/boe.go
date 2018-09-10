@@ -86,7 +86,7 @@ func (boe *BoeHandle) Init()(error) {
         bcontinue = true
         return nil
     }
-    //fmt.Printf("Init ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    //fmt.Printf("[boe]Init ecode:%d\r\n", uint32(ret.ecode))
     C.boe_err_free(ret)
     return ErrInitFailed
 }
@@ -98,7 +98,7 @@ func (boe *BoeHandle) Release() (error) {
     if ret == C.BOE_OK {
         return nil
     }
-    fmt.Printf("Release ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    fmt.Printf("[boe]Release ecode:%d\r\n", uint32(ret.ecode))
     C.boe_err_free(ret)
     return ErrInitFailed
 }
@@ -119,7 +119,7 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
         var str string = string(acc[:])
         return str,nil
     }
-    fmt.Printf("GetBindAccount ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    fmt.Printf("[boe]GetBindAccount ecode:%d\r\n", uint32(ret.ecode))
     C.boe_err_free(ret)
     return "",ErrGetAccountFailed
 
@@ -132,7 +132,7 @@ func (boe *BoeHandle) GetVersion() (TVersion,error) {
         var v TVersion = TVersion{H:int(H), M:int(M), F:int(F), D:int(D)}
         return v,nil
     }
-    //fmt.Printf("GetVersion ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+    //fmt.Printf("[boe]GetVersion ecode:%d\r\n", uint32(ret.ecode))
     C.boe_err_free(ret)
     var v TVersion
     return v,ErrInitFailed
@@ -149,7 +149,7 @@ func (boe *BoeHandle) GetBoeId() (string,error){
     var sn string
     ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
     if ret != C.BOE_OK{
-        fmt.Printf("ecode:%d, emsg:%s\r\n", uint32(ret.ecode), ret.emsg)
+        fmt.Printf("[boe]ecode:%d\r\n", uint32(ret.ecode))
         C.boe_err_free(ret)
         return "", ErrGetSNFailed
     }
@@ -185,7 +185,7 @@ func (boe *BoeHandle) FWUpdate() error{
         fmt.Println("upgrade successed.")
         return nil
     }
-    fmt.Printf("UpgradeAbort ecode:%d, emsg:%s\n",uint32(ret.ecode), ret.emsg)
+    fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n",uint32(ret.ecode))
     C.boe_err_free(ret)
     return ErrUpdateFailed
 }
@@ -195,7 +195,7 @@ func (boe *BoeHandle) FWUpdateAbort() error{
     if ret == C.BOE_OK {
         return nil
     }
-    fmt.Printf("UpgradeAbort ecode:%d, emsg:%s\n",uint32(ret.ecode), ret.emsg)
+    fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n",uint32(ret.ecode))
     C.boe_err_free(ret)
     return ErrUpdateAbortFailed
 }
@@ -270,7 +270,7 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     }
 
     copy(result[:], pub[0:])
-    log.Trace("software validate sign success")
+    log.Trace("software   validate sign success")
 
     return result, nil
 }

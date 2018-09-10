@@ -150,7 +150,7 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	}
 
 	// Apply the transaction to the current state (included in the env)
-	_, gas, failed, err := ApplyMessageNonContract(msg,  gp, statedb, header)
+	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,7 +159,6 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	var root []byte
 
 	statedb.Finalise(true)
-
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx

@@ -112,7 +112,7 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 		state:      evm.StateDB,
 	}
 }
-func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header) *StateTransition {
+func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
 	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
 		//evm:        evm,
@@ -125,6 +125,7 @@ func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.Stat
 		header:     header,
 		//native:     nativeCall,
 		state:      statedb,
+		author:     author,
 	}
 }
 
@@ -132,10 +133,10 @@ func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.Stat
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessageNonContract(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
-	st := NewStateTransitionNonEVM( msg, gp, statedb, header)
+func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
+	st := NewStateTransitionNonEVM( msg, gp, statedb, header, author)
 
-	ret, _, gasUsed, failed, err := st.TransitionOnNative()
+	ret, _, gasUsed, failed, err := st.TransitionOnNative(bc)
 	return ret, gasUsed, failed, err
 }
 
@@ -225,7 +226,7 @@ func (st *StateTransition) preCheck() error {
 	return st.buyGas()
 }
 
-func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
 	if err = st.preCheck(); err != nil {
 		return nil, nil, nil,false, err
@@ -233,6 +234,11 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 	msg := st.msg
 	from := st.msg.From()
 	to := st.to().Address()
+
+	intrinsicGas := new(big.Int).SetUint64(config.TxGas)
+	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		return nil, nil, nil, false, err
+	}
 
 	// Fail if we're trying to transfer more than the available balance
 	if !native.CanTransfer(st.state, from, msg.Value()) {
@@ -252,7 +258,7 @@ func (st *StateTransition) TransitionOnNative() (ret []byte, requiredGas, usedGa
 
 	var beneficiary common.Address
 	if st.author == nil {
-		beneficiary, _ = InstanceBlockChain().Engine().Author(st.header) // Ignore error, we're past header validation
+		beneficiary, _ = bc.Engine().Author(st.header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *st.author
 	}

@@ -27,16 +27,17 @@ const (
 	SubProtocolV111 uint = 100 // Light Hpb Sub-protocol versions
 )
 const (
-	VersionMajor = 0        // Major version component of the current release
-	VersionMinor = 3        // Minor version component of the current release
+	VersionMajor = 1        // Major version component of the current release
+	VersionHardv = 0        // Hardware version component of the current release
+	VersionMinor = 0        // Minor version component of the current release
 	VersionPatch = 0        // Patch version component of the current release
-	VersionMeta  = "dev" // Version metadata to append to the version string
+	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 
 
 // Version holds the textual version string.
 var Version = func() string {
-	v := fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
+	v := fmt.Sprintf("%d.%d.%d.%d", VersionMajor, VersionHardv,VersionMinor, VersionPatch)
 	if VersionMeta != "" {
 		v += "-" + VersionMeta
 	}
