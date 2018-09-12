@@ -261,14 +261,14 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 
 	return false
 }
-
+/*
 func (prm *PeerManager) SetHpRemoteFlag(flag bool) {
 	//log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)
 	if prm.server.hpflag != flag {
 		prm.server.hpflag = flag
 	}
 }
-
+*/
 // Len returns if the current number of peers in the set.
 func (prm *PeerManager) Len() int {
 	prm.lock.RLock()

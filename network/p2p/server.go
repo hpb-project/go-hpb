@@ -32,8 +32,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
-	"path/filepath"
-	"os"
 	"github.com/hpb-project/go-hpb/boe"
 	"strings"
 )
@@ -117,8 +115,8 @@ type Server struct {
 	delHist       *dialHistory
 
 	//only for test
-	hpflag       bool // block num > 100  this should be false
-	hptype       [] RemotePeerType
+	//hpflag       bool // block num > 100  this should be false
+	//hptype       [] RemotePeerType
 
 	hdtab        [] HwPair
 
@@ -368,10 +366,12 @@ func (srv *Server) Start() (err error) {
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
+	/*
 	//todo: only for test
 	log.Warn("!!! config.json should include your pid of hpnodes in first turn !!!")
 	srv.parseRemoteHpType()
 	log.Debug("Server start","hpflag",srv.hpflag)
+	*/
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
 	log.Info("Server start with type.","NodeType",srv.localType.ToString())
@@ -534,6 +534,7 @@ running:
 					}
 				}
 				//////////////////////////////////////////////////////////
+				/*
 				// todo only for test
 				if srv.hpflag {
 					log.Debug("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
@@ -544,6 +545,7 @@ running:
 						}
 					}
 				}
+				*/
 
 				//////////////////////////////////////////////////////////
 
@@ -878,6 +880,7 @@ func (srv *Server) runPeer(p *PeerBase) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/*
 //for test code
 const  remotePeerTypeFileName  = "config.json"
 type RemotePeerType struct {
@@ -907,4 +910,5 @@ func (srv *Server) parseRemoteHpType()  error{
 
 	return  nil
 }
+*/
 ///////////////////////////////////////////////////////////////////////////////
