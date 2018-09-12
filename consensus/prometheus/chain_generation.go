@@ -143,9 +143,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	if number <= consensus.HpbNodeCheckpointInterval {
 		SetNetNodeType(snap)
-		p2p.PeerMgrInst().SetHpRemoteFlag(true)
+		//p2p.PeerMgrInst().SetHpRemoteFlag(true)
 	} else {
-		p2p.PeerMgrInst().SetHpRemoteFlag(false)
+		//p2p.PeerMgrInst().SetHpRemoteFlag(false)
 	}
 
 	c.lock.RLock()
