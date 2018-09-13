@@ -20,10 +20,10 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/consensus"
 )
 
@@ -131,11 +131,13 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 func CanTransfer(db StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
 }
+
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
 func Transfer(db StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
 }
+
 // NewEVM retutrns a new EVM . The returned EVM is not thread safe and should
 // only ever be used *once*.
 func NewEVM(ctx Context, statedb StateDB, chainConfig *config.ChainConfig, vmConfig Config) *EVM {
@@ -203,6 +205,48 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 	}
 	return ret, contract.Gas, err
+}
+
+func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte) (ret []byte, err error) {
+	//log.Error("test inner call", "addr", common.Bytes2Hex(addr[:]), "input", common.Bytes2Hex(input))
+	if evm.vmConfig.NoRecursion && evm.depth > 0 {
+		return nil, nil
+	}
+
+	// Fail if we're trying to execute above the call depth limit
+	if evm.depth > int(config.CallCreateDepth) {
+		return nil, ErrDepth
+	}
+
+	var (
+		to       = AccountRef(addr)
+		snapshot = evm.StateDB.Snapshot()
+	)
+	if !evm.StateDB.Exist(addr) {
+		precompiles := PrecompiledContractsByzantium
+		if precompiles[addr] == nil {
+			return nil, nil
+		}
+		evm.StateDB.CreateAccount(addr)
+	}
+
+	// initialise a new contract and set the code that is to be used by the
+	// E The contract is a scoped environment for this execution context
+	// only.
+	//contract := NewContract(caller, to, value, gas)
+	//contract := NewContract(caller, to, big.NewInt(0), 49999986000000)
+	contract := NewContract(caller, to, big.NewInt(0), 89954)
+	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	//ret, err = run(evm, snapshot, contract, input)
+	ret, err = run(evm, snapshot, contract, input)
+	if err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
+		if err != errExecutionReverted {
+			//contract.UseGas(contract.Gas)
+		}
+	}
+
+	return ret, err
 }
 
 // CallCode executes the contract associated with the addr with the given input

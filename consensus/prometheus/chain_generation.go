@@ -39,9 +39,12 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	//"strconv"
 	"errors"
+	"github.com/hpb-project/go-hpb/account/abi"
 	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/hvm/evm"
 	"math"
 	"math/rand"
+	"strings"
 )
 
 const (
@@ -140,13 +143,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//if cerr != nil {
 	//	return err
 	//}
-
-	if number <= consensus.HpbNodeCheckpointInterval {
-		SetNetNodeType(snap)
-		//p2p.PeerMgrInst().SetHpRemoteFlag(true)
-	} else {
-		//p2p.PeerMgrInst().SetHpRemoteFlag(false)
-	}
+	SetNetNodeType(snap)
 
 	c.lock.RLock()
 	//bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
@@ -187,8 +184,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
 
-	if c.hboe == nil {
-		log.Error("boe.BoeGetInstance() fail", "c.hboe", "instance is nil")
+	if config.GetHpbConfigInstance().Node.TestMode == 1 {
+		//panic("boe broke, please contact with hpb")
+		log.Info("no boe device, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, parentheader.HardwareRandom)
 		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
@@ -205,27 +203,24 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 		} else {
-			log.Info("no boe device, using the gensis.json hardwarerandom")
-			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-			copy(header.HardwareRandom, parentheader.HardwareRandom)
-			header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+			panic("boe broke, please contact with hpb")
 		}
-
 	}
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
-	//header.Difficulty = diffNoTurn
-	//if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.signer) {
-	//	header.Difficulty = diffInTurn
-	//}
 	header.Difficulty = diffNoTurn
-	if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
-	} else if err != nil {
-		log.Error("CalculateCurrentMiner fail", "error", err)
-		return err
 	}
+	//header.Difficulty = diffNoTurn
+	//if diffbool, m, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	//	log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+	//	header.Difficulty = diffInTurn
+	//} else if err != nil {
+	//	log.Error("CalculateCurrentMiner fail", "error", err)
+	//	return err
+	//}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -279,18 +274,18 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex())
+	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
 
 	c.lock.RUnlock()
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 
 	// 已经投票结束
-	if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
-		// 轮转
-		SetNetNodeType(snap)
-		//log.Info("SetNetNodeType ***********************")
-	}
+	//if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
+	// 轮转
+	SetNetNodeType(snap)
+	//log.Info("SetNetNodeType ***********************")
+	//}
 
 	if err != nil {
 		return nil, err
@@ -361,22 +356,23 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		if zeroaddr.Big().Cmp(primemineraddr.Big()) == 0 {
 			return nil, errors.New("primemineraddr is nil")
 		}
-		currentminer := snap.GetOffset(0, primemineraddr)
-		//currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
+		//currentminer := snap.GetOffset(0, primemineraddr)
+		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
+		//log.Error("-----genblocksig---------test for waiting 8 minutes--------------", "primemineraddr", primemineraddr, "primeoffset", currentminer, "number", number)
 		myoffset := snap.GetOffset(header.Number.Uint64(), signer)
 		distance := int(math.Abs(float64(int64(myoffset) - int64(currentminer))))
 		if distance > len(snap.Signers)/2 {
 			distance = len(snap.Signers) - distance
 		}
 		if distance > len(snap.Signers)/consensus.StepLength { //if signers length is smaller than 3,  it means myoffset smaller than currentminer have high priority
-			delay += time.Duration(len(snap.Signers)-distance+rand.Intn(5)) * wiggleTime
+			delay += time.Duration(len(snap.Signers)-distance+10+rand.Intn(5)) * wiggleTime
 		} else {
 			wiggle = time.Duration(1000+rand.Intn(len(snap.Signers))) * wiggleTime
 			delay += wiggle
 		}
 	}
 
-	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
+	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay), "number", number)
 
 	select {
 	case <-stop:
@@ -427,7 +423,11 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 				peer.SetRemoteType(discover.PreNode)
 			}
 		case discover.SynNode:
-			peer.SetRemoteType(discover.SynNode)
+			if flag := FindHpbNode(peer.Address(), addresses); flag {
+				log.Info("SynNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				peer.SetRemoteType(discover.HpNode)
+			}
+			//peer.SetRemoteType(discover.SynNode)
 		default:
 			break
 		}
@@ -462,7 +462,10 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
 	//log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
-	c.CalculateRewards(chain, state, header, uncles) //系统奖励
+	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
+	if err != nil {
+		log.Error("CalculateRewards return error", "err", err)
+	}
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
 	// 返回最终的区块
@@ -515,7 +518,6 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}
 	state.AddBalance(header.Coinbase, finalhpbrewards)
 
-	//候选节点奖励，等高性能节点奖励测试通过在测试候选节点奖励
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {
 			bigA23.Mul(bigA23, big.NewFloat(0.65))
@@ -527,45 +529,151 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 			cadReward := new(big.Int)
 			bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
-			//获取所有cad的总票数
-			votecounts := new(big.Float)
-			for _, votes := range csnap.VotePercents {
-				votecounts.Add(votecounts, big.NewFloat(votes))
-			}
-			for caddress, votes := range csnap.VotePercents {
-				var tempfloat = new(big.Float)
-				var tempInt = new(big.Int)
-				tempfloat.Quo(bigA13, big.NewFloat(3)) //calc all candidate nodes rewards coin about votepercent
-				votepercent := new(big.Float)
-				bigvotes := big.NewFloat(votes)
-				//计算获得的投票率
-				votepercent = bigvotes.Quo(bigvotes, votecounts) //calc vote percent
-				tempfloat.Mul(tempfloat, votepercent)            //every candidate node rewards coin about vote percent
-				tempfloat.Mul(tempfloat, ether2weisfloat)        //every candidate node rewards weis about vote percent
-				tempfloat.Int(tempInt)                           //from big.Float to big.Int
-				tempInt.Add(cadReward, tempInt)                  //average rewards add votepercent rewards is the final rewards for every candidate node
-				state.AddBalance(caddress, tempInt)
-				//state.GetBalance(caddress)
+
+			for caddress, _ := range csnap.VotePercents {
+				state.AddBalance(caddress, cadReward) //reward every cad node average
 			}
 		}
 	} else {
 		return err
 	}
 
-	// Accumulate the rewards for the miner and any included uncles
-	/*
-		r := new(big.Int)
-		for _, uncle := range uncles {
-			r.Add(uncle.Number, big8)
-			r.Sub(r, header.Number)
-			r.Mul(r, blockReward)
-			r.Div(r, big8)
-			state.AddBalance(uncle.Coinbase, r)
-			r.Div(blockReward, big32)
-			reward.Add(reward, r)
+	const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"roundNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"contractAddr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"deleteAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"setContractAddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"setFunStr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"funStr\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getContractAddr\",\"outputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getRoundNum\",\"outputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"adminMap\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"setRoundNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getFunStr\",\"outputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"SetContractAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"SetFunStr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"SetRoundNum\",\"type\":\"event\"}]"
+	fechaddr := common.HexToAddress("0x5bd7d60a196a915c8e3bd3e5e922ccce6f437c98")
+
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.signer,
+		Coinbase:    c.signer,
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(FechHpbBallotAddrABI))
+
+	//get contract addr
+	packres, err := fechABI.Pack("getContractAddr")
+	//log.Error("getContractAddr packres", "packres", common.Bytes2Hex(packres))
+	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
+	if err != nil {
+		log.Error("getContractAddr InnerCall fail", "err", err)
+		return err
+	} else {
+		log.Error("getContractAddr InnerCall success", "result string", common.Bytes2Hex(resultaddr))
+	}
+
+	packres, _ = fechABI.Pack("getFunStr")
+	log.Error("getFunStr packres", "packres", common.Bytes2Hex(packres))
+	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
+	if err != nil {
+		log.Error("getFunStr InnerCall fail", "err", err)
+		return err
+	} else {
+		if len(resultfun) < 74 {
+			log.Error("getFunStr InnerCall success", "result string", common.Bytes2Hex(resultfun))
+			return errors.New("getFunStr InnerCall success but result length is short")
 		}
-	*/
-	//state.AddBalance(header.Coinbase, reward)
+	}
+
+	//use read contract addr and funstr get vote result
+	realaddr := common.BytesToAddress(resultaddr)
+	funparamstr := new([8]byte)
+	copy(funparamstr[:], resultfun[66:66+8])
+	funparam := common.Hex2Bytes(string(funparamstr[:]))
+
+	numberparm := big.NewInt(int64(10))
+	paramnum := big.NewInt(int64(0))
+	paramnum.Add(paramnum, header.Number)
+	paramnum.Div(paramnum, numberparm)
+	paramnum.Mul(paramnum, numberparm)
+
+	bufparam := new(bytes.Buffer)
+	bufparam.Write(funparam[:])
+	pendingbc := new([32]byte)
+	bufparam.Write(pendingbc[:32-len(paramnum.Bytes())])
+	bufparam.Write(paramnum.Bytes())
+
+	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.signer), realaddr, bufparam.Bytes())
+	vmenv.Cancel()
+	if err != nil {
+		log.Error("realaddr InnerCall fail", "err", err)
+		return err
+	} else {
+		log.Error("realaddr InnerCall success", "result", common.Bytes2Hex(resultvote))
+	}
+	if len(resultvote) < 64+32+32+32+32 { //64 bytes + number1 + number2 + addrcounts + votes, at least have these bytes
+		log.Error("realaddr InnerCall success but result length is too short", "length", len(resultvote))
+		return errors.New("realaddr InnerCall success but result length is too short")
+	}
+	var number1, number2 *big.Int
+	var rewardsnum uint64
+	number1 = new(big.Int).SetBytes(resultvote[0:32])
+	number2 = new(big.Int).SetBytes(resultvote[32:64])
+	log.Error("two numbers", "first", number1, "second", number2)
+	if number1.Cmp(number2) >= 0 { //number1 >= number2 return , no cad vote percent rewards
+		return nil
+	}
+	resultvote = resultvote[64:]
+	rewardsnum = number2.Uint64() - number1.Uint64() //calc vote percent rewards block numbers
+
+	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
+	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
+		return errors.New("1 return data length is not enough")
+	}
+	votebigcount := new(big.Int).SetBytes(resultvote[64+32+addrbigcount.Uint64()*32 : 64+32+32+addrbigcount.Uint64()*32])
+	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32+votebigcount.Uint64()*32) {
+		return errors.New("2 return data length is not enough")
+	}
+	log.Error("addr and vote peer count", "addrbigcount", addrbigcount.String(), "votebigcount", votebigcount.String())
+	if addrbigcount.Cmp(votebigcount) != 0 {
+		return errors.New("vote contract return addrs and votes number donnot match")
+	}
+	log.Error("addr and vote peer count", "count", addrbigcount)
+	addrs := make([]common.Address, 0, addrbigcount.Int64())
+	addrsvotes := make([]big.Int, 0, addrbigcount.Int64())
+	for i := 0; i < int(addrbigcount.Int64()); i++ {
+		var tempaddr common.Address
+		tempaddr.SetBytes(resultvote[64+32+i*32 : 64+32+i*32+32])
+		addrs = append(addrs, tempaddr)
+		log.Error("addr", "tempaddr", common.Bytes2Hex(tempaddr[:]))
+
+		var tempvote big.Int
+		tempvote.SetBytes(resultvote[64+32+(i+5)*32 : 64+32+(i+5)*32+32])
+		addrsvotes = append(addrsvotes, tempvote)
+		log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
+	}
+
+	//获取所有cad的总票数
+	votecounts := new(big.Int)
+	for _, votes := range addrsvotes {
+		votecounts.Add(votecounts, &votes)
+	}
+	votecountsfloat := new(big.Float)
+	votecountsfloat.SetInt(votecounts)
+
+	bigA13.Quo(bigA13, big.NewFloat(2))
+	bigA13.Mul(bigA13, ether2weisfloat)
+	log.Error("one block cad vote percent rewards", "value", bigA13)
+	bigA13.Mul(bigA13, big.NewFloat(float64(rewardsnum))) //mul interval number
+	log.Error("one vote period cad percent rewards", "value", bigA13)
+
+	for index, addr := range addrs {
+		tempaddrvotefloat := new(big.Float)
+		tempreward := new(big.Int)
+		tempaddrvotefloat.SetInt(&addrsvotes[index])
+		tempaddrvotefloat.Quo(tempaddrvotefloat, votecountsfloat)
+		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
+		tempaddrvotefloat.Int(tempreward)
+
+		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
+		log.Error("reward cad node by vote percent", "tempreward", tempreward)
+	}
 	return nil
 }
 
