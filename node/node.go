@@ -181,14 +181,17 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 	hpbnode.accman = am
 
-	hpbnode.Hpbboe = boe.BoeGetInstance()
-
-	err = hpbnode.Hpbboe.Init()
-	if err != nil{
-		log.Warn("boe init error:"," ",err)
+	if conf.Node.TestMode == 1 || conf.Network.RoleType == "bootnode" || conf.Network.RoleType == "synnode"{
 		hpbnode.Boeflag = 0
 	}else {
-		hpbnode.Boeflag = 1
+		hpbnode.Hpbboe = boe.BoeGetInstance()
+		err = hpbnode.Hpbboe.Init()
+		if err != nil {
+			panic("Boe init fail.")
+			hpbnode.Boeflag = 0
+		}else {
+			hpbnode.Boeflag = 1
+		}
 	}
 
 

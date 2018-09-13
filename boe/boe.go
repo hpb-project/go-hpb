@@ -45,6 +45,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	//"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/common/crypto"
+    "github.com/hpb-project/go-hpb/config"
 )
 
 type BoeHandle struct {
@@ -248,31 +249,34 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     copy(m_sig[64-len(s):64], s)
     copy(m_sig[96-len(hash):96], hash)
     m_sig[96] = v
+    // need boe validate without boe
+    if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "bootnode" || config.GetHpbConfigInstance().Network.RoleType == "synnode"{
+        // use software
+        var (
+            sig = make([]byte, 65)
+        )
+        copy(sig[32-len(r):32], r)
+        copy(sig[64-len(s):64], s)
+        sig[64] = v
+        pub, err := crypto.Ecrecover(hash[:], sig)
+        if(err != nil) {
+            return nil, ErrSignCheckFailed
+        }
+        copy(result[:], pub[0:])
+        log.Trace("software   validate sign success")
 
-    c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-    //loushl change to debug
-    if false && c_ret == C.BOE_OK {
-    	log.Trace("boe validate sign success")
-        result[0] = 4
-        return result,nil
+        return result, nil
+    }else {
+        c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+        //loushl change to debug
+        if c_ret == C.BOE_OK {
+            log.Trace("boe validate sign success")
+            result[0] = 4
+            return result,nil
+        }else {
+            panic("Boe validate sign fail")
+        }
     }
-
-    // use software
-    var (
-        sig = make([]byte, 65)
-    )
-    copy(sig[32-len(r):32], r)
-    copy(sig[64-len(s):64], s)
-    sig[64] = v
-    pub, err := crypto.Ecrecover(hash[:], sig)
-    if(err != nil) {
-        return nil, ErrSignCheckFailed
-    }
-
-    copy(result[:], pub[0:])
-    log.Trace("software   validate sign success")
-
-    return result, nil
 }
 
 
