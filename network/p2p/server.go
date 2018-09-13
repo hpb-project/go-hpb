@@ -34,6 +34,8 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"github.com/hpb-project/go-hpb/boe"
 	"strings"
+	"path/filepath"
+	"os"
 )
 
 const (
@@ -116,7 +118,7 @@ type Server struct {
 
 	//only for test
 	//hpflag       bool // block num > 100  this should be false
-	//hptype       [] RemotePeerType
+	synPid       [] SynnodePid
 
 	hdtab        [] HwPair
 
@@ -366,12 +368,9 @@ func (srv *Server) Start() (err error) {
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
-	/*
-	//todo: only for test
-	log.Warn("!!! config.json should include your pid of hpnodes in first turn !!!")
-	srv.parseRemoteHpType()
-	log.Debug("Server start","hpflag",srv.hpflag)
-	*/
+	if srv.TestMode {
+		srv.parseSynnode()
+	}
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
 	log.Info("Server start with type.","NodeType",srv.localType.ToString())
@@ -522,34 +521,10 @@ running:
 				}
 
 				p.beatStart  = time.Now()
-				p.localType  = srv.localType
-
-				p.remoteType = discover.SynNode
-				if c.isboe || srv.TestMode {
-					p.remoteType = discover.PreNode
-				}
-				for _, n := range srv.BootstrapNodes {
-					if n.ID == p.ID() {
-						p.remoteType = discover.BootNode
-					}
-				}
-				//////////////////////////////////////////////////////////
-				/*
-				// todo only for test
-				if srv.hpflag {
-					log.Debug("Set peer remote type in first cycle.","pid",p.ID().TerminalString(), "peertype",srv.hptype)
-					for _, hp := range srv.hptype {
-						if hp.PID == p.ID().TerminalString() {
-							p.remoteType = discover.HpNode
-							p.log.Info("Set remote type.", "remoteType",p.remoteType.ToString())
-						}
-					}
-				}
-				*/
-
+				srv.setPeerInitType(p, c.isboe)
 				//////////////////////////////////////////////////////////
 
-				log.Debug("Server add peer base to run.", "id", c.id, "ltype", p.localType.ToString(),"rtype", p.remoteType.ToString(),"raddr", c.fd.RemoteAddr())
+				log.Debug("Server add peer base to run.", "id", c.id, "raddr", c.fd.RemoteAddr())
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -776,10 +751,10 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 			}
 		}
 	}
-
 	log.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe)
 
-	if c.isboe == false && srv.localType == discover.SynNode{
+
+	if !srv.TestMode && srv.localType == discover.SynNode  && c.isboe == false {
 		clog.Error("SynNode peer SynNode, dorp peer.")
 		c.close(DiscHwSignError)
 		return
@@ -879,36 +854,62 @@ func (srv *Server) runPeer(p *PeerBase) {
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
+
+func (srv *Server) setPeerInitType(p *PeerBase,isboe bool) {
+
+	p.localType = srv.localType
+	p.remoteType = discover.SynNode
+
+	for _, n := range srv.BootstrapNodes {
+		if n.ID == p.ID() {
+			p.remoteType = discover.BootNode
+			p.log.Info("P2P set init peer remote type bootnode")
+			return
+		}
+	}
+
+	if isboe {
+		p.remoteType = discover.PreNode
+		p.log.Info("P2P set init peer remote type prenode")
+		return
+	}
+
+	if srv.TestMode {
+		p.remoteType = discover.PreNode
+		for _, spid := range srv.synPid {
+			if  spid.PID == p.ID().TerminalString() {
+				p.remoteType = discover.SynNode
+				p.log.Info("P2P set init peer remote type synnode (TestMode)")
+				return
+			}
+		}
+		p.log.Info("P2P set init peer remote type prenode (TestMode)")
+	}
+
+
+}
 ///////////////////////////////////////////////////////////////////////////////
-/*
-//for test code
-const  remotePeerTypeFileName  = "config.json"
-type RemotePeerType struct {
+
+//for test synnode
+const  synnodeFile  = "synnode.json"
+type SynnodePid struct {
 	PID    string     `json:"pid"`
 }
-func (srv *Server) parseRemoteHpType()  error{
+
+func (srv *Server) parseSynnode()  error{
 
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	filename := filepath.Join(dir, remotePeerTypeFileName)
-	log.Debug("Parse remote hp type from config.","filename",filename)
+	filename := filepath.Join(dir, synnodeFile)
+	log.Debug("Parse syn node pid from config.","filename",filename)
 
 
-	if err := common.LoadJSON(filename, &srv.hptype); err != nil {
+	if err := common.LoadJSON(filename, &srv.synPid); err != nil {
 		log.Warn(fmt.Sprintf("Can't load file %s: %v", filename, err))
 		return nil
 	}
-
-	if srv.hpflag {
-		for _, hp := range srv.hptype {
-			if hp.PID == srv.ntab.Self().ID.TerminalString() {
-				srv.localType = discover.HpNode
-				log.Warn("Set server local node type to Hpnode.", "localType",srv.localType.ToString())
-			}
-		}
-	}
-	log.Debug("Parse remote hp type from config.","peertype",srv.hptype,"localType",srv.localType.ToString())
+	log.Debug("Parse syn node pid from config.","synPid",srv.synPid)
 
 	return  nil
 }
-*/
+
 ///////////////////////////////////////////////////////////////////////////////
