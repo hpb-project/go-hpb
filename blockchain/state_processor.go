@@ -27,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -88,6 +89,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		}
 
 		receipts = append(receipts, receipt)
+		if allLogs == nil {
+			log.Error("----------------------------------allLogs is nil")
+		}
+		if receipt.Logs == nil {
+			log.Error("----------------------------------receipt.Logs is nil")
+		}
+
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
