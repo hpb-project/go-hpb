@@ -32,7 +32,6 @@ import (
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
@@ -69,7 +68,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			}
 			transactionNum := peer.TxsRate() * float64(0.6)
 			networkBandwidth := peer.Bandwidth() * float64(0.3)
-			log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
+			//log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
 			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
 
 			onether2weis := big.NewInt(10)
