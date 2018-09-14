@@ -584,7 +584,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	//log.Error("getContractAddr packres", "packres", common.Bytes2Hex(packres))
 	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
 	if err != nil {
-		log.Error("getContractAddr InnerCall fail", "err", err)
+		//log.Error("getContractAddr InnerCall fail", "err", err)
 		return err
 	} else {
 		if resultaddr == nil || len(resultaddr) == 0 {
@@ -597,7 +597,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	log.Error("getFunStr packres", "packres", common.Bytes2Hex(packres))
 	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
 	if err != nil {
-		log.Error("getFunStr InnerCall fail", "err", err)
+		//log.Error("getFunStr InnerCall fail", "err", err)
 		return err
 	} else {
 		if resultfun == nil || len(resultfun) < 74 {
@@ -642,9 +642,12 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32+votebigcount.Uint64()*32) {
 		return errors.New("2 return data length is not enough")
 	}
-	log.Error("addr and vote peer count", "addrbigcount", addrbigcount.String(), "votebigcount", votebigcount.String())
+	//log.Error("addr and vote peer count", "addrbigcount", addrbigcount.String(), "votebigcount", votebigcount.String())
 	if addrbigcount.Cmp(votebigcount) != 0 {
 		return errors.New("vote contract return addrs and votes number donnot match")
+	}
+	if addrbigcount.Uint64() == 0 {
+		return nil
 	}
 	//log.Error("addr and vote peer count", "count", addrbigcount)
 
@@ -655,7 +658,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		//log.Error("addr", "tempaddr", common.Bytes2Hex(tempaddr[:]))
 
 		var tempvote big.Int
-		tempvote.SetBytes(resultvote[64+32+(i+5)*32 : 64+32+(i+5)*32+32])
+		tempvote.SetBytes(resultvote[64+32+(i+1+int(addrbigcount.Int64()))*32 : 64+32+(i+1+int(addrbigcount.Int64()))*32+32])
 		//log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 
 		voteres[tempaddr] = tempvote
