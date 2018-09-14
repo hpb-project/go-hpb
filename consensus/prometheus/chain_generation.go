@@ -218,8 +218,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//	header.Difficulty = diffInTurn
 	//}
 	header.Difficulty = diffNoTurn
-	if diffbool, m, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
-		log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+	if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+		//log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
 		header.Difficulty = diffInTurn
 	} else if err != nil {
 		log.Error("CalculateCurrentMiner fail", "error", err)
@@ -587,7 +587,10 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		log.Error("getContractAddr InnerCall fail", "err", err)
 		return err
 	} else {
-		log.Error("getContractAddr InnerCall success", "result string", common.Bytes2Hex(resultaddr))
+		if resultaddr == nil || len(resultaddr) == 0 {
+			return errors.New("return resultaddr is nil or length is 0")
+		}
+		//log.Error("getContractAddr InnerCall success", "result string", common.Bytes2Hex(resultaddr))
 	}
 
 	packres, _ = fechABI.Pack("getFunStr")
@@ -597,8 +600,8 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err
 	} else {
-		if len(resultfun) < 74 {
-			log.Error("getFunStr InnerCall success", "result string", common.Bytes2Hex(resultfun))
+		if resultfun == nil || len(resultfun) < 74 {
+			//log.Error("getFunStr InnerCall success", "result string", common.Bytes2Hex(resultfun))
 			return errors.New("getFunStr InnerCall success but result length is short")
 		}
 	}
@@ -619,13 +622,13 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.signer), realaddr, bufparam.Bytes())
 	vmenv.Cancel()
 	if err != nil {
-		log.Error("realaddr InnerCall fail", "err", err)
+		//log.Error("realaddr InnerCall fail", "err", err)
 		return err
 	} else {
-		log.Error("realaddr InnerCall success", "result", common.Bytes2Hex(resultvote))
+		//log.Error("realaddr InnerCall success", "result", common.Bytes2Hex(resultvote))
 	}
-	if len(resultvote) < 64+32+32+32+32 { //64 bytes + number1 + number2 + addrcounts + votes, at least have these bytes
-		log.Error("realaddr InnerCall success but result length is too short", "length", len(resultvote))
+	if resultvote == nil || len(resultvote) < 64+32+32+32+32 { //64 bytes + number1 + number2 + addrcounts + votes, at least have these bytes
+		//log.Error("realaddr InnerCall success but result length is too short", "length", len(resultvote))
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
@@ -643,17 +646,17 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	if addrbigcount.Cmp(votebigcount) != 0 {
 		return errors.New("vote contract return addrs and votes number donnot match")
 	}
-	log.Error("addr and vote peer count", "count", addrbigcount)
+	//log.Error("addr and vote peer count", "count", addrbigcount)
 
 	voteres := make(map[common.Address]big.Int)
 	for i := 0; i < int(addrbigcount.Int64()); i++ {
 		var tempaddr common.Address
 		tempaddr.SetBytes(resultvote[64+32+i*32 : 64+32+i*32+32])
-		log.Error("addr", "tempaddr", common.Bytes2Hex(tempaddr[:]))
+		//log.Error("addr", "tempaddr", common.Bytes2Hex(tempaddr[:]))
 
 		var tempvote big.Int
 		tempvote.SetBytes(resultvote[64+32+(i+5)*32 : 64+32+(i+5)*32+32])
-		log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
+		//log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 
 		voteres[tempaddr] = tempvote
 	}
@@ -674,9 +677,9 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 
 	bigA13.Quo(bigA13, big.NewFloat(2))
 	bigA13.Mul(bigA13, ether2weisfloat)
-	log.Error("one block cad vote percent rewards", "value", bigA13)
+	//log.Error("one block cad vote percent rewards", "value", bigA13)
 	bigA13.Mul(bigA13, big.NewFloat(float64(rewardsnum))) //mul interval number
-	log.Error("one vote period cad percent rewards", "value", bigA13)
+	//log.Error("one vote period cad percent rewards", "value", bigA13)
 
 	for addr, votes := range voteres {
 		tempaddrvotefloat := new(big.Float)
@@ -687,7 +690,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Int(tempreward)
 
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		log.Error("reward cad node by vote percent", "tempreward", tempreward)
+		//log.Error("reward cad node by vote percent", "tempreward", tempreward)
 	}
 	return nil
 }
