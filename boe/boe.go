@@ -269,7 +269,7 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
         return nil, ErrSignCheckFailed
     }
     copy(result[:], pub[0:])
-    log.Trace("software   validate sign success")
+    log.Trace("software validate sign success")
 
     return result, nil
 
