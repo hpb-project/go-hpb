@@ -220,7 +220,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		log.Error("Hpb protocol massage too large.","msg",msg)
 		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, MaxMsgSize)
 	}
-	start := time.Now()
+
 	// Handle the message depending on its contents
 	switch  msg.Code {
 	case  StatusMsg, ExchangeMsg:
@@ -243,45 +243,24 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			if time.Since(start)>time.Second{
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed seconds", time.Since(start))
-			}else {
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed", time.Since(start))
-			}
+			p.log.Trace("Process syn get msg","msg",msg,"err",err)
 		}
 		return nil
 
 	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			if time.Since(start)>time.Second{
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed seconds", time.Since(start))
-			}else {
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed", time.Since(start))
-			}
+			p.log.Trace("Process syn msg","msg",msg,"err",err)
 		}
 		return nil
 
-	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg:
+	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg,TxMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			if time.Since(start)>time.Second{
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed seconds", time.Since(start))
-			}else {
-				p.log.Info("Process syn msg","msg",msg,"err",err, "msg process elapsed", time.Since(start))
-			}
+			p.log.Trace("Process syn new msg","msg",msg,"err",err)
 		}
 		return nil
-	case TxMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			if time.Since(start)>time.Second{
-				p.log.Debug("Process syn msg","msg",msg,"err",err, "msg process elapsed seconds", time.Since(start))
-			}else {
-				p.log.Debug("Process syn msg","msg",msg,"err",err, "msg process elapsed", time.Since(start))
-			}
-		}
-		return nil
+
 	default:
 		p.log.Error("there is no handle to process msg","code", msg.Code)
 	}

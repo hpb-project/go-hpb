@@ -19,7 +19,6 @@ package config
 
 import (
 	"fmt"
-	"time"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
@@ -45,124 +44,6 @@ const (
 	BloomBitsBlocks uint64 = 4096
 )
 
-const (
-	// This is the amount of time spent waiting in between
-	// redialing a certain node.
-	dialHistoryExpiration = 30 * time.Second
-
-	// Discovery lookups are throttled and can only run
-	// once every few seconds.
-	lookupInterval = 4 * time.Second
-
-	// If no peers are found for this amount of time, the initial bootnodes are
-	// attempted to be connected.
-	fallbackInterval = 20 * time.Second
-
-	// Endpoint resolution is throttled with bounded backoff.
-	initialResolveDelay = 60 * time.Second
-	maxResolveDelay     = time.Hour
-)
-
-const (
-	defaultDialTimeout      = 15 * time.Second
-	refreshPeersInterval    = 30 * time.Second
-	staticPeerCheckInterval = 15 * time.Second
-
-
-	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 16
-
-	// Maximum time allowed for reading a complete message.
-	// This is effectively the amount of time a connection can be idle.
-	frameReadTimeout = 30 * time.Second
-
-	// Maximum amount of time allowed for writing a complete message.
-	frameWriteTimeout = 20 * time.Second
-)
-const (
-	maxUint24 = ^uint32(0) >> 8
-
-	sskLen = 16 // ecies.MaxSharedKeyLength(pubKey) / 2
-	sigLen = 65 // elliptic S256
-	pubLen = 64 // 512 bit pubkey in uncompressed representation without format byte
-	shaLen = 32 // hash length (for nonce etc)
-
-	authMsgLen  = sigLen + shaLen + pubLen + shaLen + 1
-	authRespLen = pubLen + shaLen + 1
-
-	eciesOverhead = 65 /* pubkey */ + 16 /* IV */ + 32 /* MAC */
-
-	encAuthMsgLen  = authMsgLen + eciesOverhead  // size of encrypted pre-EIP-8 initiator handshake
-	encAuthRespLen = authRespLen + eciesOverhead // size of encrypted pre-EIP-8 handshake reply
-
-	// total timeout for encryption handshake and protocol
-	// handshake in both directions.
-	handshakeTimeout = 5 * time.Second
-
-	// This is the timeout for sending the disconnect reason.
-	// This is shorter than the usual timeout because we don't want
-	// to wait if the connection is known to be bad anyway.
-	discWriteTimeout = 1 * time.Second
-)
-
-//Protocal
-const (
-	baseProtocolVersion    = 1
-	baseProtocolLength     = uint64(16)
-	baseProtocolMaxMsgSize = 2 * 1024
-
-	pingInterval = 15 * time.Second
-)
-
-const (
-	// devp2p message codes
-	handshakeMsg = 0x00
-	discMsg      = 0x01
-	pingMsg      = 0x02
-	pongMsg      = 0x03
-	getPeersMsg  = 0x04
-	peersMsg     = 0x05
-)
-
-
-// UDP  超时相关
-const (
-	respTimeout = 500 * time.Millisecond
-	sendTimeout = 500 * time.Millisecond
-	expiration  = 20 * time.Second
-
-	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
-	ntpWarningCooldown  = 10 * time.Minute // Minimum amount of time to pass before repeating NTP warning
-	driftThreshold      = 10 * time.Second // Allowed clock drift before warning user
-)
-
-
-
-const NodeIDBits   = 512
-const RandNoceSize = 32
-
-type NodeType  uint8
-// 节点类型
-const(
-	LightNode  NodeType = 0x10  //默认节点类型，没有通过硬件认证的节点类型都是默认类型 UnknownNode
-
-	AuthNode   NodeType = 0x30  //经过认证的节点
-	PreNode    NodeType = 0x31  //候选节点
-	HpNode     NodeType = 0x60  //高性能节点
-
-	BootNode   NodeType = 0xA0  //启动节点
-)
-
-//节点数据库相关
-
-var (
-	nodeDBNilNodeID      = discover.NodeID{}       // Special node ID to use as a nil element.
-	nodeDBNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
-	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
-
-	nodeDBNodeExpirationOneHour = time.Hour // Time after which an unseen node should be dropped.
-)
-
 var defaultNetworkConfig = NetworkConfig{
 
 	HTTPPort:     DefaultHTTPPort,
@@ -178,17 +59,11 @@ var defaultNetworkConfig = NetworkConfig{
 }
 
 var MainnetBootnodes = []string{
-	// Hpb Foundation Go Bootnodes
-	"hnode://34b0c7792d838a7d0859c0e3701f41678731605625045f65b1cd9e764686be0836cb0b0701053a2517c8804f38c25068deaf308686cba7248c46429053b62752@127.0.0.1:3001",
-	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@127.0.0.1:30011",
-	//"hnode://43b1ad158f0333fb19e8ccdfa99aa5fe90ab7f77c667a19f561f99024f52f3254452d563b9cc87399076fc9194bb0cf86de10d145897e51c62c396ec8579af2f@47.105.118.89:30001",
-	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@101.132.180.98:30011",
-	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a103639059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@47.105.118.89:30101",
-	//"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@127.0.0.1:30101",
-	//"hnode://ce0220052f26d76a1083f56522d8bfcf12b00c7e92b0cab5febe4fb467dbfed5cc616998878dcf23453f26a2b245d1323859d56f80545580425ae08b4365e237@47.100.227.96:20001",
-	//"hnode://fb9ba578cb6a47d0794e983be7438f075db136c3a9e170681bf6d99821493c3f3e48d4ecd925f182c71cbf42b2a17517c883db325d469566978b03cea7a2a601@47.99.36.31:20001",
-	//"hnode://b0506da3ee83f33e2c076e9623fd22d371aea68ea1dec158981534bc51c6e38e837c779d4f1cbe002ec1751c1a31a2ee260b1336b0141f06369bcbfce4e6aa0c@47.99.46.246:20001",
-	//"hnode://af6568c2913a99401fa567182a39f89bad7a0a273d2d7ba5a4ec1d02ad9c790c3be3f17ac92da84c5a9ed604cb7d44482783c85792d587f2bfc42b1dccd3d7e5&1@47.92.26.84:30301",
+	"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@47.94.20.30:30303",
+	"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@47.100.250.120:30303",
+	"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@47.75.213.166:30303",
+	"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@47.88.60.227:30303",
+	"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@47.254.133.46:30303",
 }
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the
