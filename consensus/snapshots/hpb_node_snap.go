@@ -426,7 +426,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		goto END
 
 	} else {
-		if index == 2 {
+		if index == consensus.Hpcalclookbackround+1 { //look back round is consensus.Hpcalclookbackround
 			hpnodeNO = len(finaltally)
 			goto END
 		}
@@ -438,7 +438,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 			latestCheckPointHash := header.Hash()
 			snaptemp, err := CalculateHpbSnap(index, signatures, config, number-consensus.HpbNodeCheckpointInterval, latestCheckPointNum-consensus.HpbNodeCheckpointInterval, latestCheckPointHash, chain)
 			if err != nil {
-				log.Error("-------- second CalculateHpbSnap------------", "err", err)
+				//log.Error("-------- second CalculateHpbSnap------------", "err", err)
 				hpnodeNO = len(finaltally)
 				goto END
 			}

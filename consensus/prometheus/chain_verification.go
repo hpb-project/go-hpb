@@ -204,27 +204,23 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	//if snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents); err != nil {
-	//	return err
-	//} else {
-	//	// 已经投票结束
-	//	if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
-	//		// 轮转
-	//		SetNetNodeType(snap)
-	//		log.Error("****************************SetNetNodeType ***********************")
-	//	}
-	//}
-
-	// Resolve the authorization key and check against signers
-	if _, err := consensus.Ecrecover(header, c.signatures); err != nil {
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	if err != nil {
+		//log.Error("===================verifySeal GetHpbNodeSnap======================", "err", err)
 		return err
 	}
 
-	/*
-		if _, ok := snap.Signers[signer]; !ok {
-			return consensus.ErrUnauthorized
-		}
-	*/
+	// Resolve the authorization key and check against signers
+	signer, err := consensus.Ecrecover(header, c.signatures)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := snap.Signers[signer]; !ok {
+		//log.Error("===================verifySeal return err======================", "err", consensus.ErrUnauthorized)
+		return consensus.ErrUnauthorized
+	}
+
 	/*
 		for seen, recent := range snap.Recents {
 			if recent == signerHash {

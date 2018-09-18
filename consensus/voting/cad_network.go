@@ -32,9 +32,9 @@ import (
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"math"
 )
 
 // 从网络中获取最优化的
@@ -92,21 +92,25 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	}
 
 	// 先获取长度，然后进行随机获取
-	//lnlen := int(math.Log2(float64(len(bestCadWinners))))
+	var lnlen int
+	if len(bestCadWinners) > 1 {
+		lnlen = int(math.Log2(float64(len(bestCadWinners))))
+	} else {
+		lnlen = 1
+	}
 
 	var lastCadWinners []*snapshots.CadWinner
 
-	//fmt.Println("bestCadWinners - 1:", len(bestCadWinners)-1)
-	//fmt.Println("hpbAddresses:", len(hpbAddresses))
-
-	//for i := 0 ; i < lnlen; i++{
-	for i := 0; i < len(bestCadWinners); i++ {
-		if len(bestCadWinners) > 1 {
-			//lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)])
-			lastCadWinners = append(lastCadWinners, bestCadWinners[i])
-		} else {
-			lastCadWinners = append(lastCadWinners, bestCadWinners[0])
-		}
+	for i := 0; i < lnlen; i++ {
+		//for i := 0; i < len(bestCadWinners); i++ {
+		//if len(bestCadWinners) > 1 {
+		//lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(lnlen)])
+		//log.Error("xxxxxxxxxxxxxxxtestxxxxxxxxxxxxxxxxxxxxx", "test", bestCadWinners[rand.Intn(1)].Address)
+		lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners))])
+		//lastCadWinners = append(lastCadWinners, bestCadWinners[i])
+		//} else {
+		//	lastCadWinners = append(lastCadWinners, bestCadWinners[0])
+		//}
 	}
 
 	//开始进行排序获取最大值
@@ -121,29 +125,30 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 		}
 	}
 	//if selectable candidate nodes not enough, rand select one in all candidate nodes,else rand select one in first consensus.HpbNodenumber numbers.
-	if len(lastCadWinners) == 1 {
-		lastCadWinnerToChain = lastCadWinners[0]
-	} else if len(lastCadWinners) <= consensus.HpbNodenumber {
-		lastCadWinnerToChain = lastCadWinners[rand.Intn(len(lastCadWinners))]
-	} else {
-		//order the candidate nodes
-		for i := len(lastCadWinners) - 1; i >= 0; i-- {
-			for j := len(lastCadWinners) - 1; j >= len(lastCadWinners)-i; j-- {
-				if lastCadWinners[j].VoteIndex > lastCadWinners[j-1].VoteIndex {
-					lastCadWinners[j], lastCadWinners[j-1] = lastCadWinners[j-1], lastCadWinners[j]
-				}
-			}
-		}
-		lastCadWinnerToChain = lastCadWinners[rand.Intn(31)]
-	}
+	//if len(lastCadWinners) == 1 {
+	//	lastCadWinnerToChain = lastCadWinners[0]
+	//} else if len(lastCadWinners) <= consensus.HpbNodenumber {
+	//	lastCadWinnerToChain = lastCadWinners[rand.Intn(len(lastCadWinners))]
+	//} else {
+	//	//order the candidate nodes
+	//	for i := len(lastCadWinners) - 1; i >= 0; i-- {
+	//		for j := len(lastCadWinners) - 1; j >= len(lastCadWinners)-i; j-- {
+	//			if lastCadWinners[j].VoteIndex > lastCadWinners[j-1].VoteIndex {
+	//				lastCadWinners[j], lastCadWinners[j-1] = lastCadWinners[j-1], lastCadWinners[j]
+	//			}
+	//		}
+	//	}
+	//	lastCadWinnerToChain = lastCadWinners[rand.Intn(31)]
+	//}
 
 	winners = append(winners, lastCadWinnerToChain) //返回最优的
 
-	if len(bestCadWinners) > 1 {
-		winners = append(winners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
-	} else {
-		winners = append(winners, bestCadWinners[0]) // 获取第一个
-	}
+	//if len(bestCadWinners) > 1 {
+	//winners = append(winners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
+	winners = append(winners, bestCadWinners[rand.Intn(lnlen)]) //返回随机
+	//} else {
+	//	winners = append(winners, bestCadWinners[0]) // 获取第一个
+	//}
 	return winners, nil
 }
 

@@ -163,18 +163,11 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 
 // 从数据库和缓存中获取数据
 func GetCandDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, hash common.Hash) (*snapshots.CadNodeSnap, error) {
-	/*if s, ok := recents.Get(string(hash)+"cand"); ok {
+	key := append(hash[:], common.Hex2Bytes("cand")...)
+	if s, ok := recents.Get(common.Bytes2Hex(key)); ok {
 		cadNodeSnap := s.(*snapshots.CadNodeSnap)
 		return cadNodeSnap, nil
-	}else{
-		// 从数据库中获取
-		if snapdb, err := snapshots.LoadCadNodeSnap(db, hash); err == nil {
-			//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
-			return snapdb, nil
-		}else{
-			return nil, err
-		}
-	}*/
+	}
 	if snapdb, err := snapshots.LoadCadNodeSnap(db, hash); err == nil {
 		//log.Trace("Prometheus： Loaded voting getHpbNodeSnap form disk", "number", number, "hash", hash)
 		return snapdb, nil
@@ -187,7 +180,8 @@ func GetCandDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, hash co
 //将数据存入到缓存和数据库中
 func StoreCanDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.CadNodeSnap, latestCheckPointHash common.Hash) error {
 	// 存入到缓存中
-	//recents.Add(string(latestCheckPointHash)+"cand", snap)
+	key := append(latestCheckPointHash[:], common.Hex2Bytes("cand")...)
+	recents.Add(common.Bytes2Hex(key), snap)
 	// 存入数据库
 	err := snap.StoreCadNodeSnap(db, latestCheckPointHash)
 	if err != nil {

@@ -213,18 +213,18 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
-	//header.Difficulty = diffNoTurn
-	//if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
-	//	header.Difficulty = diffInTurn
-	//}
 	header.Difficulty = diffNoTurn
-	if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
-		//log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
-	} else if err != nil {
-		log.Error("CalculateCurrentMiner fail", "error", err)
-		return err
 	}
+	//header.Difficulty = diffNoTurn
+	//if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
+	//	//log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
+	//	header.Difficulty = diffInTurn
+	//} else if err != nil {
+	//	log.Error("CalculateCurrentMiner fail", "error", err)
+	//	return err
+	//}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -350,16 +350,16 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		//	}
 
 		//fix delay calc
-		var primemineraddr common.Address
-		if _, tempmineraddr, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); err == nil {
-			primemineraddr = tempmineraddr
-		} else {
-			return nil, err
-		}
-		zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
-		if zeroaddr.Big().Cmp(primemineraddr.Big()) == 0 {
-			return nil, errors.New("primemineraddr is nil")
-		}
+		//var primemineraddr common.Address
+		//if _, tempmineraddr, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); err == nil {
+		//	primemineraddr = tempmineraddr
+		//} else {
+		//	return nil, err
+		//}
+		//zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
+		//if zeroaddr.Big().Cmp(primemineraddr.Big()) == 0 {
+		//	return nil, errors.New("primemineraddr is nil")
+		//}
 		//currentminer := snap.GetOffset(0, primemineraddr)
 		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
 		//log.Error("-----genblocksig---------test for waiting 8 minutes--------------", "primemineraddr", primemineraddr, "primeoffset", currentminer, "number", number)
@@ -513,17 +513,24 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	ether2weisfloat.SetInt(ether2weis)
 	bighobBlockRewardwei := bighobBlockReward.Mul(bighobBlockReward, ether2weisfloat) //reward weis for hpb nodes
 
-	finalhpbrewards := new(big.Int)
-	bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
-
 	number := header.Number.Uint64()
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
-	state.AddBalance(header.Coinbase, finalhpbrewards)
+
+	if hpsnap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
+		bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
+		finalhpbrewards := new(big.Int)
+		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
+		for _, v := range hpsnap.GetHpbNodes() {
+			//state.AddBalance(header.Coinbase, finalhpbrewards)
+			//log.Error("------------hp addr--------------", "v", v)
+			state.AddBalance(v, finalhpbrewards)
+		}
+	}
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
-		if csnap != nil {
+		if csnap != nil && len(csnap.CanAddresses) != 0 {
 			bigA23.Mul(bigA23, big.NewFloat(0.65))
 			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
 
@@ -560,9 +567,7 @@ func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 
 func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap) error {
 
-	const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"roundNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"contractAddr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"deleteAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"setContractAddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"setFunStr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"funStr\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getContractAddr\",\"outputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getRoundNum\",\"outputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"adminMap\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"setRoundNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getFunStr\",\"outputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"SetContractAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"SetFunStr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"SetRoundNum\",\"type\":\"event\"}]"
-	fechaddr := common.HexToAddress("0xe67ac1e2a1848c8a48bd7e466d55a0db8593425a")
-
+	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
 		Transfer:    evm.Transfer,
@@ -577,7 +582,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 	cfg := evm.Config{}
 	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
-	fechABI, _ := abi.JSON(strings.NewReader(FechHpbBallotAddrABI))
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.FechHpbBallotAddrABI))
 
 	//get contract addr
 	packres, err := fechABI.Pack("getContractAddr")
@@ -662,6 +667,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		//log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 
 		voteres[tempaddr] = tempvote
+		//log.Error("333333333333333vote info333333333333333333", "tempaddr", tempaddr, "vote", tempvote)
 	}
 
 	for addr, _ := range voteres {
@@ -693,7 +699,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Int(tempreward)
 
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		//log.Error("reward cad node by vote percent", "tempreward", tempreward)
+		//log.Error("reward cad node by vote percent", "addr", addr)
 	}
 	return nil
 }
