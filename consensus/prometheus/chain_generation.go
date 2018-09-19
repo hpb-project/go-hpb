@@ -567,7 +567,7 @@ func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 
 func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap) error {
 
-	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
+	fechaddr := common.HexToAddress(consensus.Fechcontractaddrtest)
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
 		Transfer:    evm.Transfer,
