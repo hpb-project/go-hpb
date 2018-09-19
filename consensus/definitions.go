@@ -39,6 +39,7 @@ const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"round
 const Fechcontractaddr = "0xe67ac1e2a1848c8a48bd7e466d55a0db8593425a"
 const Fechcontractaddrtest = "0x6d09940b20ab9acfa9aa6a37e2b2895389f127bb"
 const Hpcalclookbackround = 3
+const StageNumberII = 1000000
 
 //const Nodenumsecond = 301
 //const Nodenumthird = 1000

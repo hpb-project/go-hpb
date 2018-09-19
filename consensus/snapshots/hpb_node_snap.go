@@ -342,11 +342,18 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		from = from + 1
 	}
 	for i := from; i < latestCheckPointNum-100; i++ {
+		loopcount := 0
+	GETCOUNT:
 		header := chain.GetHeaderByNumber(uint64(i))
 		if header != nil {
 			headers = append(headers, header)
 		} else {
-			return nil, errors.New("get hpb snap but missing header")
+			if loopcount > 20 {
+				return nil, errors.New("get hpb snap but missing header")
+			}
+			loopcount += 1
+			goto GETCOUNT
+			log.Error("get hpb snap but missing header", "number", i)
 		}
 	}
 
@@ -433,7 +440,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 		index = index + 1
 		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
-			//log.Error("-------- go back for last snap------------", "index", index)
+			log.Error("-------- go back for last snap------------", "index", index)
 			header := chain.GetHeaderByNumber(uint64(latestCheckPointNum - consensus.HpbNodeCheckpointInterval))
 			latestCheckPointHash := header.Hash()
 			snaptemp, err := CalculateHpbSnap(index, signatures, config, number-consensus.HpbNodeCheckpointInterval, latestCheckPointNum-consensus.HpbNodeCheckpointInterval, latestCheckPointHash, chain)
@@ -500,5 +507,8 @@ END:
 	//等待完善
 	//snap.Number += uint64(len(headers))
 	//snap.Hash = latestCheckPointHash
+	if snap == nil {
+		log.Error("777777777777777777777777777777777777777777777777777snap.Signers k and v", "k", "v")
+	}
 	return snap, nil
 }

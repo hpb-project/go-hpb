@@ -192,6 +192,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 	} else {
 		if c.hboe.HWCheck() {
+			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
+				log.Error("parentheader.HardwareRandom is nil or length is not 32")
+			}
 			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
 				return err
 			} else {
@@ -518,14 +521,20 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		return consensus.ErrUnknownBlock
 	}
 
-	if hpsnap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
-		bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
+	if number < consensus.StageNumberII {
 		finalhpbrewards := new(big.Int)
 		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
-		for _, v := range hpsnap.GetHpbNodes() {
-			//state.AddBalance(header.Coinbase, finalhpbrewards)
-			//log.Error("------------hp addr--------------", "v", v)
-			state.AddBalance(v, finalhpbrewards)
+		state.AddBalance(header.Coinbase, finalhpbrewards)
+	} else {
+		if hpsnap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
+			bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
+			finalhpbrewards := new(big.Int)
+			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
+			for _, v := range hpsnap.GetHpbNodes() {
+				//state.AddBalance(header.Coinbase, finalhpbrewards)
+				//log.Error("------------hp addr--------------", "v", v)
+				state.AddBalance(v, finalhpbrewards)
+			}
 		}
 	}
 
@@ -599,10 +608,10 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 
 	packres, _ = fechABI.Pack("getFunStr")
-	log.Error("getFunStr packres", "packres", common.Bytes2Hex(packres))
+	//log.Error("getFunStr packres", "packres", common.Bytes2Hex(packres))
 	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
 	if err != nil {
-		//log.Error("getFunStr InnerCall fail", "err", err)
+		log.Error("getFunStr InnerCall fail", "err", err)
 		return err
 	} else {
 		if resultfun == nil || len(resultfun) < 74 {
@@ -627,7 +636,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.signer), realaddr, bufparam.Bytes())
 	vmenv.Cancel()
 	if err != nil {
-		//log.Error("realaddr InnerCall fail", "err", err)
+		log.Error("realaddr InnerCall fail", "err", err)
 		return err
 	} else {
 		//log.Error("realaddr InnerCall success", "result", common.Bytes2Hex(resultvote))
@@ -667,11 +676,10 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		//log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 
 		voteres[tempaddr] = tempvote
-		//log.Error("333333333333333vote info333333333333333333", "tempaddr", tempaddr, "vote", tempvote)
 	}
 
 	for addr, _ := range voteres {
-		if _, ok := csnap.VotePercents[addr]; ok {
+		if _, ok := csnap.VotePercents[addr]; !ok {
 			delete(voteres, addr)
 		}
 	}
@@ -699,7 +707,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Int(tempreward)
 
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		//log.Error("reward cad node by vote percent", "addr", addr)
+		//log.Error("********************8reward cad node by vote percent*******************", "addr", addr)
 	}
 	return nil
 }

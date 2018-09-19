@@ -234,8 +234,8 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 	// E The contract is a scoped environment for this execution context
 	// only.
 	//contract := NewContract(caller, to, value, gas)
-	//contract := NewContract(caller, to, big.NewInt(0), 49999986000000)
-	contract := NewContract(caller, to, big.NewInt(0), 89954)
+	contract := NewContract(caller, to, big.NewInt(0), 49999986000000)
+	//contract := NewContract(caller, to, big.NewInt(0), 89954)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
 	//ret, err = run(evm, snapshot, contract, input)
 	ret, err = run(evm, snapshot, contract, input)
