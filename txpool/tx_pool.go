@@ -515,6 +515,12 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
+	//reset fun setnonce flag=true,addtx send not setnonce flag=flase
+	var accFlag bool
+	if accounts == nil {
+		accFlag = true
+	}
+
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
 		accounts = make([]common.Address, 0, len(pool.queue))
@@ -563,7 +569,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.queue, addr)
 		}
 	}
-	pool.keepFit()
+	pool.keepFit(accFlag)
 }
 
 // demoteUnexecutables removes invalid and processed transactions from the pools
@@ -645,12 +651,12 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
 	//log.Error("-----------------send txpre event-------")
 	//TODO old event  system
-	go pool.txFeed.Send(bc.TxPreEvent{tx})
+	pool.txFeed.Send(bc.TxPreEvent{tx})
 }
 
 //If the pending limit is overflown, start equalizing allowances
 // If we've queued more transactions than the hard limit, drop oldest ones
-func (pool *TxPool) keepFit() {
+func (pool *TxPool) keepFit(accFlag bool) {
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
 	for _, list := range pool.pending {
@@ -686,11 +692,15 @@ func (pool *TxPool) keepFit() {
 							hash := tx.Hash()
 							delete(pool.all, hash)
 
-							// Update the account nonce to the dropped transaction
-							if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
-								pool.pendingState.SetNonce(offenders[i], nonce)
+							//reset fun setnonce flag=true,addtx send not setnonce flag=flase
+							if accFlag {
+								// Update the account nonce to the dropped transaction
+								if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
+									pool.pendingState.SetNonce(offenders[i], nonce)
+								}
 							}
-							log.Trace("Removed fairness-exceeding pending transaction", "hash", hash)
+
+							log.Trace("Removed fairness-exceeding pending transaction", "hash", hash,"accFlag",accFlag)
 						}
 						pending--
 					}
@@ -707,11 +717,15 @@ func (pool *TxPool) keepFit() {
 						hash := tx.Hash()
 						delete(pool.all, hash)
 
-						// Update the account nonce to the dropped transaction
-						if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
-							pool.pendingState.SetNonce(addr, nonce)
+						//reset fun setnonce flag=true,addtx send not setnonce flag=flase
+						if accFlag {
+							// Update the account nonce to the dropped transaction
+							if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
+								pool.pendingState.SetNonce(addr, nonce)
+							}
 						}
-						log.Trace("Removed fairness-exceeding pending transaction", "hash", hash)
+
+						log.Trace("Removed fairness-exceeding pending transaction", "hash", hash,"accFlag",accFlag)
 					}
 					pending--
 				}
