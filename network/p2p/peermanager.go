@@ -582,7 +582,7 @@ func (prm *PeerManager) startTest(host string, port string) float64 {
 func (prm *PeerManager) startClientBW() {
 	/////////////////////////////////////
 	//client
-	inteval := 60 * 60
+	inteval := 60 * 60 * 24 // second of one day
 	rand.Seed(time.Now().UnixNano())
 	timeout := time.NewTimer(time.Second * time.Duration(inteval+rand.Intn(inteval)))
 	defer timeout.Stop()
