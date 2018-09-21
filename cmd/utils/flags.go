@@ -314,6 +314,11 @@ var (
 		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value: "",
 	}
+	RPCVirtualHostsFlag = cli.StringFlag{
+		Name:  "rpcvhosts",
+		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
+		Value: strings.Join(config.DefaultNTConfig.HTTPVirtualHosts, ","),
+	}
 	RPCApiFlag = cli.StringFlag{
 		Name:  "rpcapi",
 		Usage: "API's offered over the HTTP-RPC interface",
@@ -783,7 +788,9 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(RPCApiFlag.Name) {
 		cfg.Network.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
 	}
-
+	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
+		cfg.Network.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
+	}
 	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.Network.WSHost == "" {
 		cfg.Network.WSHost = "127.0.0.1"
 		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {

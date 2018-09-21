@@ -18,10 +18,9 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net"
-
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
 )
 
 // CreateIPCListener creates an listener, on Unix platforms this is a unix socket, on
@@ -34,10 +33,13 @@ func CreateIPCListener(endpoint string) (net.Listener, error) {
 func (srv *Server) ServeListener(l net.Listener) error {
 	for {
 		conn, err := l.Accept()
-		if err != nil {
+		if netutil.IsTemporaryError(err) {
+			log.Warn("RPC accept error", "err", err)
+			continue
+		} else if err != nil {
 			return err
 		}
-		log.Trace(fmt.Sprint("accepted conn", conn.RemoteAddr()))
+		log.Trace("Accepted connection", "addr", conn.RemoteAddr())
 		go srv.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
 	}
 }

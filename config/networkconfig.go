@@ -26,6 +26,7 @@ import (
 	"strings"
 	"path/filepath"
 	"os"
+	"time"
 )
 
 const (
@@ -44,12 +45,14 @@ const (
 	BloomBitsBlocks uint64 = 4096
 )
 
-var defaultNetworkConfig = NetworkConfig{
+var DefaultNTConfig = NetworkConfig{
 
 	HTTPPort:     DefaultHTTPPort,
 	HTTPModules:  []string{"net", "web3", "prometheus"},
 	WSPort:       DefaultWSPort,
 	WSModules:    []string{"net", "web3", "prometheus"},
+	HTTPVirtualHosts: []string{"localhost"},
+	HTTPTimeouts:     DefaultHTTPTimeouts,
 	ListenAddr:   ":30303",
 	MaxPeers:     50,
 	NAT:          nat.Any(),
@@ -59,11 +62,12 @@ var defaultNetworkConfig = NetworkConfig{
 }
 
 var MainnetBootnodes = []string{
-	"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@47.94.20.30:30303",
-	"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@47.100.250.120:30303",
-	"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@47.75.213.166:30303",
-	"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@47.88.60.227:30303",
-	"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@47.254.133.46:30303",
+	"hnode://7d5fdaee2e78dd5085ffbf7c6d96aff10bfbf40eb464f10a10363e9059b15a90b01d99cb43ba16642e23b7aa77739443f1b573d9e9d24e2a40bfa42bfc19e9f3@127.0.0.1:28101",
+	//"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@47.94.20.30:30303",
+	//"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@47.100.250.120:30303",
+	//"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@47.75.213.166:30303",
+	//"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@47.88.60.227:30303",
+	//"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@47.254.133.46:30303",
 }
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the
@@ -85,10 +89,23 @@ type NetworkConfig struct {
 	// useless for custom HTTP clients.
 	HTTPCors []string `toml:",omitempty"`
 
+	// HTTPVirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
+	// This is by default {'localhost'}. Using this prevents attacks like
+	// DNS rebinding, which bypasses SOP by simply masquerading as being within the same
+	// origin. These attacks do not utilize CORS, since they are not cross-domain.
+	// By explicitly checking the Host-header, the server will not allow requests
+	// made against the server with a malicious host domain.
+	// Requests using ip address directly are not affected
+	HTTPVirtualHosts []string `toml:",omitempty"`
+
 	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
 	HTTPModules []string `toml:",omitempty"`
+
+	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
+	// interface.
+	HTTPTimeouts HTTPTimeouts
 
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.
@@ -187,14 +204,47 @@ type NetworkConfig struct {
 
 }
 
+// HTTPTimeouts represents the configuration params for the HTTP RPC server.
+type HTTPTimeouts struct {
+	// ReadTimeout is the maximum duration for reading the entire
+	// request, including the body.
+	//
+	// Because ReadTimeout does not let Handlers make per-request
+	// decisions on each request body's acceptable deadline or
+	// upload rate, most users will prefer to use
+	// ReadHeaderTimeout. It is valid to use them both.
+	ReadTimeout time.Duration
+
+	// WriteTimeout is the maximum duration before timing out
+	// writes of the response. It is reset whenever a new
+	// request's header is read. Like ReadTimeout, it does not
+	// let Handlers make decisions on a per-request basis.
+	WriteTimeout time.Duration
+
+	// IdleTimeout is the maximum amount of time to wait for the
+	// next request when keep-alives are enabled. If IdleTimeout
+	// is zero, the value of ReadTimeout is used. If both are
+	// zero, ReadHeaderTimeout is used.
+	IdleTimeout time.Duration
+}
+
+// DefaultHTTPTimeouts represents the default timeout values used if further
+// configuration is not provided.
+var DefaultHTTPTimeouts = HTTPTimeouts{
+	ReadTimeout:  30 * time.Second,
+	WriteTimeout: 30 * time.Second,
+	IdleTimeout:  120 * time.Second,
+}
 
 
 func DefaultNetworkConfig() NetworkConfig{
-	cfg:= defaultNetworkConfig
+	cfg:= DefaultNTConfig
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
 	cfg.WSModules = append(cfg.WSModules, "hpb")
 
+	cfg.HTTPVirtualHosts = append(cfg.HTTPVirtualHosts, "localhost")
+	cfg.HTTPTimeouts = DefaultHTTPTimeouts
 
 	return cfg
 }

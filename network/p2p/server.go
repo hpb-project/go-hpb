@@ -786,14 +786,12 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		log.Debug("Update hardware table from boot.","srv hdtab", srv.hdtab )
 	}
 
-
 	/////////////////////////////////////////////////////////////////////////////////
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Warn("Rejected peer", "err", err, "dialDest",dialDest)
 		c.close(err)
 		return
 	}
-
 
 }
 
