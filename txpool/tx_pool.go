@@ -186,7 +186,6 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
-			//log.Error("*****hanxiaole*pool.chainHeadCh,delete tx  get reset **receive chainhead ")
 			if ev.Block != nil {
 				pool.mu.Lock()
 				pool.reset(head.Header(), ev.Block.Header())
@@ -412,7 +411,7 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 	// Add the batch of transaction, tracking the accepted ones
-	///log.Error("addTxsLocked-1")
+
 	dirty := make(map[common.Address]struct{})
 	for _, tx := range txs {
 		if replace, err := pool.add(tx); err == nil {
@@ -423,18 +422,18 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 		}
 
 	}
-	//log.Error("addTxsLocked-2")
+
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
-		//log.Error("addTxsLocked-3")
+
 		addrs := make([]common.Address, 0, len(dirty))
 		for addr := range dirty {
 			addrs = append(addrs, addr)
 		}
 		pool.promoteExecutables(addrs)
-		//log.Error("addTxsLocked-4")
+
 	}
-	//log.Error("addTxsLocked-5")
+
 	return nil
 }
 
@@ -538,30 +537,29 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		accFlag=true
 	}
 
-	//log.Error("promoteExecutables-1")
 	if accounts == nil {
 		accounts = make([]common.Address, 0, len(pool.queue))
 		for addr := range pool.queue {
 			accounts = append(accounts, addr)
 		}
 	}
-	//log.Error("promoteExecutables-2")
+
 	// Iterate over all accounts and promote any executable transactions
 	for _, addr := range accounts {
 		list := pool.queue[addr]
-		//log.Error("promoteExecutables-3")
+
 		if list == nil {
-			//log.Error("promoteExecutables-4")
+
 			continue // Just in case someone calls with a non existing account
 		}
-		//log.Error("promoteExecutables-5")
+
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
 			hash := tx.Hash()
 			log.Trace("Removed old queued transaction", "hash", hash)
 			delete(pool.all, hash)
 		}
-		//log.Error("promoteExecutables-6")
+
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
@@ -569,7 +567,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
 			delete(pool.all, hash)
 		}
-		//log.Error("promoteExecutables-7")
+
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
@@ -581,25 +579,25 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				list.Remove(tx)
 			}
 		}
-		//log.Error("promoteExecutables-8")
+
 		// Drop all transactions over the allowed limit
 		for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
 			hash := tx.Hash()
 			delete(pool.all, hash)
 			log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
 		}
-		//log.Error("promoteExecutables-9")
+
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
-			//log.Error("promoteExecutables-10")
+			log.Trace("promoteExecutables list.Empty()")
 			delete(pool.queue, addr)
 		}
 	}
 	if accFlag {
-		//log.Error("promoteExecutables-11")
+
 		pool.keepFit()
 	}else{
-		//log.Error("promoteExecutables-12")
+
 		pool.keepFitSend()
 	}
 }
@@ -685,7 +683,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	//TODO old event  system
 	//go pool.txFeed.Send(bc.TxPreEvent{tx})
 	pool.txFeed.Send(bc.TxPreEvent{tx})
-	//log.Error("------------hanxiaole-----send txpre event-------","tx.once",tx.Nonce(),"acc-addr",addr,"hash",hash)
+	log.Trace("send txpre event-------","tx.once",tx.Nonce(),"acc-addr",addr,"hash",hash)
 }
 
 //If the pending limit is overflown, start equalizing allowances
@@ -731,7 +729,7 @@ func (pool *TxPool) keepFitSend() {
 							//if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
 							//	pool.pendingState.SetNonce(offenders[i], nonce)
 							//}
-							log.Trace("Removed fairness-exceeding pending keepFitsend transaction ", "pool.pendingState",tx.Nonce(),"hash", hash)
+							log.Trace("Removed fairness-exceeding pending keepFitsend transaction ", "tx.Nonce()",tx.Nonce(),"hash", hash)
 						}
 						pending--
 					}
@@ -752,7 +750,7 @@ func (pool *TxPool) keepFitSend() {
 						//if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
 						//	pool.pendingState.SetNonce(addr, nonce)
 						//}
-						log.Trace("Removed fairness-exceeding keepFitsned pending transaction","noce", tx.Nonce(),"hash", hash)
+						log.Trace("Removed fairness-exceeding keepFitsned pending transaction","tx.Nonce()", tx.Nonce(),"hash", hash)
 					}
 					pending--
 				}
@@ -783,7 +781,7 @@ func (pool *TxPool) keepFitSend() {
 			if size := uint64(list.Len()); size <= drop {
 				for _, tx := range list.Flatten() {
 					pool.removeTx(tx.Hash())
-					log.Trace("Removed fairness-exceeding Queue transaction 11111", "hash", tx.Hash())
+					log.Trace("Removed fairness-exceeding Queue transaction", "hash", tx.Hash())
 				}
 				drop -= size
 				continue
@@ -792,7 +790,7 @@ func (pool *TxPool) keepFitSend() {
 			txs := list.Flatten()
 			for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
 				pool.removeTx(txs[i].Hash())
-				log.Trace("Removed fairness-exceeding Queue transaction 222222", "hash", txs[i].Hash())
+				log.Trace("Removed fairness-exceeding Queue transaction", "hash", txs[i].Hash())
 				drop--
 			}
 		}
@@ -839,7 +837,7 @@ func (pool *TxPool) keepFit() {
 							if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
 								pool.pendingState.SetNonce(offenders[i], nonce)
 							}
-							log.Trace("Removed fairness-exceeding pending transaction", tx.Nonce(),"hash", hash)
+							log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()",tx.Nonce(),"hash", hash)
 						}
 						pending--
 					}
@@ -860,7 +858,7 @@ func (pool *TxPool) keepFit() {
 						if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
 							pool.pendingState.SetNonce(addr, nonce)
 						}
-						log.Trace("Removed fairness-exceeding pending transaction", tx.Nonce(),"hash", hash)
+						log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()",tx.Nonce(),"hash", hash)
 					}
 					pending--
 				}
@@ -891,7 +889,7 @@ func (pool *TxPool) keepFit() {
 			if size := uint64(list.Len()); size <= drop {
 				for _, tx := range list.Flatten() {
 					pool.removeTx(tx.Hash())
-					log.Trace("Removed fairness-exceeding Queue transaction 11111", "hash", tx.Hash())
+					log.Trace("Removed fairness-exceeding Queue transaction", "hash", tx.Hash())
 				}
 				drop -= size
 				continue
@@ -900,7 +898,7 @@ func (pool *TxPool) keepFit() {
 			txs := list.Flatten()
 			for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
 				pool.removeTx(txs[i].Hash())
-				log.Trace("Removed fairness-exceeding Queue transaction 222222", "hash", txs[i].Hash())
+				log.Trace("Removed fairness-exceeding Queue transaction", "hash", txs[i].Hash())
 				drop--
 			}
 		}
