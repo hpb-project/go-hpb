@@ -380,7 +380,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 		}
 		// If the transaction fails basic validation, discard it
 		if err := pool.validateTx(tx); err != nil {
-			log.Error("Discarding invalid transaction", "hash", hash, "err", err)
+			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 			return err
 		}
 	}
