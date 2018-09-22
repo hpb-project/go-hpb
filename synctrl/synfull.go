@@ -29,11 +29,12 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/rcrowley/go-metrics"
 )
 
 type fullSync struct {
-	syncer  *Syncer
+	syncer *Syncer
 
 	// Channels
 	headerCh      chan dataPack        // Channel receiving inbound block headers
@@ -57,13 +58,13 @@ type fullSync struct {
 
 func newFullsync(syncer *Syncer) *fullSync {
 	full := &fullSync{
-		syncer:         syncer,
-		headerCh:       make(chan dataPack, 1),
-		bodyCh:         make(chan dataPack, 1),
-		receiptCh:      make(chan dataPack, 1),
-		bodyWakeCh:     make(chan bool, 1),
-		receiptWakeCh:  make(chan bool, 1),
-		headerProcCh:   make(chan []*types.Header, 1),
+		syncer:        syncer,
+		headerCh:      make(chan dataPack, 1),
+		bodyCh:        make(chan dataPack, 1),
+		receiptCh:     make(chan dataPack, 1),
+		bodyWakeCh:    make(chan bool, 1),
+		receiptWakeCh: make(chan bool, 1),
+		headerProcCh:  make(chan []*types.Header, 1),
 	}
 	return full
 }
@@ -191,7 +192,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 			this.syncer.mux.Post(DoneEvent{})
 		}
 	}()
-	if p.version < config.ProtocolV111  {
+	if p.version < config.ProtocolV111 {
 		return errProVLowerBase
 	}
 
@@ -997,6 +998,9 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 		}
 		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			if err == consensus.ErrInvalidblockbutnodrop {
+				return consensus.ErrInvalidblockbutnodrop
+			}
 			return errInvalidChain
 		}
 		// Shift the results to the next batch
@@ -1006,9 +1010,9 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 }
 
 // deliver injects a new batch of data received from a remote node.
-func (this *fullSync) deliver(id string, destCh chan <- dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
+func (this *fullSync) deliver(id string, destCh chan<- dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
 	// Update the delivery metrics for both good and failed deliveries
-		inMeter.Mark(int64(packet.Items()))
+	inMeter.Mark(int64(packet.Items()))
 	defer func() {
 		if err != nil {
 			dropMeter.Mark(int64(packet.Items()))

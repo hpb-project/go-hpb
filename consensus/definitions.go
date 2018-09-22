@@ -101,6 +101,8 @@ var (
 	ErrInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 	// 非法的投票检查点
 	ErrInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
+	// reject block but do not drop peer
+	ErrInvalidblockbutnodrop = errors.New("reject block but do not drop peer")
 )
 
 var (

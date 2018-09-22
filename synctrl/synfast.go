@@ -30,6 +30,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -1070,6 +1071,9 @@ func (this *fastSync) importBlockResults(results []*fetchResult) error {
 		}
 		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("fast synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
+			if err == consensus.ErrInvalidblockbutnodrop {
+				return consensus.ErrInvalidblockbutnodrop
+			}
 			return errInvalidChain
 		}
 		// Shift the results to the next batch

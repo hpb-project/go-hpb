@@ -216,31 +216,29 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
 		snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 		if err != nil {
-			return err
+			return consensus.ErrInvalidblockbutnodrop
 		}
 		if _, ok := snap.Signers[signer]; !ok {
 			return consensus.ErrUnauthorized
 		}
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
 			if c.hboe.HWCheck() == false {
-				return errors.New("verifySeal boe check fail")
+				return consensus.ErrUnauthorized
 			}
 			parentnum := number - 1
 			parentheader := chain.GetHeaderByNumber(parentnum)
 			if parentheader == nil {
-				log.Error("-----PrepareBlockHeader parentheader------ is nil", "number", parentnum)
-				panic("-----panic PrepareBlockHeader parentheader------ is nil")
-				//return errors.New("-----PrepareBlockHeader parentheader------ is nil")
+				return consensus.ErrInvalidblockbutnodrop
 			}
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) == 0 {
-				return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
+				return consensus.ErrInvalidblockbutnodrop
 			}
 			newrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom)
 			if err != nil {
-				return err
+				return consensus.ErrInvalidblockbutnodrop
 			}
 			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
-				return errors.New("invalid HardwareRandom")
+				return consensus.ErrUnauthorized
 			}
 		}
 
@@ -251,13 +249,15 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		}
 		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
 			return consensus.ErrInvalidDifficulty
-		}
-		//check mine frequency
-		for i := 1; i < len(snap.Signers)/3; i++ {
-			if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
-				return consensus.ErrUnauthorized
+		} else {
+			//check mine frequency
+			for i := 1; i < len(snap.Signers)/3; i++ {
+				if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
+					return consensus.ErrInvalidblockbutnodrop
+				}
 			}
 		}
+
 	}
 	return nil
 }
