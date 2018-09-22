@@ -119,7 +119,7 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	synctrl.syner = NewSyncer(mode, db.GetHpbDbInstance(), synctrl.newBlockMux, nil, synctrl.removePeer)
 
 	validator := func(header *types.Header) error {
-		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true)
+		return engine.VerifyHeader(bc.InstanceBlockChain(), header, true, mode)
 	}
 	heighter := func() uint64 {
 		return bc.InstanceBlockChain().CurrentBlock().NumberU64()

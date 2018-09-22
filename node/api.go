@@ -28,20 +28,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/common/trie"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/network/p2p"
-	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/hvm/evm"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 const defaultTraceTimeout = 5 * time.Second
@@ -389,8 +389,7 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogCon
 
 	structLogger := evm.NewStructLogger(logConfig)
 
-
-	if err := api.hpb.Hpbengine.VerifyHeader(blockchain, block.Header(), true); err != nil {
+	if err := api.hpb.Hpbengine.VerifyHeader(blockchain, block.Header(), true, config.FastSync); err != nil {
 		return false, structLogger.StructLogs(), err
 	}
 	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
@@ -549,6 +548,7 @@ type storageEntry struct {
 	Key   *common.Hash `json:"key"`
 	Value common.Hash  `json:"value"`
 }
+
 /*
 // StorageRangeAt returns the storage at the given block height and transaction index.
 func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
@@ -581,6 +581,7 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) StorageRangeResu
 	}
 	return result
 }
+
 // PublicAdminAPI is the collection of administrative API methods exposed over
 // both secure and unsecure RPC channels.
 type PublicAdminAPI struct {
@@ -600,7 +601,7 @@ func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
 	if pm == nil {
 		return nil, ErrNodeStopped
 	}
-	return pm.PeersInfo() ,nil
+	return pm.PeersInfo(), nil
 }
 
 // NodeInfo retrieves all the information we know about the host node at the
@@ -617,6 +618,7 @@ func (api *PublicAdminAPI) NodeInfo() (*p2p.NodeInfo, error) {
 func (api *PublicAdminAPI) Datadir() string {
 	return api.node.DataDir()
 }
+
 // PublicWeb3API offers helper utils
 type PublicWeb3API struct {
 	stack *Node

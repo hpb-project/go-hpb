@@ -21,6 +21,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"math/big"
@@ -28,18 +29,18 @@ import (
 )
 
 // 验证头部，对外调用接口
-func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return c.verifyHeader(chain, header, nil)
+func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool, mode config.SyncMode) error {
+	return c.verifyHeader(chain, header, nil, mode)
 }
 
 // 批量验证
-func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool, mode config.SyncMode) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 
 	go func() {
 		for i, header := range headers {
-			err := c.verifyHeader(chain, header, headers[:i])
+			err := c.verifyHeader(chain, header, headers[:i], mode)
 
 			select {
 			case <-abort:
@@ -72,7 +73,7 @@ func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *
 }
 
 // 批量验证，为了避免，支持批量传入
-func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
@@ -129,14 +130,14 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	}
 
 	// All basic checks passed, verify cascading fields
-	return c.verifyCascadingFields(chain, header, parents)
+	return c.verifyCascadingFields(chain, header, parents, mode)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -176,7 +177,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		}
 	*/
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(chain, header, parents)
+	return c.verifySeal(chain, header, parents, mode)
 }
 
 // VerifyUncles implements consensus.Engine, always returning an error for any
@@ -189,13 +190,14 @@ func (c *Prometheus) VerifyUncles(chain consensus.ChainReader, block *types.Bloc
 }
 
 // VerifySeal implements consensus.Engine, checking whether the signature contained
-// in the header satisfies the consensus protocol requirements.
+//in the header satisfies the consensus protocol requirements.
 func (c *Prometheus) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	return c.verifySeal(chain, header, nil)
+	//return c.verifySeal(chain, header, nil)
+	return nil
 }
 
 // 验证封装的正确性，判断是否满足共识算法的需求
-func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	// Verifying the genesis block is not supported
 
 	number := header.Number.Uint64()
@@ -203,45 +205,59 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrUnknownBlock
 	}
 
-	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	//snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
-	//if err != nil {
-	//	//log.Error("===================verifySeal GetHpbNodeSnap======================", "err", err)
-	//	return err
-	//}
-
 	// Resolve the authorization key and check against signers
-	//signer, err := consensus.Ecrecover(header, c.signatures)
-	_, err := consensus.Ecrecover(header, c.signatures)
+	signer, err := consensus.Ecrecover(header, c.signatures)
 	if err != nil {
 		return err
 	}
 
-	//if _, ok := snap.Signers[signer]; !ok {
-	//	//log.Error("===================verifySeal return err======================", "err", consensus.ErrUnauthorized)
-	//	return consensus.ErrUnauthorized
-	//}
-
-	/*
-		for seen, recent := range snap.Recents {
-			if recent == signerHash {
-				// Signer is among recents, only fail if the current block doesn't shift it out
-				if limit := uint64(len(snap.Signers)/2 + 1); seen > number-limit {
-					return errUnauthorized
-				}
+	// false &&
+	if mode == config.FullSync && config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" {
+		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
+		snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+		if err != nil {
+			return err
+		}
+		if _, ok := snap.Signers[signer]; !ok {
+			return consensus.ErrUnauthorized
+		}
+		if config.GetHpbConfigInstance().Node.TestMode != 1 {
+			if c.hboe.HWCheck() == false {
+				return errors.New("verifySeal boe check fail")
+			}
+			parentnum := number - 1
+			parentheader := chain.GetHeaderByNumber(parentnum)
+			if parentheader == nil {
+				log.Error("-----PrepareBlockHeader parentheader------ is nil", "number", parentnum)
+				panic("-----panic PrepareBlockHeader parentheader------ is nil")
+				//return errors.New("-----PrepareBlockHeader parentheader------ is nil")
+			}
+			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) == 0 {
+				return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
+			}
+			newrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom)
+			if err != nil {
+				return err
+			}
+			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
+				return errors.New("invalid HardwareRandom")
 			}
 		}
-	*/
-	//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 
-	/*
-		inturn := snap.CalculateCurrentMiner(header.Number.Uint64(), signer)
+		//Ensure that the difficulty corresponds to the turn-ness of the signerHash
+		inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return consensus.ErrInvalidDifficulty
 		}
 		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
 			return consensus.ErrInvalidDifficulty
 		}
-	*/
+		//check mine frequency
+		for i := 1; i < len(snap.Signers)/3; i++ {
+			if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
+				return consensus.ErrUnauthorized
+			}
+		}
+	}
 	return nil
 }

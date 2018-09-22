@@ -34,8 +34,8 @@ import (
 )
 
 type fastSync struct {
-	syncer  *Syncer
-	fsPivotLock  *types.Header // Pivot header on critical section entry (cannot change between retries)
+	syncer      *Syncer
+	fsPivotLock *types.Header // Pivot header on critical section entry (cannot change between retries)
 
 	// Channels
 	headerCh      chan dataPack        // Channel receiving inbound block headers
@@ -59,13 +59,13 @@ type fastSync struct {
 
 func newFastsync(syncer *Syncer) *fastSync {
 	fast := &fastSync{
-		syncer:         syncer,
-		headerCh:       make(chan dataPack, 1),
-		bodyCh:         make(chan dataPack, 1),
-		receiptCh:      make(chan dataPack, 1),
-		bodyWakeCh:     make(chan bool, 1),
-		receiptWakeCh:  make(chan bool, 1),
-		headerProcCh:   make(chan []*types.Header, 1),
+		syncer:        syncer,
+		headerCh:      make(chan dataPack, 1),
+		bodyCh:        make(chan dataPack, 1),
+		receiptCh:     make(chan dataPack, 1),
+		bodyWakeCh:    make(chan bool, 1),
+		receiptWakeCh: make(chan bool, 1),
+		headerProcCh:  make(chan []*types.Header, 1),
 	}
 	return fast
 }
@@ -193,7 +193,7 @@ func (this *fastSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 			this.syncer.mux.Post(DoneEvent{})
 		}
 	}()
-	if p.version < config.ProtocolV111  {
+	if p.version < config.ProtocolV111 {
 		return errProVLowerBase
 	}
 
@@ -1000,7 +1000,7 @@ func (this *fastSync) processHeaders(origin uint64, td *big.Int) error {
 				if chunk[len(chunk)-1].Number.Uint64()+uint64(fsHeaderForceVerify) > pivot {
 					frequency = 1
 				}
-				if n, err := this.syncer.lightchain.InsertHeaderChain(chunk, frequency); err != nil {
+				if n, err := this.syncer.lightchain.InsertHeaderChain(chunk, frequency, config.FastSync); err != nil {
 					// If some headers were inserted, add them too to the rollback list
 					if n > 0 {
 						rollback = append(rollback, chunk[:n]...)

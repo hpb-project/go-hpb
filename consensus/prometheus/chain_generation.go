@@ -521,12 +521,14 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		return consensus.ErrUnknownBlock
 	}
 
+	var hpsnap *snapshots.HpbNodeSnap
+	var err error
 	if number < consensus.StageNumberII {
 		finalhpbrewards := new(big.Int)
 		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 		state.AddBalance(header.Coinbase, finalhpbrewards)
 	} else {
-		if hpsnap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
+		if hpsnap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
 			bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
 			finalhpbrewards := new(big.Int)
 			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
@@ -534,7 +536,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				//state.AddBalance(header.Coinbase, finalhpbrewards)
 				//log.Error("------------hp addr--------------", "v", v)
 				state.AddBalance(v, finalhpbrewards)
+				log.Error("#############################3reward hp node average########################", "caddress", v, "reward", finalhpbrewards)
 			}
+		} else {
+			return err
 		}
 	}
 
@@ -552,10 +557,11 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 			for caddress, _ := range csnap.VotePercents {
 				state.AddBalance(caddress, cadReward) //reward every cad node average
+				log.Error("^^^^^^^^^^^^^^^^^^^^^^^^reward cad node average^^^^^^^^^^^^^^^^^^^^^", "caddress", caddress, "reward", cadReward)
 			}
 
-			if number%consensus.HpbNodeCheckpointInterval == 0 {
-				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap)
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number >= consensus.StageNumberII {
+				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
 			}
 		}
 	} else {
@@ -574,8 +580,11 @@ func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 	}}
 }
 
-func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap) error {
+func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap, hpsnap *snapshots.HpbNodeSnap) error {
 
+	if csnap == nil || hpsnap == nil {
+		return errors.New("input param snap is nil")
+	}
 	fechaddr := common.HexToAddress(consensus.Fechcontractaddrtest)
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
@@ -598,7 +607,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	//log.Error("getContractAddr packres", "packres", common.Bytes2Hex(packres))
 	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
 	if err != nil {
-		//log.Error("getContractAddr InnerCall fail", "err", err)
+		log.Error("getContractAddr InnerCall fail", "err", err)
 		return err
 	} else {
 		if resultaddr == nil || len(resultaddr) == 0 {
@@ -615,7 +624,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return err
 	} else {
 		if resultfun == nil || len(resultfun) < 74 {
-			//log.Error("getFunStr InnerCall success", "result string", common.Bytes2Hex(resultfun))
+			log.Error("getFunStr InnerCall success", "result string", common.Bytes2Hex(resultfun))
 			return errors.New("getFunStr InnerCall success but result length is short")
 		}
 	}
@@ -646,7 +655,8 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
-	rewardsnum := consensus.CadNodeCheckpointInterval
+	rewardsnum := consensus.CadNodeCheckpointInterval //test
+	//rewardsnum := 1
 
 	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
@@ -676,10 +686,13 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		//log.Error("vote", "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 
 		voteres[tempaddr] = tempvote
+		log.Error("111111111111111vote1111111111111111", "tempaddr", tempaddr, "tempvote", common.Bytes2Hex(tempvote.Bytes()))
 	}
 
 	for addr, _ := range voteres {
-		if _, ok := csnap.VotePercents[addr]; !ok {
+		_, ok1 := csnap.VotePercents[addr]
+		_, ok2 := hpsnap.Signers[addr]
+		if !ok1 && !ok2 {
 			delete(voteres, addr)
 		}
 	}
@@ -707,7 +720,8 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Int(tempreward)
 
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		//log.Error("********************8reward cad node by vote percent*******************", "addr", addr)
+		log.Error("********************8reward cad node by vote percent*******************", "addr", addr, "reward", tempreward, "votes", votes.String())
 	}
+
 	return nil
 }
