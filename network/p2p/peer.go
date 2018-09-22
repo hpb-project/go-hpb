@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	baseProtocolMaxMsgSize = 2 * 1024
+	baseProtocolMaxMsgSize = 80 * 1024
 	snappyProtocolVersion = 5
 
 	//TODO: for test ,this value is 5 second
