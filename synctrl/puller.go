@@ -29,7 +29,6 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
-
 const (
 	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
 	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
@@ -170,7 +169,6 @@ func NewPuller(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadca
 		dropPeer:       dropPeer,
 	}
 }
-
 
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and block fetches until termination requested.
@@ -639,7 +637,7 @@ func (this *Puller) insert(peer string, block *types.Block) {
 	hash := block.Hash()
 
 	// Run the import on a new thread
-	log.Info("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash,"difficulty", block.Difficulty())
+	log.Info("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash, "difficulty", block.Difficulty())
 	go func() {
 		defer func() { this.done <- hash }()
 
@@ -657,6 +655,7 @@ func (this *Puller) insert(peer string, block *types.Block) {
 			go this.broadcastBlock(block, true)
 
 		case consensus.ErrFutureBlock:
+		case consensus.ErrInvalidblockbutnodrop:
 			// Weird future block, don't fail, but neither propagate
 
 		default:

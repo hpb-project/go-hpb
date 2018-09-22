@@ -1007,6 +1007,9 @@ func (this *fastSync) processHeaders(origin uint64, td *big.Int) error {
 						rollback = append(rollback, chunk[:n]...)
 					}
 					log.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
+					if err == consensus.ErrInvalidblockbutnodrop {
+						return consensus.ErrInvalidblockbutnodrop
+					}
 					return errInvalidChain
 				}
 				// All verifications passed, store newly found uncertain headers

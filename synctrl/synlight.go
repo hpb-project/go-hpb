@@ -27,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -937,6 +938,9 @@ func (this *lightSync) processHeaders(origin uint64, td *big.Int) error {
 						rollback = append(rollback, chunk[:n]...)
 					}
 					log.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
+					if err == consensus.ErrInvalidblockbutnodrop {
+						return consensus.ErrInvalidblockbutnodrop
+					}
 					return errInvalidChain
 				}
 				// All verifications passed, store newly found uncertain headers

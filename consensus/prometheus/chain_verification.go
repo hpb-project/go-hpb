@@ -247,9 +247,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return consensus.ErrInvalidDifficulty
 		}
-		if !inturn && header.Difficulty.Cmp(diffNoTurn) != 0 {
+		if header.Difficulty.Cmp(diffNoTurn) != 0 && !inturn {
 			return consensus.ErrInvalidDifficulty
-		} else {
+		} else if header.Difficulty.Cmp(diffNoTurn) == 0 {
 			//check mine frequency
 			for i := 1; i < len(snap.Signers)/3; i++ {
 				if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
