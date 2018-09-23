@@ -191,7 +191,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		copy(header.HardwareRandom, parentheader.HardwareRandom)
 		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 	} else {
-		if c.hboe.HWCheck() {
+		if c.hboe.HWCheck() || c.hboe.HWCheck() || c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Error("parentheader.HardwareRandom is nil or length is not 32")
 			}
@@ -206,11 +206,12 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 		} else {
-			log.Info("no boe device, using the gensis.json hardwarerandom")
-			header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-			copy(header.HardwareRandom, parentheader.HardwareRandom)
-			header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+			//log.Info("no boe device, using the gensis.json hardwarerandom")
+			//header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
+			//copy(header.HardwareRandom, parentheader.HardwareRandom)
+			//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 			//panic("boe broke, please contact with hpb")
+			return errors.New("boe check fail")
 		}
 	}
 

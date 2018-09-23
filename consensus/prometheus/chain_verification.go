@@ -222,7 +222,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			return consensus.ErrUnauthorized
 		}
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
-			if c.hboe.HWCheck() == false {
+			if !(c.hboe.HWCheck() || c.hboe.HWCheck() || c.hboe.HWCheck()) {
 				return consensus.ErrUnauthorized
 			}
 			parentnum := number - 1
