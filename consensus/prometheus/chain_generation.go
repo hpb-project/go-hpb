@@ -220,6 +220,14 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
+	//if header.Difficulty == diffNoTurn {
+	//	for i := 1; i < len(snap.Signers)/3; i++ {
+	//		if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], c.signer[:]) == 0 {
+	//			log.Error("777777777777777777777777777777777","offset", i)
+	//			return errors.New("self mine too frequency, mine abort")
+	//		}
+	//	}
+	//}
 	//header.Difficulty = diffNoTurn
 	//if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
 	//	//log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)

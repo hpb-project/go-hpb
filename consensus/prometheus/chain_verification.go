@@ -244,18 +244,23 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 		//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 		inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
-		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
-			return consensus.ErrInvalidDifficulty
-		}
-		if header.Difficulty.Cmp(diffNoTurn) != 0 && !inturn {
-			return consensus.ErrInvalidDifficulty
-		} else if header.Difficulty.Cmp(diffNoTurn) == 0 {
-			//check mine frequency
-			for i := 1; i < len(snap.Signers)/3; i++ {
-				if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
-					return consensus.ErrInvalidblockbutnodrop
-				}
+		if inturn {
+			if header.Difficulty.Cmp(diffInTurn) != 0 {
+				return consensus.ErrInvalidDifficulty
 			}
+		} else { //inturn is false
+			if header.Difficulty.Cmp(diffNoTurn) != 0 {
+				return consensus.ErrInvalidDifficulty
+			}
+			//else { //block difficulty is 1
+			//	//check mine frequency
+			//	for i := 1; i < len(snap.Signers)/3; i++ {
+			//		if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
+			//			log.Error("88888888888888888888888888888888888888888","offset", i, "header", header)
+			//			return consensus.ErrInvalidblockbutnodrop
+			//		}
+			//	}
+			//}
 		}
 
 	}
