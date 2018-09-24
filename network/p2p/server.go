@@ -683,7 +683,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	var err error
 	var ourRand, theirRand []byte
 	if c.id, ourRand, theirRand, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
-		log.Debug("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		log.Debug("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "reason", err)
 		c.close(err)
 		return
 	}
