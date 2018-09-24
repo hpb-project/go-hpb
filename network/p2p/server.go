@@ -545,7 +545,7 @@ running:
 
 			shortid := fmt.Sprintf("%x", nid[0:8])
 			if err := PeerMgrInst().unregister(shortid); err != nil {
-				log.Error("Peer removal failed", "peer", shortid, "err", err)
+				log.Debug("Peer removal failed", "peer", shortid, "err", err)
 			}
 
 			srv.ntab.RemoveNode(nid)
@@ -844,9 +844,9 @@ func (srv *Server) runPeer(p *PeerBase) {
 
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
-	log.Info("Server stop to run peer","id",p.ID(),"err",err)
+	log.Debug("Server stop to run peer","id",p.ID(),"err",err)
 	if err.Error() == DiscAlreadyConnected.Error(){
-		p.log.Error("######DO not stop already connected peer######")
+		p.log.Debug("######DO not stop already connected peer######")
 		//return
 	}
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
