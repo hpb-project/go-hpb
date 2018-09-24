@@ -40,7 +40,7 @@ const Fechcontractaddr = "0xe67ac1e2a1848c8a48bd7e466d55a0db8593425a"
 
 //const Fechcontractaddrtest = "0x17977943a97075645c6fc76afd91d41f935aaaae"
 const Hpcalclookbackround = 3
-const StageNumberII = 200000
+const StageNumberII = 250000
 
 //const Nodenumsecond = 301
 //const Nodenumthird = 1000

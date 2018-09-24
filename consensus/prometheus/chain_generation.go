@@ -550,7 +550,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	}
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
-		if csnap != nil && len(csnap.CanAddresses) != 0 {
+		if csnap != nil {
 			bigA23.Mul(bigA23, big.NewFloat(0.65))
 			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
 
@@ -565,7 +565,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				state.AddBalance(caddress, cadReward) //reward every cad node average
 			}
 
-			if number%consensus.HpbNodeCheckpointInterval == 0 && number >= consensus.StageNumberII {
+			if number%consensus.HpbNodeCheckpointInterval == 0 {
 				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
 			}
 		}
@@ -587,8 +587,11 @@ func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 
 func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap, hpsnap *snapshots.HpbNodeSnap) error {
 
-	if csnap == nil || hpsnap == nil {
-		return errors.New("input param snap is nil")
+	if csnap == nil {
+		return errors.New("input param csnap is nil")
+	}
+	if header.Number.Uint64() >= consensus.StageNumberII && hpsnap == nil {
+		return errors.New("input param hpsnap is nil")
 	}
 	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
 	context := evm.Context{
@@ -682,11 +685,13 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		voteres[tempaddr] = tempvote
 	}
 
-	for addr, _ := range voteres {
-		_, ok1 := csnap.VotePercents[addr]
-		_, ok2 := hpsnap.Signers[addr]
-		if !ok1 && !ok2 {
-			delete(voteres, addr)
+	if header.Number.Uint64() >= consensus.StageNumberII {
+		for addr := range voteres {
+			_, ok1 := csnap.VotePercents[addr]
+			_, ok2 := hpsnap.Signers[addr]
+			if !ok1 && !ok2 {
+				delete(voteres, addr)
+			}
 		}
 	}
 
