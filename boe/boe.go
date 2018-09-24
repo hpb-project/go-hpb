@@ -119,7 +119,7 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
         var str string = string(acc[:])
         return str,nil
     }
-    fmt.Printf("[boe]GetBindAccount ecode:%d\r\n", uint32(ret.ecode))
+    log.Info("GetBindAccount","ecode:", uint32(ret.ecode))
     C.boe_err_free(ret)
     return "",ErrGetAccountFailed
 
@@ -133,6 +133,7 @@ func (boe *BoeHandle) GetVersion() (TVersion,error) {
         return v,nil
     }
     //fmt.Printf("[boe]GetVersion ecode:%d\r\n", uint32(ret.ecode))
+    log.Info("GetVersion","ecode:", uint32(ret.ecode))
     C.boe_err_free(ret)
     var v TVersion
     return v,ErrInitFailed
@@ -220,6 +221,7 @@ func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
     if ret == C.BOE_OK {
         return signature, nil
     } 
+    log.Info("boe hwsign failed", " ecode:", ret.ecode)
     return nil, ErrHWSignFailed
 }
 
@@ -253,9 +255,9 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
     c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
     //loushl change to debug
     if c_ret == C.BOE_OK {
-    log.Trace("boe validate sign success")
-    result[0] = 4
-    return result,nil
+        log.Trace("boe validate sign success")
+        result[0] = 4
+        return result,nil
     }
 
     var (
@@ -313,5 +315,6 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
     if ret == C.BOE_OK {
         return result, nil
     } 
+    log.Error("boe getnexthash", " ecode :", ret.ecode)
     return nil, ErrGetNextHashFailed
 }
