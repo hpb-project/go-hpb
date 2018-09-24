@@ -743,6 +743,12 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	if !c.isboe {
 		remoteCoinbase := strings.ToLower(c.their.CoinBase.String())
 		log.Trace("Remote coinbase","address",remoteCoinbase)
+		if len(srv.hdtab) == 0 {
+			log.Info("Do not ready for connected.","id",c.id.TerminalString())
+			c.close(DiscHwSignError)
+			return
+		}
+
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {
 				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
