@@ -775,7 +775,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	//log.Debug("######Get remote hardware table","ourtable",ourHdtable)
 	theirHdtable, err := c.doHardwareTable(ourHdtable)
 	if err != nil {
-		clog.Error("Failed hardware table handshake", "err", err)
+		clog.Warn("Failed hardware table handshake", "reason", err)
 		c.close(err)
 		return
 	}
