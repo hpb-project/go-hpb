@@ -797,7 +797,7 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 		werr <- err
 	}()
 	if their, err = readHardwareTable(t.rw, our); err != nil {
-		log.Warn("read hardware table message","reason",err)
+		log.Debug("read hardware table message","reason",err)
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
@@ -824,7 +824,7 @@ func readHardwareTable(rw MsgReader, our *hardwareTable) (*hardwareTable, error)
 	if msg.Code == discMsg {
 		var reason [1]DiscReason
 		rlp.Decode(msg.Payload, &reason)
-		log.Warn("Hardware message to disconnect.")
+		log.Debug("Hardware message to disconnect.")
 		return nil, reason[0]
 	}
 

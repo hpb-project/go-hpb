@@ -341,7 +341,7 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 
 	//log.Error("############","len",len(toBondNode))
 	if len(toBondNode) > 0{
-		log.Debug("Discovery new nodes to bonding.","Nodes",toBondNode)
+		log.Trace("Discovery new nodes to bonding.","Nodes",toBondNode)
 		go p.ntab.Bondall(toBondNode)
 	}
 
