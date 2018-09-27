@@ -51,7 +51,9 @@ func (prm *RpcManager)Start(apis []API ) error {
 		wsModules:    config.Network.WSModules,
 		wsExposeAll:  config.Network.WSExposeAll,
 	}
-	prm.rpcmgr.startRPC(apis)
+	if err := prm.rpcmgr.startRPC(apis); err != nil {
+		log.Error("start rpc error","reason",err)
+	}
 
 
 	return nil
