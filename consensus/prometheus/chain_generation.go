@@ -484,7 +484,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				for caddress, _ := range csnap.VotePercents {
 					state.AddBalance(caddress, cadReward) //reward every cad node average
 				}
-			} else {
+			} else if len(csnap.CanAddresses) > 0 {
 				bigA23.Mul(bigA23, big.NewFloat(0.65))
 				canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.CanAddresses)))) //calc average reward coin part about cadidate nodes
 
@@ -636,6 +636,10 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	votecounts := new(big.Int)
 	for _, votes := range voteres {
 		votecounts.Add(votecounts, &votes)
+	}
+
+	if votecounts.Cmp(big.NewInt(0)) == 0 {
+		return nil
 	}
 	votecountsfloat := new(big.Float)
 	votecountsfloat.SetInt(votecounts)
