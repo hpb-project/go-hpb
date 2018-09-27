@@ -100,25 +100,12 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 		}
 	}
 
-	//计算所有候选节点的投票率，包括了高性能节点的
-	//for addr,_ := range Cadvotepercents {
-	//	if counts, ok := Cadvotepercents[addr]; ok {
-	//		Cadvotepercents[addr] = counts/votes
-	//	}
-	//}
-
 	for k, _ := range addressesmap {
 		if k != addresstemp {
 			addresses = append(addresses, k)
 		}
 	}
-
-	//log.Info("new candAddress", "number", number, "addresses", len(addresses))
-	//cadNodeSnap := NewCadNodeSnap(number, hash, addresses)
 	cadNodeSnapvote := NewCadNodeSnapvote(number, hash, addresses, Cadvotepercents)
-
-	//log.Trace("Stored genesis voting CadNodeSnap to disk")
-	//return cadNodeSnap, nil
 	return cadNodeSnapvote, nil
 }
 

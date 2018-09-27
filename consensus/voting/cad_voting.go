@@ -118,20 +118,17 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 					headers = append(headers, header)
 				} else {
 					if count > 20 {
-						log.Error("loop 20 times, return err")
+						//log.Debug("loop 20 times, return err")
 						return nil, errors.New("GetAllCadNodeSnap get headers loop 20 times, return err")
 					}
-					log.Error("----------number%consensus.CadNodeCheckpointInterval != 0----------before CalcuCadNodeSnap get header err----------------------", "number", i)
+					log.Debug("----------number%consensus.CadNodeCheckpointInterval != 0----------before CalcuCadNodeSnap get header err----------------------", "number", i)
 					count = count + 1
 					goto GetAllCadNodeSnaploop
 				}
 			}
-			//for _ , h := range headers {
-			//	log.Info("GetAllCadNodeSnap headers", "headers", h.Hash(), h.Number)
-			//}
 
 			if snapa, err := snapshots.CalcuCadNodeSnap(db, number, latestCadCheckPointHash, headers, chain); err == nil {
-				log.Info("HPB_CAD： Loaded voting Cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+				log.Debug("HPB_CAD： Loaded voting Cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 				if err := StoreCanDataToCacheAndDb(recents, db, snapa, latestCadCheckPointHash); err != nil {
 					return nil, err
 				}
@@ -146,12 +143,9 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 				headers = append(headers, header)
 			}
 		}
-		//for _ , h := range headers {
-		//	log.Info("GetAllCadNodeSnap headers", "headers", h.Hash(), h.Number)
-		//}
 
 		if snapa, err := snapshots.CalcuCadNodeSnap(db, number, latestCadCheckPointHash, headers, chain); err == nil {
-			log.Info("HPB_CAD： Loaded voting cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
+			log.Debug("HPB_CAD： Loaded voting cad Node Snap form cache and db", "number", number, "latestCheckPointNumber", latestCheckPointNumber)
 			if err := StoreCanDataToCacheAndDb(recents, db, snapa, latestCadCheckPointHash); err != nil {
 				return nil, err
 			}

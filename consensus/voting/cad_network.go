@@ -39,9 +39,6 @@ import (
 
 // 从网络中获取最优化的
 func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error) {
-	//str := strconv.FormatUint(number, 10)
-	// 模拟从外部获取
-	//type CadWinners []*snapshots.CadWinner
 
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
@@ -54,15 +51,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	}
 	for _, peer := range peers {
 
-		//fmt.Println("this is TxsRate:", peer.TxsRate())
-		//fmt.Println("this is Bandwidth:", peer.Bandwidth())
-		//networkBandwidth := float64(peer.Bandwidth()) * float64(0.3)
-		//transactionNum := float64(peer.TxsRate()) * float64(0.7)
-		//VoteIndex := networkBandwidth + transactionNum
-
 		if peer.RemoteType() != discover.BootNode && peer.RemoteType() != discover.SynNode {
-			//networkBandwidth := float64(rand.Intn(1000)) * float64(0.3)
-			//transactionNum := float64(rand.Intn(1000)) * float64(0.7)
 			if len(peer.Address()) == 0 || peer.Address() == address {
 				continue
 			}
@@ -84,7 +73,6 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 				bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{peer.GetID(), peer.Address(), uint64(VoteIndex)})
 			}
 		}
-
 	}
 
 	if len(bestCadWinners) == 0 {
@@ -102,15 +90,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	var lastCadWinners []*snapshots.CadWinner
 
 	for i := 0; i < lnlen; i++ {
-		//for i := 0; i < len(bestCadWinners); i++ {
-		//if len(bestCadWinners) > 1 {
-		//lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(lnlen)])
-		//log.Error("xxxxxxxxxxxxxxxtestxxxxxxxxxxxxxxxxxxxxx", "test", bestCadWinners[rand.Intn(1)].Address)
 		lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners))])
-		//lastCadWinners = append(lastCadWinners, bestCadWinners[i])
-		//} else {
-		//	lastCadWinners = append(lastCadWinners, bestCadWinners[0])
-		//}
 	}
 
 	//开始进行排序获取最大值
@@ -124,31 +104,10 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			lastCadWinnerToChain = lastCadWinner
 		}
 	}
-	//if selectable candidate nodes not enough, rand select one in all candidate nodes,else rand select one in first consensus.HpbNodenumber numbers.
-	//if len(lastCadWinners) == 1 {
-	//	lastCadWinnerToChain = lastCadWinners[0]
-	//} else if len(lastCadWinners) <= consensus.HpbNodenumber {
-	//	lastCadWinnerToChain = lastCadWinners[rand.Intn(len(lastCadWinners))]
-	//} else {
-	//	//order the candidate nodes
-	//	for i := len(lastCadWinners) - 1; i >= 0; i-- {
-	//		for j := len(lastCadWinners) - 1; j >= len(lastCadWinners)-i; j-- {
-	//			if lastCadWinners[j].VoteIndex > lastCadWinners[j-1].VoteIndex {
-	//				lastCadWinners[j], lastCadWinners[j-1] = lastCadWinners[j-1], lastCadWinners[j]
-	//			}
-	//		}
-	//	}
-	//	lastCadWinnerToChain = lastCadWinners[rand.Intn(31)]
-	//}
 
 	winners = append(winners, lastCadWinnerToChain) //返回最优的
 
-	//if len(bestCadWinners) > 1 {
-	//winners = append(winners, bestCadWinners[rand.Intn(len(bestCadWinners)-1)]) //返回随机
 	winners = append(winners, bestCadWinners[rand.Intn(lnlen)]) //返回随机
-	//} else {
-	//	winners = append(winners, bestCadWinners[0]) // 获取第一个
-	//}
 	return winners, nil
 }
 
@@ -169,18 +128,3 @@ func Contain(obj interface{}, target interface{}) (bool, error) {
 
 	return false, errors.New("not in array")
 }
-
-/*
-func GetCadNodeMap(db hpbdb.Database,chain consensus.ChainReader, number uint64, hash common.Hash) (map[string]*snapshots.CadWinner, error) {
-
-	cadWinnerms := make(map[string]*snapshots.CadWinner)
-
-	if cadNodeSnapformap, err  := GetCadNodeSnap(db, chain, number, hash); err == nil{
-		for _, cws := range cadNodeSnapformap.CadWinners {
-		    cadWinnerms[cws.NetworkId] = &snapshots.CadWinner{cws.NetworkId,cws.Address,cws.VoteIndex}
-		}
-	}
-
-    return cadWinnerms,nil
-}
-*/

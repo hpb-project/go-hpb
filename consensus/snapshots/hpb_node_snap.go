@@ -203,7 +203,7 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 		partheaders[i-partheadersstart] = chain.GetHeaderByNumber(i)
 		gethbynumcount = gethbynumcount + 1
 		if partheaders[i-partheadersstart] == nil || &partheaders[i-partheadersstart].Coinbase == nil {
-			log.Error("before GetOffsethw---------------chain.GetHeaderByNumber(i) &partheaders[i-partheadersstart].Coinbase == nil", "number", number)
+			log.Debug("before GetOffsethw---------------chain.GetHeaderByNumber(i) &partheaders[i-partheadersstart].Coinbase == nil", "number", number)
 			if gethbynumcount > 20 {
 				return false, zeroaddr, errors.New("cannot get header by chain.GetHeaderByNumber")
 			}
@@ -353,7 +353,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 			}
 			loopcount += 1
 			goto GETCOUNT
-			log.Error("get hpb snap but missing header", "number", i)
+			//log.Error("get hpb snap but missing header", "number", i)
 		}
 	}
 

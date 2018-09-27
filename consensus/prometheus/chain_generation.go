@@ -186,7 +186,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "synnode" {
 		//panic("boe broke, please contact with hpb")
-		log.Info("TestMode, using the gensis.json hardwarerandom")
+		log.Debug("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, parentheader.HardwareRandom)
 		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
@@ -206,11 +206,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 		} else {
-			//log.Info("no boe device, using the gensis.json hardwarerandom")
-			//header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-			//copy(header.HardwareRandom, parentheader.HardwareRandom)
-			//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
-			//panic("boe broke, please contact with hpb")
 			return errors.New("boe check fail")
 		}
 	}
@@ -221,22 +216,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
-	//if header.Difficulty == diffNoTurn {
-	//	for i := 1; i < len(snap.Signers)/3; i++ {
-	//		if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], c.signer[:]) == 0 {
-	//			log.Error("777777777777777777777777777777777","offset", i)
-	//			return errors.New("self mine too frequency, mine abort")
-	//		}
-	//	}
-	//}
-	//header.Difficulty = diffNoTurn
-	//if diffbool, _, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); diffbool && err == nil {
-	//	//log.Error("----prepare header------------test for waiting 8 minutes-------------", "primeminer", m, "number", header.Number)
-	//	header.Difficulty = diffInTurn
-	//} else if err != nil {
-	//	log.Error("CalculateCurrentMiner fail", "error", err)
-	//	return err
-	//}
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -290,18 +269,13 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Info("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
+	log.Debug("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
 
 	c.lock.RUnlock()
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 
-	// 已经投票结束
-	//if (number%consensus.HpbNodeCheckpointInterval == 0) && (number != 1) {
-	// 轮转
 	SetNetNodeType(snap)
-	//log.Info("SetNetNodeType ***********************")
-	//}
 
 	if err != nil {
 		return nil, err
@@ -310,22 +284,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if _, authorized := snap.Signers[signer]; !authorized {
 		return nil, consensus.ErrUnauthorized
 	}
-
-	//log.Info("Proposed the hardware random number in current round:" + header.HardwareRandom)
-
-	// If we're amongst the recent signers, wait for the next block
-	// 如果最近已经签名，则需要等待时序
-	/*
-		for seen, recent := range snap.Recents {
-			if recent == signerHash {
-				// 签名者在recents缓存中，等待被移除
-				if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-					log.Info("Prometheus： Signed recently, must wait for others")
-					<-stop
-					return nil, nil
-				}
-			}
-		}*/
 
 	// 轮到我们的签名
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
@@ -337,42 +295,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		//	// It's not our turn explicitly to sign, delay it a bit
 		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		//	//log.Info("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-		//
-		//	midIndex := uint64(len(snap.Signers) / 2)                //中间位置，一般的个数为奇数个
-		//	currentIndex := number % uint64(len(snap.Signers))       //挖矿的机器位置
-		//	offset := snap.GetOffset(header.Number.Uint64(), signer) //当前的位置
-		//
-		//	//在一定范围内延迟8分,当前的currentIndex往前的没有超过
-		//	if currentIndex <= midIndex {
-		//		if offset < currentIndex+midIndex/2 {
-		//			wiggle = time.Duration(1000) * wiggleTime
-		//			delay += wiggle
-		//		} else {
-		//			//log.Info("Out-of-turn signing requested", "delay", common.PrettyDuration(delay))
-		//			delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
-		//		}
-		//	} else {
-		//		if offset < currentIndex-midIndex/2 {
-		//			wiggle = time.Duration(1000) * wiggleTime
-		//			delay += wiggle
-		//		} else {
-		//			delay += time.Duration(offset-currentIndex-midIndex) * wiggleTime
-		//		}
-		//	}
-
-		//fix delay calc
-		//var primemineraddr common.Address
-		//if _, tempmineraddr, err := snap.CalculateCurrentMiner(header.Number.Uint64(), c.signer, chain, header); err == nil {
-		//	primemineraddr = tempmineraddr
-		//} else {
-		//	return nil, err
-		//}
-		//zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
-		//if zeroaddr.Big().Cmp(primemineraddr.Big()) == 0 {
-		//	return nil, errors.New("primemineraddr is nil")
-		//}
-		//currentminer := snap.GetOffset(0, primemineraddr)
 		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
 		//log.Error("-----genblocksig---------test for waiting 8 minutes--------------", "primemineraddr", primemineraddr, "primeoffset", currentminer, "number", number)
 		myoffset := snap.GetOffset(header.Number.Uint64(), signer)
@@ -388,7 +310,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		}
 	}
 
-	log.Info("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay), "number", number)
+	log.Debug("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay), "number", number)
 
 	select {
 	case <-stop:
@@ -430,17 +352,17 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 		switch peer.RemoteType() {
 		case discover.PreNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Info("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				log.Debug("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.HpNode)
 			}
 		case discover.HpNode:
 			if flag := FindHpbNode(peer.Address(), addresses); !flag {
-				log.Info("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
+				log.Debug("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.PreNode)
 			}
 		case discover.SynNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Info("SynNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				log.Debug("SynNode ---------------------> HpNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.HpNode)
 			}
 			//peer.SetRemoteType(discover.SynNode)
@@ -480,7 +402,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	//log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
 	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	if err != nil {
-		log.Error("CalculateRewards return error", "err", err)
+		log.Info("CalculateRewards return", "info", err)
 	}
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -491,9 +413,6 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 // 计算奖励
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) error {
 	// Select the correct block reward based on chain progression
-	//hobBlockReward := big.NewInt(300000000)
-	//canBlockReward := big.NewInt(100000000)
-
 	var bigIntblocksoneyear = new(big.Int)
 	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)                         //seconds in one year
 	secondsoneyesr.Quo(secondsoneyesr, big.NewFloat(float64(c.config.Period))) //blocks mined by miners in one year
@@ -551,21 +470,37 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {
-			bigA23.Mul(bigA23, big.NewFloat(0.65))
-			canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
+			if number < consensus.StageNumberII {
+				bigA23.Mul(bigA23, big.NewFloat(0.65))
+				canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
 
-			bigcadRewardwei := new(big.Float)
-			bigcadRewardwei.SetInt(ether2weis)
-			bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward) //calc average reward weis part about candidate nodes
+				bigcadRewardwei := new(big.Float)
+				bigcadRewardwei.SetInt(ether2weis)
+				bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward) //calc average reward weis part about candidate nodes
 
-			cadReward := new(big.Int)
-			bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
+				cadReward := new(big.Int)
+				bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
 
-			for caddress, _ := range csnap.VotePercents {
-				state.AddBalance(caddress, cadReward) //reward every cad node average
+				for caddress, _ := range csnap.VotePercents {
+					state.AddBalance(caddress, cadReward) //reward every cad node average
+				}
+			} else {
+				bigA23.Mul(bigA23, big.NewFloat(0.65))
+				canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.CanAddresses)))) //calc average reward coin part about cadidate nodes
+
+				bigcadRewardwei := new(big.Float)
+				bigcadRewardwei.SetInt(ether2weis)
+				bigcadRewardwei.Mul(bigcadRewardwei, canBlockReward) //calc average reward weis part about candidate nodes
+
+				cadReward := new(big.Int)
+				bigcadRewardwei.Int(cadReward) //from big.Float to big.Int
+
+				for _, caddress := range csnap.CanAddresses {
+					state.AddBalance(caddress, cadReward) //reward every cad node average
+				}
 			}
 
-			if number%consensus.HpbNodeCheckpointInterval == 0 {
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number >= consensus.StageNumberII {
 				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
 			}
 		}
@@ -590,7 +525,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	if csnap == nil {
 		return errors.New("input param csnap is nil")
 	}
-	if header.Number.Uint64() >= consensus.StageNumberII && hpsnap == nil {
+	if hpsnap == nil {
 		return errors.New("input param hpsnap is nil")
 	}
 	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
@@ -684,14 +619,16 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempvote.SetBytes(resultvote[64+32+(i+1+int(addrbigcount.Int64()))*32 : 64+32+(i+1+int(addrbigcount.Int64()))*32+32])
 		voteres[tempaddr] = tempvote
 	}
+	VotePercents := make(map[common.Address]int64)
+	for _, v := range csnap.CanAddresses {
+		VotePercents[v] = 1
+	}
 
-	if header.Number.Uint64() >= consensus.StageNumberII {
-		for addr := range voteres {
-			_, ok1 := csnap.VotePercents[addr]
-			_, ok2 := hpsnap.Signers[addr]
-			if !ok1 && !ok2 {
-				delete(voteres, addr)
-			}
+	for addr := range voteres {
+		_, ok1 := VotePercents[addr]
+		_, ok2 := hpsnap.Signers[addr]
+		if !ok1 && !ok2 {
+			delete(voteres, addr)
 		}
 	}
 

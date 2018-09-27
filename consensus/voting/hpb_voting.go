@@ -104,9 +104,6 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 	genesis := chain.GetHeaderByNumber(0)
-	/*if err := c.VerifyHeader(chain, genesis, false); err != nil {
-		return nil, err
-	}*/
 	signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
 	for i := 0; i < len(signers); i++ {
 		//log.Info("miner initialization", "i:",i)

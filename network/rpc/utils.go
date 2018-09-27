@@ -29,6 +29,7 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+	"math/big"
 )
 
 var (
@@ -223,4 +224,17 @@ func NewID() ID {
 	}
 
 	return ID("0x" + rpcId)
+}
+//Todo add hex function by loushl
+var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
+
+func isHexNum(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	return t == bigIntType
 }
