@@ -252,15 +252,6 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			if header.Difficulty.Cmp(diffNoTurn) != 0 {
 				return consensus.ErrInvalidDifficulty
 			}
-			//else { //block difficulty is 1
-			//	//check mine frequency
-			//	for i := 1; i < len(snap.Signers)/3; i++ {
-			//		if bytes.Compare(chain.GetHeaderByNumber(number - uint64(i)).Coinbase[:], signer[:]) == 0 {
-			//			log.Error("88888888888888888888888888888888888888888","offset", i, "header", header)
-			//			return consensus.ErrInvalidblockbutnodrop
-			//		}
-			//	}
-			//}
 		}
 
 	}
