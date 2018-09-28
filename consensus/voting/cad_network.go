@@ -55,8 +55,8 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			if len(peer.Address()) == 0 || peer.Address() == address {
 				continue
 			}
-			transactionNum := peer.TxsRate() * float64(0.6)
-			networkBandwidth := peer.Bandwidth() * float64(0.3)
+			//transactionNum := peer.TxsRate() * float64(0.6)
+			networkBandwidth := peer.Bandwidth() * float64(0.9)
 			//log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
 			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
 
@@ -68,7 +68,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			val64, _ := bigval.Float64()
 			balanceIndex := val64 * float64(0.1)
 
-			VoteIndex := networkBandwidth + transactionNum + balanceIndex
+			VoteIndex := networkBandwidth + balanceIndex
 			if peer.Address() != address {
 				bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{peer.GetID(), peer.Address(), uint64(VoteIndex)})
 			}
