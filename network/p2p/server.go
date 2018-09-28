@@ -745,7 +745,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		remoteCoinbase := strings.ToLower(c.their.CoinBase.String())
 		log.Trace("Remote coinbase","address",remoteCoinbase)
 		if len(srv.hdtab) == 0 {
-			log.Info("Do not ready for connected.","id",c.id.TerminalString())
+			log.Debug("Do not ready for connected.","id",c.id.TerminalString())
 			c.close(DiscHwSignError)
 			return
 		}
