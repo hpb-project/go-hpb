@@ -708,10 +708,10 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our.RandNonce = ourRand
 
 	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err!=nil{
-		log.Debug("Do hardware sign  error.","err",err)
+		clog.Debug("Do hardware sign  error.","err",err)
 		//todo close and return
 	}
-	log.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
+	clog.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
 
 
 
@@ -727,15 +727,15 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	c.their = *their
-	log.Debug("Do protocol handshake OK.","id",c.id)
-	log.Trace("Do protocol handshake.","our",c.our,"their",c.their)
+	clog.Debug("Do protocol handshake OK.","id",c.id)
+	clog.Trace("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
 	isBootnode := false
 
 	for _, n := range srv.BootstrapNodes {
 		if c.id == n.ID {
-			log.Info("Remote node is boot.","id",c.id)
+			clog.Info("Remote node is boot.","id",c.id)
 			c.isboe    = true
 			isBootnode = true
 		}
@@ -743,22 +743,22 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 	if !c.isboe {
 		remoteCoinbase := strings.ToLower(c.their.CoinBase.String())
-		log.Trace("Remote coinbase","address",remoteCoinbase)
+		clog.Trace("Remote coinbase","address",remoteCoinbase)
 		if len(srv.hdtab) == 0 {
-			log.Debug("Do not ready for connected.","id",c.id.TerminalString())
+			clog.Debug("Do not ready for connected.","id",c.id.TerminalString())
 			c.close(DiscHwSignError)
 			return
 		}
 
 		for _,hw := range srv.hdtab {
 			if hw.Adr == remoteCoinbase {
-				log.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
+				clog.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
-				log.Info("Boe verify the remote.","id",c.id.TerminalString(),"result",c.isboe)
+				clog.Info("Boe verify the remote.","id",c.id.TerminalString(),"result",c.isboe)
 			}
 		}
 	}
-	log.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe)
+	clog.Info("Verify the remote hardware.","id",c.id.TerminalString(),"result",c.isboe)
 
 
 	if !srv.TestMode && srv.localType == discover.SynNode  && c.isboe == false {
@@ -786,11 +786,11 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
-	log.Trace("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
+	clog.Trace("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
 
 	if isBootnode {
 		srv.hdtab = theirHdtable.Hdtab
-		log.Trace("Update hardware table from boot.","srv hdtab", srv.hdtab )
+		clog.Trace("Update hardware table from boot.","srv hdtab", srv.hdtab )
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////
