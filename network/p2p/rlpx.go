@@ -153,7 +153,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 		return nil, err
 	}
 	if msg.Size > baseProtocolMaxMsgSize {
-		log.Error("Message too big when read protocol handshake.")
+		log.Debug("Message too big when read protocol handshake.")
 		return nil, fmt.Errorf("message too big")
 	}
 	if msg.Code == discMsg {
@@ -163,7 +163,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 		// back otherwise. Wrap it in a string instead.
 		var reason [1]DiscReason
 		rlp.Decode(msg.Payload, &reason)
-		log.Error("Handshake message to disconnect.")
+		log.Debug("Handshake message to disconnect.")
 		return nil, reason[0]
 	}
 	if msg.Code != handshakeMsg {
@@ -171,7 +171,7 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	}
 	var hs protoHandshake
 	if err := msg.Decode(&hs); err != nil {
-		log.Error("###### protocol handshake decode","error",err)
+		log.Debug("###### protocol handshake decode","error",err)
 		return nil, err
 	}
 	if (hs.ID == discover.NodeID{}) {
