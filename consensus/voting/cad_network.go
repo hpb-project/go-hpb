@@ -32,6 +32,7 @@ import (
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math"
@@ -45,7 +46,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 
 	bestCadWinners := []*snapshots.CadWinner{}
 	peers := p2p.PeerMgrInst().PeersAll()
-	fmt.Println("######### peers length is:", len(peers))
+		log.Info("Peers:", "Connected Peers:", len(peers))
 	if len(peers) == 0 {
 		return nil, nil
 	}
