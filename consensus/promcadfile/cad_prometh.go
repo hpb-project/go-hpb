@@ -33,8 +33,8 @@ import (
 )
 
 type config struct {
-	path      string        // File containing the configuration values
-	genesis   []CadWinner // Genesis block to cache for node deploys
+	path    string      // File containing the configuration values
+	genesis []CadWinner // Genesis block to cache for node deploys
 }
 
 // 将数据写入到文件中
@@ -49,9 +49,9 @@ func (c config) flush() {
 
 // prometh 结构体
 type prometh struct {
-	network string // Network name to manage
-	conf    config // Configurations from previous runs
-	in *bufio.Reader // 处理流文件
+	network string        // Network name to manage
+	conf    config        // Configurations from previous runs
+	in      *bufio.Reader // 处理流文件
 }
 
 // read reads a single line from stdin, trimming if from spaces.
@@ -69,7 +69,7 @@ func (p *prometh) read() string {
 func (p *prometh) readAddress() *common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> 0x")
+		fmt.Printf("> hpb")
 		text, err := p.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)

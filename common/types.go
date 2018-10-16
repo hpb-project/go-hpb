@@ -189,6 +189,27 @@ func (a Address) Hex() string {
 	return "0x" + string(result)
 }
 
+func (a Address) Hpb() string {
+	unchecksummed := hex.EncodeToString(a[:])
+	sha := sha3.NewKeccak256()
+	sha.Write([]byte(unchecksummed))
+	hash := sha.Sum(nil)
+
+	result := []byte(unchecksummed)
+	for i := 0; i < len(result); i++ {
+		hashByte := hash[i/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if result[i] > '9' && hashByte > 7 {
+			result[i] -= 32
+		}
+	}
+	return "hpb" + string(result)
+}
+
 // String implements the stringer interface and is used also by the logger.
 func (a Address) String() string {
 	return a.Hex()
@@ -251,28 +272,6 @@ func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 // Address represents the 20 byte address of an Hpb account.
 
 type AddressHash [AddressHashLength]byte
-
-func BytesToAddressHash(b []byte) AddressHash {
-	var ah AddressHash
-	ah.SetHashBytes(b)
-	return ah
-}
-
-func StringToAddressHash(s string) AddressHash { return BytesToAddressHash([]byte(s)) }
-func BigToAddressHash(b *big.Int) AddressHash  { return BytesToAddressHash(b.Bytes()) }
-func HexToAddressHash(s string) AddressHash    { return BytesToAddressHash(FromHex(s)) }
-
-// IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Hpb address or not.
-func IsHexAddressHash(s string) bool {
-	if len(s) == 2+2*AddressHashLength && IsHex(s) {
-		return true
-	}
-	if len(s) == 2*AddressHashLength && IsHex("0x"+s) {
-		return true
-	}
-	return false
-}
 
 // Get the string representation of the underlying address
 func (a AddressHash) Str() string   { return string(a[:]) }

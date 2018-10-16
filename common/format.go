@@ -38,3 +38,16 @@ func (d PrettyDuration) String() string {
 	}
 	return label
 }
+
+func RexRep0xToHpb(str string) string {
+	pat := "(0x)([0-9a-f]{40})"
+	if ok, _ := regexp.Match(pat, []byte(str)); ok {
+		re, _ := regexp.Compile(pat)
+		sub := re.FindSubmatch([]byte(str))
+		// total match 3
+		if len(sub) == 3 {
+			str = re.ReplaceAllString(str, "hpb"+string(sub[2]))
+		}
+	}
+	return str
+}

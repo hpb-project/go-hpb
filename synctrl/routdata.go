@@ -52,7 +52,6 @@ func routBlock(block *types.Block, propagate bool) {
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
-					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.SynNode:
 					sendNewBlock(peer, block, td)
@@ -65,11 +64,9 @@ func routBlock(block *types.Block, propagate bool) {
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
-					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.HpNode:
 					sendNewBlock(peer, block, td)
-					//sendNewHashBlock(peer, block, td)
 					break
 				case discover.SynNode:
 					//ONLY FOR TEST

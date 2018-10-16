@@ -103,9 +103,9 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	}
 
 	prm.server.Config.CoinBase = coinbase
-	log.Info("Set coinbase address by start", "address", coinbase)
+	log.Info("Set coinbase address by start", "address", common.Hex2Hpb(coinbase.String()))
 
-	if coinbase.String() =="0x0000000000000000000000000000000000000000" {
+	if common.Hex2Hpb(coinbase.String()) == "hpb0000000000000000000000000000000000000000" {
 		panic("coinbase address is nil.")
 	}
 
@@ -266,6 +266,7 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 
 	return false
 }
+
 /*
 func (prm *PeerManager) SetHpRemoteFlag(flag bool) {
 	//log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)

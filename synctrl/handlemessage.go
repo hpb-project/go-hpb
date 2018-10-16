@@ -338,7 +338,6 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 		// scenario should easily be covered by the fetcher.
 		currentBlock := bc.InstanceBlockChain().CurrentBlock()
 		if trueTD.Cmp(bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
-			//go InstanceSynCtrl().synchronise(p)
 		}
 	}
 	return nil
@@ -383,7 +382,6 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 		// scenario should easily be covered by the fetcher.
 		currentBlock := bc.InstanceBlockChain().CurrentBlock()
 		if trueTD.Cmp(bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
-			//go InstanceSynCtrl().synchronise(p)
 		}
 	}
 	return nil

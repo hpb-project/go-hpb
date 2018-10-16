@@ -269,7 +269,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Debug("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
+	log.Debug("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hpb(), "number", number)
 
 	c.lock.RUnlock()
 
@@ -352,17 +352,17 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 		switch peer.RemoteType() {
 		case discover.PreNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Debug("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				log.Debug("PreNode ---------------------> HpNode", "addesss", peer.Address().Hpb())
 				peer.SetRemoteType(discover.HpNode)
 			}
 		case discover.HpNode:
 			if flag := FindHpbNode(peer.Address(), addresses); !flag {
-				log.Debug("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
+				log.Debug("HpNode ---------------------> PreNode", "addesss", peer.Address().Hpb())
 				peer.SetRemoteType(discover.PreNode)
 			}
 		case discover.SynNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Debug("SynNode ---------------------> HpNode", "addesss", peer.Address().Hex())
+				log.Debug("SynNode ---------------------> HpNode", "addesss", peer.Address().Hpb())
 				peer.SetRemoteType(discover.HpNode)
 			}
 			//peer.SetRemoteType(discover.SynNode)
@@ -528,7 +528,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	if hpsnap == nil {
 		return errors.New("input param hpsnap is nil")
 	}
-	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
+	fechaddr := common.HexToAddress(common.Hpb2Hex(consensus.Fechcontractaddr))
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
 		Transfer:    evm.Transfer,

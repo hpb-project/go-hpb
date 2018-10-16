@@ -29,8 +29,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -38,12 +38,12 @@ import (
 // config contains all the configurations needed by prometh that should be saved
 // between sessions.
 type pconfig struct {
-	path      string        // File containing the configuration values
+	path      string      // File containing the configuration values
 	genesis   *bc.Genesis // Genesis block to cache for node deploys
-	bootFull  []string      // Bootnodes to always connect to by full nodes
-	bootLight []string      // Bootnodes to always connect to by light nodes
+	bootFull  []string    // Bootnodes to always connect to by full nodes
+	bootLight []string    // Bootnodes to always connect to by light nodes
 	ethstats  string
-	Servers map[string][]byte `json:"servers,omitempty"`
+	Servers   map[string][]byte `json:"servers,omitempty"`
 }
 
 // 返回按照字母顺序的服务器
@@ -68,7 +68,7 @@ func (c pconfig) flush() {
 
 // prometh 结构体
 type prometh struct {
-	network string // Network name to manage
+	network string  // Network name to manage
 	conf    pconfig // Configurations from previous runs
 
 	servers  map[string]*sshClient // SSH connections to servers to administer
@@ -181,7 +181,6 @@ func (p *prometh) readDefaultBigInt(def *big.Int) *big.Int {
 	}
 }
 
-
 // readDefaultFloat reads a single line from stdin, trimming if from spaces, enforcing
 // it to parse into a float. If an empty line is entered, the default value is returned.
 func (p *prometh) readDefaultFloat(def float64) float64 {
@@ -220,7 +219,7 @@ func (p *prometh) readPassword() string {
 func (p *prometh) readAddress() *common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> 0x")
+		fmt.Printf("> hpb")
 		text, err := p.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
@@ -236,9 +235,9 @@ func (p *prometh) readAddress() *common.Address {
 		}
 
 		/**
-		*
-		SetString sets z to the value of s, interpreted in the given base, and returns z and a boolean indicating success. The entire string (not just a prefix) must be valid for success. If SetString fails, the value of z is undefined but the returned value is nil.
-        The base argument must be 0 or a value between 2 and MaxBase. If the base is 0, the string prefix determines the actual conversion base. A prefix of “0x” or “0X” selects base 16; the “0” prefix selects base 8, and a “0b” or “0B” prefix selects base 2. Otherwise the selected base is 10.
+				*
+				SetString sets z to the value of s, interpreted in the given base, and returns z and a boolean indicating success. The entire string (not just a prefix) must be valid for success. If SetString fails, the value of z is undefined but the returned value is nil.
+		        The base argument must be 0 or a value between 2 and MaxBase. If the base is 0, the string prefix determines the actual conversion base. A prefix of “0x” or “0X” selects base 16; the “0” prefix selects base 8, and a “0b” or “0B” prefix selects base 2. Otherwise the selected base is 10.
 		*/
 
 		bigaddr, _ := new(big.Int).SetString(text, 16)
@@ -253,7 +252,7 @@ func (p *prometh) readAddress() *common.Address {
 func (p *prometh) readDefaultAddress(def common.Address) common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> 0x")
+		fmt.Printf("> hpb")
 		text, err := p.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)

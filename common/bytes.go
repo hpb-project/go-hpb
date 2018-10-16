@@ -19,6 +19,7 @@ package common
 
 import (
 	"encoding/hex"
+	"strings"
 )
 
 func ToHex(b []byte) string {
@@ -56,9 +57,20 @@ func CopyBytes(b []byte) (copiedBytes []byte) {
 	return
 }
 
-func HasHexPrefix(str string) bool {
-	l := len(str)
-	return l >= 2 && str[0:2] == "0x"
+//HexPrefix2HpbPrefix
+func Hex2Hpb(str string) string {
+	if strings.HasPrefix(str, "0x") {
+		return strings.Replace(str, "0x", "hpb", 2)
+	}
+	return str
+}
+
+//HpbPrefix2HexPrefix
+func Hpb2Hex(str string) string {
+	if strings.HasPrefix(str, "hpb") {
+		return strings.Replace(str, "hpb", "0x", 3)
+	}
+	return str
 }
 
 func IsHex(str string) bool {

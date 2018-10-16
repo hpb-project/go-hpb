@@ -2217,7 +2217,7 @@ var toTwosComplement = function (number) {
  * @return {Boolean}
 */
 var isStrictAddress = function (address) {
-    return /^0x[0-9a-f]{40}$/i.test(address);
+    return /^hpb[0-9a-f]{40}$/i.test(address);
 };
 
 /**
@@ -2228,10 +2228,10 @@ var isStrictAddress = function (address) {
  * @return {Boolean}
 */
 var isAddress = function (address) {
-    if (!/^(0x)?[0-9a-f]{40}$/i.test(address)) {
+    if (!/^(hpb)?[0-9a-f]{40}$/i.test(address)) {
         // check if it has the basic requirements of an address
         return false;
-    } else if (/^(0x)?[0-9a-f]{40}$/.test(address) || /^(0x)?[0-9A-F]{40}$/.test(address)) {
+    } else if (/^(hpb)?[0-9a-f]{40}$/.test(address) || /^(hpb)?[0-9A-F]{40}$/.test(address)) {
         // If it's all small caps or all all caps, return true
         return true;
     } else {
@@ -2250,6 +2250,7 @@ var isAddress = function (address) {
 var isChecksumAddress = function (address) {
     // Check each case
     address = address.replace('0x','');
+    address = address.replace('hpb','');
     var addressHash = sha3(address.toLowerCase());
 
     for (var i = 0; i < 40; i++ ) {
@@ -2274,6 +2275,7 @@ var toChecksumAddress = function (address) {
     if (typeof address === 'undefined') return '';
 
     address = address.toLowerCase().replace('0x','');
+    address = address.toLowerCase().replace('hpb','');
     var addressHash = sha3(address);
     var checksumAddress = '0x';
 
