@@ -30,6 +30,7 @@ import (
 	"strconv"
 	//"errors"
 	"errors"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"math"
 	"math/rand"
@@ -142,135 +143,6 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 		offset++
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
-}
-
-// 判断当前的次序
-func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chain consensus.ChainReader, header *types.Header) (bool, common.Address, error) {
-
-	// 实际开发中，从硬件中获取
-	//rand := rand.Uint64()
-	//TODO：硬件随机数相关，直接使用的低16字节对应的uint64对uint64(len(snap.Signers)取余确定,每次都从区块头中获取轮次内的signer集合，然后作排除操作后，在进行确定offset
-	var currentIndex uint64
-	zeroaddr := common.HexToAddress("0000000000000000000000000000000000000000")
-	signers := s.GetHpbNodes() //hpb节点，是排序过的
-	if signers == nil {
-		return false, zeroaddr, errors.New("CalculateCurrentMiner GetHpbNodes() return nil snap have no hp signers")
-	}
-	var hpbsignersmap = make(map[common.Address]int)
-	for offset, signeradrr := range signers {
-		hpbsignersmap[signeradrr] = offset //offset为signer对应的offset
-	}
-
-	randBigInt := new(big.Int)
-	if len(header.HardwareRandom) == 0 {
-		log.Error("---------------CalculateCurrentMiner header.HardwareRandom----------", "len(header.HardwareRandom)", "0")
-		return false, zeroaddr, errors.New("CalculateCurrentMiner header.HardwareRandom is nil")
-	}
-	randBigInt.SetBytes(header.HardwareRandom)
-
-	var partheadersstart uint64
-	//如果number为1，则直接对原来的singers集合进行取余操作获取offset，这里根绝signers的数组下标作为对应signer的offset，
-	if number%uint64(len(signers)) == 1 {
-		if offset, ok := hpbsignersmap[signer]; ok && uint64(offset) == randBigInt.Uint64()%uint64(len(hpbsignersmap)) {
-			if zeroaddr.Big().Cmp(signer.Big()) == 0 {
-				for _, signer := range signers {
-					log.Error("===========true number%uint64(len(signers)) == 1=========print signers================", "signer", signer)
-				}
-				log.Error("===============true number%uint64(len(signers)) == 1 signer is nil========================")
-			}
-			return true, signer, nil
-		} else {
-			if zeroaddr.Big().Cmp(signers[offset].Big()) == 0 {
-				for _, signer := range signers {
-					log.Error("-----------false number%uint64(len(signers)) == 1-----------print signers-----------------------", "signer", signer)
-				}
-				log.Error("--------------------false number%uint64(len(signers)) == 1 signer is nil------------------------")
-			}
-			return false, signers[offset], nil
-		}
-	} else { //如果不为1，则作如下处理
-		partheadersstart = number - (number-1)%uint64(len(signers))
-		//log.Error("before GetOffsethw partheadersstart","partheadersstart",partheadersstart, "len(s.Signers)", len(s.Signers))
-	}
-
-	var partheaders = make([]*types.Header, (number-1)%uint64(len(signers)))
-	//offset := s.GetOffset(number, signer) //当前的位置
-
-	var gethbynumcount int = 0
-	//获取部分区块头，为了获取这些区块头中都那些signer进行了签名操作
-	for i := partheadersstart; i < number; i++ {
-	loop:
-		partheaders[i-partheadersstart] = chain.GetHeaderByNumber(i)
-		gethbynumcount = gethbynumcount + 1
-		if partheaders[i-partheadersstart] == nil || &partheaders[i-partheadersstart].Coinbase == nil {
-			log.Debug("before GetOffsethw---------------chain.GetHeaderByNumber(i) &partheaders[i-partheadersstart].Coinbase == nil", "number", number)
-			if gethbynumcount > 20 {
-				return false, zeroaddr, errors.New("cannot get header by chain.GetHeaderByNumber")
-			}
-			goto loop
-		}
-	}
-	//log.Error("before GetOffsethw number","number",number, "len partheaders", len(partheaders))
-	//mappartheaders,是这些区块头中signer的map，包含了对应signer签署区块的个数，暂时没什么用
-	_, _, mappartheaders := s.GetOffsethw(number, signer, partheaders)
-
-	for recentsignaddr, _ := range mappartheaders {
-		if _, ok := mappartheaders[recentsignaddr]; ok { //因为mappartheaders这个map的alue是int，所以只有通过这种办法才能确定这个key是否真正存在
-			delete(hpbsignersmap, recentsignaddr) //存在就在之前保存的高性能节点的map中删除这个key，剩下的就是在这一轮次还没有签过名的高性能节点map
-		} //hpbsignersmap 是高性能节点的差集
-	}
-	currentIndex = randBigInt.Uint64() % uint64(len(hpbsignersmap)) //挖矿的机器位置
-
-	_, ok := hpbsignersmap[signer] //在未签名的高性能map中查找对应的signer是否存在
-	//差集合放入数组，然后进行排序，
-	hpbsignerarray := make([]common.Address, 0, len(hpbsignersmap))
-	for addr, _ := range hpbsignersmap {
-		hpbsignerarray = append(hpbsignerarray, addr)
-	}
-	for i := 0; i < len(hpbsignerarray); i++ {
-		for j := 0; j < len(hpbsignerarray)-i-1; j++ {
-			if bytes.Compare(hpbsignerarray[j][:], hpbsignerarray[j+1][:]) > 0 {
-				hpbsignerarray[j], hpbsignerarray[j+1] = hpbsignerarray[j+1], hpbsignerarray[j]
-			}
-		}
-	}
-
-	//确定offset
-	var unsigneroffset = 0
-	for i := 0; i < len(hpbsignerarray); i++ {
-		if hpbsignerarray[i] == signer {
-			unsigneroffset = i
-			break
-		}
-	}
-	//for i := 0; i < len(hpbsignerarray); i++ {
-	//	log.Error("chaji hpb nodes","hpbsignerarray",hpbsignerarray[i] )
-	//}
-	//log.Error("rand % len(hpbsignerarray)", "currentIndex", currentIndex, "signer", signer)
-	if ok && currentIndex == uint64(unsigneroffset) { //如果在区块头中未出现过，在未签名集合中，并且offset匹配则为真
-		if zeroaddr.Big().Cmp(signer.Big()) == 0 {
-			for _, signer := range signers {
-				log.Error("===========true number%uint64(len(signers)) != 1=========print signers================", "signer", signer)
-			}
-			for _, signer2 := range hpbsignerarray {
-				log.Error("===========true number%uint64(len(signers)) != 1=========print signers================", "signer2", signer2)
-			}
-			log.Error("===============true number%uint64(len(signers)) != 1 signer is nil========================")
-		}
-		return true, signer, nil
-	} else {
-		if zeroaddr.Big().Cmp(hpbsignerarray[currentIndex].Big()) == 0 {
-			for _, signer := range signers {
-				log.Error("---------------false number%uint64(len(signers)) != 1-----------print signers-------------------", "signer", signer)
-			}
-			for _, signer2 := range hpbsignerarray {
-				log.Error("-------------false number%uint64(len(signers)) != 1----------------print signers-------------------", "signer2", signer2)
-			}
-			log.Error("--------------------false number%uint64(len(signers)) != 1 signer is nil-----------------------")
-		}
-		return false, hpbsignerarray[currentIndex], nil
-	}
-	//return (number % uint64(len(signers))) == uint64(offset)
 }
 
 // 判断当前的次序
@@ -445,7 +317,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 			latestCheckPointHash := header.Hash()
 			snaptemp, err := CalculateHpbSnap(index, signatures, config, number-consensus.HpbNodeCheckpointInterval, latestCheckPointNum-consensus.HpbNodeCheckpointInterval, latestCheckPointHash, chain)
 			if err != nil {
-				//log.Error("-------- second CalculateHpbSnap------------", "err", err)
+				log.Debug("recursive call CalculateHpbSnap fail", "err", err)
 				hpnodeNO = len(finaltally)
 				goto END
 			}
@@ -461,23 +333,39 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 					delete(hpsmaptemp, v)
 				}
 			}
+
+			if 0 == len(hpsmaptemp) {
+				hpnodeNO = len(finaltally)
+				goto END
+			}
 			//order the hpsmaptemp by put it into []common.address
 			delhpsmap := make([]common.Address, len(hpsmaptemp))
 			for key, _ := range hpsmaptemp {
 				delhpsmap = append(delhpsmap, key)
 			}
 
-			for i := 0; i < len(delhpsmap); i++ {
-				for j := 0; j < len(delhpsmap)-i-1; j++ {
-					if bytes.Compare(delhpsmap[j][:], delhpsmap[j+1][:]) > 0 {
-						delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+			//sort by addr
+			if 1 < len(delhpsmap) {
+				for i := 0; i < len(delhpsmap); i++ {
+					for j := 0; j < len(delhpsmap)-i-1; j++ {
+						if bytes.Compare(delhpsmap[j][:], delhpsmap[j+1][:]) > 0 {
+							delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+						}
 					}
 				}
 			}
+
 			//calc how many last snap hps needing to add the latest snap
 			if len(finaltally)+len(delhpsmap) > consensus.HpbNodenumber {
-				for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
-					finaltally = append(finaltally, delhpsmap[i])
+				if number < consensus.StageNumberIII {
+					for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
+						finaltally = append(finaltally, delhpsmap[i])
+					}
+				} else {
+					finaltally, err = randselecthp(chain, number, delhpsmap, finaltally, consensus.HpbNodenumber-len(finaltally))
+					if nil != err {
+						return nil, err
+					}
 				}
 			} else {
 				for i := 0; i < len(delhpsmap); i++ {
@@ -490,25 +378,156 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	}
 
 END:
-	for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
-		snap.Signers[finaltally[i]] = struct{}{}
+	if number < consensus.StageNumberIII {
+		for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
+			snap.Signers[finaltally[i]] = struct{}{}
+		}
+	} else {
+		err := randsethp(chain, number, finaltally, snap, hpnodeNO, true)
+		if nil != err {
+			return nil, err
+		}
 	}
-	zeroaddr := common.HexToAddress(common.Hpb2Hex("hpb0000000000000000000000000000000000000000"))
+
+	//for debug
+	for _, v := range snap.GetHpbNodes() {
+		log.Debug("qazwsx snap hp nodes", "addr", common.Bytes2Hex(v[:]))
+	}
+
+	zeroaddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
 	if _, ok := snap.Signers[zeroaddr]; ok {
 		delete(snap.Signers, zeroaddr)
 	}
 
-	//if len(snap.Tally) != 0 {
-	//	for k,v := range snap.Tally {
-	//		log.Error("777777777777777777777777777777777777777777777777777snap.Signers k and v", "k", k, "v", v)
-	//	}
-	//}
-
-	//等待完善
-	//snap.Number += uint64(len(headers))
-	//snap.Hash = latestCheckPointHash
-	if snap == nil {
-		log.Error("777777777777777777777777777777777777777777777777777snap.Signers k and v", "k", "v")
-	}
 	return snap, nil
+}
+
+func randsethp(chain consensus.ChainReader, number uint64, finaltallytemp []common.Address, snap *HpbNodeSnap, hpnodeNO int, setsnap bool) error {
+
+	if number == 0 || hpnodeNO > len(finaltallytemp) || nil == snap || hpnodeNO == 0 {
+		return errors.New("randsethp: bad param")
+	}
+
+	var finaltally []common.Address
+	finaltally = make([]common.Address, 0, len(finaltallytemp))
+	for _, v := range finaltallytemp {
+		finaltally = append(finaltally, v)
+	}
+
+	var input, output []byte
+	var err error
+	var inputtemp [32]byte
+
+	//sort by addr
+	for i := 0; i < len(finaltally); i++ {
+		for j := 0; j < len(finaltally)-i-1; j++ {
+			if bytes.Compare(finaltally[j][:], finaltally[j+1][:]) > 0 {
+				finaltally[j], finaltally[j+1] = finaltally[j+1], finaltally[j]
+			}
+		}
+	}
+
+	headerhash := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	if len(headerhash[:]) == 0 {
+		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom fail", "length is", len(headerhash[:]))
+		return errors.New("header`s HardwareRandom is bad in func randsethp")
+	}
+	copy(inputtemp[:], headerhash[:])
+	input = inputtemp[:]
+	//log.Error("qazwsx input GenRand param", "string value", common.Bytes2Hex(input))
+
+	for i := 0; i < hpnodeNO; i++ {
+		err, output = GenRand(input)
+		if nil != err {
+			return err
+		}
+		tempbigint := new(big.Int).SetBytes(output)
+		random := tempbigint.Uint64()
+		offset := int(random % uint64(len(finaltally)))
+		input = output
+		log.Debug("qazwsx randsethp rand selectable offset", "value", offset, "number", number)
+		snap.Signers[finaltally[offset]] = struct{}{}
+		if 0 < offset && 1 < len(finaltally) {
+			for j := offset - 1; j >= 0; j-- {
+				finaltally[j+1] = finaltally[j]
+			}
+		}
+
+		if 1 < len(finaltally) {
+			finaltally = finaltally[1:]
+		} else {
+			return nil
+		}
+	}
+	return nil
+}
+
+func randselecthp(chain consensus.ChainReader, number uint64, fromtemp []common.Address, to []common.Address, hpnodeNO int) ([]common.Address, error) {
+
+	if number == 0 || hpnodeNO > len(fromtemp) || hpnodeNO == 0 || to == nil {
+		return nil, errors.New("randsethp: bad param")
+	}
+
+	var from []common.Address
+	from = make([]common.Address, 0, len(fromtemp))
+	for _, v := range fromtemp {
+		from = append(from, v)
+	}
+
+	var input, output []byte
+	var err error
+	var inputtemp [32]byte
+
+	//sort by addr
+	for i := 0; i < len(from); i++ {
+		for j := 0; j < len(from)-i-1; j++ {
+			if bytes.Compare(from[j][:], from[j+1][:]) > 0 {
+				from[j], from[j+1] = from[j+1], from[j]
+			}
+		}
+	}
+
+	headerhash := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	if len(headerhash[:]) == 0 {
+		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom() fail", "length is", len(headerhash[:]))
+		return nil, errors.New("header`s HardwareRandom is bad in func randselecthp")
+	}
+	copy(inputtemp[:], headerhash[:])
+	input = inputtemp[:]
+
+	for i := 0; i < hpnodeNO; i++ {
+		err, output = GenRand(input)
+		if nil != err {
+			return nil, err
+		}
+		tempbigint := new(big.Int).SetBytes(output)
+		random := tempbigint.Uint64()
+		offset := int(random % uint64(len(from)))
+
+		to = append(to, from[offset])
+
+		if 0 != offset && 1 < len(from) {
+			for j := offset - 1; j >= 0; j-- {
+				from[j+1] = from[j]
+			}
+		}
+
+		if 1 < len(from) {
+			from = from[1:]
+		} else {
+			return to, nil
+		}
+	}
+	return to, nil
+}
+
+func GenRand(input []byte) (error, []byte) {
+
+	if len(input) == 0 || input == nil {
+		return errors.New("bad param"), nil
+	}
+
+	output := crypto.Keccak256(input)
+
+	return nil, output
 }

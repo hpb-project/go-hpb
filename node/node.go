@@ -267,6 +267,12 @@ func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 
 func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 
+	if config.GetHpbConfigInstance().Node.TestCodeParam == 1 {
+		consensus.SetTestParam()
+	}
+	log.Info("--------------StageNumberII----------------", "value", consensus.StageNumberII)
+	log.Info("--------------StageNumberIII---------------", "value", consensus.StageNumberIII)
+
 	hpbnode.startBloomHandlers()
 
 	err := hpbnode.WorkerInit(conf)

@@ -37,10 +37,14 @@ const Nodenumfirst = 151
 const StepLength = 4
 const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"roundNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"contractAddr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"deleteAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"setContractAddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"setFunStr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"funStr\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getContractAddr\",\"outputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getRoundNum\",\"outputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"adminMap\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"setRoundNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getFunStr\",\"outputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"SetContractAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"SetFunStr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"SetRoundNum\",\"type\":\"event\"}]"
 const Fechcontractaddr = "hpb43f75fc8c4fc623b8ddf0039ee76e9d4ca9ca7b3"
-const Fechcontractaddrtestnet = "0x29a0b37a9d07f74eea1b1d7aa7ec0720fb631260"
 
 const Hpcalclookbackround = 3
-const StageNumberII = 260000
+const BandwithLimit = 200 * 1024
+
+var (
+	StageNumberII  uint64 = 260000
+	StageNumberIII uint64 = 800000
+)
 
 //const Nodenumsecond = 301
 //const Nodenumthird = 1000
@@ -102,11 +106,18 @@ var (
 	ErrInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
 	// reject block but do not drop peer
 	ErrInvalidblockbutnodrop = errors.New("reject block but do not drop peer")
+	// boe hecheck err
+	Errboehwcheck = errors.New("boe hwcheck err")
+	// verify header random err
+	Errrandcheck = errors.New("verify header random err")
+	// bandwith err
+	ErrBandwith = errors.New("verify header bandwith beyond the limit")
 )
 
 var (
 	NonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signerHash
 	NonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signerHash.
+	Zeroaddr      = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	ExtraVanity = 32 // Fixed number of extra-data prefix bytes reserved for signerHash vanity
 	ExtraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
@@ -161,4 +172,18 @@ func SigHash(header *types.Header) (hash common.Hash) {
 	})
 	hasher.Sum(hash[:0])
 	return hash
+}
+
+func SetNumber(number uint64) uint64 {
+	//return number
+	if number >= StageNumberIII {
+		return number - 1
+	} else {
+		return number
+	}
+}
+
+func SetTestParam() {
+	StageNumberII = 1
+	StageNumberIII = 0
 }

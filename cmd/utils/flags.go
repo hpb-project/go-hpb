@@ -449,6 +449,11 @@ var (
 		Name:  "testmode",
 		Usage: "Run ghpb with testmode and boe don't need",
 	}
+	TestCodeStageFlag = cli.IntSliceFlag{
+		Name:  "testparam",
+		Usage: "Run ghpb with test code stage and boe need",
+		Value: nil,
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -877,6 +882,16 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	}
 	if ctx.GlobalBool(TestModeFlag.Name) {
 		cfg.Node.TestMode = 1
+	}
+	if ctx.GlobalIsSet(TestCodeStageFlag.Name) {
+		res := ctx.GlobalIntSlice(TestCodeStageFlag.Name)
+		if nil == res || len(res) < 2 {
+			cfg.Node.TestCodeParam = 1
+		} else {
+			consensus.StageNumberII = uint64(res[0])
+			consensus.StageNumberIII = uint64(res[1])
+		}
+
 	}
 	// Override any default configs for hard coded networks.
 	switch {

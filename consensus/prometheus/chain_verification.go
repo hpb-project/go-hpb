@@ -92,9 +92,9 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	//	return consensus.ErrInvalidCheckpointBeneficiary
 	//}
 	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
-	if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
-		return consensus.ErrInvalidVote
-	}
+	//if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
+	//	return consensus.ErrInvalidVote
+	//}
 	//if checkpoint && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
 	//	return consensus.ErrInvalidCheckpointVote
 	//}
@@ -126,6 +126,12 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	if number > 0 {
 		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
 			return consensus.ErrInvalidDifficulty
+		}
+	}
+	//Ensure that the block`s nonce that is peer`s bandwith do not beyond the BandwithLimit too much
+	if number > consensus.StageNumberIII {
+		if new(big.Int).SetBytes(header.Nonce[:]).Uint64() > consensus.BandwithLimit+50*1024 {
+			return consensus.ErrBandwith
 		}
 	}
 
@@ -222,8 +228,8 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			return consensus.ErrUnauthorized
 		}
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
-			if !(c.hboe.HWCheck() || c.hboe.HWCheck() || c.hboe.HWCheck()) {
-				return consensus.ErrUnauthorized
+			if !c.hboe.HWCheck() {
+				return consensus.Errboehwcheck
 			}
 			parentnum := number - 1
 			parentheader := chain.GetHeaderByNumber(parentnum)
@@ -238,7 +244,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
-				return consensus.ErrUnauthorized
+				return consensus.Errrandcheck
 			}
 		}
 
