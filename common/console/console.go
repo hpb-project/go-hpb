@@ -230,7 +230,7 @@ func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
 
 	outputRex := []string{}
 	for _, out := range output {
-		outputRex = append(outputRex, common.RexRep0xToHpb(out))
+		outputRex = append(outputRex, common.RexRep0xToHpb(&out))
 	}
 
 	fmt.Fprintln(c.printer, strings.Join(outputRex, " "))

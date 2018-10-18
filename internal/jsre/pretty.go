@@ -93,7 +93,7 @@ func (ctx ppctx) printValue(v otto.Value, level int, inArray bool) {
 		fmt.Fprint(ctx.w, SpecialColor("undefined"))
 	case v.IsString():
 		s, _ := v.ToString()
-		fmt.Fprint(ctx.w, StringColor("%q", common.RexRep0xToHpb(s)))
+		fmt.Fprint(ctx.w, StringColor("%q", common.RexRep0xToHpb(&s)))
 	case v.IsBoolean():
 		b, _ := v.ToBoolean()
 		fmt.Fprint(ctx.w, SpecialColor("%t", b))
@@ -101,7 +101,7 @@ func (ctx ppctx) printValue(v otto.Value, level int, inArray bool) {
 		fmt.Fprint(ctx.w, NumberColor("NaN"))
 	case v.IsNumber():
 		s, _ := v.ToString()
-		fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(s)))
+		fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(&s)))
 	default:
 		fmt.Fprint(ctx.w, "<unprintable>")
 	}
@@ -135,7 +135,8 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 	case "Object":
 		// Print values from bignumber.js as regular numbers.
 		if ctx.isBigNumber(obj) {
-			fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(toString(obj))))
+			str := toString(obj)
+			fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(&str)))
 			return
 		}
 		// Otherwise, print all fields indented, but stop if we're too deep.
@@ -151,7 +152,8 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		fmt.Fprintln(ctx.w, "{")
 		for i, k := range keys {
 			v, _ := obj.Get(k)
-			fmt.Fprintf(ctx.w, "%s%s: ", common.RexRep0xToHpb(ctx.indent(level+1)), common.RexRep0xToHpb(k))
+			str := ctx.indent(level + 1)
+			fmt.Fprintf(ctx.w, "%s%s: ", common.RexRep0xToHpb(&str), common.RexRep0xToHpb(&k))
 			ctx.printValue(v, level+1, false)
 			if i < len(keys)-1 {
 				fmt.Fprintf(ctx.w, ",")
@@ -161,7 +163,8 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		if inArray {
 			level--
 		}
-		fmt.Fprintf(ctx.w, "%s}", common.RexRep0xToHpb(ctx.indent(level)))
+		str := ctx.indent(level)
+		fmt.Fprintf(ctx.w, "%s}", common.RexRep0xToHpb(&str))
 
 	case "Function":
 		// Use toString() to display the argument list if possible.
@@ -170,16 +173,18 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		} else {
 			desc := strings.Trim(strings.Split(robj.String(), "{")[0], " \t\n")
 			desc = strings.Replace(desc, " (", "(", 1)
-			fmt.Fprint(ctx.w, FunctionColor("%s", common.RexRep0xToHpb(desc)))
+			fmt.Fprint(ctx.w, FunctionColor("%s", common.RexRep0xToHpb(&desc)))
 		}
 
 	case "RegExp":
-		fmt.Fprint(ctx.w, StringColor("%s", common.RexRep0xToHpb(toString(obj))))
+		str := toString(obj)
+		fmt.Fprint(ctx.w, StringColor("%s", common.RexRep0xToHpb(&str)))
 
 	default:
 		if v, _ := obj.Get("toString"); v.IsFunction() && level <= maxPrettyPrintLevel {
 			s, _ := obj.Call("toString")
-			fmt.Fprintf(ctx.w, "<%s %s>", obj.Class(), common.RexRep0xToHpb(s.String()))
+			str := s.String()
+			fmt.Fprintf(ctx.w, "<%s %s>", obj.Class(), common.RexRep0xToHpb(&str))
 		} else {
 			fmt.Fprintf(ctx.w, "<%s>", obj.Class())
 		}
