@@ -63,7 +63,7 @@ func RexRepHpbTo0x(str *string) string {
 		if len(sub) == 5 {
 			*str = re.ReplaceAllString(*str, "0x"+string(sub[2])+string(sub[3])+string(sub[4]))
 		}
-		RexRep0xToHpb(str)
+		RexRepHpbTo0x(str)
 	}
 
 	return *str
