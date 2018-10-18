@@ -109,6 +109,7 @@ var (
 		utils.NodeTypeFlag,
 		utils.TestModeFlag,
 		utils.RPCVirtualHostsFlag,
+		utils.TestCodeStageFlag,
 
 		configFileFlag,
 	}

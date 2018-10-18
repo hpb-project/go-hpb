@@ -32,13 +32,15 @@ import (
 	//"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math"
 )
 
 // 从网络中获取最优化的
-func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error) {
+func GetCadNodeFromNetwork(state *state.StateDB, voteres map[common.Address]big.Int) ([]*snapshots.CadWinner, []byte, error) {
 
 	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	address := common.BigToAddress(bigaddr)
@@ -47,8 +49,9 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	peers := p2p.PeerMgrInst().PeersAll()
 	fmt.Println("######### peers length is:", len(peers))
 	if len(peers) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
+
 	for _, peer := range peers {
 
 		if peer.RemoteType() != discover.BootNode && peer.RemoteType() != discover.SynNode {
@@ -56,7 +59,8 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 				continue
 			}
 			//transactionNum := peer.TxsRate() * float64(0.6)
-			networkBandwidth := peer.Bandwidth() * float64(0.9)
+			//TODO: modify power for hp node -----------------done
+			networkBandwidth := peer.Bandwidth() * float64(0.5) //from 0.9 -0.5
 			//log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
 			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
 
@@ -68,7 +72,19 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 			val64, _ := bigval.Float64()
 			balanceIndex := val64 * float64(0.1)
 
-			VoteIndex := networkBandwidth + balanceIndex
+			var vote float64
+			if nil != voteres {
+				tempvote, ok := voteres[peer.Address()]
+				if !ok {
+					continue
+				}
+				vote = float64(tempvote.Uint64()) * float64(0.4)
+			} else {
+				vote = 0
+			}
+
+			VoteIndex := networkBandwidth + balanceIndex + vote
+
 			if peer.Address() != address {
 				bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{peer.GetID(), peer.Address(), uint64(VoteIndex)})
 			}
@@ -76,7 +92,7 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	}
 
 	if len(bestCadWinners) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// 先获取长度，然后进行随机获取
@@ -108,7 +124,24 @@ func GetCadNodeFromNetwork(state *state.StateDB) ([]*snapshots.CadWinner, error)
 	winners = append(winners, lastCadWinnerToChain) //返回最优的
 
 	winners = append(winners, bestCadWinners[rand.Intn(lnlen)]) //返回随机
-	return winners, nil
+
+	for _, peer := range peers {
+		if peer.Address() == lastCadWinnerToChain.Address {
+			//test---------------------------------
+			log.Debug("-------------------------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth())
+
+			var bigbandwith *big.Int
+			if peer.Bandwidth() > consensus.BandwithLimit {
+				bigbandwith = big.NewInt(consensus.BandwithLimit)
+			} else {
+				bigbandwith = big.NewInt(int64(peer.Bandwidth()))
+				log.Debug("qazwsx set candaddress peer`s bandwith", "big value", bigbandwith, "string value", common.Bytes2Hex(bigbandwith.Bytes()))
+			}
+
+			return winners, bigbandwith.Bytes(), nil
+		}
+	}
+	return winners, nil, nil
 }
 
 func Contain(obj interface{}, target interface{}) (bool, error) {
