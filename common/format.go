@@ -40,13 +40,26 @@ func (d PrettyDuration) String() string {
 }
 
 func RexRep0xToHpb(str string) string {
-	pat := "(0x)([0-9a-f]{40})"
+	pat := "(0x)([0-9a-f]{40})([^0-9a-f]{1})(.*)?"
 	if ok, _ := regexp.Match(pat, []byte(str)); ok {
 		re, _ := regexp.Compile(pat)
 		sub := re.FindSubmatch([]byte(str))
-		// total match 3
-		if len(sub) == 3 {
-			str = re.ReplaceAllString(str, "hpb"+string(sub[2]))
+		// total match 5 is right
+		if len(sub) == 5 {
+			str = re.ReplaceAllString(str, "hpb"+string(sub[2])+string(sub[3])+string(sub[4]))
+		}
+	}
+	return str
+}
+
+func RexRepHpbTo0x(str string) string {
+	pat := "(hpb)([0-9a-f]{40})([^0-9a-f]{1}|$)(.*)?"
+	if ok, _ := regexp.Match(pat, []byte(str)); ok {
+		re, _ := regexp.Compile(pat)
+		sub := re.FindSubmatch([]byte(str))
+		// total match 5 is right
+		if len(sub) == 5 {
+			str = re.ReplaceAllString(str, "0x"+string(sub[2])+string(sub[3])+string(sub[4]))
 		}
 	}
 	return str

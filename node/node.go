@@ -202,7 +202,7 @@ func New(conf *config.HpbConfig) (*Node, error) {
 	} else {
 		hpbnode.hpberbase = common.HexToAddress(common.Hpb2Hex(coinbasestring))
 		//copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
-		log.Info("set coinbase of node", ": ", hpbnode.hpberbase)
+		log.Info("set coinbase of node", ": ", hpbnode.hpberbase.Hpb())
 	}
 
 	// Note: any interaction with Config that would create/touch files
