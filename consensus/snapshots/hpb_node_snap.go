@@ -427,7 +427,7 @@ func randsethp(chain consensus.ChainReader, number uint64, finaltallytemp []comm
 		}
 	}
 
-	headerhash := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	headerhash := chain.GetHeaderByNumber((number - 1) / consensus.HpbNodeCheckpointInterval * consensus.HpbNodeCheckpointInterval).HardwareRandom
 	if len(headerhash[:]) == 0 {
 		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom fail", "length is", len(headerhash[:]))
 		return errors.New("header`s HardwareRandom is bad in func randsethp")
@@ -487,7 +487,7 @@ func randselecthp(chain consensus.ChainReader, number uint64, fromtemp []common.
 		}
 	}
 
-	headerhash := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	headerhash := chain.GetHeaderByNumber((number - 1) / consensus.HpbNodeCheckpointInterval * consensus.HpbNodeCheckpointInterval).HardwareRandom
 	if len(headerhash[:]) == 0 {
 		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom() fail", "length is", len(headerhash[:]))
 		return nil, errors.New("header`s HardwareRandom is bad in func randselecthp")
