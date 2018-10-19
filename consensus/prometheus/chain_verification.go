@@ -130,7 +130,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	}
 	//Ensure that the block`s nonce that is peer`s bandwith do not beyond the BandwithLimit too much
 	if number > consensus.StageNumberIII {
-		if new(big.Int).SetBytes(header.Nonce[:]).Uint64() > consensus.BandwithLimit+50*1024 {
+		if new(big.Int).SetBytes(header.Nonce[:]).Uint64() > consensus.BandwithLimit+50*1024*8 {
 			return consensus.ErrBandwith
 		}
 	}

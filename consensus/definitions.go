@@ -39,7 +39,7 @@ const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"round
 const Fechcontractaddr = "hpb43f75fc8c4fc623b8ddf0039ee76e9d4ca9ca7b3"
 
 const Hpcalclookbackround = 3
-const BandwithLimit = 200 * 1024
+const BandwithLimit = 200 * 1024 * 8
 
 var (
 	StageNumberII  uint64 = 260000
