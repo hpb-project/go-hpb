@@ -187,7 +187,16 @@ func init() {
 }
 
 func main() {
-	if err := app.Run(os.Args); err != nil {
+	var strs []string
+	for _, str := range os.Args {
+		if common.IsAddrHas0xPre(str) {
+			fmt.Println("invalid address without hpb prefix")
+			os.Exit(1)
+		}
+		strs = append(strs, common.RexRepHpbTo0x(&str))
+	}
+
+	if err := app.Run(strs); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

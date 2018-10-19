@@ -145,6 +145,14 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
 	if err := c.decode(&incomingMsg); err != nil {
 		return nil, false, &invalidRequestError{err.Error()}
 	}
+
+	// covert hpb to 0x by xjl
+	str := string(incomingMsg[:])
+	if common.IsAddrHas0xPre(str) {
+		return nil, false, &invalidParamsError{"Invalid params: Address without hpb prefix"}
+	}
+	incomingMsg = []byte(common.RexRepHpbTo0x(&str))
+
 	if isBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
 	}
@@ -277,8 +285,6 @@ func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interf
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &invalidParamsError{"Invalid params supplied"}
 	} else {
-		str := string(args[:])
-		args = []byte(common.RexRepHpbTo0x(&str))
 		return parsePositionalArguments(args, argTypes)
 	}
 }

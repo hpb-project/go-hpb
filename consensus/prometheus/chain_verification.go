@@ -82,7 +82,6 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	// Don't waste time checking blocks from the future
 	//if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 	if header.Time.Cmp(new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(c.config.Period))) > 0 {
-		//todo add log by xjl
 		log.Error("errInvalidChain occur in (c *Prometheus) verifyHeader()", "header.Time", header.Time, "big.NewInt(time.Now().Unix())", big.NewInt(time.Now().Unix()))
 		return consensus.ErrFutureBlock
 	}
