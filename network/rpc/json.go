@@ -363,7 +363,22 @@ func (c *jsonCodec) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
-	return c.encode(res)
+	msg, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(msg))
+	str := string(msg)
+	str = common.RexRep0xToHpb(&str)
+	fmt.Println(str)
+
+	resp := new(jsonrpcMessage)
+	err = json.Unmarshal([]byte(str), resp)
+	if err != nil {
+		return err
+	}
+
+	return c.encode(resp)
 }
 
 // Close the underlying connection
