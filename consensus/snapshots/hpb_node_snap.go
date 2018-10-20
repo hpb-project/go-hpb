@@ -357,15 +357,8 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 			//calc how many last snap hps needing to add the latest snap
 			if len(finaltally)+len(delhpsmap) > consensus.HpbNodenumber {
-				if number < consensus.StageNumberIII {
-					for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
-						finaltally = append(finaltally, delhpsmap[i])
-					}
-				} else {
-					finaltally, err = randselecthp(chain, number, delhpsmap, finaltally, consensus.HpbNodenumber-len(finaltally))
-					if nil != err {
-						return nil, err
-					}
+				for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
+					finaltally = append(finaltally, delhpsmap[i])
 				}
 			} else {
 				for i := 0; i < len(delhpsmap); i++ {
@@ -378,20 +371,8 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	}
 
 END:
-	if number < consensus.StageNumberIII {
-		for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
-			snap.Signers[finaltally[i]] = struct{}{}
-		}
-	} else {
-		err := randsethp(chain, number, finaltally, snap, hpnodeNO, true)
-		if nil != err {
-			return nil, err
-		}
-	}
-
-	//for debug
-	for _, v := range snap.GetHpbNodes() {
-		log.Debug("qazwsx snap hp nodes", "addr", common.Bytes2Hex(v[:]))
+	for i := len(finaltally) - 1; i > len(finaltally)-hpnodeNO-1; i-- {
+		snap.Signers[finaltally[i]] = struct{}{}
 	}
 
 	zeroaddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
@@ -400,125 +381,6 @@ END:
 	}
 
 	return snap, nil
-}
-
-func randsethp(chain consensus.ChainReader, number uint64, finaltallytemp []common.Address, snap *HpbNodeSnap, hpnodeNO int, setsnap bool) error {
-
-	if number == 0 || hpnodeNO > len(finaltallytemp) || nil == snap || hpnodeNO == 0 {
-		return errors.New("randsethp: bad param")
-	}
-
-	var finaltally []common.Address
-	finaltally = make([]common.Address, 0, len(finaltallytemp))
-	for _, v := range finaltallytemp {
-		finaltally = append(finaltally, v)
-	}
-
-	var input, output []byte
-	var err error
-	var inputtemp [32]byte
-
-	//sort by addr
-	for i := 0; i < len(finaltally); i++ {
-		for j := 0; j < len(finaltally)-i-1; j++ {
-			if bytes.Compare(finaltally[j][:], finaltally[j+1][:]) > 0 {
-				finaltally[j], finaltally[j+1] = finaltally[j+1], finaltally[j]
-			}
-		}
-	}
-
-	headerhash := chain.GetHeaderByNumber((number - 1) / consensus.HpbNodeCheckpointInterval * consensus.HpbNodeCheckpointInterval).HardwareRandom
-	if len(headerhash[:]) == 0 {
-		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom fail", "length is", len(headerhash[:]))
-		return errors.New("header`s HardwareRandom is bad in func randsethp")
-	}
-	copy(inputtemp[:], headerhash[:])
-	input = inputtemp[:]
-	//log.Error("qazwsx input GenRand param", "string value", common.Bytes2Hex(input))
-
-	for i := 0; i < hpnodeNO; i++ {
-		err, output = GenRand(input)
-		if nil != err {
-			return err
-		}
-		tempbigint := new(big.Int).SetBytes(output)
-		random := tempbigint.Uint64()
-		offset := int(random % uint64(len(finaltally)))
-		input = output
-		log.Debug("qazwsx randsethp rand selectable offset", "value", offset, "number", number)
-		snap.Signers[finaltally[offset]] = struct{}{}
-		if 0 < offset && 1 < len(finaltally) {
-			for j := offset - 1; j >= 0; j-- {
-				finaltally[j+1] = finaltally[j]
-			}
-		}
-
-		if 1 < len(finaltally) {
-			finaltally = finaltally[1:]
-		} else {
-			return nil
-		}
-	}
-	return nil
-}
-
-func randselecthp(chain consensus.ChainReader, number uint64, fromtemp []common.Address, to []common.Address, hpnodeNO int) ([]common.Address, error) {
-
-	if number == 0 || hpnodeNO > len(fromtemp) || hpnodeNO == 0 || to == nil {
-		return nil, errors.New("randsethp: bad param")
-	}
-
-	var from []common.Address
-	from = make([]common.Address, 0, len(fromtemp))
-	for _, v := range fromtemp {
-		from = append(from, v)
-	}
-
-	var input, output []byte
-	var err error
-	var inputtemp [32]byte
-
-	//sort by addr
-	for i := 0; i < len(from); i++ {
-		for j := 0; j < len(from)-i-1; j++ {
-			if bytes.Compare(from[j][:], from[j+1][:]) > 0 {
-				from[j], from[j+1] = from[j+1], from[j]
-			}
-		}
-	}
-
-	headerhash := chain.GetHeaderByNumber((number - 1) / consensus.HpbNodeCheckpointInterval * consensus.HpbNodeCheckpointInterval).HardwareRandom
-	if len(headerhash[:]) == 0 {
-		log.Debug("qazwsx chain.GetHeaderByNumber(number-1).HardwareRandom() fail", "length is", len(headerhash[:]))
-		return nil, errors.New("header`s HardwareRandom is bad in func randselecthp")
-	}
-	copy(inputtemp[:], headerhash[:])
-	input = inputtemp[:]
-
-	for i := 0; i < hpnodeNO; i++ {
-		err, output = GenRand(input)
-		if nil != err {
-			return nil, err
-		}
-		tempbigint := new(big.Int).SetBytes(output)
-		random := tempbigint.Uint64()
-		offset := int(random % uint64(len(from)))
-
-		to = append(to, from[offset])
-
-		if 0 != offset && 1 < len(from) {
-			for j := offset - 1; j >= 0; j-- {
-				from[j+1] = from[j]
-			}
-		}
-
-		if 1 < len(from) {
-			from = from[1:]
-		} else {
-			return to, nil
-		}
-	}
-	return to, nil
 }
 
 func GenRand(input []byte) (error, []byte) {
