@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 )
 
@@ -684,10 +683,6 @@ func (c *Client) read(conn net.Conn) error {
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
 		}
-
-		str := string(buf[:])
-		common.RexRep0xToHpb(&str)
-		buf = []byte(str)
 
 		if isBatch(buf) {
 			err = json.Unmarshal(buf, &rs)

@@ -149,7 +149,7 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
 	// covert hpb to 0x by xjl
 	str := string(incomingMsg[:])
 	if common.IsAddrHas0xPre(str) {
-		return nil, false, &invalidParamsError{"Invalid params: Address without hpb prefix"}
+		return nil, false, &invalidParamsError{"Invalid params: Address must with hpb prefix, not 0x"}
 	}
 	incomingMsg = []byte(common.RexRepHpbTo0x(&str))
 

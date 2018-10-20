@@ -27,7 +27,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/internal/jsre"
 	"github.com/hpb-project/go-hpb/internal/web3ext"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -228,12 +227,7 @@ func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
 		output = append(output, fmt.Sprintf("%v", argument))
 	}
 
-	outputRex := []string{}
-	for _, out := range output {
-		outputRex = append(outputRex, common.RexRep0xToHpb(&out))
-	}
-
-	fmt.Fprintln(c.printer, strings.Join(outputRex, " "))
+	fmt.Fprintln(c.printer, strings.Join(output, " "))
 	return otto.Value{}
 }
 

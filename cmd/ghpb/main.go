@@ -190,7 +190,7 @@ func main() {
 	var strs []string
 	for _, str := range os.Args {
 		if common.IsAddrHas0xPre(str) {
-			fmt.Println("invalid address without hpb prefix")
+			fmt.Println("invalid address: Must with hpb prefix, not 0x")
 			os.Exit(1)
 		}
 		strs = append(strs, common.RexRepHpbTo0x(&str))
