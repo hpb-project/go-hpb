@@ -367,10 +367,8 @@ func (c *jsonCodec) Write(res interface{}) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(msg))
 	str := string(msg)
 	str = common.RexRep0xToHpb(&str)
-	fmt.Println(str)
 
 	resp := new(jsonrpcMessage)
 	err = json.Unmarshal([]byte(str), resp)
