@@ -36,7 +36,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	//	headers []*types.Header
 	//snap    *snapshots.HpbNodeSnap
 	//)
-	number = consensus.SetNumber(number)
+	//number = consensus.SetNumber(number)
 
 	// 首次要创建
 	if number == 0 {

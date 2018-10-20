@@ -174,15 +174,6 @@ func SigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-func SetNumber(number uint64) uint64 {
-	//return number
-	if number >= StageNumberIII {
-		return number - 1
-	} else {
-		return number
-	}
-}
-
 func SetTestParam() {
 	StageNumberII = 1
 	StageNumberIII = 0
