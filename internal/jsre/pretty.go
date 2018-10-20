@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/robertkrimen/otto"
 )
 
@@ -93,7 +92,7 @@ func (ctx ppctx) printValue(v otto.Value, level int, inArray bool) {
 		fmt.Fprint(ctx.w, SpecialColor("undefined"))
 	case v.IsString():
 		s, _ := v.ToString()
-		fmt.Fprint(ctx.w, StringColor("%q", common.RexRep0xToHpb(&s)))
+		fmt.Fprint(ctx.w, StringColor("%q", s))
 	case v.IsBoolean():
 		b, _ := v.ToBoolean()
 		fmt.Fprint(ctx.w, SpecialColor("%t", b))
@@ -101,7 +100,7 @@ func (ctx ppctx) printValue(v otto.Value, level int, inArray bool) {
 		fmt.Fprint(ctx.w, NumberColor("NaN"))
 	case v.IsNumber():
 		s, _ := v.ToString()
-		fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(&s)))
+		fmt.Fprint(ctx.w, NumberColor("%s", s))
 	default:
 		fmt.Fprint(ctx.w, "<unprintable>")
 	}
@@ -135,8 +134,7 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 	case "Object":
 		// Print values from bignumber.js as regular numbers.
 		if ctx.isBigNumber(obj) {
-			str := toString(obj)
-			fmt.Fprint(ctx.w, NumberColor("%s", common.RexRep0xToHpb(&str)))
+			fmt.Fprint(ctx.w, NumberColor("%s", toString(obj)))
 			return
 		}
 		// Otherwise, print all fields indented, but stop if we're too deep.
@@ -152,8 +150,7 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		fmt.Fprintln(ctx.w, "{")
 		for i, k := range keys {
 			v, _ := obj.Get(k)
-			str := ctx.indent(level + 1)
-			fmt.Fprintf(ctx.w, "%s%s: ", common.RexRep0xToHpb(&str), common.RexRep0xToHpb(&k))
+			fmt.Fprintf(ctx.w, "%s%s: ", ctx.indent(level+1), k)
 			ctx.printValue(v, level+1, false)
 			if i < len(keys)-1 {
 				fmt.Fprintf(ctx.w, ",")
@@ -163,8 +160,7 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		if inArray {
 			level--
 		}
-		str := ctx.indent(level)
-		fmt.Fprintf(ctx.w, "%s}", common.RexRep0xToHpb(&str))
+		fmt.Fprintf(ctx.w, "%s}", ctx.indent(level))
 
 	case "Function":
 		// Use toString() to display the argument list if possible.
@@ -173,18 +169,16 @@ func (ctx ppctx) printObject(obj *otto.Object, level int, inArray bool) {
 		} else {
 			desc := strings.Trim(strings.Split(robj.String(), "{")[0], " \t\n")
 			desc = strings.Replace(desc, " (", "(", 1)
-			fmt.Fprint(ctx.w, FunctionColor("%s", common.RexRep0xToHpb(&desc)))
+			fmt.Fprint(ctx.w, FunctionColor("%s", desc))
 		}
 
 	case "RegExp":
-		str := toString(obj)
-		fmt.Fprint(ctx.w, StringColor("%s", common.RexRep0xToHpb(&str)))
+		fmt.Fprint(ctx.w, StringColor("%s", toString(obj)))
 
 	default:
 		if v, _ := obj.Get("toString"); v.IsFunction() && level <= maxPrettyPrintLevel {
 			s, _ := obj.Call("toString")
-			str := s.String()
-			fmt.Fprintf(ctx.w, "<%s %s>", obj.Class(), common.RexRep0xToHpb(&str))
+			fmt.Fprintf(ctx.w, "<%s %s>", obj.Class(), s.String())
 		} else {
 			fmt.Fprintf(ctx.w, "<%s>", obj.Class())
 		}
