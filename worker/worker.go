@@ -298,7 +298,7 @@ func (self *worker) eventListener() {
 		
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
-			if atomic.LoadInt32(&self.mining) == 0 {
+			if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
 				self.currentMu.Lock()
 				acc, _ := types.Sender(self.current.signer, ev.Tx)
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
