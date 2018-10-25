@@ -29,8 +29,7 @@ import (
 	"strings"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
-	"github.com/hpb-project/go-hpb/common"
+	"github.com/deckarep/golang-set"
 	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/net/websocket"
 )
@@ -41,10 +40,6 @@ var websocketJSONCodec = websocket.Codec{
 	// Marshal is the stock JSON marshaller used by the websocket library too.
 	Marshal: func(v interface{}) ([]byte, byte, error) {
 		msg, err := json.Marshal(v)
-		//convert 0x to hpb by xjl
-		str := string(msg[:])
-		common.RexRep0xToHpb(&str)
-		msg = []byte(str)
 		return msg, websocket.TextFrame, err
 	},
 	// Unmarshal is a specialized unmarshaller to properly convert numbers.

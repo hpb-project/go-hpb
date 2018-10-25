@@ -219,7 +219,7 @@ func (p *prometh) readPassword() string {
 func (p *prometh) readAddress() *common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> hpb")
+		fmt.Printf("> 0x")
 		text, err := p.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
@@ -252,7 +252,7 @@ func (p *prometh) readAddress() *common.Address {
 func (p *prometh) readDefaultAddress(def common.Address) common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> hpb")
+		fmt.Printf("> 0x")
 		text, err := p.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
