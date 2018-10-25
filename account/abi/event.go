@@ -1,18 +1,18 @@
-// Copyright 2018 The go-hpb Authors
-// This file is part of the go-hpb.
+// Copyright 2016 The hpb-project Authors
+// This file is part of the hpb-project library.
 //
-// The go-hpb is free software: you can redistribute it and/or modify
+// The hpb-project library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-hpb is distributed in the hope that it will be useful,
+// The hpb-project library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
+// along with the hpb-project library. If not, see <http://www.gnu.org/licenses/>.
 
 package abi
 
@@ -30,7 +30,18 @@ import (
 type Event struct {
 	Name      string
 	Anonymous bool
-	Inputs    []Argument
+	Inputs    Arguments
+}
+
+func (e Event) String() string {
+	inputs := make([]string, len(e.Inputs))
+	for i, input := range e.Inputs {
+		inputs[i] = fmt.Sprintf("%v %v", input.Name, input.Type)
+		if input.Indexed {
+			inputs[i] = fmt.Sprintf("%v indexed %v", input.Name, input.Type)
+		}
+	}
+	return fmt.Sprintf("e %v(%v)", e.Name, strings.Join(inputs, ", "))
 }
 
 // Id returns the canonical representation of the event's signature used by the

@@ -495,6 +495,10 @@ type HwPair struct {
 	Hid []byte
 }
 
+func (prm *PeerManager) HwInfo() []HwPair {
+	return prm.server.hdtab
+}
+
 func (prm *PeerManager) parseBindInfo(filename string) error {
 	// Load the nodes from the config file.
 	var binding []bindInfo
@@ -588,7 +592,8 @@ func (prm *PeerManager) startTest(host string, port string) float64 {
 func (prm *PeerManager) startClientBW() {
 	/////////////////////////////////////
 	//client
-	inteval := 60 * 60 * 24 // second of one day
+	inteval := 30 // second of one day
+	//inteval := 60 * 60 * 24 // second of one day
 	rand.Seed(time.Now().UnixNano())
 	timeout := time.NewTimer(time.Second * time.Duration(inteval+rand.Intn(inteval)))
 	defer timeout.Stop()
