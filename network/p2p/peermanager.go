@@ -103,9 +103,9 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	}
 
 	prm.server.Config.CoinBase = coinbase
-	log.Info("Set coinbase address by start", "address", common.Hex2Hpb(coinbase.String()))
+	log.Info("Set coinbase address by start", "address", coinbase.String())
 
-	if common.Hex2Hpb(coinbase.String()) == "hpb0000000000000000000000000000000000000000" {
+	if coinbase.String() == "0x0000000000000000000000000000000000000000" {
 		panic("coinbase address is nil.")
 	}
 

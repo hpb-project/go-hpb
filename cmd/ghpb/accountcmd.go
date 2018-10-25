@@ -23,7 +23,6 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -222,11 +221,11 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 		password := getPassPhrase(prompt, false, i, passwords)
 		err = ks.Unlock(account, password)
 		if err == nil {
-			log.Info("Unlocked account", "address", account.Address.Hpb())
+			log.Info("Unlocked account", "address", account.Address.Hex())
 			return account, password
 		}
 		if err, ok := err.(*keystore.AmbiguousAddrError); ok {
-			log.Info("Unlocked account", "address", account.Address.Hpb())
+			log.Info("Unlocked account", "address", account.Address.Hex())
 			return ambiguousAddrRecovery(ks, err, password), password
 		}
 		if err != keystore.ErrDecrypt {
@@ -235,7 +234,7 @@ func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i in
 		}
 	}
 	// All trials expended to unlock account, bail out
-	utils.Fatalf("Failed to unlock account %s (%v)", common.Hex2Hpb(address), err)
+	utils.Fatalf("Failed to unlock account %s (%v)", address, err)
 
 	return accounts.Account{}, ""
 }

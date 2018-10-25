@@ -310,7 +310,7 @@ func (ac *accountCache) scanAccounts() error {
 		// Parse the address.
 		keyJSON.Address = ""
 		err = json.NewDecoder(buf).Decode(&keyJSON)
-		addr := common.HexToAddress(common.Hpb2Hex(keyJSON.Address))
+		addr := common.HexToAddress(keyJSON.Address)
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)

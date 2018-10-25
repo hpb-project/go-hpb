@@ -47,7 +47,7 @@ var (
 	GitCommit = gitCommit
 	gitCommit = ""
 	// Hpb address of the Geth release oracle.
-	relOracle = common.HexToAddress(common.Hpb2Hex("hpbfa7b9770ca4cb04296cac84f37736d4041251cdf"))
+	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
 	app = utils.NewApp(gitCommit, "the go-hpb command line interface")
 	// flags that configure the node
@@ -187,16 +187,7 @@ func init() {
 }
 
 func main() {
-	var strs []string
-	for _, str := range os.Args {
-		if common.IsAddrHas0xPre(str) {
-			fmt.Println("invalid address: Must with hpb prefix, not 0x")
-			os.Exit(1)
-		}
-		strs = append(strs, common.RexRepHpbTo0x(&str))
-	}
-
-	if err := app.Run(strs); err != nil {
+	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

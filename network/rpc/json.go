@@ -26,7 +26,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 )
 
@@ -145,13 +144,6 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
 	if err := c.decode(&incomingMsg); err != nil {
 		return nil, false, &invalidRequestError{err.Error()}
 	}
-
-	// covert hpb to 0x by xjl
-	str := string(incomingMsg[:])
-	if common.IsAddrHas0xPre(str) {
-		return nil, false, &invalidParamsError{"Invalid params: Address must with hpb prefix, not 0x"}
-	}
-	incomingMsg = []byte(common.RexRepHpbTo0x(&str))
 
 	if isBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
@@ -363,20 +355,7 @@ func (c *jsonCodec) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
-	msg, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-	str := string(msg)
-	str = common.RexRep0xToHpb(&str)
-
-	resp := new(jsonrpcMessage)
-	err = json.Unmarshal([]byte(str), resp)
-	if err != nil {
-		return err
-	}
-
-	return c.encode(resp)
+	return c.encode(res)
 }
 
 // Close the underlying connection
