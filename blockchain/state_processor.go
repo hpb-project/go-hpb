@@ -22,6 +22,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -77,8 +78,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//the tx without contract
 		if len(msg.Data()) != 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
-			if err != nil {
-				return nil, nil, nil, err
+			if errs != nil {
+				return nil, nil, nil, errs
 			}
 		}else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc,nil, gp, statedb, header, tx, totalUsedGas)
@@ -102,6 +103,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
+		log.Error("Asmessage err","err",err)
 		return nil, nil, err
 	}
 	cfg := evm.Config{}
@@ -113,6 +115,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {
+		log.Error("ApplyMessage err","err",err)
 		return nil, nil, err
 	}
 
@@ -146,12 +149,14 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
+		log.Error("Asmessage err","err",err)
 		return nil, nil, err
 	}
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
 	if err != nil {
+		log.Error("ApplyMessageNonContract err","err",err)
 		return nil, nil, err
 	}
 
