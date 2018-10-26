@@ -23,7 +23,9 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
+	"github.com/hpb-project/go-hpb/network/p2p"
 	"math/big"
 	"time"
 )
@@ -128,8 +130,12 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 		}
 	}
 	//Ensure that the block`s nonce that is peer`s bandwith do not beyond the BandwithLimit too much
+	//check prehp node bandwith
 	if number > consensus.StageNumberIII {
-		if new(big.Int).SetBytes(header.Nonce[:]).Uint64() > consensus.BandwithLimit+50*1024*8 {
+		if new(big.Int).SetInt64(int64(header.Nonce[6])).Int64() > consensus.BandwithLimit+10 {
+			return consensus.ErrBandwith
+		}
+		if new(big.Int).SetInt64(int64(header.Nonce[7])).Int64() > consensus.BandwithLimit+10 {
 			return consensus.ErrBandwith
 		}
 	}
@@ -181,6 +187,12 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 			}
 		}
 	*/
+	if number > consensus.StageNumberIII {
+		if isallright, _ := c.VerifySelectPrehp(chain, header, number, header.CandAddress, mode); !isallright {
+			return consensus.ErrInvalidCadaddr
+		}
+	}
+
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents, mode)
 }
@@ -261,4 +273,73 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 	}
 	return nil
+}
+
+func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *types.Header, number uint64, CadWinner common.Address, mode config.SyncMode) (bool, error) {
+
+	if mode != config.FullSync {
+		return true, nil
+	}
+	var cadWinner []*snapshots.CadWinner
+	defer func() {
+		//log.Error("111111111111111 VerifySelectPrehp 111111111111111111", "input addr", CadWinner, "calc value", cadWinner[0].Address)
+	}()
+
+	state, _ := chain.StateAt(chain.GetBlock(chain.GetHeaderByNumber(number-1).Hash(), number-1).Root())
+	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
+	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
+		log.Error("GetNodeinfoFromContract err", "value", err)
+		//return err
+	GETBOOTNODEINFO:
+		bootnodeinfp = p2p.PeerMgrInst().HwInfo()
+		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
+			goto GETBOOTNODEINFO
+		}
+	}
+	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
+	addrlist := make([]common.Address, 0, len(bootnodeinfp))
+	for _, v := range bootnodeinfp {
+		addrlist = append(addrlist, common.HexToAddress(v.Adr))
+	}
+
+	if len(addrlist) == 0 {
+		return false, errors.New("forbid mining before successfully connect with bootnode")
+	}
+
+	err, _, voteres := c.GetVoteRes(chain, header, state)
+	if nil != err {
+		//return false, err //for test '//'
+		//test code, release code should '//'
+		log.Warn("GetVoteRes return err, please deploy contract!")
+		voteres = make(map[common.Address]big.Int)
+		for _, v := range addrlist {
+			voteres[v] = *big.NewInt(0)
+		}
+	}
+	var band, balance, vote map[common.Address]int
+
+	band, err = c.GetBandwithRes(addrlist, chain, number-1)
+	balance, err = c.GetBalanceRes(addrlist, state, number-1)
+	vote, err = c.GetAllVoteRes(voteres, addrlist, number-1)
+	if err != nil {
+		return false, err
+	}
+	rankingmap := make(map[common.Address]float64)
+	for _, v := range addrlist {
+		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
+		//log.Error("VerifySelectPrehp **********************+three item ranking info******************", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
+	}
+
+	random := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	//log.Error("VerifySelectPrehp zzzzzzzzzz input GetCadNodeFromNetwork random zzzzzzzzzz", "value", random, "number", number)
+	// Get the best peer from the network
+	if cadWinner, _, err = voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
+		if bytes.Compare(cadWinner[0].Address[:], CadWinner[:]) == 0 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	} else {
+		return false, err
+	}
 }

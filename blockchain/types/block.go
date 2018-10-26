@@ -85,7 +85,7 @@ type Header struct {
 	Extra          []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest      common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce          BlockNonce     `json:"nonce"            gencodec:"required"`
-	HardwareRandom []byte         `json:"hardwareRandom"           gencodec:""`
+	HardwareRandom []byte         `json:"hardwareRandom"           gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -323,6 +323,7 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
+func (b *Block) Hardwarerandom() []byte   { return common.CopyBytes(b.header.HardwareRandom) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -415,7 +416,8 @@ func (h *Header) String() string {
 	Extra:		    %s
 	MixDigest:      %x
 	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+	hardwarerandom:		    %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom)
 }
 
 type Blocks []*Block

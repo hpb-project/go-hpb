@@ -22,126 +22,133 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"reflect"
 
 	//"github.com/hpb-project/go-hpb/common"
 	//"github.com/hpb-project/go-hpb/consensus"
 	// "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
-	//"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/state"
+
+	"bytes"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"math"
+	"math/rand"
 )
 
 // 从网络中获取最优化的
-func GetCadNodeFromNetwork(state *state.StateDB, voteres map[common.Address]big.Int) ([]*snapshots.CadWinner, []byte, error) {
-
-	bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
-	address := common.BigToAddress(bigaddr)
+func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64) ([]*snapshots.CadWinner, []byte, error) {
 
 	bestCadWinners := []*snapshots.CadWinner{}
 	peers := p2p.PeerMgrInst().PeersAll()
 	fmt.Println("######### peers length is:", len(peers))
-	if len(peers) == 0 {
-		return nil, nil, nil
+
+	//order the hpsmaptemp by put it into []common.address
+	delhpsmap := make(common.Addresses, 0, len(rankingdata))
+	selectres := make(common.Addresses, 0, consensus.NumberPrehp)
+	for key, _ := range rankingdata {
+		delhpsmap = append(delhpsmap, key)
 	}
-
-	for _, peer := range peers {
-
-		if peer.RemoteType() != discover.BootNode && peer.RemoteType() != discover.SynNode {
-			if len(peer.Address()) == 0 || peer.Address() == address {
-				continue
-			}
-			//transactionNum := peer.TxsRate() * float64(0.6)
-			//TODO: modify power for hp node -----------------done
-			networkBandwidth := peer.Bandwidth() * float64(0.5) //from 0.9 -0.5
-			//log.Error("GetCadNodeFromNetwork print peer addr", "addr", peer.Address().Str())
-			bigval := new(big.Float).SetInt(state.GetBalance(peer.Address()))
-
-			onether2weis := big.NewInt(10)
-			onether2weis.Exp(onether2weis, big.NewInt(18), nil)
-			onether2weisf := new(big.Float).SetInt(onether2weis)
-			bigval.Quo(bigval, onether2weisf)
-
-			val64, _ := bigval.Float64()
-			balanceIndex := val64 * float64(0.1)
-
-			var vote float64
-			if nil != voteres {
-				tempvote, ok := voteres[peer.Address()]
-				if !ok {
-					continue
+	//sort.Sort(delhpsmap)
+	//sort by addr
+	if 1 < len(delhpsmap) {
+		for i := 0; i < len(delhpsmap); i++ {
+			for j := 0; j < len(delhpsmap)-i-1; j++ {
+				if bytes.Compare(delhpsmap[j][:], delhpsmap[j+1][:]) > 0 {
+					delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
 				}
-				vote = float64(tempvote.Uint64()) * float64(0.4)
-			} else {
-				vote = 0
-			}
-
-			VoteIndex := networkBandwidth + balanceIndex + vote
-
-			if peer.Address() != address {
-				bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{peer.GetID(), peer.Address(), uint64(VoteIndex)})
 			}
 		}
+	}
+
+	//sort by ranking
+	for i := 0; i < len(delhpsmap); i++ {
+		for j := 0; j < len(delhpsmap)-i-1; j++ {
+			if rankingdata[delhpsmap[j]] > rankingdata[delhpsmap[j+1]] {
+				delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+			}
+		}
+	}
+
+	input := random
+	for i := 0; i < consensus.NumberPrehp; i++ {
+		err, output := snapshots.GenRand(input)
+		if nil != err {
+			return nil, nil, err
+		}
+		tempbigint := new(big.Int).SetBytes(output)
+		random := tempbigint.Uint64()
+		offset := int(random % uint64(len(delhpsmap)))
+		input = output
+		log.Debug("qazwsx randsethp rand selectable offset", "value", offset)
+		selectres = append(selectres, delhpsmap[offset])
+		if 0 < offset && 1 < len(delhpsmap) {
+			for j := offset - 1; j >= 0; j-- {
+				delhpsmap[j+1] = delhpsmap[j]
+			}
+		}
+
+		if 1 < len(delhpsmap) {
+			delhpsmap = delhpsmap[1:]
+		}
+		if 1 == len(delhpsmap) {
+			selectres = append(selectres, delhpsmap[0])
+			break
+		}
+	}
+	delhpsmap = selectres
+
+	//sort by addr
+	if 1 < len(delhpsmap) {
+		for i := 0; i < len(delhpsmap); i++ {
+			for j := 0; j < len(delhpsmap)-i-1; j++ {
+				if bytes.Compare(delhpsmap[j][:], delhpsmap[j+1][:]) > 0 {
+					delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+				}
+			}
+		}
+	}
+	for i := 0; i < len(delhpsmap); i++ {
+		bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{"", delhpsmap[i], uint64(rankingdata[delhpsmap[i]])})
+		//log.Error("bestCadWinners-----------info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
 	}
 
 	if len(bestCadWinners) == 0 {
 		return nil, nil, nil
 	}
 
-	// 先获取长度，然后进行随机获取
-	var lnlen int
-	if len(bestCadWinners) > 1 {
-		lnlen = int(math.Log2(float64(len(bestCadWinners))))
-	} else {
-		lnlen = 1
-	}
-
-	var lastCadWinners []*snapshots.CadWinner
-
-	for i := 0; i < lnlen; i++ {
-		lastCadWinners = append(lastCadWinners, bestCadWinners[rand.Intn(len(bestCadWinners))])
-	}
-
-	//开始进行排序获取最大值
+	//log.Error("-------------best cad winner--------------", "addr", bestCadWinners[0], "selectres len", len(delhpsmap))
 	winners := []*snapshots.CadWinner{}
-	lastCadWinnerToChain := &snapshots.CadWinner{}
-	voteIndexTemp := uint64(0)
-
-	for _, lastCadWinner := range lastCadWinners {
-		if lastCadWinner.VoteIndex >= voteIndexTemp {
-			voteIndexTemp = lastCadWinner.VoteIndex
-			lastCadWinnerToChain = lastCadWinner
-		}
-	}
-
-	winners = append(winners, lastCadWinnerToChain) //返回最优的
-
-	winners = append(winners, bestCadWinners[rand.Intn(lnlen)]) //返回随机
-
+	winners = append(winners, bestCadWinners[0])                                    //返回最优的
+	winners = append(winners, bestCadWinners[1:][rand.Intn(len(bestCadWinners)-1)]) //返回随机
+	var resbandwith [2]byte
 	for _, peer := range peers {
-		if peer.Address() == lastCadWinnerToChain.Address {
+		if peer.Address() == winners[0].Address {
 			//test---------------------------------
-			log.Debug("-------------------------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth())
+			//log.Error("--------winners[0]---------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
-			var bigbandwith *big.Int
-			if peer.Bandwidth() > consensus.BandwithLimit {
-				bigbandwith = big.NewInt(consensus.BandwithLimit)
+			//var bigbandwith *big.Int
+			if peer.Bandwidth()/(1024*8) > consensus.BandwithLimit {
+				//resbandwith[0] = consensus.BandwithLimit
+				resbandwith[0] = byte(rand.Intn(consensus.BandwithLimit)) //for test
 			} else {
-				bigbandwith = big.NewInt(int64(peer.Bandwidth()))
-				log.Debug("qazwsx set candaddress peer`s bandwith", "big value", bigbandwith, "string value", common.Bytes2Hex(bigbandwith.Bytes()))
+				resbandwith[0] = byte(peer.Bandwidth() / (1024 * 8))
 			}
+		}
+		if peer.Address() == winners[1].Address {
+			//test---------------------------------
+			//log.Error("---------winners[1]----------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
-			return winners, bigbandwith.Bytes(), nil
+			if peer.Bandwidth()/(1024*8) > consensus.BandwithLimit {
+				//resbandwith[1] = consensus.BandwithLimit
+				resbandwith[1] = byte(rand.Intn(consensus.BandwithLimit)) //for test
+			} else {
+				resbandwith[1] = byte(peer.Bandwidth() / (1024 * 8))
+			}
 		}
 	}
-	return winners, nil, nil
+	return winners, resbandwith[:], nil
 }
 
 func Contain(obj interface{}, target interface{}) (bool, error) {

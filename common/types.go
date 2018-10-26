@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"reflect"
 
+	"bytes"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 )
@@ -338,3 +339,11 @@ func (a *UnprefixedAddressHash) UnmarshalText(input []byte) error {
 func (a UnprefixedAddressHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
+
+type Addresses []Address
+
+func (self Addresses) Len() int { return len(self) }
+func (self Addresses) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+func (self Addresses) Less(i, j int) bool { return bytes.Compare(self[i][:], self[j][:]) == 0 }
