@@ -146,7 +146,7 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	log.Debug("Iperf server start", "port", prm.iport)
 	prm.startServerBW(strconv.Itoa(prm.iport))
 
-	if prm.server.localType != discover.BootNode {
+	if prm.server.localType != discover.BootNode && prm.server.localType != discover.SynNode {
 		go prm.startClientBW()
 	}
 
@@ -592,8 +592,7 @@ func (prm *PeerManager) startTest(host string, port string) float64 {
 func (prm *PeerManager) startClientBW() {
 	/////////////////////////////////////
 	//client
-	inteval := 30 // second of one day
-	//inteval := 60 * 60 * 24 // second of one day
+	inteval := 60 * 60 // second of one hour
 	rand.Seed(time.Now().UnixNano())
 	timeout := time.NewTimer(time.Second * time.Duration(inteval+rand.Intn(inteval)))
 	defer timeout.Stop()
@@ -606,14 +605,44 @@ func (prm *PeerManager) startClientBW() {
 			timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval)))
 		}
 
-		//2 to test
+		//2 select peer to test
 		if len(prm.peers) == 0 {
 			log.Warn("There is no peer to start bandwidth testing.")
 			continue
 		}
 
-		skip := rand.Intn(len(prm.peers))
+		pzlist := make([]*Peer, 0, len(prm.peers))
+		palist := make([]*Peer, 0, len(prm.peers))
 		for _, p := range prm.peers {
+			//bandwidth
+			//p.log.Error("############ select peer to bw test","bandwidth",p.bandwidth)
+			if p.remoteType == discover.BootNode || p.remoteType == discover.SynNode {
+				continue
+			}
+			p.log.Debug("select peer to bw test","bandwidth",p.bandwidth)
+			palist = append(palist, p)
+			if p.bandwidth < 0.1{
+				pzlist = append(pzlist, p)
+			}
+		}
+
+		if len(palist) == 0 {
+			log.Warn("There is no hpnode or prenode peer to start bandwidth testing.")
+			continue
+		}
+
+		//3. do test
+		if len(pzlist) > 0{
+			pt := pzlist[0]
+			pt.log.Info("Start bandwidth testing(first).", "remoteType", pt.remoteType.ToString())
+			prm.sendReqBWTestMsg(pt)
+			log.Info("Reset timeout to shorter.")
+			timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval)))
+			continue
+		}
+
+		skip := rand.Intn(len(palist))
+		for _, p := range palist {
 			if skip > 0 {
 				skip = skip - 1
 				continue
@@ -623,6 +652,8 @@ func (prm *PeerManager) startClientBW() {
 			prm.sendReqBWTestMsg(p)
 			break
 		}
+		log.Info("Reset timeout to longer.")
+		timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval*2)))
 	}
 	log.Error("Test bandwidth loop stop.")
 	return
