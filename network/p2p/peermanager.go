@@ -652,7 +652,7 @@ func (prm *PeerManager) startClientBW() {
 			break
 		}
 		log.Debug("Reset timeout to longer.")
-		timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval*2)))
+		timeout.Reset(time.Second * time.Duration(inteval*2+rand.Intn(inteval*2)))
 	}
 	log.Error("Test bandwidth loop stop.")
 	return
