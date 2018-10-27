@@ -678,7 +678,7 @@ func (prm *PeerManager) HandleReqBWTestMsg(p *Peer, msg Msg) error {
 		prm.ilock.Lock()
 		defer prm.ilock.Unlock()
 
-		p.log.Warn("Lock of iperf server.")
+		p.log.Debug("Lock of iperf server.")
 		resp := bwTestRes{
 			Version: 0x01,
 			Port:    uint16(prm.iport),
@@ -691,7 +691,7 @@ func (prm *PeerManager) HandleReqBWTestMsg(p *Peer, msg Msg) error {
 		}
 
 		time.Sleep(time.Second * 15)
-		p.log.Warn("Release lock of iperf server.")
+		p.log.Debug("Release lock of iperf server.")
 	}()
 
 	return nil
