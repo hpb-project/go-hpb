@@ -634,9 +634,8 @@ func (prm *PeerManager) startClientBW() {
 		//3. do test
 		if len(pzlist) > 0{
 			pt := pzlist[0]
-			pt.log.Info("Start bandwidth testing(first).", "remoteType", pt.remoteType.ToString())
+			pt.log.Debug("Start bandwidth testing(first).", "remoteType", pt.remoteType.ToString())
 			prm.sendReqBWTestMsg(pt)
-			log.Info("Reset timeout to shorter.")
 			timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval)))
 			continue
 		}
@@ -648,11 +647,11 @@ func (prm *PeerManager) startClientBW() {
 				continue
 			}
 
-			p.log.Info("Start bandwidth testing.", "remoteType", p.remoteType.ToString())
+			p.log.Debug("Start bandwidth testing.", "remoteType", p.remoteType.ToString())
 			prm.sendReqBWTestMsg(p)
 			break
 		}
-		log.Info("Reset timeout to longer.")
+		log.Debug("Reset timeout to longer.")
 		timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval*2)))
 	}
 	log.Error("Test bandwidth loop stop.")
