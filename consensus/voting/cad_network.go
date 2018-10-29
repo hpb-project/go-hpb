@@ -110,7 +110,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 		}
 	}
 	for i := 0; i < len(delhpsmap); i++ {
-		bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{"", delhpsmap[i], uint64(rankingdata[delhpsmap[i]])})
+		bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{NetworkId: "", Address: delhpsmap[i], VoteIndex: uint64(rankingdata[delhpsmap[i]])})
 		//log.Error("bestCadWinners-----------info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
 	}
 
@@ -119,9 +119,21 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	}
 
 	//log.Error("-------------best cad winner--------------", "addr", bestCadWinners[0], "selectres len", len(delhpsmap))
-	winners := []*snapshots.CadWinner{}
-	winners = append(winners, bestCadWinners[0])                                    //返回最优的
-	winners = append(winners, bestCadWinners[1:][rand.Intn(len(bestCadWinners)-1)]) //返回随机
+	winners := make([]*snapshots.CadWinner, 0, 2)
+	winners = append(winners, bestCadWinners[0]) //返回最优的
+	if len(peers) > 0 {
+		temp := rand.Intn(len(peers))
+		addr1 := peers[temp].Address()
+		addr2 := peers[(temp+1)%len(peers)].Address()
+		if bytes.Compare(bestCadWinners[0].Address[:], addr1[:]) != 0 {
+			winners = append(winners, &snapshots.CadWinner{NetworkId: "", Address: addr1, VoteIndex: uint64(rankingdata[addr1])})
+		} else {
+			winners = append(winners, &snapshots.CadWinner{NetworkId: "", Address: addr2, VoteIndex: uint64(rankingdata[addr2])})
+		}
+	} else {
+		winners = append(winners, bestCadWinners[1:][rand.Intn(len(bestCadWinners)-1)]) //返回随机
+	}
+
 	var resbandwith [2]byte
 	for _, peer := range peers {
 		if peer.Address() == winners[0].Address {

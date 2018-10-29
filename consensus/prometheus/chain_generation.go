@@ -176,6 +176,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	SetNetNodeType(snap)
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
+	if 0 == len(snap.Signers) {
+		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
+	}
 	header.Difficulty = diffNoTurn
 	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
@@ -229,7 +232,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	var random []byte
-	random = chain.GetHeaderByNumber(number - 1).HardwareRandom
+	//random = chain.GetHeaderByNumber(number - 1).HardwareRandom
+	random = crypto.Keccak256(header.Number.Bytes())
 
 	// Get the best peer from the network
 	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
@@ -539,7 +543,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			}
 
 			if number%consensus.HpbNodeCheckpointInterval == 0 && number >= consensus.StageNumberII {
-				//return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
+				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
 			}
 		}
 	} else {
@@ -630,7 +634,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
-	rewardsnum := consensus.CadNodeCheckpointInterval //test
+	rewardsnum := consensus.HpbNodeCheckpointInterval //test
 
 	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
@@ -1100,6 +1104,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 	n := len(out.Coinbases)
 	if len(out.Coinbases) == 0 || n != len(out.Cid1s) || n != len(out.Hids) || n != len(out.Cid2s) {
 		log.Error("return 4 parts do not match", "Coinbases", n, "Cid1s", len(out.Cid1s), "Cid2s", len(out.Cid2s), "Hids", len(out.Hids))
+		return errors.New("contract return 4 parts length do not match"), nil
 	}
 
 	//log.Error("print contract return res", "value", common.Bytes2Hex(resultaddr))
@@ -1122,10 +1127,11 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		_, err2 := buff.Write(out.Cid2s[i][:])
 		if err1 != nil || err2 != nil {
 			log.Error("construct cid fail", "err1", err1, "err2", err2)
+			return errors.New("construct cid fail"), nil
 		}
 		res = append(res, p2p.HwPair{Adr: common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
-	log.Error("3333333333333333", "value", res)
+	log.Debug("3333333333333333", "value", res)
 
 	return nil, res
 }

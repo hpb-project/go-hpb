@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -188,8 +189,9 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		}
 	*/
 	if number > consensus.StageNumberIII {
-		if isallright, _ := c.VerifySelectPrehp(chain, header, number, header.CandAddress, mode); !isallright {
-			return consensus.ErrInvalidCadaddr
+		if isallright, err := c.VerifySelectPrehp(chain, header, number, header.CandAddress, mode); !isallright {
+			//return consensus.ErrInvalidCadaddr
+			return err
 		}
 	}
 
@@ -306,6 +308,19 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		return false, errors.New("forbid mining before successfully connect with bootnode")
 	}
 
+	comaddrinboot := false
+	for _, v := range bootnodeinfp {
+		addr := common.HexToAddress(v.Adr)
+		if bytes.Compare(addr[:], header.ComdAddress[:]) == 0 {
+			comaddrinboot = true
+			break
+		}
+	}
+
+	if !comaddrinboot {
+		return false, errors.New("comaddress invalid")
+	}
+
 	err, _, voteres := c.GetVoteRes(chain, header, state)
 	if nil != err {
 		//return false, err //for test '//'
@@ -330,7 +345,8 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		//log.Error("VerifySelectPrehp **********************+three item ranking info******************", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
 	}
 
-	random := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	//random := chain.GetHeaderByNumber(number - 1).HardwareRandom
+	random := crypto.Keccak256(header.Number.Bytes())
 	//log.Error("VerifySelectPrehp zzzzzzzzzz input GetCadNodeFromNetwork random zzzzzzzzzz", "value", random, "number", number)
 	// Get the best peer from the network
 	if cadWinner, _, err = voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
