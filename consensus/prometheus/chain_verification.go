@@ -293,7 +293,7 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		log.Error("GetNodeinfoFromContract err", "value", err)
 		//return err
 	GETBOOTNODEINFO:
-		bootnodeinfp = p2p.PeerMgrInst().HwInfo()
+		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
 			goto GETBOOTNODEINFO
 		}

@@ -91,7 +91,6 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 		TestMode:   config.Node.TestMode == 1,
 		PrivateKey: config.Node.PrivateKey,
 		NetworkId:  config.Node.NetworkId,
-		//DefaultAddr:config.Node.DefaultAddress,
 		ListenAddr: config.Network.ListenAddr,
 
 		NetRestrict:     config.Network.NetRestrict,
@@ -104,7 +103,6 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 
 	prm.server.Config.CoinBase = coinbase
 	log.Info("Set coinbase address by start", "address", coinbase.String())
-
 	if coinbase.String() == "0x0000000000000000000000000000000000000000" {
 		panic("coinbase address is nil.")
 	}
@@ -495,8 +493,12 @@ type HwPair struct {
 	Hid []byte
 }
 
-func (prm *PeerManager) HwInfo() []HwPair {
-	return prm.server.hdtab
+func (prm *PeerManager) GetHwInfo() []HwPair {
+	return prm.server.getHdtab()
+}
+
+func (prm *PeerManager) SetHwInfo(pairs []HwPair) error {
+	return prm.server.updateHdtab(pairs,false)
 }
 
 func (prm *PeerManager) parseBindInfo(filename string) error {
@@ -504,25 +506,24 @@ func (prm *PeerManager) parseBindInfo(filename string) error {
 	var binding []bindInfo
 	if err := common.LoadJSON(filename, &binding); err != nil {
 		log.Error(fmt.Sprintf("Can't load node file %s: %v", filename, err))
-		//panic("Hardware Info Parse Error. Can't load node file.")
-		//return nil
+		panic("Hardware Info Parse Error. Can't load node file.")
 	}
 	log.Debug("Boot node parse binding hardware table.", "binding", binding)
-	prm.server.hdtab = make([]HwPair, 0, len(binding))
-	for _, b := range binding {
+	hdtab := make([]HwPair, 0, len(binding))
+	for i, b := range binding {
 		cid, cerr := hex.DecodeString(b.CID)
 		hid, herr := hex.DecodeString(b.HID)
 		if cerr != nil || herr != nil {
-			log.Error(fmt.Sprintf("Can't parse node file %s", filename))
-			//panic("Hardware Info Parse Error.")
-			//return nil
+			log.Error(fmt.Sprintf("Can't parse node file %s(index=%d)", filename,i))
+			panic("Hardware Info Parse Error.")
 		}
 		//todo check cid hid adr
-
-		prm.server.hdtab = append(prm.server.hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
+		hdtab = append(hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
 	}
-	log.Debug("Boot node parse binding hardware table.", "hdtab", prm.server.hdtab)
 
+	prm.server.updateHdtab(hdtab,true)
+	//prm.server.hdtab = hdtab
+	log.Info("Boot node parse binding hardware table.", "hdtab", hdtab)
 	return nil
 }
 
