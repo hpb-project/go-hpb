@@ -773,7 +773,6 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	if isRemoteBoot || srv.localType == discover.BootNode {
 
 		ourHdtable := &hardwareTable{Version:0x00,Hdtab:hdtab}
-		//log.Debug("######Get remote hardware table","ourtable",ourHdtable)
 		theirHdtable, err := c.doHardwareTable(ourHdtable)
 		if err != nil {
 			clog.Debug("Failed hardware table handshake", "reason", err)
@@ -785,10 +784,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 		if isRemoteBoot{
 			srv.updateHdtab(theirHdtable.Hdtab,true)
-			//srv.hdtab = theirHdtable.Hdtab
 			clog.Trace("Update hardware table from boot.","srv hdtab", srv.getHdtab() )
 		}
-
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////
