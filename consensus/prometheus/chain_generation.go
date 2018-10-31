@@ -195,6 +195,16 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
 			goto GETBOOTNODEINFO
 		}
+		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			addrfrompeers := common.HexToAddress(bootnodeinfp[i].Adr)
+			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
+		}
+	} else {
+
 	}
 
 	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
@@ -817,6 +827,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	if votecounts.Cmp(big.NewInt(0)) == 0 {
 		return nil, nil, nil
 	}
+	log.Debug(">>>>>>>>>>>>>>get vote result<<<<<<<<<<<<<<<<<", "value", voteres)
 
 	return nil, votecounts, voteres
 }
@@ -1131,7 +1142,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		}
 		res = append(res, p2p.HwPair{Adr: common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
-	log.Debug("3333333333333333", "value", res)
+	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
 
 	return nil, res
 }
