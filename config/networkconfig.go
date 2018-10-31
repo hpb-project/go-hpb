@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package config
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
-	"strings"
-	"path/filepath"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -47,32 +46,44 @@ const (
 
 var DefaultNTConfig = NetworkConfig{
 
-	HTTPPort:     DefaultHTTPPort,
-	HTTPModules:  []string{"net", "web3", "prometheus"},
-	WSPort:       DefaultWSPort,
-	WSModules:    []string{"net", "web3", "prometheus"},
+	HTTPPort:         DefaultHTTPPort,
+	HTTPModules:      []string{"net", "web3", "prometheus"},
+	WSPort:           DefaultWSPort,
+	WSModules:        []string{"net", "web3", "prometheus"},
 	HTTPVirtualHosts: []string{"localhost"},
 	HTTPTimeouts:     DefaultHTTPTimeouts,
-	ListenAddr:   ":30303",
-	MaxPeers:     50,
-	NAT:          nat.Any(),
-	IpcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
-	HttpEndpoint: DefaultHTTPEndpoint(),
-	WsEndpoint:   DefaultWSEndpoint(),
+	ListenAddr:       ":30303",
+	MaxPeers:         50,
+	NAT:              nat.Any(),
+	IpcEndpoint:      DefaultIPCEndpoint(clientIdentifier),
+	HttpEndpoint:     DefaultHTTPEndpoint(),
+	WsEndpoint:       DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
-	"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@47.94.20.30:30303",
-	"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@47.100.250.120:30303",
-	"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@47.75.213.166:30303",
-	"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@47.88.60.227:30303",
-	"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@47.254.133.46:30303",
+	////////////"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@47.94.20.30:30303",
+	"hnode://4f505f38b41b683c59a5384ce419c3d265f39556097bfcf3da7ba1d6630c1b4d6efc818537df44bf82aba971c672d1a6709d4724094aba2be7889976752cb54d@:::8540",
+	"hnode://4f505f38b41b683c59a5384ce419c3d265f39556097bfcf3da7ba1d6630c1b4d6efc818537df44bf82aba971c672d1a6709d4724094aba2be7889976752cb54d@127.0.0.1:8540",
+	//"hnode://ca5e38a4c9b0a989d246e2bbdee467e7303c1e60a33a65d6033bab3ce3be4afc30f40b60d5765601073d4679f3269470c4f39d8010a7bf60ed87b9d68cfd4e01@:::8540",
+	//"hnode://ca5e38a4c9b0a989d246e2bbdee467e7303c1e60a33a65d6033bab3ce3be4afc30f40b60d5765601073d4679f3269470c4f39d8010a7bf60ed87b9d68cfd4e01@127.0.0.1:8540",
+	////"hnode://848b4b0edd7c00f9907fbf31dfd6d4d430eea041e5b9872c7ef7c5080dfb7ecf738657324d812034a113970f68cbb3cb0e35f8b5a4e1eafa1ca437335cccacbc@:::8540",
+	////"hnode://848b4b0edd7c00f9907fbf31dfd6d4d430eea041e5b9872c7ef7c5080dfb7ecf738657324d812034a113970f68cbb3cb0e35f8b5a4e1eafa1ca437335cccacbc@127.0.0.1:8540",
+	//////"hnode://c7457e0a6d33bb5d22c21e19792ede7e2547e601edea119c6784ce0ecae5cf9827fd9c7547758f085a6e0dc7e6f200f9fa413eb984fff68f4ce1cd1bcdeda0d5@:::8540",
+	//////"hnode://c7457e0a6d33bb5d22c21e19792ede7e2547e601edea119c6784ce0ecae5cf9827fd9c7547758f085a6e0dc7e6f200f9fa413eb984fff68f4ce1cd1bcdeda0d5@127.0.0.1:8540",
+	//////////"hnode://d0e05343dcdec91efcf81d97b68006d575c2cfc0cdc5bd573447efe5e7df4c491629d420c7ff730b8d376053dd2bf78250997f4f68b335f834a7c6f99ae577ea@:::8540",
+	////////"hnode://d0e05343dcdec91efcf81d97b68006d575c2cfc0cdc5bd573447efe5e7df4c491629d420c7ff730b8d376053dd2bf78250997f4f68b335f834a7c6f99ae577ea@127.0.0.1:8540",
+	//////////"hnode://@:8540",
+	//////////"hnode://@127.0.0.1:8540",
+	////////////"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@47.100.250.120:30303",
+	////////////"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@47.75.213.166:30303",
+	////////////"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@47.88.60.227:30303",
+	////////////"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@47.254.133.46:30303",
 }
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.
-var TestnetBootnodes = []string{
-}
+var TestnetBootnodes = []string{}
+
 type NetworkConfig struct {
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
@@ -132,7 +143,6 @@ type NetworkConfig struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
-
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.
 	MaxPeers int
@@ -145,7 +155,7 @@ type NetworkConfig struct {
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
 	//DiscoveryV5 bool `toml:",omitempty"`
-    NoDiscovery bool
+	NoDiscovery bool
 	// Listener address for the V5 discovery protocol UDP traffic.
 	//DiscoveryV5Addr string `toml:",omitempty"`
 
@@ -195,12 +205,11 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
-	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	IpcEndpoint  string // IPC endpoint to listen at (empty = IPC disabled)
+	HttpEndpoint string // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	WsEndpoint   string // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 
 	BootstrapNodes []*discover.Node
-
 }
 
 // HTTPTimeouts represents the configuration params for the HTTP RPC server.
@@ -235,9 +244,8 @@ var DefaultHTTPTimeouts = HTTPTimeouts{
 	IdleTimeout:  120 * time.Second,
 }
 
-
-func DefaultNetworkConfig() NetworkConfig{
-	cfg:= DefaultNTConfig
+func DefaultNetworkConfig() NetworkConfig {
+	cfg := DefaultNTConfig
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
 	cfg.WSModules = append(cfg.WSModules, "hpb")
@@ -247,7 +255,6 @@ func DefaultNetworkConfig() NetworkConfig{
 
 	return cfg
 }
-
 
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
 // and port parameters.
@@ -275,6 +282,7 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
 	return config.IPCEndpoint()
 }
+
 // WSEndpoint resolves an websocket endpoint based on the configured host interface
 // and port parameters.
 func (c *NetworkConfig) WSEndpoint() string {
@@ -289,12 +297,3 @@ func DefaultWSEndpoint() string {
 	config := &NetworkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
-
-
-
-
-
-
-
-
-

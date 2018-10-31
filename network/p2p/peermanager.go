@@ -323,6 +323,9 @@ func (prm *PeerManager) BestPeer() *Peer {
 		bestTd   *big.Int
 	)
 	for _, p := range prm.peers {
+		if p.remoteType == discover.SynNode {
+			continue
+		}
 		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
 			bestPeer, bestTd = p, td
 		}
@@ -619,9 +622,9 @@ func (prm *PeerManager) startClientBW() {
 			if p.remoteType == discover.BootNode || p.remoteType == discover.SynNode {
 				continue
 			}
-			p.log.Debug("select peer to bw test","bandwidth",p.bandwidth)
+			p.log.Debug("select peer to bw test", "bandwidth", p.bandwidth)
 			palist = append(palist, p)
-			if p.bandwidth < 0.1{
+			if p.bandwidth < 0.1 {
 				pzlist = append(pzlist, p)
 			}
 		}
@@ -632,7 +635,7 @@ func (prm *PeerManager) startClientBW() {
 		}
 
 		//3. do test
-		if len(pzlist) > 0{
+		if len(pzlist) > 0 {
 			pt := pzlist[0]
 			pt.log.Debug("Start bandwidth testing(first).", "remoteType", pt.remoteType.ToString())
 			prm.sendReqBWTestMsg(pt)
