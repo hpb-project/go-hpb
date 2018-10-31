@@ -293,9 +293,17 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		log.Error("GetNodeinfoFromContract err", "value", err)
 		//return err
 	GETBOOTNODEINFO:
-		bootnodeinfp = p2p.PeerMgrInst().HwInfo()
+		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
 			goto GETBOOTNODEINFO
+		}
+		log.Debug("VerifySelectPrehp from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			addrfrompeers := common.HexToAddress(bootnodeinfp[i].Adr)
+			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
 		}
 	}
 	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)

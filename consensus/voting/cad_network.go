@@ -34,6 +34,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/rand"
 )
 
@@ -43,6 +44,13 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	bestCadWinners := []*snapshots.CadWinner{}
 	peers := p2p.PeerMgrInst().PeersAll()
 	fmt.Println("######### peers length is:", len(peers))
+
+	for i := 0; i < len(peers); i++ {
+		if peers[i].RemoteType() == discover.BootNode || peers[i].RemoteType() == discover.SynNode {
+			copy(peers[i:], peers[i+1:])
+			peers = peers[0 : len(peers)-1]
+		}
+	}
 
 	//order the hpsmaptemp by put it into []common.address
 	delhpsmap := make(common.Addresses, 0, len(rankingdata))

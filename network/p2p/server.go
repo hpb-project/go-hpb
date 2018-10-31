@@ -120,6 +120,7 @@ type Server struct {
 	//hpflag       bool // block num > 100  this should be false
 	synPid       [] SynnodePid
 
+	hdlock       sync.RWMutex
 	hdtab        [] HwPair
 
 	setupLock    sync.Mutex
@@ -731,26 +732,27 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	clog.Trace("Do protocol handshake.","our",c.our,"their",c.their)
 
 	/////////////////////////////////////////////////////////////////////////////////
-	isBootnode := false
+	isRemoteBoot := false
+	hdtab := srv.getHdtab()
 
 	for _, n := range srv.BootstrapNodes {
 		if c.id == n.ID {
 			clog.Info("Remote node is boot.","id",c.id)
-			c.isboe    = true
-			isBootnode = true
+			c.isboe = true
+			isRemoteBoot = true
 		}
 	}
 
 	if !c.isboe {
 		remoteCoinbase := strings.ToLower(c.their.CoinBase.String())
 		clog.Trace("Remote coinbase","address",remoteCoinbase)
-		if len(srv.hdtab) == 0 {
+		if len(hdtab) == 0 {
 			clog.Debug("Do not ready for connected.","id",c.id.TerminalString())
 			c.close(DiscHwSignError)
 			return
 		}
 
-		for _,hw := range srv.hdtab {
+		for _,hw := range hdtab {
 			if hw.Adr == remoteCoinbase {
 				clog.Debug("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
 				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
@@ -767,30 +769,23 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
-	///////////////////////////////////////////////////////////////////////////
-	//for _, hp := range srv.hptype {
-	//	if hp.PID == c.id.TerminalString() {
-	//		remoteBoe = true
-	//		c.isboe   = remoteBoe
-	//		log.Warn("###### ONLY FOR TEST SYN TO SET BOE TRUE ######", "isboe",remoteBoe)
-	//	}
-	//}
-	///////////////////////////////////////////////////////////////////////////
 
+	if isRemoteBoot || srv.localType == discover.BootNode {
 
-	ourHdtable := &hardwareTable{Version:0x00,Hdtab:srv.hdtab}
-	//log.Debug("######Get remote hardware table","ourtable",ourHdtable)
-	theirHdtable, err := c.doHardwareTable(ourHdtable)
-	if err != nil {
-		clog.Debug("Failed hardware table handshake", "reason", err)
-		c.close(err)
-		return
-	}
-	clog.Trace("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
+		ourHdtable := &hardwareTable{Version:0x00,Hdtab:hdtab}
+		theirHdtable, err := c.doHardwareTable(ourHdtable)
+		if err != nil {
+			clog.Debug("Failed hardware table handshake", "reason", err)
+			c.close(err)
+			return
+		}
 
-	if isBootnode {
-		srv.hdtab = theirHdtable.Hdtab
-		clog.Trace("Update hardware table from boot.","srv hdtab", srv.hdtab )
+		clog.Trace("Exchange hardware table.","our",ourHdtable, "their",theirHdtable)
+
+		if isRemoteBoot{
+			srv.updateHdtab(theirHdtable.Hdtab,true)
+			clog.Trace("Update hardware table from boot.","srv hdtab", srv.getHdtab() )
+		}
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -799,16 +794,55 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
-
 }
 
-func truncateName(s string) string {
-	if len(s) > 20 {
-		return s[:20] + "..."
+func  (srv *Server) updateHdtab(pairs [] HwPair, boot bool) error {
+
+	log.Debug("hw pairs from prometheus","boot",boot,"pairs",pairs)
+
+	if len(srv.hdtab) == len(pairs) {
+		theSame := true
+		for _,our := range srv.hdtab {
+			find := false
+			for _, there:= range pairs {
+				if our.Adr == there.Adr{
+					find = true
+					break
+				}
+			}
+
+			if !find{
+				log.Debug("update hardware table do not fond.","address",our.Adr)
+				theSame = false
+				break
+			}
+		}
+
+		if theSame {
+			log.Debug("do not need update hardware table.")
+			return nil
+		}
 	}
-	return s
+
+	log.Info("server need to update hardware table","boot", boot, "our", len(srv.hdtab), "there", len(pairs))
+	srv.hdlock.Lock()
+	defer srv.hdlock.Unlock()
+	srv.hdtab = pairs
+
+	return nil
 }
 
+func  (srv *Server) getHdtab() [] HwPair {
+	srv.hdlock.RLock()
+	defer srv.hdlock.RUnlock()
+	return srv.hdtab
+}
+
+func  (srv *Server) getHdtabSize() int {
+	srv.hdlock.RLock()
+	defer srv.hdlock.RUnlock()
+	return len(srv.hdtab)
+}
 // checkpoint sends the conn to run, which performs the
 // post-handshake checks for the stage (posthandshake, addpeer).
 func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
