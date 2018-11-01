@@ -300,13 +300,24 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		}
 		log.Debug("VerifySelectPrehp from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
 		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(bootnodeinfp[i].Adr)
+			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
+			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
 			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
 				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
 		}
 	} else {
+		log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
+			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
+			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
+		}
+
 		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
 		if nil != err {
 			log.Debug("VerifySelectPrehp get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)

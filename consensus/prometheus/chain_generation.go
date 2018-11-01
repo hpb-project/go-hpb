@@ -188,23 +188,33 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
-		log.Error("GetNodeinfoFromContract err", "value", err)
+		log.Error("GetNodeinfoFromContract fail", "error", err)
 		//return err
 	GETBOOTNODEINFO:
 		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
 			goto GETBOOTNODEINFO
 		}
-		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
+		//log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
 		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(bootnodeinfp[i].Adr)
+			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
+			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
 			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
 				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
 		}
-		log.Error("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
+		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
 	} else {
+		//log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
+			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
+			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
+		}
 		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
 		if nil != err {
 			log.Debug("prepare header get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
