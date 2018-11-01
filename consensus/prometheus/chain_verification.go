@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -305,11 +306,17 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
 		}
+	} else {
+		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
+		if nil != err {
+			log.Debug("VerifySelectPrehp get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
+			return false, err
+		}
 	}
 	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
 	addrlist := make([]common.Address, 0, len(bootnodeinfp))
 	for _, v := range bootnodeinfp {
-		addrlist = append(addrlist, common.HexToAddress(v.Adr))
+		addrlist = append(addrlist, common.HexToAddress(strings.Replace(v.Adr, " ", "", -1)))
 	}
 
 	if len(addrlist) == 0 {
@@ -331,9 +338,8 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 
 	err, _, voteres := c.GetVoteRes(chain, header, state)
 	if nil != err {
-		//return false, err //for test '//'
-		//test code, release code should '//'
-		log.Warn("GetVoteRes return err, please deploy contract!")
+		//return false, err
+		log.Debug("GetVoteRes return err, please deploy contract!")
 		voteres = make(map[common.Address]big.Int)
 		for _, v := range addrlist {
 			voteres[v] = *big.NewInt(0)

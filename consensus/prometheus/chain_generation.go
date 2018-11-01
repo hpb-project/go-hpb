@@ -203,14 +203,20 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
 		}
+		log.Error("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
 	} else {
-
+		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
+		if nil != err {
+			log.Debug("prepare header get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
+			return err
+		}
 	}
 
 	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
 	addrlist := make([]common.Address, 0, len(bootnodeinfp))
 	for _, v := range bootnodeinfp {
-		addrlist = append(addrlist, common.HexToAddress(v.Adr))
+		addrlist = append(addrlist, common.HexToAddress(strings.Replace(v.Adr, " ", "", -1)))
+		log.Debug("common.HexToAddress(v.Adr)", "addr", common.HexToAddress(v.Adr), "v.Adr", v.Adr, "length", len(v.Adr))
 	}
 
 	if len(addrlist) == 0 {
@@ -218,14 +224,12 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	err, _, voteres := c.GetVoteRes(chain, header, state)
 	if nil != err {
-		//return err //for test '//'
-		//test code, release code should '//'
-		log.Warn("GetVoteRes return err, please deploy contract!")
+		//return err
+		log.Debug("GetVoteRes return err, please deploy contract!")
 		voteres = make(map[common.Address]big.Int)
 		for _, v := range addrlist {
 			voteres[v] = *big.NewInt(0)
 		}
-
 	}
 	var band, balance, vote map[common.Address]int
 
@@ -260,6 +264,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
 			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
+		//log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress) //for test
 
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
@@ -945,9 +950,9 @@ type BandWithStatics struct {
 //input number, return key is commonAddress, order is value
 func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.StateDB, number uint64) (map[common.Address]int, error) {
 
-	if number < consensus.NumberBackBandwith {
-		return nil, nil
-	}
+	//if number < consensus.NumberBackBandwith {
+	//	return nil, nil
+	//}
 	if addrlist == nil || len(addrlist) == 0 || state == nil {
 		return nil, consensus.ErrBadParam
 	}
@@ -1008,9 +1013,9 @@ func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.State
 //input number, return key is commonAddress, order is value
 func (c *Prometheus) GetAllVoteRes(voteres map[common.Address]big.Int, addrlist []common.Address, number uint64) (map[common.Address]int, error) {
 
-	if number < consensus.NumberBackBandwith {
-		return nil, nil
-	}
+	//if number < consensus.NumberBackBandwith {
+	//	return nil, nil
+	//}
 	if addrlist == nil || len(addrlist) == 0 {
 		return nil, consensus.ErrBadParam
 	}
