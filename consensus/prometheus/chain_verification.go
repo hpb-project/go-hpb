@@ -310,9 +310,9 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 	} else {
 		log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
 		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
-			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
-			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
+			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
+			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
 				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}

@@ -52,7 +52,7 @@ const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
 	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 500 * time.Millisecond // 延时单位
+	wiggleTime            = 240 * time.Millisecond // 延时单位
 	comCheckpointInterval = 2                      // 社区投票间隔
 	cadCheckpointInterval = 2                      // 社区投票间隔
 )
@@ -208,9 +208,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	} else {
 		//log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
 		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
-			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
-			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
+			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
+			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
 				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
@@ -252,12 +252,13 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
 		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
-		//log.Error("prepare +++++++++++++three item ranking info+++++++++++++++", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
+		log.Debug("prepare +++++++++++++three item ranking info+++++++++++++++", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
 	}
 
 	var random []byte
 	//random = chain.GetHeaderByNumber(number - 1).HardwareRandom
 	random = crypto.Keccak256(header.Number.Bytes())
+	log.Debug("qwer from 151 select 20 input random", "number", number, "string random sha3 with number", common.Bytes2Hex(random))
 
 	// Get the best peer from the network
 	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
@@ -857,28 +858,29 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	mapaddrbandwithres := make(map[common.Address]*BandWithStatics)
 	for i := number - consensus.NumberBackBandwith; i < number-100; i++ {
 		//statistics prehp node bandwith
-		tempaddr := chain.GetHeaderByNumber(i).CandAddress
-		tempBandwith := chain.GetHeaderByNumber(i).Nonce[6]
-		if 0 != tempBandwith {
-			if v, ok := mapaddrbandwithres[tempaddr]; !ok {
-				mapaddrbandwithres[tempaddr] = &BandWithStatics{uint64(tempBandwith), 1}
+		tempaddr1 := chain.GetHeaderByNumber(i).CandAddress
+		tempBandwith1 := chain.GetHeaderByNumber(i).Nonce[6]
+		if 0 != tempBandwith1 {
+			if v, ok := mapaddrbandwithres[tempaddr1]; !ok {
+				mapaddrbandwithres[tempaddr1] = &BandWithStatics{uint64(tempBandwith1), 1}
 			} else {
-				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith)) / (v.Num + 1)
+				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith1)) / (v.Num + 1)
 				v.Num += 1
 			}
 		}
 
 		//statistics comaddress node bandwith
-		tempaddr = chain.GetHeaderByNumber(i).ComdAddress
-		tempBandwith = chain.GetHeaderByNumber(i).Nonce[7]
-		if 0 != tempBandwith {
-			if v, ok := mapaddrbandwithres[tempaddr]; !ok {
-				mapaddrbandwithres[tempaddr] = &BandWithStatics{uint64(tempBandwith), 1}
+		tempaddr2 := chain.GetHeaderByNumber(i).ComdAddress
+		tempBandwith2 := chain.GetHeaderByNumber(i).Nonce[7]
+		if 0 != tempBandwith2 {
+			if v, ok := mapaddrbandwithres[tempaddr2]; !ok {
+				mapaddrbandwithres[tempaddr2] = &BandWithStatics{uint64(tempBandwith2), 1}
 			} else {
-				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith)) / (v.Num + 1)
+				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith2)) / (v.Num + 1)
 				v.Num += 1
 			}
 		}
+		log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
 	}
 
 	for i := 0; i < len(addrlist); i++ {
@@ -888,7 +890,8 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	}
 
 	arrayaddrbandwith := make([]common.Address, 0, 151)
-	for k, _ := range mapaddrbandwithres {
+	for k, v := range mapaddrbandwithres {
+		log.Debug("qwer>>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
 		arrayaddrbandwith = append(arrayaddrbandwith, k)
 	}
 
@@ -975,6 +978,7 @@ func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.State
 	for _, v := range arrayaddrwith {
 		mapBalance[v] = state.GetBalance(v)
 		//log.Error("11111111111 getbalance res 1111111111111", "addr", v, "value", mapBalance[v])
+		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "balance", mapBalance[v])
 	}
 
 	arrayaddrlen := len(arrayaddrwith)
@@ -1041,6 +1045,7 @@ func (c *Prometheus) GetAllVoteRes(voteres map[common.Address]big.Int, addrlist 
 		} else {
 			mapVotes[v] = big.NewInt(0)
 		}
+		log.Debug("qwerGetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
 
 	}
 
@@ -1155,7 +1160,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 			log.Error("construct cid fail", "err1", err1, "err2", err2)
 			return errors.New("construct cid fail"), nil
 		}
-		res = append(res, p2p.HwPair{Adr: common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
+		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
 	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
 

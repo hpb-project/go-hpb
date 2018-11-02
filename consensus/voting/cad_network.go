@@ -89,7 +89,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 		random := tempbigint.Uint64()
 		offset := int(random % uint64(len(delhpsmap)))
 		input = output
-		log.Debug("qazwsx randsethp rand selectable offset", "value", offset)
+		log.Debug("qwer randsethp rand selectable offset", "value", offset, "out", common.Bytes2Hex(output))
 		selectres = append(selectres, delhpsmap[offset])
 		if 0 < offset && 1 < len(delhpsmap) {
 			for j := offset - 1; j >= 0; j-- {
