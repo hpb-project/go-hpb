@@ -824,7 +824,7 @@ func  (srv *Server) updateHdtab(pairs [] HwPair, boot bool) error {
 		}
 	}
 
-	log.Info("server need to update hardware table","boot", boot, "our", len(srv.hdtab), "there", len(pairs))
+	log.Info("server need to update hardware table","boot", boot, "our", len(srv.hdtab), "there", len(pairs),"hdtab",pairs)
 	srv.hdlock.Lock()
 	defer srv.hdlock.Unlock()
 	srv.hdtab = pairs

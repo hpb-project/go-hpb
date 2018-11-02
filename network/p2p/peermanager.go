@@ -524,9 +524,11 @@ func (prm *PeerManager) parseBindInfo(filename string) error {
 		hdtab = append(hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
 	}
 
+
+	log.Info("Boot node parse binding hardware table.", "hdtab", hdtab)
 	prm.server.updateHdtab(hdtab,true)
 	//prm.server.hdtab = hdtab
-	log.Info("Boot node parse binding hardware table.", "hdtab", hdtab)
+
 	return nil
 }
 
