@@ -70,9 +70,9 @@ type Header struct {
 	ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash      common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 	Coinbase       common.Address `json:"miner"            gencodec:"required"`
-	CandAddress    common.Address `json:"candAddress"      gencodec:""`
-	ComdAddress    common.Address `json:"comdAddress"      gencodec:""`
-	VoteIndex      *big.Int       `json:"voteIndex"        gencodec:""`
+	CandAddress    common.Address `json:"candAddress"      gencodec:"required"`
+	ComdAddress    common.Address `json:"comdAddress"      gencodec:"required"`
+	VoteIndex      *big.Int       `json:"voteIndex"        gencodec:"required"`
 	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -85,7 +85,7 @@ type Header struct {
 	Extra          []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest      common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce          BlockNonce     `json:"nonce"            gencodec:"required"`
-	HardwareRandom []byte         `json:"hardwareRandom"           gencodec:""`
+	HardwareRandom []byte         `json:"hardwareRandom"   gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -238,6 +238,9 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Time = new(big.Int); h.Time != nil {
 		cpy.Time.Set(h.Time)
 	}
+	if cpy.VoteIndex = new(big.Int); h.VoteIndex != nil {
+		cpy.VoteIndex.Set(h.VoteIndex)
+	}
 	if cpy.Difficulty = new(big.Int); h.Difficulty != nil {
 		cpy.Difficulty.Set(h.Difficulty)
 	}
@@ -323,6 +326,7 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
+func (b *Block) Hardwarerandom() []byte   { return common.CopyBytes(b.header.HardwareRandom) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -403,6 +407,9 @@ func (h *Header) String() string {
 	ParentHash:	    %x
 	UncleHash:	    %x
 	Coinbase:	    %x
+    CandAddress:    %x
+	ComdAddress:    %x
+    VoteIndex:      %x
 	Root:		    %x
 	TxSha		    %x
 	ReceiptSha:	    %x
@@ -415,7 +422,8 @@ func (h *Header) String() string {
 	Extra:		    %s
 	MixDigest:      %x
 	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+	hardwarerandom: %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.CandAddress, h.ComdAddress, h.VoteIndex, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom)
 }
 
 type Blocks []*Block

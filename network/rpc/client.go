@@ -683,6 +683,7 @@ func (c *Client) read(conn net.Conn) error {
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
 		}
+
 		if isBatch(buf) {
 			err = json.Unmarshal(buf, &rs)
 		} else {

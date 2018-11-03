@@ -30,23 +30,23 @@ import (
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/node"
-	"github.com/hpb-project/go-hpb/network/p2p/nat"
-	"github.com/hpb-project/go-hpb/network/p2p/netutil"
-	"github.com/hpb-project/go-hpb/config"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/hpb-project/go-hpb/common/metrics"
-	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
+	"github.com/hpb-project/go-hpb/network/p2p/netutil"
+	"github.com/hpb-project/go-hpb/node"
 	"github.com/hpb-project/go-hpb/node/db"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -119,7 +119,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value:  config.DefaultConfig.NetworkId,
+		Value: config.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -449,6 +449,11 @@ var (
 		Name:  "testmode",
 		Usage: "Run ghpb with testmode and boe don't need",
 	}
+	TestCodeStageFlag = cli.IntSliceFlag{
+		Name:  "testparam",
+		Usage: "Run ghpb with test code stage and boe need",
+		Value: nil,
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -722,9 +727,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 	return lines
 }
 
-
 func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
-
 
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
@@ -807,9 +810,9 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.Network.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
-	cfg.Network.WsEndpoint  = cfg.Network.WSEndpoint()
+	cfg.Network.WsEndpoint = cfg.Network.WSEndpoint()
 	cfg.Network.IpcEndpoint = cfg.Node.IPCEndpoint()
-	cfg.Network.HttpEndpoint    = cfg.Network.HTTPEndpoint()
+	cfg.Network.HttpEndpoint = cfg.Network.HTTPEndpoint()
 
 }
 
@@ -818,6 +821,7 @@ func SetConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	SetNodeConfig(ctx, cfg)
 	SetNetWorkConfig(ctx, cfg)
 }
+
 // SetNodeConfig applies node-related command line flags to the config.
 func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	switch {
@@ -878,6 +882,16 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalBool(TestModeFlag.Name) {
 		cfg.Node.TestMode = 1
 	}
+	if ctx.GlobalIsSet(TestCodeStageFlag.Name) {
+		res := ctx.GlobalIntSlice(TestCodeStageFlag.Name)
+		if nil == res || len(res) < 2 {
+			cfg.Node.TestCodeParam = 1
+		} else {
+			consensus.StageNumberII = uint64(res[0])
+			consensus.StageNumberIII = uint64(res[1])
+		}
+
+	}
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
@@ -921,7 +935,7 @@ func setGPO(ctx *cli.Context, cfg *config.GpoConfig) {
 	}
 }
 
-func SetTxPool(ctx *cli.Context, cfg *config.TxPoolConfiguration ) {
+func SetTxPool(ctx *cli.Context, cfg *config.TxPoolConfiguration) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
 	}
@@ -965,8 +979,6 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 		Fatalf("flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
 }
-
-
 
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
@@ -1012,7 +1024,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *bc.BlockChain, chainD
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	
+
 	engine = prometheus.New(cfg.Prometheus, chainDb)
 
 	chain, err = bc.NewBlockChainWithEngine(chainDb, cfg, engine)

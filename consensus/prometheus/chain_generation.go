@@ -41,6 +41,7 @@ import (
 	"errors"
 	"github.com/hpb-project/go-hpb/account/abi"
 	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"math"
 	"math/rand"
@@ -51,7 +52,7 @@ const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
 	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 500 * time.Millisecond // 延时单位
+	wiggleTime            = 240 * time.Millisecond // 延时单位
 	comCheckpointInterval = 2                      // 社区投票间隔
 	cadCheckpointInterval = 2                      // 社区投票间隔
 )
@@ -132,48 +133,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//获得块号
 	number := header.Number.Uint64()
 
-	// get hpb node snap
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-
-	// get andidate node snap
-	//csnap, cerr :=  voting.GetCadNodeSnap(c.db,chain, number, header.ParentHash)
-	//if cerr != nil {
-	//	return err
-	//}
-	SetNetNodeType(snap)
-
-	c.lock.RLock()
-	//bigaddr, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
-	//address := common.BigToAddress(bigaddr)
-
-	// Get the best peer from the network
-	if cadWinner, err := voting.GetCadNodeFromNetwork(state); err == nil {
-
-		//log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
-
-		if cadWinner == nil || len(cadWinner) != 2 {
-			//if no peers, add itself Coinbase to CandAddress and ComdAddress, or when candidate nodes is less len(hpbsnap.signers), the zero address will become the hpb node
-			header.CandAddress = header.Coinbase
-			header.ComdAddress = header.Coinbase
-			header.VoteIndex = new(big.Int).SetUint64(0)
-		} else {
-			header.CandAddress = cadWinner[0].Address // 设置地址
-			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
-			copy(header.Nonce[:], consensus.NonceAuthVote)
-			header.ComdAddress = cadWinner[1].Address // 设置地址
-		}
-	} else {
-		return err
-	}
-
-	//log.Info("header.CandAddress-------------","CandAddress", header.CandAddress.Hex())
-	//log.Info("header.ComdAddress-------------","ComdAddress", header.ComdAddress.Hex())
-
-	c.lock.RUnlock()
-
 	//TODO:在区块头中设置boehwrand,通过获取父节点header的HardwareRandom通过调用boe的GetNextHash获取当前区块的rand
 	parentnum := number - 1
 	parentheader := chain.GetHeaderByNumber(parentnum)
@@ -188,10 +147,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		//panic("boe broke, please contact with hpb")
 		log.Debug("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
-		copy(header.HardwareRandom, parentheader.HardwareRandom)
-		header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
+		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 	} else {
-		if c.hboe.HWCheck() || c.hboe.HWCheck() || c.hboe.HWCheck() {
+		if c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Error("parentheader.HardwareRandom is nil or length is not 32")
 			}
@@ -210,12 +169,124 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		}
 	}
 
+	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+	SetNetNodeType(snap)
 	//确定当前轮次的难度值，如果当前轮次
 	//根据快照中的情况
+	if 0 == len(snap.Signers) {
+		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
+	}
 	header.Difficulty = diffNoTurn
 	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.signer) {
 		header.Difficulty = diffInTurn
 	}
+
+	c.lock.RLock()
+
+	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
+	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
+		log.Error("GetNodeinfoFromContract fail", "error", err)
+		//return err
+	GETBOOTNODEINFO:
+		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
+		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
+			goto GETBOOTNODEINFO
+		}
+		//log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
+			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
+			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
+		}
+		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
+	} else {
+		//log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
+		for i := 0; i < len(bootnodeinfp); i++ {
+			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
+			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
+			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
+				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
+				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
+			}
+		}
+		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
+		if nil != err {
+			log.Debug("prepare header get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
+			return err
+		}
+	}
+
+	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
+	addrlist := make([]common.Address, 0, len(bootnodeinfp))
+	for _, v := range bootnodeinfp {
+		addrlist = append(addrlist, common.HexToAddress(strings.Replace(v.Adr, " ", "", -1)))
+		log.Debug("common.HexToAddress(v.Adr)", "addr", common.HexToAddress(v.Adr), "v.Adr", v.Adr, "length", len(v.Adr))
+	}
+
+	if len(addrlist) == 0 {
+		return errors.New("forbid mining before successfully connect with bootnode")
+	}
+	err, _, voteres := c.GetVoteRes(chain, header, state)
+	if nil != err {
+		//return err
+		log.Debug("GetVoteRes return err, please deploy contract!")
+		voteres = make(map[common.Address]big.Int)
+		for _, v := range addrlist {
+			voteres[v] = *big.NewInt(0)
+		}
+	}
+	var band, balance, vote map[common.Address]int
+
+	band, err = c.GetBandwithRes(addrlist, chain, number-1)
+	balance, err = c.GetBalanceRes(addrlist, state, number-1)
+	vote, err = c.GetAllVoteRes(voteres, addrlist, number-1)
+	if err != nil {
+		return err
+	}
+	rankingmap := make(map[common.Address]float64)
+	for _, v := range addrlist {
+		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
+		log.Debug("prepare +++++++++++++three item ranking info+++++++++++++++", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
+	}
+
+	var random []byte
+	//random = chain.GetHeaderByNumber(number - 1).HardwareRandom
+	random = crypto.Keccak256(header.Number.Bytes())
+	log.Debug("qwer from 151 select 20 input random", "number", number, "string random sha3 with number", common.Bytes2Hex(random))
+
+	// Get the best peer from the network
+	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
+
+		//log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
+
+		if cadWinner == nil || len(cadWinner) != 2 {
+			//if no peers, add itself Coinbase to CandAddress and ComdAddress, or when candidate nodes is less len(hpbsnap.signers), the zero address will become the hpb node
+			header.CandAddress = header.Coinbase
+			header.ComdAddress = header.Coinbase
+			header.VoteIndex = new(big.Int).SetUint64(0)
+		} else {
+			header.CandAddress = cadWinner[0].Address // 设置地址
+			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
+			header.ComdAddress = cadWinner[1].Address // 设置地址
+		}
+		//log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress) //for test
+
+		if nil == nonce {
+			copy(header.Nonce[:], consensus.NonceDropVote)
+		} else {
+			copy(header.Nonce[len(header.Nonce)-len(nonce):], nonce)
+		}
+
+	} else {
+		return err
+	}
+	c.lock.RUnlock()
 
 	// 检查头部的组成情况
 	if len(header.Extra) < consensus.ExtraVanity {
@@ -352,17 +423,14 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 		switch peer.RemoteType() {
 		case discover.PreNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Debug("PreNode ---------------------> HpNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.HpNode)
 			}
 		case discover.HpNode:
 			if flag := FindHpbNode(peer.Address(), addresses); !flag {
-				log.Debug("HpNode ---------------------> PreNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.PreNode)
 			}
 		case discover.SynNode:
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
-				log.Debug("SynNode ---------------------> HpNode", "addesss", peer.Address().Hex())
 				peer.SetRemoteType(discover.HpNode)
 			}
 			//peer.SetRemoteType(discover.SynNode)
@@ -592,7 +660,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
-	rewardsnum := consensus.CadNodeCheckpointInterval //test
+	rewardsnum := consensus.HpbNodeCheckpointInterval //test
 
 	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
@@ -659,4 +727,442 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 
 	return nil
+}
+
+func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, *big.Int, map[common.Address]big.Int) {
+
+	//for test---------------------------------put the test account, replace false by true
+	if false {
+		res := make(map[common.Address]big.Int)
+		res[common.HexToAddress("0x02fc7e00f3b8720cd76467e33ad5c46f78776d8f")] = *big.NewInt(20000)
+		res[common.HexToAddress("0xdf0ad2b130f3fdb6188a46a887b530be410455f5")] = *big.NewInt(30000)
+		res[common.HexToAddress("0x33b2b418390538da5107d555aee5af3b7e010395")] = *big.NewInt(40000)
+		res[common.HexToAddress("0xd89b6d8f696ae42675a6688500ed39af34d65787")] = *big.NewInt(50000)
+		res[common.HexToAddress("0x4ea6d599d934cbfcb306a83ca120818d29fa4d97")] = *big.NewInt(60000)
+		res[common.HexToAddress("0x02caa91a1735dddc8f432bedf92d9593aceb9442")] = *big.NewInt(70000)
+		res[common.HexToAddress("0xe4d52d302bf25e5e8d3a9e9371ef30b92095a64b")] = *big.NewInt(80000)
+		res[common.HexToAddress("0xe271ce45212339510fd209444436e245f56f7e33")] = *big.NewInt(90000)
+		res[common.HexToAddress("0xf63ee121d4af7c6cbc810d99a77792aeeec7c253")] = *big.NewInt(100000)
+		return nil, nil, res
+	}
+
+	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.signer,
+		Coinbase:    c.signer,
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.FechHpbBallotAddrABI))
+
+	//get contract addr
+	packres, err := fechABI.Pack("getContractAddr")
+	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
+	if err != nil {
+		log.Error("getContractAddr InnerCall fail", "err", err)
+		return err, nil, nil
+	} else {
+		if resultaddr == nil || len(resultaddr) == 0 {
+			return errors.New("return resultaddr is nil or length is 0"), nil, nil
+		}
+	}
+
+	packres, _ = fechABI.Pack("getFunStr")
+	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
+	if err != nil {
+		log.Error("getFunStr InnerCall fail", "err", err)
+		return err, nil, nil
+	} else {
+		if resultfun == nil || len(resultfun) < 74 {
+			return errors.New("getFunStr InnerCall success but result length is short"), nil, nil
+		}
+	}
+
+	//use read contract addr and funstr get vote result
+	realaddr := common.BytesToAddress(resultaddr)
+	funparamstr := new([8]byte)
+	copy(funparamstr[:], resultfun[66:66+8])
+	funparam := common.Hex2Bytes(string(funparamstr[:]))
+
+	paramnum := big.NewInt(header.Number.Int64())
+	bufparam := new(bytes.Buffer)
+	bufparam.Write(funparam[:])
+	pendingbc := new([32]byte)
+	bufparam.Write(pendingbc[:32-len(paramnum.Bytes())])
+	bufparam.Write(paramnum.Bytes())
+
+	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.signer), realaddr, bufparam.Bytes())
+	vmenv.Cancel()
+	if err != nil {
+		log.Error("realaddr InnerCall fail", "err", err)
+		return err, nil, nil
+	}
+	if resultvote == nil || len(resultvote) < 64+32+32+32+32 { //64 bytes + number1 + number2 + addrcounts + votes, at least have these bytes
+		return errors.New("realaddr InnerCall success but result length is too short"), nil, nil
+	}
+	resultvote = resultvote[64:]
+
+	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
+	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
+		return errors.New("1 return data length is not enough"), nil, nil
+	}
+	votebigcount := new(big.Int).SetBytes(resultvote[64+32+addrbigcount.Uint64()*32 : 64+32+32+addrbigcount.Uint64()*32])
+	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32+votebigcount.Uint64()*32) {
+		return errors.New("2 return data length is not enough"), nil, nil
+	}
+	if addrbigcount.Cmp(votebigcount) != 0 {
+		return errors.New("vote contract return addrs and votes number donnot match"), nil, nil
+	}
+	if addrbigcount.Uint64() == 0 {
+		return nil, nil, nil
+	}
+
+	voteres := make(map[common.Address]big.Int)
+	for i := 0; i < int(addrbigcount.Int64()); i++ {
+		var tempaddr common.Address
+		tempaddr.SetBytes(resultvote[64+32+i*32 : 64+32+i*32+32])
+		var tempvote big.Int
+		tempvote.SetBytes(resultvote[64+32+(i+1+int(addrbigcount.Int64()))*32 : 64+32+(i+1+int(addrbigcount.Int64()))*32+32])
+		voteres[tempaddr] = tempvote
+	}
+
+	//获取所有cad的总票数
+	votecounts := new(big.Int)
+	for _, votes := range voteres {
+		votecounts.Add(votecounts, &votes)
+	}
+
+	if votecounts.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil, nil
+	}
+	log.Debug(">>>>>>>>>>>>>>get vote result<<<<<<<<<<<<<<<<<", "value", voteres)
+
+	return nil, votecounts, voteres
+}
+
+//input number, return key is commonAddress, order is value
+func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.ChainReader, number uint64) (map[common.Address]int, error) {
+
+	if number < consensus.NumberBackBandwith {
+		return nil, nil
+	}
+
+	mapaddrbandwithres := make(map[common.Address]*BandWithStatics)
+	for i := number - consensus.NumberBackBandwith; i < number-100; i++ {
+		//statistics prehp node bandwith
+		tempaddr1 := chain.GetHeaderByNumber(i).CandAddress
+		tempBandwith1 := chain.GetHeaderByNumber(i).Nonce[6]
+		if 0 != tempBandwith1 {
+			if v, ok := mapaddrbandwithres[tempaddr1]; !ok {
+				mapaddrbandwithres[tempaddr1] = &BandWithStatics{uint64(tempBandwith1), 1}
+			} else {
+				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith1)) / (v.Num + 1)
+				v.Num += 1
+			}
+		}
+
+		//statistics comaddress node bandwith
+		tempaddr2 := chain.GetHeaderByNumber(i).ComdAddress
+		tempBandwith2 := chain.GetHeaderByNumber(i).Nonce[7]
+		if 0 != tempBandwith2 {
+			if v, ok := mapaddrbandwithres[tempaddr2]; !ok {
+				mapaddrbandwithres[tempaddr2] = &BandWithStatics{uint64(tempBandwith2), 1}
+			} else {
+				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith2)) / (v.Num + 1)
+				v.Num += 1
+			}
+		}
+		log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
+	}
+
+	for i := 0; i < len(addrlist); i++ {
+		if _, ok := mapaddrbandwithres[addrlist[i]]; !ok {
+			mapaddrbandwithres[addrlist[i]] = &BandWithStatics{0, 0}
+		}
+	}
+
+	arrayaddrbandwith := make([]common.Address, 0, 151)
+	for k, v := range mapaddrbandwithres {
+		log.Debug("qwer>>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
+		arrayaddrbandwith = append(arrayaddrbandwith, k)
+	}
+
+	arrayaddrlen := len(arrayaddrbandwith)
+	for i := 0; i <= arrayaddrlen-1; i++ {
+		for j := arrayaddrlen - 1; j >= i+1; j-- {
+			if bytes.Compare(arrayaddrbandwith[j-1][:], arrayaddrbandwith[j][:]) < 0 {
+				arrayaddrbandwith[j-1], arrayaddrbandwith[j] = arrayaddrbandwith[j], arrayaddrbandwith[j-1]
+			}
+		}
+	}
+
+	for i := 0; i <= arrayaddrlen-1; i++ {
+		for j := arrayaddrlen - 1; j >= i+1; j-- {
+			if mapaddrbandwithres[arrayaddrbandwith[j-1]].AverageValue < mapaddrbandwithres[arrayaddrbandwith[j]].AverageValue {
+				arrayaddrbandwith[j-1], arrayaddrbandwith[j] = arrayaddrbandwith[j], arrayaddrbandwith[j-1]
+			}
+		}
+	}
+
+	mapintaddr := make(map[int][]common.Address)
+	offset := 0
+	tempaddrslice := make([]common.Address, 0, 151)
+	tempaddrslice = append(tempaddrslice, arrayaddrbandwith[0])
+	mapintaddr[0] = tempaddrslice
+
+	//set map, key is int ,value is []addr
+	for i := 1; i < len(arrayaddrbandwith); i++ {
+		if mapv, ok := mapintaddr[offset]; ok {
+			if mapaddrbandwithres[arrayaddrbandwith[i]].AverageValue == mapaddrbandwithres[arrayaddrbandwith[i-1]].AverageValue {
+				mapv = append(mapv, arrayaddrbandwith[i])
+			} else {
+				offset++
+				tempaddrslice := make([]common.Address, 0, 151)
+				tempaddrslice = append(tempaddrslice, arrayaddrbandwith[i])
+				mapintaddr[offset] = tempaddrslice
+			}
+		} else {
+			tempaddrslice := make([]common.Address, 0, 151)
+			tempaddrslice = append(tempaddrslice, arrayaddrbandwith[i])
+			mapintaddr[offset] = tempaddrslice
+		}
+	}
+
+	res := make(map[common.Address]int)
+	for k, v := range mapintaddr {
+		for _, addr := range v {
+			res[addr] = k
+		}
+	}
+
+	//for k,v := range res {
+	//	if statics,ok := mapaddrbandwithres[k]; ok {
+	//		log.Error("statistics node bandwith", "addr", common.Bytes2Hex(k[:]), "average bandwith", statics.AverageValue, "ranking", v)
+	//	}else {
+	//		log.Error("statistics node bandwith not find the node", "addr", common.Bytes2Hex(k[:]), "set average bandwith", 0, "ranking", v)
+	//	}
+	//}
+
+	return res, nil
+}
+
+type BandWithStatics struct {
+	//Addr common.Address
+	AverageValue uint64
+	Num          uint64
+}
+
+//input number, return key is commonAddress, order is value
+func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.StateDB, number uint64) (map[common.Address]int, error) {
+
+	//if number < consensus.NumberBackBandwith {
+	//	return nil, nil
+	//}
+	if addrlist == nil || len(addrlist) == 0 || state == nil {
+		return nil, consensus.ErrBadParam
+	}
+
+	mapBalance := make(map[common.Address]*big.Int)
+	arrayaddrwith := make([]common.Address, 0, len(addrlist))
+	for _, v := range addrlist {
+		arrayaddrwith = append(arrayaddrwith, v)
+	}
+	for _, v := range arrayaddrwith {
+		mapBalance[v] = state.GetBalance(v)
+		//log.Error("11111111111 getbalance res 1111111111111", "addr", v, "value", mapBalance[v])
+		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "balance", mapBalance[v])
+	}
+
+	arrayaddrlen := len(arrayaddrwith)
+	for i := 0; i <= arrayaddrlen-1; i++ {
+		for j := arrayaddrlen - 1; j >= i+1; j-- {
+			if mapBalance[arrayaddrwith[j-1]].Cmp(mapBalance[arrayaddrwith[j]]) < 0 {
+				arrayaddrwith[j-1], arrayaddrwith[j] = arrayaddrwith[j], arrayaddrwith[j-1]
+			}
+		}
+	}
+
+	mapintaddr := make(map[int][]common.Address)
+	offset := 0
+	tempaddrslice := make([]common.Address, 0, 151)
+	tempaddrslice = append(tempaddrslice, arrayaddrwith[0])
+	mapintaddr[0] = tempaddrslice
+
+	//set map, key is int ,value is []addr
+	for i := 1; i < len(arrayaddrwith); i++ {
+		if mapv, ok := mapintaddr[offset]; ok {
+			if mapBalance[arrayaddrwith[i]].Cmp(mapBalance[arrayaddrwith[i-1]]) == 0 {
+				mapv = append(mapv, arrayaddrwith[i])
+			} else {
+				offset++
+				tempaddrslice := make([]common.Address, 0, 151)
+				tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
+				mapintaddr[offset] = tempaddrslice
+			}
+		} else {
+			tempaddrslice := make([]common.Address, 0, 151)
+			tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
+			mapintaddr[offset] = tempaddrslice
+		}
+	}
+
+	res := make(map[common.Address]int)
+	for k, v := range mapintaddr {
+		for _, addr := range v {
+			res[addr] = k
+		}
+	}
+
+	return res, nil
+}
+
+//input number, return key is commonAddress, order is value
+func (c *Prometheus) GetAllVoteRes(voteres map[common.Address]big.Int, addrlist []common.Address, number uint64) (map[common.Address]int, error) {
+
+	//if number < consensus.NumberBackBandwith {
+	//	return nil, nil
+	//}
+	if addrlist == nil || len(addrlist) == 0 {
+		return nil, consensus.ErrBadParam
+	}
+
+	mapVotes := make(map[common.Address]*big.Int)
+	arrayaddrwith := make([]common.Address, 0, len(addrlist))
+	for _, v := range addrlist {
+		arrayaddrwith = append(arrayaddrwith, v)
+	}
+	for _, v := range arrayaddrwith {
+		if votes, ok := voteres[v]; ok {
+			mapVotes[v] = &votes
+		} else {
+			mapVotes[v] = big.NewInt(0)
+		}
+		log.Debug("qwerGetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
+
+	}
+
+	arrayaddrlen := len(arrayaddrwith)
+	for i := 0; i <= arrayaddrlen-1; i++ {
+		for j := arrayaddrlen - 1; j >= i+1; j-- {
+			if mapVotes[arrayaddrwith[j-1]].Cmp(mapVotes[arrayaddrwith[j]]) < 0 {
+				arrayaddrwith[j-1], arrayaddrwith[j] = arrayaddrwith[j], arrayaddrwith[j-1]
+			}
+		}
+	}
+
+	mapintaddr := make(map[int][]common.Address)
+	offset := 0
+	tempaddrslice := make([]common.Address, 0, 151)
+	tempaddrslice = append(tempaddrslice, arrayaddrwith[0])
+	mapintaddr[0] = tempaddrslice
+
+	//set map, key is int ,value is []addr
+	for i := 1; i < len(arrayaddrwith); i++ {
+		if mapv, ok := mapintaddr[offset]; ok {
+			if mapVotes[arrayaddrwith[i]].Cmp(mapVotes[arrayaddrwith[i-1]]) == 0 {
+				mapv = append(mapv, arrayaddrwith[i])
+			} else {
+				offset++
+				tempaddrslice := make([]common.Address, 0, 151)
+				tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
+				mapintaddr[offset] = tempaddrslice
+			}
+		} else {
+			tempaddrslice := make([]common.Address, 0, 151)
+			tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
+			mapintaddr[offset] = tempaddrslice
+		}
+	}
+
+	res := make(map[common.Address]int)
+	for k, v := range mapintaddr {
+		for _, addr := range v {
+			res[addr] = k
+		}
+	}
+
+	return res, nil
+}
+
+func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, []p2p.HwPair) {
+
+	fechaddr := common.HexToAddress(consensus.BootnodeInfoContractAddr)
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.signer,
+		Coinbase:    c.signer,
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.BootnodeInfoContractABI))
+
+	//get bootnode info "addr,cid,hid"
+	packres, err := fechABI.Pack(consensus.BootnodeInfoContractMethodName)
+	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.signer), fechaddr, packres)
+	if err != nil {
+		log.Error("get bootnode info from InnerCall fail", "err", err)
+		return err, nil
+	} else {
+		if resultaddr == nil || len(resultaddr) == 0 {
+			return errors.New("return bootnode info result is nil or length is 0"), nil
+		}
+	}
+
+	var out struct {
+		Coinbases []common.Address
+		Cid1s     [][32]byte
+		Cid2s     [][32]byte
+		Hids      [][32]byte
+	}
+
+	err = fechABI.Unpack(&out, consensus.BootnodeInfoContractMethodName, resultaddr)
+
+	n := len(out.Coinbases)
+	if len(out.Coinbases) == 0 || n != len(out.Cid1s) || n != len(out.Hids) || n != len(out.Cid2s) {
+		log.Error("return 4 parts do not match", "Coinbases", n, "Cid1s", len(out.Cid1s), "Cid2s", len(out.Cid2s), "Hids", len(out.Hids))
+		return errors.New("contract return 4 parts length do not match"), nil
+	}
+
+	//log.Error("print contract return res", "value", common.Bytes2Hex(resultaddr))
+	res := make([]p2p.HwPair, 0, 151)
+	for i := 0; i < n; i++ {
+		if bytes.Compare(out.Coinbases[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Cid1s[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Cid2s[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Hids[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		buff := new(bytes.Buffer)
+		_, err1 := buff.Write(out.Cid1s[i][:])
+		_, err2 := buff.Write(out.Cid2s[i][:])
+		if err1 != nil || err2 != nil {
+			log.Error("construct cid fail", "err1", err1, "err2", err2)
+			return errors.New("construct cid fail"), nil
+		}
+		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
+	}
+	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
+
+	return nil, res
 }

@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package config
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
-	"strings"
-	"path/filepath"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -47,18 +46,18 @@ const (
 
 var DefaultNTConfig = NetworkConfig{
 
-	HTTPPort:     DefaultHTTPPort,
-	HTTPModules:  []string{"net", "web3", "prometheus"},
-	WSPort:       DefaultWSPort,
-	WSModules:    []string{"net", "web3", "prometheus"},
+	HTTPPort:         DefaultHTTPPort,
+	HTTPModules:      []string{"net", "web3", "prometheus"},
+	WSPort:           DefaultWSPort,
+	WSModules:        []string{"net", "web3", "prometheus"},
 	HTTPVirtualHosts: []string{"localhost"},
 	HTTPTimeouts:     DefaultHTTPTimeouts,
-	ListenAddr:   ":30303",
-	MaxPeers:     50,
-	NAT:          nat.Any(),
-	IpcEndpoint:  DefaultIPCEndpoint(clientIdentifier),
-	HttpEndpoint: DefaultHTTPEndpoint(),
-	WsEndpoint:   DefaultWSEndpoint(),
+	ListenAddr:       ":30303",
+	MaxPeers:         50,
+	NAT:              nat.Any(),
+	IpcEndpoint:      DefaultIPCEndpoint(clientIdentifier),
+	HttpEndpoint:     DefaultHTTPEndpoint(),
+	WsEndpoint:       DefaultWSEndpoint(),
 }
 
 var MainnetBootnodes = []string{
@@ -71,8 +70,8 @@ var MainnetBootnodes = []string{
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.
-var TestnetBootnodes = []string{
-}
+var TestnetBootnodes = []string{}
+
 type NetworkConfig struct {
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
@@ -132,7 +131,6 @@ type NetworkConfig struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
-
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.
 	MaxPeers int
@@ -145,7 +143,7 @@ type NetworkConfig struct {
 	// DiscoveryV5 specifies whether the the new topic-discovery based V5 discovery
 	// protocol should be started or not.
 	//DiscoveryV5 bool `toml:",omitempty"`
-    NoDiscovery bool
+	NoDiscovery bool
 	// Listener address for the V5 discovery protocol UDP traffic.
 	//DiscoveryV5Addr string `toml:",omitempty"`
 
@@ -195,12 +193,11 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
-	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	IpcEndpoint  string // IPC endpoint to listen at (empty = IPC disabled)
+	HttpEndpoint string // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	WsEndpoint   string // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 
 	BootstrapNodes []*discover.Node
-
 }
 
 // HTTPTimeouts represents the configuration params for the HTTP RPC server.
@@ -235,9 +232,8 @@ var DefaultHTTPTimeouts = HTTPTimeouts{
 	IdleTimeout:  120 * time.Second,
 }
 
-
-func DefaultNetworkConfig() NetworkConfig{
-	cfg:= DefaultNTConfig
+func DefaultNetworkConfig() NetworkConfig {
+	cfg := DefaultNTConfig
 
 	cfg.HTTPModules = append(cfg.HTTPModules, "hpb")
 	cfg.WSModules = append(cfg.WSModules, "hpb")
@@ -247,7 +243,6 @@ func DefaultNetworkConfig() NetworkConfig{
 
 	return cfg
 }
-
 
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
 // and port parameters.
@@ -275,6 +270,7 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 	config := &Nodeconfig{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
 	return config.IPCEndpoint()
 }
+
 // WSEndpoint resolves an websocket endpoint based on the configured host interface
 // and port parameters.
 func (c *NetworkConfig) WSEndpoint() string {
@@ -289,12 +285,3 @@ func DefaultWSEndpoint() string {
 	config := &NetworkConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
 	return config.WSEndpoint()
 }
-
-
-
-
-
-
-
-
-

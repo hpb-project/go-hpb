@@ -1,15 +1,14 @@
 package config
 
 import (
-	"math/big"
+	"crypto/ecdsa"
 	"fmt"
+	"math/big"
 	"os"
+	"os/user"
+	"path/filepath"
 	"runtime"
 	"strings"
-	"path/filepath"
-	"crypto/ecdsa"
-	"os/user"
-
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -21,6 +20,7 @@ import (
 
 // SyncMode represents the synchronisation mode of the downloader.
 type SyncMode int
+
 const (
 	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
 	FastSync                  // Quickly download the headers, full sync only at the chain head
@@ -73,21 +73,21 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 }
 
 var DefaultConfig = Nodeconfig{
-	SyncMode:    FastSync,
-	DataDir:     DefaultDataDir(),
+	SyncMode: FastSync,
+	DataDir:  DefaultDataDir(),
 	//DefaultBlockChainConfig:              downloader.FastSync,
-	NetworkId:             1,
-	LightPeers:            20,
-	DatabaseCache:         128,
-	GasPrice:              big.NewInt(18 * Shannon),
-	IPCPath:               "ghpb.ipc",
+	NetworkId:     1,
+	LightPeers:    20,
+	DatabaseCache: 128,
+	GasPrice:      big.NewInt(18 * Shannon),
+	IPCPath:       "ghpb.ipc",
 	/* HPB don't need dymatic gasprice
 	GPO: gasprice.Config{
 		Blocks:     10,
 		Percentile: 50,
 	},
 	*/
-	MaxTrieCacheGen : uint16(120),
+	MaxTrieCacheGen: uint16(120),
 }
 
 //TODO: shanlin
@@ -96,7 +96,6 @@ type GpoConfig struct {
 	Percentile int
 	Default    *big.Int `toml:",omitempty"`
 }
-
 
 type Nodeconfig struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
@@ -117,8 +116,6 @@ type Nodeconfig struct {
 	// databases or flat files. This enables ephemeral nodes which can fully reside
 	// in memory.
 	DataDir string
-
-
 
 	// The genesis block, which is inserted if the database is empty.
 	// If nil, the Hpb main net block is used.
@@ -151,7 +148,7 @@ type Nodeconfig struct {
 	EnablePreimageRecording bool
 
 	// Miscellaneous options
-	DocRoot   string `toml:"-"`
+	DocRoot string `toml:"-"`
 
 	// KeyStoreDir is the file system folder that contains private keys. The directory can
 	// be specified as a relative path, in which case it is resolved relative to the
@@ -162,13 +159,11 @@ type Nodeconfig struct {
 	// is created by New and destroyed when the node is stopped.
 	KeyStoreDir string `toml:",omitempty"`
 
-
-
 	// UseLightweightKDF lowers the memory and CPU requirements of the key store
 	// scrypt KDF at the expense of security.
 	UseLightweightKDF bool `toml:",omitempty"`
 
-	MaxTrieCacheGen  uint16
+	MaxTrieCacheGen uint16
 
 	// This field must be set to a valid secp256k1 private key.
 	PrivateKey *ecdsa.PrivateKey `toml:"-"`
@@ -181,11 +176,15 @@ type Nodeconfig struct {
 
 	//RpcAPIs       []rpc.API   // List of APIs currently provided by the node
 
-	DefaultAddress    common.Address
+	DefaultAddress common.Address
 
 	//1:testmode and don't nedd boe  0:standard mode and need boe
-	TestMode		uint8
+	TestMode uint8
+
+	//1:test code  0:release code
+	TestCodeParam uint8
 }
+
 // NodeDB returns the path to the discovery node database.
 func (c *Nodeconfig) NodeDB() string {
 	if c.DataDir == "" {
@@ -193,6 +192,7 @@ func (c *Nodeconfig) NodeDB() string {
 	}
 	return c.ResolvePath(DatadirNodeDatabase)
 }
+
 // NodeName returns the devp2p node identifier.
 func (c *Nodeconfig) NodeName() string {
 	name := c.name()
@@ -241,7 +241,6 @@ var isOldGethResource = map[string]bool{
 	"static-nodes.json":  true,
 	"trusted-nodes.json": true,
 }
-
 
 func (c *Nodeconfig) InstanceDir() string {
 	if c.DataDir == "" {
@@ -292,7 +291,6 @@ func (c *Nodeconfig) NodeKey() error {
 	c.PrivateKey = key
 	return nil
 }
-
 
 // TODO: shanlin to del this function
 // NodeKey retrieves the currently configured private key of the node, checking
@@ -362,7 +360,6 @@ func (c *Nodeconfig) parsePersistentNodes(path string) []*discover.Node {
 	return nodes
 }
 
-
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {
@@ -400,8 +397,6 @@ func defaultNodeConfig() Nodeconfig {
 	return cfg
 }
 
-
-
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
 // account the set data folders as well as the designated platform we're currently
 // running on.
@@ -427,15 +422,12 @@ func (c *Nodeconfig) IPCEndpoint() string {
 	return c.IPCPath
 }
 
-
-
 func (c *Nodeconfig) instanceDir() string {
 	if c.DataDir == "" {
 		return ""
 	}
 	return filepath.Join(c.DataDir, c.name())
 }
-
 
 // resolvePath resolves path in the instance directory.
 func (c *Nodeconfig) ResolvePath(path string) string {

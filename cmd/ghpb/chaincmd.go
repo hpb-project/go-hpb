@@ -28,23 +28,23 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
-	
+
 	//"path/filepath"
 	//"io/ioutil"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/node/db"
-	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
@@ -65,7 +65,7 @@ participating.
 
 It expects the genesis file as argument.`,
 	}
-	
+
 	initcadCommand = cli.Command{
 		Action:    utils.MigrateFlags(initCadNodes),
 		Name:      "initcad",
@@ -79,7 +79,7 @@ It expects the genesis file as argument.`,
 		Description: `
 The init command initializes a new random string and definition for the network.`,
 	}
-	
+
 	importCommand = cli.Command{
 		Action:    utils.MigrateFlags(importChain),
 		Name:      "import",
@@ -165,9 +165,8 @@ Use "hpb dump 0" to dump the genesis block.`,
 		Name:      "boeupdate",
 		Usage:     "update boe firmware",
 		ArgsUsage: "<firmwarepath>",
-		Flags: []cli.Flag{
-		},
-		Category: "BOE FIRMWARE UPDATE COMMANDS",
+		Flags:     []cli.Flag{},
+		Category:  "BOE FIRMWARE UPDATE COMMANDS",
 		Description: `
 Update the firmwre of BOE.`,
 	}
@@ -176,31 +175,30 @@ Update the firmwre of BOE.`,
 		Name:      "boecheck",
 		Usage:     "detect boe",
 		ArgsUsage: "",
-		Flags: []cli.Flag{
-		},
-		Category: "BOE DETECT COMMANDS",
+		Flags:     []cli.Flag{},
+		Category:  "BOE DETECT COMMANDS",
 		Description: `
 Detect BOE.`,
 	}
-
 )
+
 func boeupdate(ctx *cli.Context) error {
-	 boehandle := boe.BoeGetInstance()
-	 error := boehandle.Init()
-	 if error != nil{
-	 	log.Error("boe init failed"," ",error)
-	 	return error
-	 }
-	 log.Trace("start boe fw update")
-	 error = boehandle.FWUpdate()
-	 if error != nil{
-	 	log.Error("boe fw update failed"," ",error)
-	 	return error
-	 }
-	 log.Trace("boe fw update complete")
-	 error = boehandle.Release()
-	if error != nil{
-		log.Error("boe release failed"," ",error)
+	boehandle := boe.BoeGetInstance()
+	error := boehandle.Init()
+	if error != nil {
+		log.Error("boe init failed", " ", error)
+		return error
+	}
+	log.Trace("start boe fw update")
+	error = boehandle.FWUpdate()
+	if error != nil {
+		log.Error("boe fw update failed", " ", error)
+		return error
+	}
+	log.Trace("boe fw update complete")
+	error = boehandle.Release()
+	if error != nil {
+		log.Error("boe release failed", " ", error)
 		return error
 	}
 	return nil
@@ -209,8 +207,8 @@ func boeupdate(ctx *cli.Context) error {
 func boecheck(ctx *cli.Context) error {
 	boehandle := boe.BoeGetInstance()
 	error := boehandle.Init()
-	if error != nil{
-		log.Error("boe init failed"," ",error)
+	if error != nil {
+		log.Error("boe init failed", " ", error)
 		return error
 	}
 	log.Trace("start boe hardware check")
@@ -247,10 +245,9 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
 		}
-		
+
 		_, hash, err := bc.SetupGenesisBlock(chaindb, genesis)
-		
-		
+
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
@@ -259,10 +256,9 @@ func initGenesis(ctx *cli.Context) error {
 	return nil
 }
 
-
 func initCadNodes(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
-	
+
 	genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
 		utils.Fatalf("Must supply path to genesis JSON file")
@@ -272,45 +268,16 @@ func initCadNodes(ctx *cli.Context) error {
 		utils.Fatalf("Failed to read genesis file: %v", err)
 	}
 	defer file.Close()
-	
+
 	var cNodes []snapshots.CadWinner
 	if err := json.NewDecoder(file).Decode(&cNodes); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
-    
-	MakeConfigNode(ctx)
-	
-	/*
 
-	for _, name := range []string{"chaindata"} {
-		chaindb, err := db.OpenDatabase(name, 0, 0)
-	
-		if err != nil {
-			utils.Fatalf("Failed to open database: %v", err)
-		}
-		
-		hash := bc.GetCanonicalHash(chaindb, 0)
-		
-		cadNodeSnap := snapshots.CadNodeSnap{Number: uint64(0), Hash: hash, CadWinners: cNodes}
-		
-		blob, err := json.Marshal(cadNodeSnap)
-		if err != nil {
-			return err
-		}
-		
-		fmt.Printf("%s", blob)
-		
-		werr := bc.StoreCadNodes(chaindb,blob,hash)
-		
-		if werr != nil {
-			utils.Fatalf("Failed to candidate nodes: %v", werr)
-		}
-		log.Info("Successfully wrote candidate nodes")
-	}
-	*/
-	
+	MakeConfigNode(ctx)
+
 	return nil
-	
+
 }
 
 func importChain(ctx *cli.Context) error {

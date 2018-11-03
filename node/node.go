@@ -19,73 +19,72 @@ package node
 import (
 	"errors"
 	"fmt"
-	"os"
-	"sync/atomic"
-	"runtime"
-	"path/filepath"
-	"strings"
-	"sync"
 	"io/ioutil"
 	"math/big"
-
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/bloombits"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/constant"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"github.com/prometheus/prometheus/util/flock"
-	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/blockchain/bloombits"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/synctrl"
+	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/prometheus/prometheus/util/flock"
 	//"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/internal/hpbapi"
-	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/prometheus"
-	"github.com/hpb-project/go-hpb/worker"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/internal/debug"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/node/gasprice"
-	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/worker"
 )
 
 // Node is a container on which services can be registered.
 type Node struct {
 	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
-	accman   		*accounts.Manager
-	newBlockMux        *sub.TypeMux
+	accman      *accounts.Manager
+	newBlockMux *sub.TypeMux
 
-	Hpbconfig       *config.HpbConfig
-	Hpbpeermanager  *p2p.PeerManager
-	Hpbrpcmanager   *rpc.RpcManager
-	Hpbsyncctr      *synctrl.SynCtrl
-	Hpbtxpool 		*txpool.TxPool
-	Hpbbc           *bc.BlockChain
+	Hpbconfig      *config.HpbConfig
+	Hpbpeermanager *p2p.PeerManager
+	Hpbrpcmanager  *rpc.RpcManager
+	Hpbsyncctr     *synctrl.SynCtrl
+	Hpbtxpool      *txpool.TxPool
+	Hpbbc          *bc.BlockChain
 	//Hpbworker       *Worker
-	Hpbboe			*boe.BoeHandle
+	Hpbboe *boe.BoeHandle
 	//HpbDb
-	HpbDb  	    hpbdb.Database
+	HpbDb hpbdb.Database
 
-	networkId		uint64
-	netRPCService   *hpbapi.PublicNetAPI
+	networkId     uint64
+	netRPCService *hpbapi.PublicNetAPI
 
 	// The genesis block, which is inserted if the database is empty.
 	// If nil, the Hpb main net block is used.
 	//Genesis *bc.Genesis `toml:",omitempty"`
 
-	Hpbengine          consensus.Engine
+	Hpbengine consensus.Engine
 	//accountManager  *accounts.Manager
-	bloomRequests   chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
-	bloomIndexer    *bc.ChainIndexer             // Bloom indexer operating during block imports
+	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	bloomIndexer  *bc.ChainIndexer               // Bloom indexer operating during block imports
 
 	// Channel for shutting down the service
 	shutdownChan  chan bool    // Channel for shutting down the hpb
@@ -94,8 +93,8 @@ type Node struct {
 	//ApiBackend      *HpbApiBackend
 
 	miner     *worker.Miner
-	gasPrice        *big.Int
-	hpberbase       common.Address
+	gasPrice  *big.Int
+	hpberbase common.Address
 
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
@@ -103,15 +102,15 @@ type Node struct {
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
-	lock sync.RWMutex
+	lock       sync.RWMutex
 	ApiBackend *HpbApiBackend
 
-	RpcAPIs       []rpc.API   // List of APIs currently provided by the node
+	RpcAPIs []rpc.API // List of APIs currently provided by the node
 
 	stop chan struct{} // Channel to wait for termination notifications
 
 	//1:boe init ok  0: boe init fail
-	Boeflag			uint8
+	Boeflag uint8
 }
 
 /*
@@ -124,7 +123,7 @@ func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainCo
 }
 */
 // New creates a hpb node, create all object and start
-func New(conf  *config.HpbConfig) (*Node, error){
+func New(conf *config.HpbConfig) (*Node, error) {
 
 	var coinbasestring string
 
@@ -142,7 +141,7 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if strings.ContainsAny(conf.Node.Name, `/\`) {
 		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
 	}
-	if conf.Node.Name == config.DatadirDefaultKeyStore{
+	if conf.Node.Name == config.DatadirDefaultKeyStore {
 		return nil, errors.New(`Config.Name cannot be "` + config.DatadirDefaultKeyStore + `"`)
 	}
 	if strings.HasSuffix(conf.Node.Name, ".ipc") {
@@ -150,25 +149,25 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	}
 
 	hpbnode := &Node{
-		Hpbconfig:         conf,
-		Hpbpeermanager:    nil, //peermanager,
-		Hpbsyncctr:		   nil, //syncctr,
-		Hpbtxpool:		   nil, //hpbtxpool,
-		Hpbbc:			   nil, //block,
+		Hpbconfig:      conf,
+		Hpbpeermanager: nil, //peermanager,
+		Hpbsyncctr:     nil, //syncctr,
+		Hpbtxpool:      nil, //hpbtxpool,
+		Hpbbc:          nil, //block,
 		//boe
 
-		HpbDb:		   nil, //db,
-		networkId:		   conf.Node.NetworkId,
+		HpbDb:     nil, //db,
+		networkId: conf.Node.NetworkId,
 
-		newBlockMux:       nil, //eventmux,
-		accman:	   		   nil, //am,
-		Hpbengine:		   nil,
+		newBlockMux: nil, //eventmux,
+		accman:      nil, //am,
+		Hpbengine:   nil,
 
-		gasPrice:       conf.Node.GasPrice,
-		hpberbase:      common.Address{},
-		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   nil,
-		stop:           make(chan struct{}),
+		gasPrice:      conf.Node.GasPrice,
+		hpberbase:     common.Address{},
+		bloomRequests: make(chan chan *bloombits.Retrieval),
+		bloomIndexer:  nil,
+		stop:          make(chan struct{}),
 	}
 	log.Info("Initialising Hpb node", "network", conf.Node.NetworkId)
 
@@ -186,11 +185,9 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	if err != nil {
 		log.Warn("Boe init fail.")
 		hpbnode.Boeflag = 0
-	}else {
+	} else {
 		hpbnode.Boeflag = 1
 	}
-
-
 
 	//Get coinbase from boe and set it to node.hperbase
 	coinbasestring, err = hpbnode.Hpbboe.GetBindAccount()
@@ -202,22 +199,20 @@ func New(conf  *config.HpbConfig) (*Node, error){
 		}
 		log.Warn("Get coinbase from boe fail, and set coinbase with account[0]")
 
-	}else {
+	} else {
 		hpbnode.hpberbase = common.HexToAddress(coinbasestring)
 		//copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
-		log.Info("set coinbase of node",": ", hpbnode.hpberbase)
+		log.Info("set coinbase of node", ": ", hpbnode.hpberbase.Hex())
 	}
-
 
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	//create all object
 	peermanager := p2p.PeerMgrInst()
-    hpbnode.Hpbpeermanager = peermanager
+	hpbnode.Hpbpeermanager = peermanager
 	hpbnode.Hpbrpcmanager = rpc.RpcMgrInst()
 
 	hpbnode.HpbDb = hpbdatabase
-
 
 	hpbnode.newBlockMux = new(sub.TypeMux)
 
@@ -225,15 +220,14 @@ func New(conf  *config.HpbConfig) (*Node, error){
 
 	peermanager.RegChanStatus(hpbnode.Hpbbc.Status)
 
-
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
-	hpbtxpool      := txpool.GetTxPool()
+	hpbtxpool := txpool.GetTxPool()
 
 	hpbnode.Hpbtxpool = hpbtxpool
 	hpbnode.ApiBackend = &HpbApiBackend{hpbnode, nil}
 
 	gpoParams := conf.Node.GPO
-	if gpoParams.Default == nil{
+	if gpoParams.Default == nil {
 		gpoParams.Default = conf.Node.GasPrice
 	}
 
@@ -241,9 +235,9 @@ func New(conf  *config.HpbConfig) (*Node, error){
 	hpbnode.bloomIndexer = NewBloomIndexer(hpbdatabase, params.BloomBitsBlocks)
 	return hpbnode, nil
 }
-func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
+func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 	stored := bc.GetCanonicalHash(hpbnode.HpbDb, 0)
-	if (stored != (common.Hash{})) {
+	if stored != (common.Hash{}) {
 		if !conf.Node.SkipBcVersionCheck {
 			bcVersion := bc.GetBlockChainVersion(hpbnode.HpbDb)
 			if bcVersion != bc.BlockChainVersion && bcVersion != 0 {
@@ -251,7 +245,7 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 			}
 			bc.WriteBlockChainVersion(hpbnode.HpbDb, bc.BlockChainVersion)
 		}
-		engine      :=  prometheus.InstancePrometheus()
+		engine := prometheus.InstancePrometheus()
 		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
 		_, err := hpbnode.Hpbbc.InitWithEngine(engine)
@@ -262,26 +256,28 @@ func (hpbnode *Node) WorkerInit(conf  *config.HpbConfig) error{
 		hpbnode.Hpbsyncctr = synctrl.InstanceSynCtrl()
 		hpbnode.newBlockMux = hpbnode.Hpbsyncctr.NewBlockMux()
 
-		hpbnode.miner = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine,hpbnode.hpberbase)
+		hpbnode.miner = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine, hpbnode.hpberbase)
 		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
 
-	}else{
+	} else {
 		return errors.New(`The genesis block is not inited`)
 	}
 	return nil
 }
 
-func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
+func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 
-
+	if config.GetHpbConfigInstance().Node.TestCodeParam == 1 {
+		consensus.SetTestParam()
+	}
+	log.Info("--------------StageNumberII----------------", "value", consensus.StageNumberII)
+	log.Info("--------------StageNumberIII---------------", "value", consensus.StageNumberIII)
 
 	hpbnode.startBloomHandlers()
 
-
-
 	err := hpbnode.WorkerInit(conf)
-	if err != nil{
-		log.Error("Worker init failed",":", err)
+	if err != nil {
+		log.Error("Worker init failed", ":", err)
 		return err
 	}
 	if hpbnode.Hpbsyncctr == nil {
@@ -290,7 +286,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 	}
 	hpbnode.Hpbsyncctr.Start()
 	retval := hpbnode.Hpbpeermanager.Start(hpbnode.hpberbase)
-	if retval != nil{
+	if retval != nil {
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
 	}
@@ -302,9 +298,7 @@ func (hpbnode *Node) Start(conf  *config.HpbConfig) (error){
 
 }
 
-
-
-func makeAccountManager(conf  *config.Nodeconfig) (*accounts.Manager, string, error) {
+func makeAccountManager(conf *config.Nodeconfig) (*accounts.Manager, string, error) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
 	if conf.UseLightweightKDF {
@@ -360,8 +354,6 @@ func (n *Node) openDataDir() error {
 	n.instanceDirLock = release
 	return nil
 }
-
-
 
 // Stop terminates a running node along with all it's services. In the node was
 // not started, an error is returned.
@@ -454,7 +446,6 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 	return n.server
 }*/
 
-
 // DataDir retrieves the current datadir used by the protocol stack.
 // Deprecated: No files should be stored in this directory, use InstanceDir instead.
 func (n *Node) DataDir() string {
@@ -471,17 +462,11 @@ func (n *Node) AccountManager() *accounts.Manager {
 	return n.accman
 }
 
-
 // EventMux retrieves the event multiplexer used by all the network services in
 // the current protocol stack.
 func (n *Node) NewBlockMux() *sub.TypeMux {
 	return n.newBlockMux
 }
-
-
-
-
-
 
 // ResolvePath returns the absolute path of a resource in the instance directory.
 func (n *Node) ResolvePath(x string) string {
@@ -601,11 +586,11 @@ func (s *Node) StartMining(local bool) error {
 */
 
 // get all rpc api from modules
-func (n *Node) GetAPI() error{
+func (n *Node) GetAPI() error {
 	return nil
 }
 
-func (n *Node)SetNodeAPI() error {
+func (n *Node) SetNodeAPI() error {
 	n.RpcAPIs = n.APIs()
 	n.RpcAPIs = append(n.RpcAPIs, n.Nodeapis()...)
 	return nil

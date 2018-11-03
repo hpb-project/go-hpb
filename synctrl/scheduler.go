@@ -63,7 +63,7 @@ type fetchResult struct {
 // queue represents hashes that are either need fetching or are being fetched
 type scheduler struct {
 	mode          config.SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
-	fastSyncPivot uint64   // Block number where the fast sync pivots into archive synchronisation mode
+	fastSyncPivot uint64          // Block number where the fast sync pivots into archive synchronisation mode
 
 	headerHead common.Hash // Hash of the last queued header to verify order
 
@@ -490,6 +490,7 @@ func (this *scheduler) reserveHeaders(p *peerConnection, count int, taskPool map
 		index := int(header.Number.Int64() - int64(this.resultOffset))
 		if index >= len(this.resultCache) || index < 0 {
 			common.Report("index allocation went beyond available resultCache space")
+			log.Error("invalid hash chain(reserveHeaders)", "index", index, "len(resultCache)", len(this.resultCache))
 			return nil, false, errInvalidChain
 		}
 		if this.resultCache[index] == nil {
@@ -823,6 +824,7 @@ func (this *scheduler) deliver(id string, taskPool map[common.Hash]*types.Header
 		index := int(header.Number.Int64() - int64(this.resultOffset))
 		if index >= len(this.resultCache) || index < 0 || this.resultCache[index] == nil {
 			failure = errInvalidChain
+			log.Error("invalid hash chain(deliver)", "index", index, "len(resultCache)", len(this.resultCache))
 			break
 		}
 		if err := reconstruct(header, i, this.resultCache[index]); err != nil {

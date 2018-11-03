@@ -215,8 +215,6 @@ func (this *SynCtrl) sync() {
 	for {
 		select {
 		case <-this.newPeerCh:
-			//go this.synchronise(p2p.PeerMgrInst().BestPeer())
-
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
 			go this.synchronise(p2p.PeerMgrInst().BestPeer())

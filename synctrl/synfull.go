@@ -367,6 +367,7 @@ func (this *fullSync) findAncestor(p *peerConnection, height uint64) (uint64, er
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.log.Warn("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
+					log.Error("invalid hash chain(full->findAncestor)")
 					return 0, errInvalidChain
 				}
 			}
@@ -546,7 +547,7 @@ func (this *fullSync) fetchHeaders(p *peerConnection, from uint64) error {
 			if skeleton {
 				filled, proced, err := this.fillHeaderSkeleton(from, headers)
 				if err != nil {
-					p.log.Debug("Skeleton chain invalid", "err", err)
+					log.Error("invalid hash chain(full->fetchHeaders)", "err", err)
 					return errInvalidChain
 				}
 				headers = filled[proced:]
@@ -721,6 +722,7 @@ func (this *fullSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 				// Deliver the received chunk of data and check chain validity
 				accepted, err := deliver(packet)
 				if err == errInvalidChain {
+					log.Error("invalid hash chain(full->fetchParts)")
 					return err
 				}
 				// Unless a peer delivered something completely else than requested (usually
@@ -1001,6 +1003,7 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 			if err == consensus.ErrInvalidblockbutnodrop {
 				return consensus.ErrInvalidblockbutnodrop
 			}
+			log.Error("invalid hash chain(full->importBlockResults)", "err", err)
 			return errInvalidChain
 		}
 		// Shift the results to the next batch

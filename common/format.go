@@ -38,3 +38,42 @@ func (d PrettyDuration) String() string {
 	}
 	return label
 }
+
+func IsAddrHas0xPre(str string) bool {
+	pat := "(0x)([0-9a-f]{40})([^0-9a-f]{1}|$)(.*)?"
+	if ok, _ := regexp.Match(pat, []byte(str)); ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+func RexRep0xToHpb(str *string) string {
+	pat := "(0x)([0-9a-f]{40})([^0-9a-f]{1}|$)(.*)?"
+	if ok, _ := regexp.Match(pat, []byte(*str)); ok {
+
+		re, _ := regexp.Compile(pat)
+		sub := re.FindSubmatch([]byte(*str))
+		if len(sub) == 5 {
+			*str = re.ReplaceAllString(*str, "hpb"+string(sub[2])+string(sub[3])+string(sub[4]))
+		}
+		RexRep0xToHpb(str)
+	}
+
+	return *str
+}
+
+func RexRepHpbTo0x(str *string) string {
+	pat := "(hpb)([0-9a-f]{40})([^0-9a-f]{1}|$)(.*)?"
+	if ok, _ := regexp.Match(pat, []byte(*str)); ok {
+
+		re, _ := regexp.Compile(pat)
+		sub := re.FindSubmatch([]byte(*str))
+		if len(sub) == 5 {
+			*str = re.ReplaceAllString(*str, "0x"+string(sub[2])+string(sub[3])+string(sub[4]))
+		}
+		RexRepHpbTo0x(str)
+	}
+
+	return *str
+}

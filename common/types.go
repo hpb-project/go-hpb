@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"reflect"
 
+	"bytes"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 )
@@ -252,28 +253,6 @@ func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 
 type AddressHash [AddressHashLength]byte
 
-func BytesToAddressHash(b []byte) AddressHash {
-	var ah AddressHash
-	ah.SetHashBytes(b)
-	return ah
-}
-
-func StringToAddressHash(s string) AddressHash { return BytesToAddressHash([]byte(s)) }
-func BigToAddressHash(b *big.Int) AddressHash  { return BytesToAddressHash(b.Bytes()) }
-func HexToAddressHash(s string) AddressHash    { return BytesToAddressHash(FromHex(s)) }
-
-// IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Hpb address or not.
-func IsHexAddressHash(s string) bool {
-	if len(s) == 2+2*AddressHashLength && IsHex(s) {
-		return true
-	}
-	if len(s) == 2*AddressHashLength && IsHex("0x"+s) {
-		return true
-	}
-	return false
-}
-
 // Get the string representation of the underlying address
 func (a AddressHash) Str() string   { return string(a[:]) }
 func (a AddressHash) Bytes() []byte { return a[:] }
@@ -360,3 +339,11 @@ func (a *UnprefixedAddressHash) UnmarshalText(input []byte) error {
 func (a UnprefixedAddressHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
+
+type Addresses []Address
+
+func (self Addresses) Len() int { return len(self) }
+func (self Addresses) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+func (self Addresses) Less(i, j int) bool { return bytes.Compare(self[i][:], self[j][:]) == 0 }

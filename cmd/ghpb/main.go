@@ -23,24 +23,25 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"time" 
+	"time"
 
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
-	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/metrics"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/internal/debug"
 	"github.com/hpb-project/go-hpb/node"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
 	clientIdentifier = "ghpb" // Client identifier to advertise over the network
 )
+
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	GitCommit = gitCommit
@@ -108,6 +109,7 @@ var (
 		utils.NodeTypeFlag,
 		utils.TestModeFlag,
 		utils.RPCVirtualHostsFlag,
+		utils.TestCodeStageFlag,
 
 		configFileFlag,
 	}
@@ -125,7 +127,6 @@ var (
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 	}
-
 )
 
 func init() {
@@ -207,9 +208,8 @@ func ghpb(ctx *cli.Context) error {
 	return nil
 }
 
-
 //create node object
-func createNode(conf  *config.HpbConfig) (* node.Node, error) {
+func createNode(conf *config.HpbConfig) (*node.Node, error) {
 	//create node object
 	stack, err := node.New(conf)
 	if err != nil {
@@ -218,12 +218,11 @@ func createNode(conf  *config.HpbConfig) (* node.Node, error) {
 	}
 	return stack, nil
 }
+
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
-func startNode(ctx *cli.Context, stack *node.Node, conf  *config.HpbConfig) {
-
-
+func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 
 	// Unlock any account specifically requested
 	ks := stack.AccountManager().KeyStore().(*keystore.KeyStore)
@@ -236,14 +235,13 @@ func startNode(ctx *cli.Context, stack *node.Node, conf  *config.HpbConfig) {
 		}
 	}
 
-	if unlocks[0] != ""{
+	if unlocks[0] != "" {
 		account, err := utils.MakeAddress(ks, strings.TrimSpace(unlocks[0]))
 		if err != nil {
 			utils.Fatalf("Could not list accounts: %v", err)
 		}
 		conf.Node.DefaultAddress = account.Address
 	}
-
 
 	//set rpc aii
 	//utils.SetNodeAPI(&conf.Node, stack)

@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
+	"github.com/deckarep/golang-set"
 	"github.com/hpb-project/go-hpb/common/log"
 	"golang.org/x/net/websocket"
 )

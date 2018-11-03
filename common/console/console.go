@@ -226,6 +226,7 @@ func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
 	for _, argument := range call.ArgumentList {
 		output = append(output, fmt.Sprintf("%v", argument))
 	}
+
 	fmt.Fprintln(c.printer, strings.Join(output, " "))
 	return otto.Value{}
 }

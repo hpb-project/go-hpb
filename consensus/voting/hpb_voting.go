@@ -36,6 +36,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	//	headers []*types.Header
 	//snap    *snapshots.HpbNodeSnap
 	//)
+	//number = consensus.SetNumber(number)
 
 	// 首次要创建
 	if number == 0 {
@@ -143,7 +144,7 @@ func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snaps
 	// 存入数据库
 	err := snap.Store(latestCheckPointHash, db)
 	if err != nil {
-		log.Info("------------------StoreDataToCacheAndDb hpb err---------------------------", "err", err)
+		log.Trace("StoreDataToCacheAndDb hpb fail", "err", err)
 	}
 
 	return err
