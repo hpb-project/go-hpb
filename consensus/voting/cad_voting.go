@@ -95,6 +95,10 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 		headers []*types.Header
 	)
 
+	if number > consensus.StageNumberIII {
+		consensus.CadNodeCheckpointInterval = 400
+	}
+
 	// 开始直接返回nil
 	if number <= consensus.CadNodeCheckpointInterval {
 		return nil, nil
