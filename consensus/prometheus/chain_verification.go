@@ -231,10 +231,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	// false &&
-	if mode == config.FullSync && config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
-		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-		snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	var snap *snapshots.HpbNodeSnap
+	if mode == config.FullSync {
+		snap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 		if err != nil {
 			return consensus.ErrInvalidblockbutnodrop
 		}
@@ -244,6 +243,12 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			}
 			return consensus.ErrUnauthorized
 		}
+	}
+
+	// false &&
+	if mode == config.FullSync && config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
+		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
+
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
 			if !c.hboe.HWCheck() {
 				return consensus.Errboehwcheck
