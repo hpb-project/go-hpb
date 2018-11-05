@@ -239,6 +239,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			return consensus.ErrInvalidblockbutnodrop
 		}
 		if _, ok := snap.Signers[signer]; !ok {
+			for _, v := range snap.Signers {
+				log.Debug("verify fail consensus.ErrUnauthorized", "snap.Signer", v)
+			}
 			return consensus.ErrUnauthorized
 		}
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
@@ -258,6 +261,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
+				log.Debug("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
 				return consensus.Errrandcheck
 			}
 		}
