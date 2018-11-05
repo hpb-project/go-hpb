@@ -116,10 +116,18 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 				}
 			}
 		}
+		//sort by ranking
+		for i := 0; i < len(delhpsmap); i++ {
+			for j := 0; j < len(delhpsmap)-i-1; j++ {
+				if rankingdata[delhpsmap[j]] > rankingdata[delhpsmap[j+1]] {
+					delhpsmap[j], delhpsmap[j+1] = delhpsmap[j+1], delhpsmap[j]
+				}
+			}
+		}
 	}
 	for i := 0; i < len(delhpsmap); i++ {
 		bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{NetworkId: "", Address: delhpsmap[i], VoteIndex: uint64(rankingdata[delhpsmap[i]])})
-		//log.Error("bestCadWinners-----------info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
+		log.Debug("bestCadWinners-----------info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
 	}
 
 	if len(bestCadWinners) == 0 {
