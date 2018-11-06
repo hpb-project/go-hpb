@@ -79,6 +79,10 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 		}
 	}
 
+	for i := 0; i < len(delhpsmap); i++ {
+		log.Debug(">>>>>>>>>>>>>order by there element<<<<<<<<<<<<<<<", "addr", delhpsmap[i], "ranking value", rankingdata[delhpsmap[i]])
+	}
+
 	input := random
 	for i := 0; i < consensus.NumberPrehp; i++ {
 		err, output := snapshots.GenRand(input)

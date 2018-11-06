@@ -363,7 +363,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
 		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
-		//log.Error("VerifySelectPrehp **********************+three item ranking info******************", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
+		log.Debug("**********************+three item ranking info******************", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
 	}
 
 	//random := chain.GetHeaderByNumber(number - 1).HardwareRandom

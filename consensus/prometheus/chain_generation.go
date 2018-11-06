@@ -199,7 +199,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
 			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
-		//log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress) //for test
+		log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
 
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
