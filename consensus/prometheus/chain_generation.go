@@ -206,15 +206,17 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		}
 		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
 	} else {
-		//log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
+		log.Debug("11111111111111111111 from node info contract return", "value", bootnodeinfp) //for test
 		for i := 0; i < len(bootnodeinfp); i++ {
 			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
+			log.Debug("2222222222222222222222222 from node info contract return", "value", bootnodeinfp[i].Adr) //for test
 			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
 			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
 				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
 				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
 			}
 		}
+		log.Debug("333333333333333333333 from node info contract return", "value", bootnodeinfp) //for test
 		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
 		if nil != err {
 			log.Debug("prepare header get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
