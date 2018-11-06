@@ -123,6 +123,7 @@ var (
 	ErrBadParam = errors.New("input bad param")
 	// invalid cadaddress
 	ErrInvalidCadaddr = errors.New("invalid cadaddress")
+	Errnilparam       = errors.New("input param is nil")
 )
 
 var (

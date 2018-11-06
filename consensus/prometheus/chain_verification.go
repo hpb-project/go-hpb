@@ -18,6 +18,7 @@ package prometheus
 import (
 	"bytes"
 	"errors"
+	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -189,9 +190,14 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 			}
 		}
 	*/
-	if number > consensus.StageNumberIII {
-		if isallright, err := c.VerifySelectPrehp(chain, header, number, header.CandAddress, mode); !isallright {
-			//return consensus.ErrInvalidCadaddr
+	if number > consensus.StageNumberIII && mode == config.FullSync {
+
+		state, _ := chain.StateAt(chain.GetBlock(chain.GetHeaderByNumber(number-1).Hash(), number-1).Root())
+		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
+			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
+				return consensus.ErrInvalidCadaddr
+			}
+		} else {
 			return err
 		}
 	}
@@ -287,17 +293,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
-func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *types.Header, number uint64, CadWinner common.Address, mode config.SyncMode) (bool, error) {
-
-	if mode != config.FullSync {
-		return true, nil
-	}
-	var cadWinner []*snapshots.CadWinner
-	defer func() {
-		//log.Error("111111111111111 VerifySelectPrehp 111111111111111111", "input addr", CadWinner, "calc value", cadWinner[0].Address)
-	}()
-
-	state, _ := chain.StateAt(chain.GetBlock(chain.GetHeaderByNumber(number-1).Hash(), number-1).Root())
+func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainReader, header *types.Header, number uint64, verify bool) ([]*snapshots.CadWinner, []byte, error) {
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Error("GetNodeinfoFromContract err", "value", err)
@@ -307,30 +303,19 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
 			goto GETBOOTNODEINFO
 		}
-		log.Debug("VerifySelectPrehp from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
-		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
-			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
-			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
-				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
-				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
-			}
+		err, bootnodeinfp = PreDealNodeInfo(bootnodeinfp)
+		if nil != err {
+			return nil, nil, err
 		}
 	} else {
-		log.Debug("VerifySelectPrehp from node info contract return", "value", bootnodeinfp) //for test
-		for i := 0; i < len(bootnodeinfp); i++ {
-			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
-			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
-			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
-				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
-				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
-			}
+		err, bootnodeinfp = PreDealNodeInfo(bootnodeinfp)
+		if nil != err {
+			return nil, nil, err
 		}
-
 		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
 		if nil != err {
 			log.Debug("VerifySelectPrehp get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
-			return false, err
+			return nil, nil, err
 		}
 	}
 	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
@@ -340,20 +325,22 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 	}
 
 	if len(addrlist) == 0 {
-		return false, errors.New("forbid mining before successfully connect with bootnode")
+		return nil, nil, errors.New("forbid mining before successfully connect with bootnode")
 	}
 
-	comaddrinboot := false
-	for _, v := range bootnodeinfp {
-		addr := common.HexToAddress(v.Adr)
-		if bytes.Compare(addr[:], header.ComdAddress[:]) == 0 {
-			comaddrinboot = true
-			break
+	if verify == true {
+		comaddrinboot := false
+		for _, v := range bootnodeinfp {
+			addr := common.HexToAddress(v.Adr)
+			if bytes.Compare(addr[:], header.ComdAddress[:]) == 0 {
+				comaddrinboot = true
+				break
+			}
 		}
-	}
 
-	if !comaddrinboot {
-		return false, errors.New("comaddress invalid")
+		if !comaddrinboot {
+			return nil, nil, errors.New("comaddress invalid")
+		}
 	}
 
 	err, _, voteres := c.GetVoteRes(chain, header, state)
@@ -371,7 +358,7 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 	balance, err = c.GetBalanceRes(addrlist, state, number-1)
 	vote, err = c.GetAllVoteRes(voteres, addrlist, number-1)
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
@@ -383,13 +370,9 @@ func (c *Prometheus) VerifySelectPrehp(chain consensus.ChainReader, header *type
 	random := crypto.Keccak256(header.Number.Bytes())
 	//log.Error("VerifySelectPrehp zzzzzzzzzz input GetCadNodeFromNetwork random zzzzzzzzzz", "value", random, "number", number)
 	// Get the best peer from the network
-	if cadWinner, _, err = voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
-		if bytes.Compare(cadWinner[0].Address[:], CadWinner[:]) == 0 {
-			return true, nil
-		} else {
-			return false, nil
-		}
+	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
+		return cadWinner, nonce, nil
 	} else {
-		return false, err
+		return nil, nil, err
 	}
 }

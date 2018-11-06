@@ -186,85 +186,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	c.lock.RLock()
 
-	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
-	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
-		log.Error("GetNodeinfoFromContract fail", "error", err)
-		//return err
-	GETBOOTNODEINFO:
-		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
-		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
-			goto GETBOOTNODEINFO
-		}
-		//log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", bootnodeinfp) //for test
-		for i := 0; i < len(bootnodeinfp); i++ {
-			addrfrompeers := common.HexToAddress(strings.Replace(bootnodeinfp[i].Adr, " ", "", -1))
-			bootnodeinfp[i].Adr = common.Bytes2Hex(addrfrompeers[:])
-			if bytes.Compare(addrfrompeers[:], consensus.Zeroaddr[:]) == 0 {
-				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
-				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
-			}
-		}
-		log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return after", "value", bootnodeinfp)
-	} else {
-		log.Debug("11111111111111111111 from node info contract return", "value", bootnodeinfp) //for test
-		for i := 0; i < len(bootnodeinfp); i++ {
-			bootnodeinfp[i].Adr = strings.Replace(bootnodeinfp[i].Adr, " ", "", -1)
-			log.Debug("2222222222222222222222222 from node info contract return", "value", bootnodeinfp[i].Adr) //for test
-			tempaddr := common.Hex2Bytes(bootnodeinfp[i].Adr)
-			if new(big.Int).SetBytes(tempaddr[:]).Cmp(big.NewInt(0)) == 0 {
-				copy(bootnodeinfp[i:], bootnodeinfp[i+1:])
-				bootnodeinfp = bootnodeinfp[0 : len(bootnodeinfp)-1]
-			}
-		}
-		log.Debug("333333333333333333333 from node info contract return", "value", bootnodeinfp) //for test
-		err = p2p.PeerMgrInst().SetHwInfo(bootnodeinfp)
-		if nil != err {
-			log.Debug("prepare header get node info from contract, p2p.PeerMgrInst().SetHwInfo set fail ", "err", err)
-			return err
-		}
-	}
-
-	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
-	addrlist := make([]common.Address, 0, len(bootnodeinfp))
-	for _, v := range bootnodeinfp {
-		addrlist = append(addrlist, common.HexToAddress(strings.Replace(v.Adr, " ", "", -1)))
-		log.Debug("common.HexToAddress(v.Adr)", "addr", common.HexToAddress(v.Adr), "v.Adr", v.Adr, "length", len(v.Adr))
-	}
-
-	if len(addrlist) == 0 {
-		return errors.New("forbid mining before successfully connect with bootnode")
-	}
-	err, _, voteres := c.GetVoteRes(chain, header, state)
-	if nil != err {
-		//return err
-		log.Debug("GetVoteRes return err, please deploy contract!")
-		voteres = make(map[common.Address]big.Int)
-		for _, v := range addrlist {
-			voteres[v] = *big.NewInt(0)
-		}
-	}
-	var band, balance, vote map[common.Address]int
-
-	band, err = c.GetBandwithRes(addrlist, chain, number-1)
-	balance, err = c.GetBalanceRes(addrlist, state, number-1)
-	vote, err = c.GetAllVoteRes(voteres, addrlist, number-1)
-	if err != nil {
-		return err
-	}
-	rankingmap := make(map[common.Address]float64)
-	for _, v := range addrlist {
-		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
-		log.Debug("prepare +++++++++++++three item ranking info+++++++++++++++", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
-	}
-
-	var random []byte
-	//random = chain.GetHeaderByNumber(number - 1).HardwareRandom
-	random = crypto.Keccak256(header.Number.Bytes())
-	log.Debug("qwer from 151 select 20 input random", "number", number, "string random sha3 with number", common.Bytes2Hex(random))
-
-	// Get the best peer from the network
-	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
-
+	if cadWinner, nonce, err := c.GetSelectPrehp(state, chain, header, number, false); nil == err {
 		//log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
 
 		if cadWinner == nil || len(cadWinner) != 2 {
@@ -882,7 +804,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 				v.Num += 1
 			}
 		}
-		log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
+		//log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
 	}
 
 	for i := 0; i < len(addrlist); i++ {
@@ -892,8 +814,8 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	}
 
 	arrayaddrbandwith := make([]common.Address, 0, 151)
-	for k, v := range mapaddrbandwithres {
-		log.Debug("qwer>>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
+	for k, _ := range mapaddrbandwithres {
+		//log.Debug("qwer>>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
 		arrayaddrbandwith = append(arrayaddrbandwith, k)
 	}
 
@@ -1165,6 +1087,26 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
 	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
+
+	return nil, res
+}
+
+func PreDealNodeInfo(pairs []p2p.HwPair) (error, []p2p.HwPair) {
+	if nil == pairs {
+		return consensus.Errnilparam, nil
+	}
+	res := make([]p2p.HwPair, 0, len(pairs))
+	log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", pairs) //for test
+	for i := 0; i < len(pairs); i++ {
+		pairs[i].Adr = strings.Replace(pairs[i].Adr, " ", "", -1)
+		if pairs[i].Adr != "0x0000000000000000000000000000000000000000" {
+			res = append(res, pairs[i])
+		}
+	}
+	if 0 == len(res) {
+		return errors.New("input node info addr all zero"), nil
+	}
+	log.Debug(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res)
 
 	return nil, res
 }
