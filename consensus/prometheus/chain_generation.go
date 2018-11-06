@@ -1098,15 +1098,15 @@ func PreDealNodeInfo(pairs []p2p.HwPair) (error, []p2p.HwPair) {
 	res := make([]p2p.HwPair, 0, len(pairs))
 	log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", pairs) //for test
 	for i := 0; i < len(pairs); i++ {
-		pairs[i].Adr = strings.Replace(pairs[i].Adr, " ", "", -1)
-		if pairs[i].Adr != "0x0000000000000000000000000000000000000000" {
+		if len(pairs[i].Adr) != 0 {
+			pairs[i].Adr = strings.Replace(pairs[i].Adr, " ", "", -1)
 			res = append(res, pairs[i])
 		}
 	}
 	if 0 == len(res) {
 		return errors.New("input node info addr all zero"), nil
 	}
-	log.Debug(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res)
+	log.Debug(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res, "length", len(res))
 
 	return nil, res
 }
