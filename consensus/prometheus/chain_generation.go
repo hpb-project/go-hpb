@@ -847,6 +847,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 		if mapv, ok := mapintaddr[offset]; ok {
 			if mapaddrbandwithres[arrayaddrbandwith[i]].AverageValue == mapaddrbandwithres[arrayaddrbandwith[i-1]].AverageValue {
 				mapv = append(mapv, arrayaddrbandwith[i])
+				mapintaddr[offset] = mapv
 			} else {
 				offset++
 				tempaddrslice := make([]common.Address, 0, 151)
@@ -925,6 +926,7 @@ func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.State
 		if mapv, ok := mapintaddr[offset]; ok {
 			if mapBalance[arrayaddrwith[i]].Cmp(mapBalance[arrayaddrwith[i-1]]) == 0 {
 				mapv = append(mapv, arrayaddrwith[i])
+				mapintaddr[offset] = mapv
 			} else {
 				offset++
 				tempaddrslice := make([]common.Address, 0, 151)
@@ -993,6 +995,7 @@ func (c *Prometheus) GetAllVoteRes(voteres map[common.Address]big.Int, addrlist 
 		if mapv, ok := mapintaddr[offset]; ok {
 			if mapVotes[arrayaddrwith[i]].Cmp(mapVotes[arrayaddrwith[i-1]]) == 0 {
 				mapv = append(mapv, arrayaddrwith[i])
+				mapintaddr[offset] = mapv
 			} else {
 				offset++
 				tempaddrslice := make([]common.Address, 0, 151)
