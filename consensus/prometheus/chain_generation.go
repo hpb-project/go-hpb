@@ -152,7 +152,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	} else {
 		if c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
-				log.Error("parentheader.HardwareRandom is nil or length is not 32")
+				log.Debug("parentheader.HardwareRandom is nil or length is not 32")
 			}
 			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
 				return err
@@ -784,7 +784,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 		//statistics prehp node bandwith
 		tempaddr1 := chain.GetHeaderByNumber(i).CandAddress
 		tempBandwith1 := chain.GetHeaderByNumber(i).Nonce[6]
-		if 0 != tempBandwith1 {
+		if 0 != tempBandwith1 && 0xff != tempBandwith1 {
 			if v, ok := mapaddrbandwithres[tempaddr1]; !ok {
 				mapaddrbandwithres[tempaddr1] = &BandWithStatics{uint64(tempBandwith1), 1}
 			} else {
@@ -796,7 +796,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 		//statistics comaddress node bandwith
 		tempaddr2 := chain.GetHeaderByNumber(i).ComdAddress
 		tempBandwith2 := chain.GetHeaderByNumber(i).Nonce[7]
-		if 0 != tempBandwith2 {
+		if 0 != tempBandwith2 && 0xff != tempBandwith2 {
 			if v, ok := mapaddrbandwithres[tempaddr2]; !ok {
 				mapaddrbandwithres[tempaddr2] = &BandWithStatics{uint64(tempBandwith2), 1}
 			} else {
@@ -885,73 +885,25 @@ type BandWithStatics struct {
 	Num          uint64
 }
 
-//input number, return key is commonAddress, order is value
-func (c *Prometheus) GetBalanceRes(addrlist []common.Address, state *state.StateDB, number uint64) (map[common.Address]int, error) {
+func (c *Prometheus) GetAllBalances(addrlist []common.Address, state *state.StateDB) (map[common.Address]big.Int, error) {
 
-	//if number < consensus.NumberBackBandwith {
-	//	return nil, nil
-	//}
 	if addrlist == nil || len(addrlist) == 0 || state == nil {
 		return nil, consensus.ErrBadParam
 	}
 
-	mapBalance := make(map[common.Address]*big.Int)
+	mapBalance := make(map[common.Address]big.Int)
 	arrayaddrwith := make([]common.Address, 0, len(addrlist))
 	for _, v := range addrlist {
 		arrayaddrwith = append(arrayaddrwith, v)
 	}
 	for _, v := range arrayaddrwith {
-		mapBalance[v] = state.GetBalance(v)
-		//log.Error("11111111111 getbalance res 1111111111111", "addr", v, "value", mapBalance[v])
+		mapBalance[v] = *state.GetBalance(v)
 		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "balance", mapBalance[v])
 	}
-
-	arrayaddrlen := len(arrayaddrwith)
-	for i := 0; i <= arrayaddrlen-1; i++ {
-		for j := arrayaddrlen - 1; j >= i+1; j-- {
-			if mapBalance[arrayaddrwith[j-1]].Cmp(mapBalance[arrayaddrwith[j]]) < 0 {
-				arrayaddrwith[j-1], arrayaddrwith[j] = arrayaddrwith[j], arrayaddrwith[j-1]
-			}
-		}
-	}
-
-	mapintaddr := make(map[int][]common.Address)
-	offset := 0
-	tempaddrslice := make([]common.Address, 0, 151)
-	tempaddrslice = append(tempaddrslice, arrayaddrwith[0])
-	mapintaddr[0] = tempaddrslice
-
-	//set map, key is int ,value is []addr
-	for i := 1; i < len(arrayaddrwith); i++ {
-		if mapv, ok := mapintaddr[offset]; ok {
-			if mapBalance[arrayaddrwith[i]].Cmp(mapBalance[arrayaddrwith[i-1]]) == 0 {
-				mapv = append(mapv, arrayaddrwith[i])
-				mapintaddr[offset] = mapv
-			} else {
-				offset++
-				tempaddrslice := make([]common.Address, 0, 151)
-				tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
-				mapintaddr[offset] = tempaddrslice
-			}
-		} else {
-			tempaddrslice := make([]common.Address, 0, 151)
-			tempaddrslice = append(tempaddrslice, arrayaddrwith[i])
-			mapintaddr[offset] = tempaddrslice
-		}
-	}
-
-	res := make(map[common.Address]int)
-	for k, v := range mapintaddr {
-		for _, addr := range v {
-			res[addr] = k
-		}
-	}
-
-	return res, nil
+	return mapBalance, nil
 }
 
-//input number, return key is commonAddress, order is value
-func (c *Prometheus) GetAllVoteRes(voteres map[common.Address]big.Int, addrlist []common.Address, number uint64) (map[common.Address]int, error) {
+func (c *Prometheus) GetRankingRes(voteres map[common.Address]big.Int, addrlist []common.Address) (map[common.Address]int, error) {
 
 	//if number < consensus.NumberBackBandwith {
 	//	return nil, nil

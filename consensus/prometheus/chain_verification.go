@@ -134,7 +134,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	}
 	//Ensure that the block`s nonce that is peer`s bandwith do not beyond the BandwithLimit too much
 	//check prehp node bandwith
-	if number > consensus.StageNumberIII {
+	if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) {
 		if new(big.Int).SetInt64(int64(header.Nonce[6])).Int64() > consensus.BandwithLimit+10 {
 			return consensus.ErrBandwith
 		}
@@ -294,6 +294,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 }
 
 func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainReader, header *types.Header, number uint64, verify bool) ([]*snapshots.CadWinner, []byte, error) {
+
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Error("GetNodeinfoFromContract err", "value", err)
@@ -343,6 +344,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 		}
 	}
 
+	//get all votes
 	err, _, voteres := c.GetVoteRes(chain, header, state)
 	if nil != err {
 		//return false, err
@@ -352,23 +354,27 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 			voteres[v] = *big.NewInt(0)
 		}
 	}
-	var band, balance, vote map[common.Address]int
-
-	band, err = c.GetBandwithRes(addrlist, chain, number-1)
-	balance, err = c.GetBalanceRes(addrlist, state, number-1)
-	vote, err = c.GetAllVoteRes(voteres, addrlist, number-1)
+	//get votes ranking res
+	voterank, errvote := c.GetRankingRes(voteres, addrlist)
+	//get bandwith ranking res
+	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
+	//get all balances
+	allbalances, err := c.GetAllBalances(addrlist, state)
 	if err != nil {
+		return nil, nil, err
+	}
+	//get balance ranking res
+	balancerank, errbalance := c.GetRankingRes(allbalances, addrlist)
+	if errvote != nil || errbandwith != nil || errbalance != nil {
 		return nil, nil, err
 	}
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
-		rankingmap[v] = float64(band[v])*0.5 + float64(balance[v])*0.15 + float64(vote[v])*0.35
-		log.Debug("**********************+three item ranking info******************", "addr", v, "bandwith", band[v], "balance", balance[v], "vote", vote[v], "number", number)
+		rankingmap[v] = float64(bandrank[v])*0.5 + float64(balancerank[v])*0.15 + float64(voterank[v])*0.35
+		log.Debug("**********************+three item ranking info******************", "addr", v, "bandwith", bandrank[v], "balance", balancerank[v], "vote", voterank[v], "number", number)
 	}
 
-	//random := chain.GetHeaderByNumber(number - 1).HardwareRandom
 	random := crypto.Keccak256(header.Number.Bytes())
-	//log.Error("VerifySelectPrehp zzzzzzzzzz input GetCadNodeFromNetwork random zzzzzzzzzz", "value", random, "number", number)
 	// Get the best peer from the network
 	if cadWinner, nonce, err := voting.GetCadNodeFromNetwork(random, rankingmap); err == nil {
 		return cadWinner, nonce, nil
