@@ -770,7 +770,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 
 
-	if isRemoteBoot || srv.localType == discover.BootNode {
+	if true || isRemoteBoot || srv.localType == discover.BootNode {
 
 		ourHdtable := &hardwareTable{Version:0x00,Hdtab:hdtab}
 		theirHdtable, err := c.doHardwareTable(ourHdtable)
