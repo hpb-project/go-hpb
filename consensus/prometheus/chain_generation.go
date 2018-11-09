@@ -454,6 +454,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 			for _, v := range hpsnap.GetHpbNodes() {
 				state.AddBalance(v, finalhpbrewards)
+				log.Debug(">>>>>>>>>reward hpnode in the snapshot<<<<<<<<<<<<", "addr", v, "reward value", finalhpbrewards)
 			}
 		} else {
 			return err
@@ -489,6 +490,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 				for _, caddress := range csnap.CanAddresses {
 					state.AddBalance(caddress, cadReward) //reward every cad node average
+					log.Debug("<<<<<<<<<<<<<<<reward prenode in the snapshot>>>>>>>>>>", "addr", caddress, "reward value", cadReward)
 				}
 			}
 
@@ -648,6 +650,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
 		tempaddrvotefloat.Int(tempreward)
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
+		log.Debug("++++++++++reward node with the vote contract++++++++++++", "addr", addr, "reward value", tempreward)
 	}
 
 	return nil
