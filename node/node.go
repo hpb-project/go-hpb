@@ -368,6 +368,8 @@ func (n *Node) Stop() error {
 	n.miner.Stop()
 	n.Hpbpeermanager.Stop()
 
+	n.Hpbrpcmanager.Stop()
+
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
 		if err := n.instanceDirLock.Release(); err != nil {
