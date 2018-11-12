@@ -255,6 +255,9 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	//}
 
 	if prm.server.localType != nt {
+		prm.lock.Lock()
+		defer prm.lock.Unlock()
+
 		prm.server.localType = nt
 		for _, p := range prm.peers {
 			p.localType = nt
