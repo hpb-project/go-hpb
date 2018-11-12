@@ -241,6 +241,10 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 		}
 	}
 
+	for _, v := range headers {
+		log.Debug("-------------CalculateHpbSnap--------------", "number", v.Number, "candaddress", common.Bytes2Hex(v.CandAddress[:]), "voteindex", v.VoteIndex)
+	}
+
 	//signers := make([]common.Address, 0, consensus.HpbNodenumber)
 	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, nil)
 	snap.Tally = make(map[common.Address]Tally)
@@ -286,7 +290,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 	for i := 0; i < len(snap.Tally); i++ {
 		for j := 0; j < len(snap.Tally)-i-1; j++ {
-			if tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) > 0 {
+			if tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) < 0 {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
 			} else if (tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) == 0) && (bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0) {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]

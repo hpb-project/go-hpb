@@ -807,7 +807,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 				v.Num += 1
 			}
 		}
-		//log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
+		log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
 	}
 
 	for i := 0; i < len(addrlist); i++ {
@@ -871,14 +871,6 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 		}
 	}
 
-	//for k,v := range res {
-	//	if statics,ok := mapaddrbandwithres[k]; ok {
-	//		log.Error("statistics node bandwith", "addr", common.Bytes2Hex(k[:]), "average bandwith", statics.AverageValue, "ranking", v)
-	//	}else {
-	//		log.Error("statistics node bandwith not find the node", "addr", common.Bytes2Hex(k[:]), "set average bandwith", 0, "ranking", v)
-	//	}
-	//}
-
 	return res, nil
 }
 
@@ -901,7 +893,7 @@ func (c *Prometheus) GetAllBalances(addrlist []common.Address, state *state.Stat
 	}
 	for _, v := range arrayaddrwith {
 		mapBalance[v] = *state.GetBalance(v)
-		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "balance", mapBalance[v])
+		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(v))
 	}
 	return mapBalance, nil
 }
@@ -926,7 +918,7 @@ func (c *Prometheus) GetRankingRes(voteres map[common.Address]big.Int, addrlist 
 		} else {
 			mapVotes[v] = big.NewInt(0)
 		}
-		log.Debug("qwerGetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
+		//log.Debug("qwerGetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
 
 	}
 
