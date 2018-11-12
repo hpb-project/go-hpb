@@ -254,8 +254,8 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	//	log.Info("SynNode need not allow to change", "to", nt.ToString())
 	//	return true
 	//}
-	prm.lock.Lock()
-	defer prm.lock.Unlock()
+
+
 	if prm.server.localType != nt {
 		prm.lock.Lock()
 		defer prm.lock.Unlock()
