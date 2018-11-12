@@ -35,6 +35,7 @@ const (
 var dialHistroyAddr []string = []string{}
 var fronttime int64 = time.Now().Unix()
 var mutex sync.Mutex
+
 // NodeDialer is used to connect to nodes in the network, typically by using
 // an underlying net.Dialer but also using net.Pipe in tests
 type NodeDialer interface {
@@ -53,15 +54,14 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 	return t.Dialer.Dial("tcp", addr.String())
 }
 
-
 type dialstate struct {
 	//maxDynDials int
 	ntab        discoverTable
 	netrestrict *netutil.Netlist
 
-	dialing       map[discover.NodeID]connFlag
-	static        map[discover.NodeID]*dialTask
-	hist          *dialHistory
+	dialing map[discover.NodeID]connFlag
+	static  map[discover.NodeID]*dialTask
+	hist    *dialHistory
 
 	start     time.Time        // time when the dialer was first used
 	bootnodes []*discover.Node // default dials when there are no peers
@@ -70,10 +70,10 @@ type dialstate struct {
 type discoverTable interface {
 	Self() *discover.Node
 	Close()
-	FindNodes()[]*discover.Node
+	FindNodes() []*discover.Node
 	Bondall(nodes []*discover.Node) int
 
-    //AddNode(node *discover.Node)
+	//AddNode(node *discover.Node)
 	RemoveNode(nid discover.NodeID)
 	//HasNode(nid discover.NodeID) bool
 }
@@ -151,7 +151,6 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 		return true
 	}
 
-
 	// Expire the dial history on every invocation.
 	s.hist.expire(now)
 
@@ -171,7 +170,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
-			log.Debug("Add node to dial task.","id",n.ID)
+			log.Debug("Add node to dial task.", "id", n.ID)
 		}
 	}
 
@@ -212,12 +211,12 @@ func (t *dialTask) Do(srv *Server) {
 	if t.dest.Incomplete() {
 		return
 	}
-	if srv.delHist.contains(t.dest.ID){
+	if srv.delHist.contains(t.dest.ID) {
 		log.Debug("Do task: recently delete node.")
 		return
 	}
 	success := t.dial(srv, t.dest)
-	log.Trace("One dial task done.","result",success)
+	log.Trace("One dial task done.", "result", success)
 
 }
 
@@ -233,7 +232,7 @@ func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	}
 	for _, v := range dialHistroyAddr {
 		if v == addr.String() {
-			log.Info("dile histroy", "len=", len(dialHistroyAddr), "restime:", time.Now().Unix()-fronttime)
+			log.Debug("dile histroy", "len=", len(dialHistroyAddr), "restime:", time.Now().Unix()-fronttime)
 			return false
 		}
 	}
