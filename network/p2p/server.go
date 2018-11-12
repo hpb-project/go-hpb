@@ -45,7 +45,7 @@ const (
 	maxAcceptConns = 100
 
 	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 16
+	maxActiveDialTasks = 4
 
 	// Maximum time allowed for reading a complete message.
 	// This is effectively the amount of time a connection can be idle.

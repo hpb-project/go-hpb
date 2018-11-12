@@ -20,6 +20,7 @@ import (
 	"container/heap"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/hpb-project/go-hpb/common/log"
@@ -31,6 +32,9 @@ const (
 	dialHistoryExpiration = 30 * time.Second
 )
 
+var dialHistroyAddr []string = []string{}
+var fronttime int64 = time.Now().Unix()
+var mutex sync.Mutex
 // NodeDialer is used to connect to nodes in the network, typically by using
 // an underlying net.Dialer but also using net.Pipe in tests
 type NodeDialer interface {
@@ -219,6 +223,24 @@ func (t *dialTask) Do(srv *Server) {
 
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
+	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
+
+	if len(dialHistroyAddr) > 30 || time.Now().Unix()-fronttime > int64(100) {
+		fronttime = time.Now().Unix()
+		mutex.Lock()
+		dialHistroyAddr = []string{}
+		mutex.Unlock()
+	}
+	for _, v := range dialHistroyAddr {
+		if v == addr.String() {
+			log.Info("dile histroy", "len=", len(dialHistroyAddr), "restime:", time.Now().Unix()-fronttime)
+			return false
+		}
+	}
+	mutex.Lock()
+	dialHistroyAddr = append(dialHistroyAddr, addr.String())
+	mutex.Unlock()
+	log.Debug("Connect:", "ip=", addr.String(), "id=", dest.ID, "time=", time.Now().Second())
 	fd, err := srv.dialer.Dial(dest)
 	if err != nil {
 		log.Trace("Dial error", "task", t, "err", err)

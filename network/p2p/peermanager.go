@@ -102,11 +102,12 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	}
 
 	prm.server.Config.CoinBase = coinbase
-	log.Info("Set coinbase address by start", "address", coinbase.String())
-	if coinbase.String() == "0x0000000000000000000000000000000000000000" {
-		panic("coinbase address is nil.")
+	log.Info("Set coinbase address by start", "address", coinbase.String(), "roletype", config.Network.RoleType)
+	if config.Network.RoleType != "synnode" {
+		if coinbase.String() == "0x0000000000000000000000000000000000000000" {
+			panic("coinbase address is nil.")
+		}
 	}
-
 	prm.hpbpro.networkId = prm.server.NetworkId
 	prm.hpbpro.regMsgProcess(ReqNodesMsg, HandleReqNodesMsg)
 	prm.hpbpro.regMsgProcess(ResNodesMsg, HandleResNodesMsg)
@@ -253,7 +254,8 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	//	log.Info("SynNode need not allow to change", "to", nt.ToString())
 	//	return true
 	//}
-
+	prm.lock.Lock()
+	defer prm.lock.Unlock()
 	if prm.server.localType != nt {
 		prm.lock.Lock()
 		defer prm.lock.Unlock()

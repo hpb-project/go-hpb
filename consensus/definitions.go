@@ -124,6 +124,7 @@ var (
 	// invalid cadaddress
 	ErrInvalidCadaddr = errors.New("invalid cadaddress")
 	Errnilparam       = errors.New("input param is nil")
+	ErrNoLastBlock    = errors.New("No Last Block when verify during the fullsync")
 )
 
 var (
