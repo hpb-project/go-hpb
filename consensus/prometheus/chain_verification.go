@@ -191,11 +191,16 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		}
 	*/
 	if number > consensus.StageNumberIII && mode == config.FullSync {
+		count := 0
 	GETLASTBLOCK:
 		lastblock := chain.GetBlock(chain.GetHeaderByNumber(number-1).Hash(), number-1)
 		if nil == lastblock {
 			log.Debug("ErrNoLastBlock", "err", consensus.ErrNoLastBlock)
-			//return consensus.ErrInvalidblockbutnodrop
+			if 10 != count {
+				return consensus.ErrInvalidblockbutnodrop
+			}
+			time.Sleep(time.Second)
+			count++
 			goto GETLASTBLOCK
 		}
 
