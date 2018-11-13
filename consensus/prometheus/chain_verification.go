@@ -193,7 +193,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	if number > consensus.StageNumberIII && mode == config.FullSync {
 		count := 0
 	GETLASTBLOCK:
-		lastblock := chain.GetBlock(chain.GetHeaderByNumber(number-1).Hash(), number-1)
+		lastblock := chain.GetHeaderByNumber(number - 1)
 		if nil == lastblock {
 			log.Debug("ErrNoLastBlock", "err", consensus.ErrNoLastBlock)
 			if 10 != count {
@@ -204,7 +204,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 			goto GETLASTBLOCK
 		}
 
-		state, _ := chain.StateAt(lastblock.Root())
+		state, _ := chain.StateAt(lastblock.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
 				return consensus.ErrInvalidCadaddr
