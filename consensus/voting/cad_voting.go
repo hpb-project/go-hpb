@@ -99,7 +99,7 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 	//	consensus.CadNodeCheckpointInterval = 400
 	//}
 
-	gobacknum := 100
+	gobacknum := 200
 	if number > consensus.StageNumberIII {
 		if number <= consensus.CadNodeCheckpointInterval+200 {
 			return nil, nil
