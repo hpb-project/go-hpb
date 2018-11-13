@@ -807,7 +807,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 				v.Num += 1
 			}
 		}
-		log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
+		//log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
 	}
 
 	for i := 0; i < len(addrlist); i++ {
