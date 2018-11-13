@@ -290,7 +290,13 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 	for i := 0; i < len(snap.Tally); i++ {
 		for j := 0; j < len(snap.Tally)-i-1; j++ {
-			if tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) < 0 {
+			var switchcondition bool
+			if number > consensus.StageNumberIII {
+				switchcondition = tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) < 0
+			} else {
+				switchcondition = tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) > 0
+			}
+			if switchcondition {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
 			} else if (tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) == 0) && (bytes.Compare(tallytemp[j].CandAddress[:], tallytemp[j+1].CandAddress[:]) > 0) {
 				tallytemp[j], tallytemp[j+1] = tallytemp[j+1], tallytemp[j]
