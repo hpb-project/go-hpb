@@ -46,7 +46,8 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	fmt.Println("######### peers length is:", len(peers))
 
 	for i := 0; i < len(peers); i++ {
-		if peers[i].RemoteType() == discover.BootNode || peers[i].RemoteType() == discover.SynNode {
+		_, ok := rankingdata[peers[i].Address()]
+		if peers[i].RemoteType() == discover.BootNode || peers[i].RemoteType() == discover.SynNode || !ok {
 			copy(peers[i:], peers[i+1:])
 			peers = peers[0 : len(peers)-1]
 		}
