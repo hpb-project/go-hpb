@@ -369,6 +369,7 @@ func (n *Node) Stop() error {
 	n.Hpbpeermanager.Stop()
 
 	n.Hpbrpcmanager.Stop()
+	n.HpbDb.Close()
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
