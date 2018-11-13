@@ -95,13 +95,21 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 		headers []*types.Header
 	)
 
-	if number > consensus.StageNumberIII {
-		consensus.CadNodeCheckpointInterval = 400
-	}
+	//if number > consensus.StageNumberIII {
+	//	consensus.CadNodeCheckpointInterval = 400
+	//}
 
-	// 开始直接返回nil
-	if number <= consensus.CadNodeCheckpointInterval {
-		return nil, nil
+	gobacknum := 100
+	if number > consensus.StageNumberIII {
+		if number <= consensus.CadNodeCheckpointInterval+200 {
+			return nil, nil
+		}
+		gobacknum = gobacknum + 200
+	} else {
+		// 开始直接返回nil
+		if number <= consensus.CadNodeCheckpointInterval {
+			return nil, nil
+		}
 	}
 
 	//不在投票点开始获取数据库中的内容
@@ -114,7 +122,7 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 			return snapcd, err
 		} else {
 			// 开始获取之前的所有header
-			for i := latestCheckPointNumber - consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
+			for i := latestCheckPointNumber - uint64(gobacknum); i < latestCheckPointNumber-100; i++ {
 				count := 0
 			GetAllCadNodeSnaploop:
 				header := chain.GetHeaderByNumber(uint64(i))
@@ -141,7 +149,7 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 		}
 	} else {
 		// 开始获取之前的所有header
-		for i := latestCheckPointNumber - consensus.CadNodeCheckpointInterval; i < latestCheckPointNumber-100; i++ {
+		for i := latestCheckPointNumber - uint64(gobacknum); i < latestCheckPointNumber-100; i++ {
 			header := chain.GetHeaderByNumber(uint64(i))
 			if header != nil {
 				headers = append(headers, header)
