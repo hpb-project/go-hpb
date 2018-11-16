@@ -76,6 +76,13 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 
 	addressesmap := make(map[common.Address]string)
 
+	// 检查所有的头部，检查连续性
+	for i := 0; i < len(headers)-1; i++ {
+		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 /* || headers[i+1].Hash() != headers[i].ParentHash */ {
+			return nil, consensus.ErrInvalidVotingChain
+		}
+	}
+
 	for _, header := range headers {
 		addressesmap[header.ComdAddress] = "ok"
 		//log.Info("new headers", "headers", header.Number)

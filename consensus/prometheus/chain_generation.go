@@ -399,6 +399,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
+		return nil, err
 	}
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)

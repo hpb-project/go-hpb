@@ -82,6 +82,8 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 					return nil, err
 				}
 				return snapa, err
+			} else {
+				return nil, err
 			}
 		}
 	} else {
@@ -97,8 +99,6 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 			return nil, err
 		}
 	}
-
-	return nil, nil
 }
 
 //生成初始化的区块

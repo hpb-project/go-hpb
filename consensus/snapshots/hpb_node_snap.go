@@ -236,7 +236,8 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 	// 检查所有的头部，检查连续性
 	for i := 0; i < len(headers)-1; i++ {
-		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
+		log.Debug("CalculateHpbSnap get headers", "header hash", headers[i].Hash(), "header number", headers[i].Number)
+		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 /*|| headers[i+1].Hash() != headers[i].ParentHash */ {
 			return nil, consensus.ErrInvalidVotingChain
 		}
 	}

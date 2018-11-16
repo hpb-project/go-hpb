@@ -145,6 +145,8 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 					return nil, err
 				}
 				return snapa, err
+			} else {
+				return nil, err
 			}
 		}
 	} else {
@@ -162,9 +164,10 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 				return nil, err
 			}
 			return snapa, err
+		} else {
+			return nil, err
 		}
 	}
-	return nil, nil
 }
 
 // 从数据库和缓存中获取数据
