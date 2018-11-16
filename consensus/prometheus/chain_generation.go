@@ -204,7 +204,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
 		} else {
-			copy(header.Nonce[len(header.Nonce)-len(nonce):], nonce)
+			if number > consensus.StageNumberIII {
+				copy(header.Nonce[len(header.Nonce)-len(nonce):], nonce)
+			} else {
+				copy(header.Nonce[:], consensus.NonceDropVote)
+			}
 		}
 
 	} else {
@@ -495,7 +499,17 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			}
 
 			if number%consensus.HpbNodeCheckpointInterval == 0 && number >= consensus.StageNumberII {
-				return c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
+				var errreward error
+				loopcount := 3
+			GETCONTRACTLOOP:
+				if errreward = c.rewardvotepercentcad(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap); errreward != nil {
+					log.Info("rewardvotepercent get contract fail", "info", errreward)
+					loopcount -= 1
+					if 0 != loopcount {
+						goto GETCONTRACTLOOP
+					}
+				}
+				return errreward
 			}
 		}
 	} else {
