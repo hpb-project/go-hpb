@@ -843,14 +843,20 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
 	// Irrelevant of the canonical status, write the block itself to the database
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-		return NonStatTy, err
+	if block.Number().Uint64() < consensus.StageNumberIII {
+		if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+			return NonStatTy, err
+		}
 	}
+
 	// Write other block data using a batch.
 	batch := bc.chainDb.NewBatch()
-	if err := WriteBlock(batch, block); err != nil {
-		return NonStatTy, err
+	if block.Number().Uint64() < consensus.StageNumberIII {
+		if err := WriteBlock(batch, block); err != nil {
+			return NonStatTy, err
+		}
 	}
+
 	if _, err := state.CommitTo(batch, true); err != nil {
 		return NonStatTy, err
 	}
@@ -881,14 +887,33 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	} else {
 		status = SideStatTy
 	}
-	if err := batch.Write(); err != nil {
-		return NonStatTy, err
+
+	if block.Number().Uint64() < consensus.StageNumberIII {
+		if err := batch.Write(); err != nil {
+			return NonStatTy, err
+		}
 	}
 
 	// Set new head.
 	if status == CanonStatTy {
-		bc.insert(block)
+		if block.Number().Uint64() >= consensus.StageNumberIII {
+
+			if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+				return NonStatTy, err
+			}
+			if err := WriteBlock(batch, block); err != nil {
+				return NonStatTy, err
+			}
+			bc.insert(block)
+			if err := batch.Write(); err != nil {
+				return NonStatTy, err
+			}
+
+		} else {
+			bc.insert(block)
+		}
 	}
+
 	bc.futureBlocks.Remove(block.Hash())
 	return status, nil
 }
@@ -1054,7 +1079,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
 
 			blockInsertTimer.UpdateSince(bstart)
-			events = append(events, ChainSideEvent{block})
+			//events = append(events, ChainSideEvent{block})
 		}
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
