@@ -1241,6 +1241,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	for _, block := range newChain {
 		// insert the block in the canonical way, re-writing history
+		log.Warn(">>>>>>>>>reorg insert<<<<<<<<<<", "block number", block.Number(), "block hash", block.Hash())
 		bc.insert(block)
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
