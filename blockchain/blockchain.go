@@ -843,7 +843,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
 	// Irrelevant of the canonical status, write the block itself to the database
-	if block.Number().Uint64() < consensus.StageNumberIII {
+	if block.Number().Uint64() < consensus.StageNumber4 {
 		if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 			return NonStatTy, err
 		}
@@ -851,7 +851,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	// Write other block data using a batch.
 	batch := bc.chainDb.NewBatch()
-	if block.Number().Uint64() < consensus.StageNumberIII {
+	if block.Number().Uint64() < consensus.StageNumber4 {
 		if err := WriteBlock(batch, block); err != nil {
 			return NonStatTy, err
 		}
@@ -864,11 +864,19 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		return NonStatTy, err
 	}
 
+	var breorg bool
+	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 0 {
+		if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
+			if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
+				breorg = true
+			}
+		}
+	}
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 &&
-		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) {
+		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
@@ -888,7 +896,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		status = SideStatTy
 	}
 
-	if block.Number().Uint64() < consensus.StageNumberIII {
+	if block.Number().Uint64() < consensus.StageNumber4 {
 		if err := batch.Write(); err != nil {
 			return NonStatTy, err
 		}
@@ -896,7 +904,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	// Set new head.
 	if status == CanonStatTy {
-		if block.Number().Uint64() >= consensus.StageNumberIII {
+		if block.Number().Uint64() >= consensus.StageNumber4 {
 
 			if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
 				return NonStatTy, err
@@ -1079,7 +1087,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
 
 			blockInsertTimer.UpdateSince(bstart)
-			//events = append(events, ChainSideEvent{block})
+			if block.Number().Uint64() < consensus.StageNumber4 {
+				events = append(events, ChainSideEvent{block})
+			}
+
 		}
 		stats.processed++
 		stats.usedGas += usedGas.Uint64()
@@ -1244,12 +1255,14 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	if len(deletedLogs) > 0 {
 		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
 	}
-	if len(oldChain) > 0 {
-		go func() {
-			for _, block := range oldChain {
-				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
-			}
-		}()
+	if newBlock.Number().Uint64() < consensus.StageNumber4 {
+		if len(oldChain) > 0 {
+			go func() {
+				for _, block := range oldChain {
+					bc.chainSideFeed.Send(ChainSideEvent{Block: block})
+				}
+			}()
+		}
 	}
 
 	return nil
