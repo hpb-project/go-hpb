@@ -843,18 +843,14 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
 	// Irrelevant of the canonical status, write the block itself to the database
-	if block.Number().Uint64() < consensus.StageNumber4 {
-		if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-			return NonStatTy, err
-		}
+	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+		return NonStatTy, err
 	}
 
 	// Write other block data using a batch.
 	batch := bc.chainDb.NewBatch()
-	if block.Number().Uint64() < consensus.StageNumber4 {
-		if err := WriteBlock(batch, block); err != nil {
-			return NonStatTy, err
-		}
+	if err := WriteBlock(batch, block); err != nil {
+		return NonStatTy, err
 	}
 
 	if _, err := state.CommitTo(batch, true); err != nil {
@@ -865,6 +861,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	}
 
 	var breorg bool
+	breorg = false
 	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 0 {
 		if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
 			if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
@@ -879,7 +876,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
 
 		if breorg {
-			bc.currentBlock = bc.GetBlockByNumber(block.Number().Uint64() - 200)
+			var newBlock = block
+			//find the ancestor; if the block that is the middle block of the input chain is a local CanonStatTy block, some bad thing maybe happen
+			for ; newBlock != nil && newBlock.Hash() != bc.GetBlockByNumber(newBlock.NumberU64()).Hash(); newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1) {
+			}
+			//bc.currentBlock = bc.GetBlockByNumber(block.Number().Uint64() - 200)
+			bc.currentBlock = newBlock
 		}
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
@@ -900,30 +902,13 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		status = SideStatTy
 	}
 
-	if block.Number().Uint64() < consensus.StageNumber4 {
-		if err := batch.Write(); err != nil {
-			return NonStatTy, err
-		}
+	if err := batch.Write(); err != nil {
+		return NonStatTy, err
 	}
 
 	// Set new head.
 	if status == CanonStatTy {
-		if block.Number().Uint64() >= consensus.StageNumber4 {
-
-			if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-				return NonStatTy, err
-			}
-			if err := WriteBlock(batch, block); err != nil {
-				return NonStatTy, err
-			}
-			bc.insert(block)
-			if err := batch.Write(); err != nil {
-				return NonStatTy, err
-			}
-
-		} else {
-			bc.insert(block)
-		}
+		bc.insert(block)
 	}
 
 	bc.futureBlocks.Remove(block.Hash())
@@ -1091,9 +1076,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
 
 			blockInsertTimer.UpdateSince(bstart)
-			if block.Number().Uint64() < consensus.StageNumber4 {
-				events = append(events, ChainSideEvent{block})
-			}
+			events = append(events, ChainSideEvent{block})
 
 		}
 		stats.processed++
@@ -1260,14 +1243,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	if len(deletedLogs) > 0 {
 		go bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
 	}
-	if newBlock.Number().Uint64() < consensus.StageNumber4 {
-		if len(oldChain) > 0 {
-			go func() {
-				for _, block := range oldChain {
-					bc.chainSideFeed.Send(ChainSideEvent{Block: block})
-				}
-			}()
-		}
+	if len(oldChain) > 0 {
+		go func() {
+			for _, block := range oldChain {
+				bc.chainSideFeed.Send(ChainSideEvent{Block: block})
+			}
+		}()
 	}
 
 	return nil
