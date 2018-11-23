@@ -42,14 +42,14 @@ import (
 func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64) ([]*snapshots.CadWinner, []byte, error) {
 
 	bestCadWinners := []*snapshots.CadWinner{}
-	peers := p2p.PeerMgrInst().PeersAll()
-	fmt.Println("######### peers length is:", len(peers))
+	peerp2ps := p2p.PeerMgrInst().PeersAll()
+	fmt.Println("######### peers length is:", len(peerp2ps))
+	peers := make([]*p2p.Peer, 0, len(peerp2ps))
 
-	for i := 0; i < len(peers); i++ {
-		_, ok := rankingdata[peers[i].Address()]
-		if peers[i].RemoteType() == discover.BootNode || peers[i].RemoteType() == discover.SynNode || !ok {
-			copy(peers[i:], peers[i+1:])
-			peers = peers[0 : len(peers)-1]
+	for i := 0; i < len(peerp2ps); i++ {
+		_, ok := rankingdata[peerp2ps[i].Address()]
+		if peerp2ps[i].RemoteType() != discover.BootNode && peerp2ps[i].RemoteType() != discover.SynNode && ok {
+			peers = append(peers, peerp2ps[i])
 		}
 	}
 
