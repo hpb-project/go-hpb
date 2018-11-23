@@ -132,10 +132,10 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 		case discover.PreNode:
 			switch peer.RemoteType() {
 			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
+				CacheSendDataTransactions(peer, types.Transactions{tx})
 				break
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				CacheSendDataTransactions(peer, types.Transactions{tx})
 				break
 			default:
 				break
@@ -144,7 +144,7 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 		case discover.HpNode:
 			switch peer.RemoteType() {
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				CacheSendDataTransactions(peer, types.Transactions{tx})
 				break
 			default:
 				break
@@ -153,10 +153,10 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 		case discover.SynNode:
 			switch peer.RemoteType() {
 			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
+				CacheSendDataTransactions(peer, types.Transactions{tx})
 				break
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				CacheSendDataTransactions(peer, types.Transactions{tx})
 				break
 			default:
 				break

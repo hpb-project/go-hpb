@@ -23,34 +23,32 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
 
-
 // message of control
-const MsgVersion  uint64 = 0x0001
+const MsgVersion uint64 = 0x0001
 const (
-	handshakeMsg    uint64 = 0x0000
-	discMsg         uint64 = 0x0001
-	pingMsg         uint64 = 0x0002
-	pongMsg         uint64 = 0x0003
+	handshakeMsg uint64 = 0x0000
+	discMsg      uint64 = 0x0001
+	pingMsg      uint64 = 0x0002
+	pongMsg      uint64 = 0x0003
 
-	hardwareMsg     uint64 = 0x0010
+	hardwareMsg uint64 = 0x0010
 
-	baseMsgMax      uint64 = 0x0FFF
+	baseMsgMax uint64 = 0x0FFF
 )
 
 // message of hpb protocol
 const (
-	StatusMsg          uint64 = 0x1010
-	ExchangeMsg        uint64 = 0x1011
-	ReqNodesMsg        uint64 = 0x1020
-	ResNodesMsg        uint64 = 0x1021
-	ReqBWTestMsg       uint64 = 0x1030
-	ResBWTestMsg       uint64 = 0x1031
-
+	StatusMsg    uint64 = 0x1010
+	ExchangeMsg  uint64 = 0x1011
+	ReqNodesMsg  uint64 = 0x1020
+	ResNodesMsg  uint64 = 0x1021
+	ReqBWTestMsg uint64 = 0x1030
+	ResBWTestMsg uint64 = 0x1031
 
 	NewBlockHashesMsg  uint64 = 0x2012
 	TxMsg              uint64 = 0x2013
@@ -64,10 +62,9 @@ const (
 	GetReceiptsMsg     uint64 = 0x201b
 	ReceiptsMsg        uint64 = 0x201c
 
-	NewHashBlockMsg    uint64 = 0x2020
+	NewHashBlockMsg uint64 = 0x2020
+	CompressTxMsg   uint64 = 0x2022
 )
-
-
 
 // Msg defines the structure of a p2p message.
 //
@@ -200,7 +197,7 @@ func (self *msgEventer) ReadMsg() (Msg, error) {
 	if err != nil {
 		return msg, err
 	}
-	self.feed.Notify(PeerEventMsgRecv,&PeerEvent{
+	self.feed.Notify(PeerEventMsgRecv, &PeerEvent{
 		Type:     PeerEventMsgRecv,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,
@@ -218,7 +215,7 @@ func (self *msgEventer) WriteMsg(msg Msg) error {
 	if err != nil {
 		return err
 	}
-	self.feed.Notify(PeerEventMsgSend,&PeerEvent{
+	self.feed.Notify(PeerEventMsgSend, &PeerEvent{
 		Type:     PeerEventMsgSend,
 		Peer:     self.peerID,
 		Protocol: self.Protocol,

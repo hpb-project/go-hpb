@@ -125,6 +125,11 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	return &Transaction{data: d}
 }
 
+// GetDataSize returns which  size of transaction' payload
+func (tx *Transaction) GetDataSize() int {
+	return len(tx.data.Payload)
+}
+
 // ChainId returns which chain id this transaction was signed for (if at all)
 func (tx *Transaction) ChainId() *big.Int {
 	return deriveChainId(tx.data.V)
@@ -468,6 +473,20 @@ func (s Transactions) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s Transactions) GetRlp(i int) []byte {
 	enc, _ := rlp.EncodeToBytes(s[i])
 	return enc
+}
+func (s Transactions) Append(ts Transactions) (r Transactions) {
+	for _, e := range ts {
+		s = append(s, e)
+	}
+	return s
+}
+
+func (s Transactions) Get(i int) *Transaction {
+	return s[i]
+}
+
+func (s Transactions) GetAll() []*Transaction {
+	return s
 }
 
 // Returns a new set t which is the difference between a to b

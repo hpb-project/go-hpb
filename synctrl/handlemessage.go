@@ -17,9 +17,11 @@
 package synctrl
 
 import (
+	"bytes"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/compress"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -407,5 +409,33 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		p.KnownTxsAdd(tx.Hash())
 	}
 	txpool.GetTxPool().AddTxs(txs)
+	return nil
+}
+
+// HandleCompressTxMsg deal received CompressTxMsg
+func HandleCompressTxMsg(p *p2p.Peer, msg p2p.Msg) error {
+	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+		return nil
+	}
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	var compressData []byte
+	msgStream.Decode(&compressData)
+	log.Debug("receive compress msg", "from", p.RemoteAddr().String(), "", compressData)
+	unCompressData := compress.ZlibUnCompress(compressData)
+	txs := new(types.Transactions)
+	rlp.Decode(bytes.NewReader(unCompressData), txs)
+	log.Debug("uncompress msg", "tx count", txs.Len())
+	for i := 0; i < txs.Len(); i++ {
+		tx := txs.Get(i)
+		if tx == nil {
+			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
+		}
+		p.KnownTxsAdd(tx.Hash())
+	}
+	txpool.GetTxPool().AddTxs(txs.GetAll())
+	log.Debug("uncompress msg", "deal tx count", txs.Len())
 	return nil
 }
