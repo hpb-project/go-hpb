@@ -415,7 +415,22 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	var bigIntblocksoneyear = new(big.Int)
 	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)                         //seconds in one year
 	secondsoneyesr.Quo(secondsoneyesr, big.NewFloat(float64(c.config.Period))) //blocks mined by miners in one year
-	secondsoneyesr.Int(bigIntblocksoneyear)                                    //from big.Float to big.Int
+
+	if header.Number.Uint64() >= consensus.StageNumberIII {
+		seconds := big.NewInt(0)
+		currentheader := chain.GetHeaderByNumber(header.Number.Uint64())
+		beforeheader := chain.GetHeaderByNumber(header.Number.Uint64() - 200)
+
+		seconds.Sub(currentheader.Time, beforeheader.Time)
+		seconds.Quo(seconds, big.NewInt(200))
+
+		secondsfloat := big.NewFloat(0)
+		secondsfloat.SetInt(seconds)
+		secondsfloat.Quo(secondsfloat, big.NewFloat(float64(c.config.Period)))
+		secondsoneyesr.Mul(secondsoneyesr, secondsfloat)
+	}
+
+	secondsoneyesr.Int(bigIntblocksoneyear) //from big.Float to big.Int
 
 	bigrewards := big.NewFloat(float64(100000000 * 0.03)) //hpb coins additional issue one year
 	bigrewards.Mul(bigrewards, big.NewFloat(float64(consensus.Nodenumfirst)))
@@ -424,6 +439,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	bigIntblocksoneyearfloat := new(big.Float)
 	bigIntblocksoneyearfloat.SetInt(bigIntblocksoneyear)      //from big.Int to big.Float
 	A := bigrewards.Quo(bigrewards, bigIntblocksoneyearfloat) //calc reward mining one block
+	log.Debug("CalculateRewards calc reward mining one block", "hpb coin", A)
 
 	//mul 2/3
 	A.Mul(A, big.NewFloat(2))
