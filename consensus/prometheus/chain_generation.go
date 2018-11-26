@@ -418,8 +418,8 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	if header.Number.Uint64() >= consensus.StageNumberIII {
 		seconds := big.NewInt(0)
-		currentheader := chain.GetHeaderByNumber(header.Number.Uint64())
-		beforeheader := chain.GetHeaderByNumber(header.Number.Uint64() - 200)
+		currentheader := chain.GetHeaderByNumber(header.Number.Uint64() - 1)
+		beforeheader := chain.GetHeaderByNumber(header.Number.Uint64() - 201)
 
 		seconds.Sub(currentheader.Time, beforeheader.Time)
 		seconds.Quo(seconds, big.NewInt(200))
