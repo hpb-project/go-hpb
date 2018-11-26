@@ -191,20 +191,9 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		}
 	*/
 	if number > consensus.StageNumberIII && mode == config.FullSync {
-		count := 0
-	GETLASTBLOCK:
-		lastblock := chain.GetHeaderByNumber(number - 1)
-		if nil == lastblock {
-			log.Debug("ErrNoLastBlock", "err", consensus.ErrNoLastBlock)
-			if 10 != count {
-				return consensus.ErrInvalidblockbutnodrop
-			}
-			time.Sleep(time.Second)
-			count++
-			goto GETLASTBLOCK
-		}
 
-		state, _ := chain.StateAt(lastblock.Root)
+		lastheader := chain.GetHeader(header.ParentHash, number-1)
+		state, _ := chain.StateAt(lastheader.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
 				return consensus.ErrInvalidCadaddr
@@ -253,6 +242,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if mode == config.FullSync {
 		snap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 		if err != nil {
+			log.Debug("verifySeal GetHpbNodeSnap fail", "err", err)
 			return consensus.ErrInvalidblockbutnodrop
 		}
 		if _, ok := snap.Signers[signer]; !ok {
@@ -271,16 +261,18 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			if !c.hboe.HWCheck() {
 				return consensus.Errboehwcheck
 			}
-			parentnum := number - 1
-			parentheader := chain.GetHeaderByNumber(parentnum)
+			parentheader := chain.GetHeader(header.ParentHash, number-1)
 			if parentheader == nil {
+				log.Debug("verifySeal GetHeaderByNumber", "fail", "header is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) == 0 {
+				log.Debug("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			newrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom)
 			if err != nil {
+				log.Debug("verifySeal GetNextHash", "fail", err)
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
