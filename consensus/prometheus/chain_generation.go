@@ -428,16 +428,20 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	if header.Number.Uint64() >= consensus.StageNumberIII {
 		seconds := big.NewInt(0)
-		currentheader := chain.GetHeaderByNumber(header.Number.Uint64() - 1)
-		beforeheader := chain.GetHeaderByNumber(header.Number.Uint64() - 201)
+		tempheader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+		fromtime := tempheader.Time
 
-		seconds.Sub(currentheader.Time, beforeheader.Time)
+		for l := 0; l < 200; l++ {
+			tempheader = chain.GetHeader(tempheader.ParentHash, tempheader.Number.Uint64()-1)
+		}
+
+		seconds.Sub(fromtime, tempheader.Time)
 		secondsfloat := big.NewFloat(0)
 		secondsfloat.SetInt(seconds)
 		secondsfloat.Quo(secondsfloat, big.NewFloat(200))
 
 		A.Quo(A, big.NewFloat(float64(c.config.Period)))
-		secondsoneyesr.Mul(secondsoneyesr, secondsfloat)
+		A.Mul(A, secondsfloat)
 	}
 	log.Debug("CalculateRewards calc reward mining one block", "hpb coin", A)
 
