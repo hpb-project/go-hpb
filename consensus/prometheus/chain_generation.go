@@ -52,7 +52,7 @@ const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
 	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 240 * time.Millisecond // 延时单位
+	wiggleTime            = 500 * time.Millisecond // 延时单位
 	comCheckpointInterval = 2                      // 社区投票间隔
 	cadCheckpointInterval = 2                      // 社区投票间隔
 )
@@ -304,7 +304,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		if distance > len(snap.Signers)/consensus.StepLength { //if signers length is smaller than 3,  it means myoffset smaller than currentminer have high priority
 			delay += time.Duration(len(snap.Signers)-distance+10+rand.Intn(5)) * wiggleTime
 		} else {
-			wiggle = time.Duration(1000+rand.Intn(len(snap.Signers))) * wiggleTime
+			wiggle = time.Duration(500+rand.Intn(len(snap.Signers))) * wiggleTime
 			delay += wiggle
 		}
 	}
