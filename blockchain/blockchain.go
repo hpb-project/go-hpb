@@ -890,7 +890,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 				//find the ancestor; if the block that is the middle block of the input chain is a local CanonStatTy block, some bad thing maybe happen
 				for newBlock != nil && localblock != nil && newBlock.Hash() != localblock.Hash() {
 					newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
-					if newBlock.NumberU64() == localblock.NumberU64() {
+					if newBlock.NumberU64() <= localblock.NumberU64() {
 						localblock = bc.GetBlockByNumber(newBlock.NumberU64())
 					}
 				}
