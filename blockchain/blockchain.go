@@ -862,10 +862,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	var breorg bool
 	breorg = false
-	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 0 {
+	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
 		if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
 			if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
 				breorg = true
+				log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
 			}
 		}
 	}
@@ -885,6 +886,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		}
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
+			log.Warn("execute reorg", "current block number", bc.currentBlock.Number(), "input block number", block.Number())
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
 				return NonStatTy, err
 			}
