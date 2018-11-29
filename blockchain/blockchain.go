@@ -863,12 +863,12 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	var breorg bool
 	breorg = false
 	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
-		if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
-			if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
-				breorg = true
-				log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
-			}
-		}
+		//if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
+		//	if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
+		breorg = true
+		log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
+		//	}
+		//}
 	}
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
@@ -878,11 +878,25 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 		if breorg {
 			var newBlock = block
-			//find the ancestor; if the block that is the middle block of the input chain is a local CanonStatTy block, some bad thing maybe happen
-			for ; newBlock != nil && newBlock.Hash() != bc.GetBlockByNumber(newBlock.NumberU64()).Hash(); newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1) {
+			if block.Number().Uint64() <= bc.currentBlock.Number().Uint64() {
+				var localblock = bc.GetBlockByNumber(block.NumberU64())
+				//find the ancestor; if the block that is the middle block of the input chain is a local CanonStatTy block, some bad thing maybe happen
+				for newBlock != nil && localblock != nil && newBlock.Hash() != localblock.Hash() {
+					newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
+					localblock = bc.GetBlockByNumber(newBlock.NumberU64())
+				}
+			} else {
+				var localblock = bc.currentBlock
+				//find the ancestor; if the block that is the middle block of the input chain is a local CanonStatTy block, some bad thing maybe happen
+				for newBlock != nil && localblock != nil && newBlock.Hash() != localblock.Hash() {
+					newBlock = bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
+					if newBlock.NumberU64() == localblock.NumberU64() {
+						localblock = bc.GetBlockByNumber(newBlock.NumberU64())
+					}
+				}
 			}
-			//bc.currentBlock = bc.GetBlockByNumber(block.Number().Uint64() - 200)
 			bc.currentBlock = newBlock
+
 		}
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
