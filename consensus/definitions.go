@@ -48,7 +48,7 @@ const NumberPrehp = 20          //nodes num from 151 nodes select
 
 var (
 	StageNumberII  uint64 = 260000
-	StageNumberIII uint64 = 1150000
+	StageNumberIII uint64 = 1200000
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
 )
