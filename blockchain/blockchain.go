@@ -876,7 +876,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 &&
 		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
 
-		if breorg {
+		if false || breorg {
 			var newBlock = block
 			if block.Number().Uint64() <= bc.currentBlock.Number().Uint64() {
 				var localblock = bc.GetBlockByNumber(block.NumberU64())
@@ -1233,14 +1233,14 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
+		log.Warn("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	for _, block := range newChain {
 		// insert the block in the canonical way, re-writing history
-		log.Warn(">>>>>>>>>reorg insert<<<<<<<<<<", "block number", block.Number(), "block hash", block.Hash())
+		log.Warn("reorg insert", "block number", block.Number(), "block hash", block.Hash())
 		bc.insert(block)
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
