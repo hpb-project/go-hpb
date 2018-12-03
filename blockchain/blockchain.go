@@ -77,15 +77,17 @@ const (
 type BlockChain struct {
 	config *config.ChainConfig // chain & network configuration
 
-	hc            *HeaderChain
-	chainDb       hpbdb.Database
-	rmLogsFeed    sub.Feed
-	chainFeed     sub.Feed
-	chainSideFeed sub.Feed
-	chainHeadFeed sub.Feed
-	logsFeed      sub.Feed
-	scope         sub.SubscriptionScope
-	genesisBlock  *types.Block
+	hc                 *HeaderChain
+	chainDb            hpbdb.Database
+	rmLogsFeed         sub.Feed
+	chainFeed          sub.Feed
+	chainSideFeed      sub.Feed
+	chainHeadFeed      sub.Feed
+	txhashFeed         sub.Feed
+	txstateprocessFeed sub.Feed
+	logsFeed           sub.Feed
+	scope              sub.SubscriptionScope
+	genesisBlock       *types.Block
 
 	mu               sync.RWMutex // global mutex for locking chain operations
 	chainmu          sync.RWMutex // blockchain insertion lock
@@ -501,6 +503,7 @@ func (bc *BlockChain) insert(block *types.Block) {
 	if err := WriteCanonicalHash(bc.chainDb, block.Hash(), block.NumberU64()); err != nil {
 		log.Crit("Failed to insert block number", "err", err)
 	}
+
 	if err := WriteHeadBlockHash(bc.chainDb, block.Hash()); err != nil {
 		log.Crit("Failed to insert head block hash", "err", err)
 	}
@@ -876,7 +879,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 &&
 		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
 
-		if breorg {
+		if false || breorg {
 			var newBlock = block
 			if block.Number().Uint64() <= bc.currentBlock.Number().Uint64() {
 				var localblock = bc.GetBlockByNumber(block.NumberU64())
@@ -1057,12 +1060,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+
+		processbefore := time.Now()
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state)
+		receipts, logs, usedGas, err := bc.processor.Process(bc, block, state)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+		log.Error("process insertchain process spend time", "value", time.Now().Sub(processbefore))
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
@@ -1233,14 +1239,14 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
+		log.Warn("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
 		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
 	for _, block := range newChain {
 		// insert the block in the canonical way, re-writing history
-		log.Warn(">>>>>>>>>reorg insert<<<<<<<<<<", "block number", block.Number(), "block hash", block.Hash())
+		log.Warn("reorg insert", "block number", block.Number(), "block hash", block.Hash())
 		bc.insert(block)
 		// write lookup entries for hash based transaction/receipt searches
 		if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
@@ -1287,6 +1293,32 @@ func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 
 		case ChainSideEvent:
 			bc.chainSideFeed.Send(ev)
+		}
+	}
+}
+
+func (bc *BlockChain) PostTxhashEvents(events []interface{}) {
+
+	for _, event := range events {
+		switch ev := event.(type) {
+		case consensus.Txcommonhash:
+			bc.txhashFeed.Send(ev)
+
+		}
+	}
+}
+
+func (bc *BlockChain) GetTxstateprocessEvents() {
+}
+
+func (bc *BlockChain) PostTxstateprocessEvents(events []interface{}) {
+
+	for _, event := range events {
+		switch ev := event.(type) {
+		case consensus.Txfromaddr:
+			//log.Error("txpool send 22222222222222222222", "test", "test")
+			bc.txstateprocessFeed.Send(ev)
+
 		}
 	}
 }
@@ -1479,6 +1511,15 @@ func (bc *BlockChain) SubscribeChainEvent(ch chan<- ChainEvent) sub.Subscription
 // SubscribeChainHeadEvent registers a subscription of ChainHeadEvent.
 func (bc *BlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) sub.Subscription {
 	return bc.scope.Track(bc.chainHeadFeed.Subscribe(ch))
+}
+
+// SubscribeChainHeadEvent registers a subscription of ChainHeadEvent.
+func (bc *BlockChain) SubscribeTxhahEvent(ch chan<- consensus.Txcommonhash) sub.Subscription {
+	return bc.scope.Track(bc.txhashFeed.Subscribe(ch))
+}
+
+func (bc *BlockChain) SubscribeTxstateprocessEvent(ch chan<- consensus.Txfromaddr) sub.Subscription {
+	return bc.scope.Track(bc.txstateprocessFeed.Subscribe(ch))
 }
 
 // SubscribeChainSideEvent registers a subscription of ChainSideEvent.

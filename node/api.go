@@ -397,7 +397,7 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogCon
 		return false, structLogger.StructLogs(), err
 	}
 
-	receipts, _, usedGas, err := processor.Process(block, statedb)
+	receipts, _, usedGas, err := processor.Process(blockchain, block, statedb)
 	if err != nil {
 		return false, structLogger.StructLogs(), err
 	}

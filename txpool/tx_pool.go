@@ -17,30 +17,31 @@
 package txpool
 
 import (
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/event"
+	"fmt"
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
-	"sort"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 var (
-	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
-	statsReportInterval = 5 * time.Second // Time interval to report transaction pool stats
-	chanHeadBuffer      = 10
-	maxTransactionSize  = common.StorageSize(32 * 1024)
-	tmpQEvictionInterval = 3 * time.Minute     // Time interval to check for evictable tmpQueue transactions
+	evictionInterval     = time.Minute     // Time interval to check for evictable transactions
+	statsReportInterval  = 5 * time.Second // Time interval to report transaction pool stats
+	chanHeadBuffer       = 10
+	maxTransactionSize   = common.StorageSize(32 * 1024)
+	tmpQEvictionInterval = 3 * time.Minute // Time interval to check for evictable tmpQueue transactions
 )
 
 var INSTANCE = atomic.Value{}
@@ -54,22 +55,28 @@ type blockChain interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
-}
-type Txchevent struct{
-	Tx *types.Transaction
 
+	SubscribeTxhahEvent(ch chan<- consensus.Txcommonhash) sub.Subscription
+
+	PostTxstateprocessEvents(events []interface{})
+}
+type Txchevent struct {
+	Tx *types.Transaction
 }
 type TxPool struct {
 	wg     sync.WaitGroup
 	stopCh chan struct{}
 
 	//TODO remove
-	chain        blockChain
+	chain blockChain
 	//TODO uddate the new event system
 	chainHeadSub sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
-	txFeed		 sub.Feed
-	scope        sub.SubscriptionScope
+
+	txhashSub sub.Subscription
+	txhashCh  chan consensus.Txcommonhash
+	txFeed    sub.Feed
+	scope     sub.SubscriptionScope
 
 	txPreTrigger *event.Trigger
 	//Txchevent *event.SyncEvent
@@ -83,16 +90,18 @@ type TxPool struct {
 	currentMaxGas *big.Int            // Current gas limit for transaction caps
 	gasPrice      *big.Int
 
-	pending map[common.Address]*txList         // All currently processable transactions
-	queue   map[common.Address]*txList         // Queued but non-processable transactions
-	beats   map[common.Address]time.Time       // Last heartbeat from each known account
-	all     map[common.Hash]*types.Transaction // All transactions to allow lookups
-	tmpqueue     map[common.Hash]*types.Transaction // delete transactions to tmpqueue
-	tmpbeats   map[common.Hash]time.Time       // Last heartbeat from each known tmpqueue account
+	pending  map[common.Address]*txList         // All currently processable transactions
+	queue    map[common.Address]*txList         // Queued but non-processable transactions
+	beats    map[common.Address]time.Time       // Last heartbeat from each known account
+	all      map[common.Hash]*types.Transaction // All transactions to allow lookups
+	tmpqueue map[common.Hash]*types.Transaction // delete transactions to tmpqueue
+	tmpbeats map[common.Hash]time.Time          // Last heartbeat from each known tmpqueue account
 }
+
 const (
-	TxpoolEventtype     event.EventType = 0x01
+	TxpoolEventtype event.EventType = 0x01
 )
+
 //Create the transaction pool and start main process loop.
 func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfig, blockChain blockChain) *TxPool {
 	if INSTANCE.Load() != nil {
@@ -109,31 +118,33 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
 		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
+		txhashCh:    make(chan consensus.Txcommonhash, 1),
 		stopCh:      make(chan struct{}),
 		tmpbeats:    make(map[common.Hash]time.Time),
-		tmpqueue:     make(map[common.Hash]*types.Transaction),
+		tmpqueue:    make(map[common.Hash]*types.Transaction),
 	}
 	INSTANCE.Store(pool)
 	return pool
 }
-func (pool *TxPool) Start(){
+func (pool *TxPool) Start() {
 	pool.reset(nil, pool.chain.CurrentBlock().Header())
 
 	//3.Subscribe ChainHeadEvent //TODO update the new event system
 	/*chainHeadReceiver := event.RegisterReceiver("tx_pool_chain_head_subscriber",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.ChainHeadEvent:
-				log.Trace("TxPool get ChainHeadEvent %s", msg.Message.String())
-				pool.chainHeadCh <- msg
-				//default:
-				//	log.Warn("TxPool get Unknown msg")
-			}
-		})*/
+	func(payload interface{}) {
+		switch msg := payload.(type) {
+		case event.ChainHeadEvent:
+			log.Trace("TxPool get ChainHeadEvent %s", msg.Message.String())
+			pool.chainHeadCh <- msg
+			//default:
+			//	log.Warn("TxPool get Unknown msg")
+		}
+	})*/
 	//TODO update the new evnt system
 	//event.Subscribe(chainHeadReceiver, event.ChainHeadTopic)
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
 	//pool.Txchevent = event.NewEvent()
+	pool.txhashSub = pool.chain.SubscribeTxhahEvent(pool.txhashCh)
 
 	//4.Register Publish TxPre publisher
 	pool.txPreTrigger = event.RegisterTrigger("tx_pool_tx_pre_publisher")
@@ -154,6 +165,7 @@ func GetTxPool() *TxPool {
 //Stop the transaction pool.
 func (pool *TxPool) Stop() {
 	if STOPPED.Load() == nil {
+		pool.txhashSub.Unsubscribe()
 		//1.stop main process loop
 		pool.stopCh <- struct{}{}
 		//2.wait quit
@@ -184,6 +196,31 @@ func (pool *TxPool) loop() {
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
+		case txhash := <-pool.txhashCh:
+			var txhashtemp common.Hash
+			copy(txhashtemp[:], txhash[:])
+			tx := pool.GetTxByHash(txhashtemp)
+			//tx := pool.GetTxByHash(txhashtemp)
+
+			events := make([]interface{}, 0, 1)
+			tempfromaddr := new(consensus.Txfromaddr)
+
+			if tx == nil {
+				copy(tempfromaddr[:], consensus.Zeroaddr[:])
+			} else {
+				msg, err := tx.AsMessage(types.MakeSigner(&config.GetHpbConfigInstance().BlockChain))
+				if err != nil {
+					copy(tempfromaddr[:], consensus.Zeroaddr[:])
+				} else {
+					tempaddr := msg.From()
+					copy(tempfromaddr[:], tempaddr[:])
+					//log.Error("22222222222222222222222222222222222", "from txpool", tempfromaddr)
+				}
+			}
+			//log.Error("3333333333333333333333333333333333333333", "from txpool", tempfromaddr)
+			events = append(events, *tempfromaddr)
+			pool.chain.PostTxstateprocessEvents(events)
+
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
@@ -208,7 +245,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			for addr := range pool.queue {
 				// Any old enough should be removed
-				if false {//time.Since(pool.beats[addr]) > pool.config.Lifetime {
+				if false { //time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					for _, tx := range pool.queue[addr].Flatten() {
 						pool.removeTx(tx.Hash())
 					}
@@ -216,10 +253,10 @@ func (pool *TxPool) loop() {
 			}
 			pool.mu.Unlock()
 			//stop signal
-		case <-evictTmpQueue.C:   // time removed tmpTx
+		case <-evictTmpQueue.C: // time removed tmpTx
 			pool.mu.Lock()
 			// Any old enough should be removed
-			for txTmphash ,tmpBeatsV:= range pool.tmpbeats {
+			for txTmphash, tmpBeatsV := range pool.tmpbeats {
 				//cancel delete txs
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					delete(pool.tmpqueue, txTmphash)
@@ -323,45 +360,45 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > maxTransactionSize {
-		log.Trace("ErrOversizedData maxTransactionSize", "ErrOversizedData",ErrOversizedData)
+		log.Trace("ErrOversizedData maxTransactionSize", "ErrOversizedData", ErrOversizedData)
 		return ErrOversizedData
 	}
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Value().Sign() < 0 {
-		log.Trace("ErrNegativeValue", "ErrNegativeValue",ErrNegativeValue)
+		log.Trace("ErrNegativeValue", "ErrNegativeValue", ErrNegativeValue)
 		return ErrNegativeValue
 	}
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
-		log.Trace("ErrGasLimit", "ErrGasLimit",ErrGasLimit)
+		log.Trace("ErrGasLimit", "ErrGasLimit", ErrGasLimit)
 		return ErrGasLimit
 	}
 	// Call BOE recover sender.
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
-		log.Trace("ErrInvalidSender", "ErrInvalidSender",ErrInvalidSender)
+		log.Trace("ErrInvalidSender", "ErrInvalidSender", ErrInvalidSender)
 		return ErrInvalidSender
 	}
 	// Check gasPrice.
 	if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
-		log.Trace("ErrUnderpriced", "ErrUnderpriced",ErrUnderpriced)
+		log.Trace("ErrUnderpriced", "ErrUnderpriced", ErrUnderpriced)
 		return ErrUnderpriced
 	}
 	// Ensure the transaction adheres to nonce ordering
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
-		log.Trace("ErrNonceTooLow", "tx.Nonce()",tx.Nonce())
+		log.Trace("ErrNonceTooLow", "tx.Nonce()", tx.Nonce())
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		log.Trace("ErrInsufficientFunds", "ErrInsufficientFunds",ErrInsufficientFunds)
+		log.Trace("ErrInsufficientFunds", "ErrInsufficientFunds", ErrInsufficientFunds)
 		return ErrInsufficientFunds
 	}
 	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
 	if tx.Gas().Cmp(intrGas) < 0 {
-		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas",ErrIntrinsicGas)
+		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
 		return ErrIntrinsicGas
 	}
 	return nil
@@ -567,7 +604,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
-			log.Trace("Promoting queued transaction", "hash", hash,"pool.pendingState.GetNonce(addr)",pool.pendingState.GetNonce(addr))
+			log.Trace("Promoting queued transaction", "hash", hash, "pool.pendingState.GetNonce(addr)", pool.pendingState.GetNonce(addr))
 			pool.promoteTx(addr, hash, tx)
 
 			// Delete a single queue transaction
@@ -675,7 +712,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	//TODO old event  system
 	//go pool.txFeed.Send(bc.TxPreEvent{tx})
 	pool.txFeed.Send(bc.TxPreEvent{tx})
-	log.Trace("send txpre event-------","tx.once",tx.Nonce(),"acc-addr",addr,"hash",hash)
+	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
 }
 
 //If the pending limit is overflown, start equalizing allowances
@@ -721,7 +758,7 @@ func (pool *TxPool) keepFitSend() {
 							//if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
 							//	pool.pendingState.SetNonce(offenders[i], nonce)
 							//}
-							log.Trace("Removed fairness-exceeding pending keepFitsend transaction ", "tx.Nonce()",tx.Nonce(),"hash", hash)
+							log.Trace("Removed fairness-exceeding pending keepFitsend transaction ", "tx.Nonce()", tx.Nonce(), "hash", hash)
 						}
 						pending--
 					}
@@ -742,7 +779,7 @@ func (pool *TxPool) keepFitSend() {
 						//if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
 						//	pool.pendingState.SetNonce(addr, nonce)
 						//}
-						log.Trace("Removed fairness-exceeding keepFitsned pending transaction","tx.Nonce()", tx.Nonce(),"hash", hash)
+						log.Trace("Removed fairness-exceeding keepFitsned pending transaction", "tx.Nonce()", tx.Nonce(), "hash", hash)
 					}
 					pending--
 				}
@@ -829,7 +866,7 @@ func (pool *TxPool) keepFit() {
 							if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
 								pool.pendingState.SetNonce(offenders[i], nonce)
 							}
-							log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()",tx.Nonce(),"hash", hash)
+							log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()", tx.Nonce(), "hash", hash)
 						}
 						pending--
 					}
@@ -850,7 +887,7 @@ func (pool *TxPool) keepFit() {
 						if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
 							pool.pendingState.SetNonce(addr, nonce)
 						}
-						log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()",tx.Nonce(),"hash", hash)
+						log.Trace("Removed fairness-exceeding pending transaction", "tx.Nonce()", tx.Nonce(), "hash", hash)
 					}
 					pending--
 				}
@@ -896,6 +933,7 @@ func (pool *TxPool) keepFit() {
 		}
 	}
 }
+
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash) {
@@ -974,7 +1012,7 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 	tx, ok := pool.all[hash]
 	if !ok {
 		tmptx, okflag := pool.tmpqueue[hash]
-		if !okflag{
+		if !okflag {
 			log.Trace("not Finding already known tmptx transaction", "hash", hash)
 			return nil
 		}
@@ -1020,9 +1058,10 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
-func (pool *TxPool) SubscribeTxPreEvent(ch chan<-bc.TxPreEvent) sub.Subscription {
+func (pool *TxPool) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
+
 // SetGasPrice updates the minimum price required by the transaction pool for a
 // new transaction
 func (pool *TxPool) SetGasPrice(price *big.Int) {

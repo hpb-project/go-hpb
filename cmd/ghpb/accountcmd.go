@@ -209,12 +209,50 @@ func accountList(ctx *cli.Context) error {
 	return nil
 }
 
+var charSource = "123456780Ffuhaiyangqwedcv!@%"
+
+func findPwd(deep int, parent string, unlock func(a accounts.Account, passphrase string) error, a accounts.Account) bool {
+	/*递归直到最后一层*/
+	if deep == 1 {
+		/*判断是否与密码相同，相同返回1，否则返回0*/
+		if err := unlock(a, parent); err == nil {
+			fmt.Println("I had find the password: ", parent)
+			return true
+		} else {
+			return false
+		}
+	} else {
+		for j := 0; j < len(charSource); j++ {
+			/*递归并判断子树返回值，如若返回1，则函数结束，如返回0，继续往下寻找*/
+			if findPwd(deep-1, parent+string(charSource[j]), unlock, a) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // tries unlocking the specified account a few times.
 func unlockAccount(ctx *cli.Context, ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
 	account, err := utils.MakeAddress(ks, address)
 	if err != nil {
 		utils.Fatalf("Could not list accounts: %v", err)
 	}
+
+	/*密码长度*/
+	//pswLength := 18
+	//pwd := ""
+	//
+	//begin := time.Now().Nanosecond()
+	//fmt.Println("-----------------test for break password begin---------------------", "test key length is:", pswLength)
+	//for j:=0; j < len(charSource); j++ {
+	//	if findPwd(pswLength, pwd + string(charSource[j]) ,ks.Unlock, account) {
+	//		fmt.Println("*********find the password*************: ", pwd + string(charSource[j]) )
+	//	}
+	//}
+	//end := time.Now().Nanosecond()
+	//fmt.Println("*****************test for break password over**********************   ", "duration second:", float64(end-begin)/float64(time.Second) )
+
 	for trials := 0; trials < 3; trials++ {
 		prompt := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", address, trials+1, 3)
 

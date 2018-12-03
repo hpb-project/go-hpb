@@ -304,7 +304,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		if distance > len(snap.Signers)/consensus.StepLength { //if signers length is smaller than 3,  it means myoffset smaller than currentminer have high priority
 			delay += time.Duration(len(snap.Signers)-distance+10+rand.Intn(5)) * wiggleTime
 		} else {
-			wiggle = time.Duration(500+rand.Intn(len(snap.Signers))) * wiggleTime
+			wiggle = time.Duration(20+rand.Intn(len(snap.Signers))) * wiggleTime
 			delay += wiggle
 		}
 	}

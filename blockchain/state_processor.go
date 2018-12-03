@@ -56,7 +56,7 @@ func NewStateProcessor(config *config.ChainConfig, bc *BlockChain, engine consen
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, []*types.Log, *big.Int, error) {
+func (p *StateProcessor) Process(chain consensus.ChainReader, block *types.Block, statedb *state.StateDB) (types.Receipts, []*types.Log, *big.Int, error) {
 	var (
 		receipts     types.Receipts
 		receipt      *types.Receipt
@@ -67,10 +67,37 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 
+	txstateprocess := make(chan consensus.Txfromaddr, 1)
+	txstateprocessSub := chain.SubscribeTxstateprocessEvent(txstateprocess)
+
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		msg, err := tx.AsMessage(types.MakeSigner(p.config))
+
+		events := make([]interface{}, 0, 1)
+		var txhashtemp consensus.Txcommonhash
+		var hashtemp common.Hash
+		hashtemp = tx.Hash()
+		copy(txhashtemp[:], hashtemp[:])
+		events = append(events, txhashtemp)
+		chain.PostTxhashEvents(events)
+
+		txtemp := new(common.Address)
+		select {
+		case txfromtxpool := <-txstateprocess:
+			//log.Error("coming from txpoolrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr", "txfromtxpool", txtemp)
+			copy(txtemp[:], txfromtxpool[:])
+			if txtemp != nil && *txtemp != consensus.Zeroaddr {
+				//log.Error("coming from txpool", "txfromtxpool", txtemp)
+				tx.SetFromtxpool(types.MakeSigner(p.config), *txtemp)
+			}
+		}
+		//log.Error("coming from txpoolzzzzzzzzzzzzzzzzzzzzzzzzzz", "txfromtxpool", txtemp)
+
+		var msg types.Message
+		var err error
+		msg, err = tx.AsMessage(types.MakeSigner(p.config))
+		//msg, err := tx.AsMessage(types.MakeSigner(p.config))
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -90,6 +117,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+	defer func() {
+		txstateprocessSub.Unsubscribe()
+	}()
+
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
 		return nil, nil, nil, errfinalize

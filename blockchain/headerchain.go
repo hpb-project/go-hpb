@@ -20,6 +20,7 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"math"
 	"math/big"
 	mrand "math/rand"
@@ -460,4 +461,16 @@ func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 
 func (bc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, nil
+}
+
+func (bc *HeaderChain) PostTxhashEvents(events []interface{}) {
+}
+
+func (bc *HeaderChain) PostTxstateprocessEvents(events []interface{}) {
+}
+func (bc *HeaderChain) GetTxstateprocessEvents() {
+}
+
+func (bc *HeaderChain) SubscribeTxstateprocessEvent(ch chan<- consensus.Txfromaddr) sub.Subscription {
+	return nil
 }

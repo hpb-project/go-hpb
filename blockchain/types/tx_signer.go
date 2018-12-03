@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 var (
@@ -72,6 +72,7 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// call is not the same as used current, invalidate
 		// the cache.2
 		if sigCache.signer.Equal(signer) {
+			//log.Error("55555555555555555555555555555555", "from", sigCache.from)
 			return sigCache.from, nil
 		}
 	}
@@ -197,8 +198,6 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 		return common.Address{}, ErrInvalidSig
 	}
 
-
-
 	// encode the snature in uncompressed format
 	r, s := R.Bytes(), S.Bytes()
 	//sig := make([]byte, 65)
@@ -206,7 +205,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	copy(sig[64-len(s):64], s)
 	sig[64] = V*/
 
-	pub , err := boe.BoeGetInstance().ValidateSign(sighash.Bytes(), r, s, V)
+	pub, err := boe.BoeGetInstance().ValidateSign(sighash.Bytes(), r, s, V)
 	if err != nil {
 		log.Trace("boe validatesign error")
 		return common.Address{}, err

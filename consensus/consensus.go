@@ -21,6 +21,8 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/event/sub"
+
 	//"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -48,6 +50,12 @@ type ChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
 	StateAt(root common.Hash) (*state.StateDB, error)
+
+	PostTxhashEvents(events []interface{})
+
+	GetTxstateprocessEvents()
+
+	SubscribeTxstateprocessEvent(ch chan<- Txfromaddr) sub.Subscription
 }
 
 // Engine is an algorithm agnostic consensus engine.
