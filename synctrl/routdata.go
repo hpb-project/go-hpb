@@ -128,43 +128,45 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
 	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
 	for _, peer := range peers {
-		switch peer.LocalType() {
-		case discover.PreNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.HpNode:
-			switch peer.RemoteType() {
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.SynNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		default:
-			break
-		}
+		//fuhy all broadcast no matter what type is
+		sendTransactions(peer, types.Transactions{tx})
+		//switch peer.LocalType() {
+		//case discover.PreNode:
+		//	switch peer.RemoteType() {
+		//	case discover.PreNode:
+		//		sendTransactions(peer, types.Transactions{tx})
+		//		break
+		//	case discover.HpNode:
+		//		sendTransactions(peer, types.Transactions{tx})
+		//		break
+		//	default:
+		//		break
+		//	}
+		//	break
+		//case discover.HpNode:
+		//	switch peer.RemoteType() {
+		//	case discover.HpNode:
+		//		sendTransactions(peer, types.Transactions{tx})
+		//		break
+		//	default:
+		//		break
+		//	}
+		//	break
+		//case discover.SynNode:
+		//	switch peer.RemoteType() {
+		//	case discover.PreNode:
+		//		sendTransactions(peer, types.Transactions{tx})
+		//		break
+		//	case discover.HpNode:
+		//		sendTransactions(peer, types.Transactions{tx})
+		//		break
+		//	default:
+		//		break
+		//	}
+		//	break
+		//default:
+		//	break
+		//}
 	}
 
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
