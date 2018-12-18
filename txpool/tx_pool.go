@@ -81,8 +81,9 @@ type TxPool struct {
 	txPreTrigger *event.Trigger
 	//Txchevent *event.SyncEvent
 
-	signer types.Signer
-	mu     sync.RWMutex
+	signer            types.Signer
+	mu                sync.RWMutex
+	muforstateprocess sync.RWMutex
 
 	config        config.TxPoolConfiguration
 	currentState  *state.StateDB      // Current state in the blockchain head
@@ -90,12 +91,14 @@ type TxPool struct {
 	currentMaxGas *big.Int            // Current gas limit for transaction caps
 	gasPrice      *big.Int
 
-	pending  map[common.Address]*txList         // All currently processable transactions
-	queue    map[common.Address]*txList         // Queued but non-processable transactions
-	beats    map[common.Address]time.Time       // Last heartbeat from each known account
-	all      map[common.Hash]*types.Transaction // All transactions to allow lookups
-	tmpqueue map[common.Hash]*types.Transaction // delete transactions to tmpqueue
-	tmpbeats map[common.Hash]time.Time          // Last heartbeat from each known tmpqueue account
+	pending                 map[common.Address]*txList         // All currently processable transactions
+	queue                   map[common.Address]*txList         // Queued but non-processable transactions
+	beats                   map[common.Address]time.Time       // Last heartbeat from each known account
+	all                     map[common.Hash]*types.Transaction // All transactions to allow lookups
+	tmpqueue                map[common.Hash]*types.Transaction // delete transactions to tmpqueue
+	allforstateprocess      map[common.Hash]*types.Transaction // All transactions to allow lookups
+	tmpqueueforstateprocess map[common.Hash]*types.Transaction // delete transactions to tmpqueue
+	tmpbeats                map[common.Hash]time.Time          // Last heartbeat from each known tmpqueue account
 }
 
 const (
@@ -109,19 +112,21 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 	}
 	//2.Create the transaction pool with its initial settings
 	pool := &TxPool{
-		config:      config,
-		pending:     make(map[common.Address]*txList),
-		queue:       make(map[common.Address]*txList),
-		beats:       make(map[common.Address]time.Time),
-		all:         make(map[common.Hash]*types.Transaction),
-		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
-		chain:       blockChain,
-		signer:      types.NewBoeSigner(chainConfig.ChainId),
-		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
-		txhashCh:    make(chan consensus.Txcommonhash, 1),
-		stopCh:      make(chan struct{}),
-		tmpbeats:    make(map[common.Hash]time.Time),
-		tmpqueue:    make(map[common.Hash]*types.Transaction),
+		config:                  config,
+		pending:                 make(map[common.Address]*txList),
+		queue:                   make(map[common.Address]*txList),
+		beats:                   make(map[common.Address]time.Time),
+		all:                     make(map[common.Hash]*types.Transaction),
+		gasPrice:                new(big.Int).SetUint64(config.PriceLimit),
+		chain:                   blockChain,
+		signer:                  types.NewBoeSigner(chainConfig.ChainId),
+		chainHeadCh:             make(chan bc.ChainHeadEvent, chanHeadBuffer),
+		txhashCh:                make(chan consensus.Txcommonhash, 1),
+		stopCh:                  make(chan struct{}),
+		tmpbeats:                make(map[common.Hash]time.Time),
+		tmpqueue:                make(map[common.Hash]*types.Transaction),
+		allforstateprocess:      make(map[common.Hash]*types.Transaction),
+		tmpqueueforstateprocess: make(map[common.Hash]*types.Transaction),
 	}
 	INSTANCE.Store(pool)
 	return pool
@@ -190,17 +195,23 @@ func (pool *TxPool) loop() {
 	evictTmpQueue := time.NewTicker(tmpQEvictionInterval)
 	defer evictTmpQueue.Stop()
 
+	//evictCopytxpool := time.NewTicker(time.Duration(config.GetHpbConfigInstance().Prometheus.Period-1)*time.Second)
+	//defer evictCopytxpool.Stop()
+
 	// Track the previous head headers for transaction reorgs
 	head := pool.chain.CurrentBlock()
 
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
+		//case <-evictCopytxpool.C:
+		//pool.CopyAllandTempQueue()
+
 		case txhash := <-pool.txhashCh:
 			var txhashtemp common.Hash
 			copy(txhashtemp[:], txhash[:])
 			tx := pool.GetTxByHash(txhashtemp)
-			//tx := pool.GetTxByHash(txhashtemp)
+			//tx := pool.GetTxByHashforstateprocess(txhashtemp)
 
 			events := make([]interface{}, 0, 1)
 			tempfromaddr := new(consensus.Txfromaddr)
@@ -225,7 +236,10 @@ func (pool *TxPool) loop() {
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.mu.Lock()
+				//before := time.Now()
 				pool.reset(head.Header(), ev.Block.Header())
+				//fuhy
+				//log.Error("aaaaaaaaaaaaaaaaaa txpool deal with txs from block spend time", "block number", ev.Block.Number(),"txs", len(ev.Block.Transactions()), "value", time.Now().Sub(before))
 				head = ev.Block
 
 				pool.mu.Unlock()
@@ -357,7 +371,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
-func (pool *TxPool) validateTx(tx *types.Transaction) error {
+func (pool *TxPool) validateTxpart1(tx *types.Transaction) error {
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > maxTransactionSize {
 		log.Trace("ErrOversizedData maxTransactionSize", "ErrOversizedData", ErrOversizedData)
@@ -369,6 +383,24 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		log.Trace("ErrNegativeValue", "ErrNegativeValue", ErrNegativeValue)
 		return ErrNegativeValue
 	}
+
+	// Call BOE recover sender.
+	_, err := types.Sender(pool.signer, tx)
+	if err != nil {
+		log.Trace("ErrInvalidSender", "ErrInvalidSender", ErrInvalidSender)
+		return ErrInvalidSender
+	}
+
+	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
+	if tx.Gas().Cmp(intrGas) < 0 {
+		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
+		return ErrIntrinsicGas
+	}
+	return nil
+}
+
+func (pool *TxPool) validateTxpart2(tx *types.Transaction) error {
+
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
 		log.Trace("ErrGasLimit", "ErrGasLimit", ErrGasLimit)
@@ -396,28 +428,44 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		log.Trace("ErrInsufficientFunds", "ErrInsufficientFunds", ErrInsufficientFunds)
 		return ErrInsufficientFunds
 	}
-	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
-	if tx.Gas().Cmp(intrGas) < 0 {
-		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
-		return ErrIntrinsicGas
-	}
 	return nil
 }
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
+	for _, tx := range txs {
+		hash := tx.Hash()
+		// If the transaction fails basic validation, discard it
+		if err := pool.validateTxpart1(tx); err != nil {
+			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+			return err
+		}
+
+		//pool.mu.Lock()
+		//if pool.all[hash] != nil {
+		//	log.Trace("Discarding already known transaction", "hash", hash)
+		//	return fmt.Errorf("known transaction: %x", hash)
+		//}
+		//pool.mu.Unlock()
+		//
+		//tx.AsMessage(types.MakeSigner(&config.GetHpbConfigInstance().BlockChain))
+	}
+
 	//concurrent validate tx before pool's lock.
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
 	for _, tx := range txs {
+		// If the transaction fails basic validation, discard it
 		hash := tx.Hash()
 		if pool.all[hash] != nil {
 			log.Trace("Discarding already known transaction", "hash", hash)
 			return fmt.Errorf("known transaction: %x", hash)
 		}
-		// If the transaction fails basic validation, discard it
-		if err := pool.validateTx(tx); err != nil {
+
+		//tx.AsMessage(types.MakeSigner(&config.GetHpbConfigInstance().BlockChain))
+
+		if err := pool.validateTxpart2(tx); err != nil {
 			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 			return err
 		}
@@ -428,16 +476,24 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
 
 	hash := tx.Hash()
+	if err := pool.validateTxpart1(tx); err != nil {
+		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		return err
+	}
+
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	if pool.all[hash] != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return fmt.Errorf("known transaction: %x", hash)
 	}
+
+	//tx.AsMessage(types.MakeSigner(&config.GetHpbConfigInstance().BlockChain))
+
 	// If the transaction fails basic validation, discard it
-	if err := pool.validateTx(tx); err != nil {
+	if err := pool.validateTxpart2(tx); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
@@ -1023,12 +1079,53 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 
 }
 
+func (pool *TxPool) GetTxByHashforstateprocess(hash common.Hash) *types.Transaction {
+	pool.muforstateprocess.RLock()
+	defer pool.muforstateprocess.RUnlock()
+	tx, ok := pool.allforstateprocess[hash]
+	if !ok {
+		tmptx, okflag := pool.tmpqueueforstateprocess[hash]
+		if !okflag {
+			log.Trace("not Finding already known tmptx transaction", "hash", hash)
+			return nil
+		}
+		//log.Info("-----GetTxByHash","tmpqueue_hash",hash,"tmptx=",tmptx)
+		return tmptx
+	}
+	return tx
+
+}
+
+func (pool *TxPool) CopyAllandTempQueue() {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+	pool.muforstateprocess.Lock()
+	defer pool.muforstateprocess.Unlock()
+
+	//pool.allforstateprocess = pool.all
+	//pool.tmpqueueforstateprocess = pool.tmpqueue
+
+	pool.allforstateprocess = make(map[common.Hash]*types.Transaction)
+	pool.tmpqueueforstateprocess = make(map[common.Hash]*types.Transaction)
+
+	for k, v := range pool.all {
+		pool.allforstateprocess[k] = v
+	}
+
+	for k, v := range pool.tmpqueue {
+		pool.tmpqueueforstateprocess[k] = v
+	}
+}
+
 // Pending retrieves all currently processable transactions, groupped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	//fuhy
+	//pool.mu.Lock()
+	//defer pool.mu.Unlock()
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()

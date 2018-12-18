@@ -88,7 +88,7 @@ func (p *StateProcessor) Process(chain consensus.ChainReader, block *types.Block
 			//log.Error("coming from txpoolrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr", "txfromtxpool", txtemp)
 			copy(txtemp[:], txfromtxpool[:])
 			if txtemp != nil && *txtemp != consensus.Zeroaddr {
-				//log.Error("coming from txpool", "txfromtxpool", txtemp)
+				//log.Error("coming from txpool", "txfromtxpool", *txtemp)
 				tx.SetFromtxpool(types.MakeSigner(p.config), *txtemp)
 			}
 		}
@@ -190,7 +190,7 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
 	if err != nil {
-		log.Error("ApplyMessageNonContract err", "err", err)
+		//log.Error("ApplyMessageNonContract err", "err", err)
 		return nil, nil, err
 	}
 

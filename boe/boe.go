@@ -24,7 +24,7 @@ package boe
 int upgrade_call_back_cgo(int progress, char *msg)
 {
     static int lp = 0;
-    
+
     if(progress >= 0 && progress <= 100)
     {
         if(lp != progress)
@@ -39,25 +39,24 @@ int upgrade_call_back_cgo(int progress, char *msg)
 */
 import "C"
 import (
-    "unsafe"
-    "fmt"
-    "sync/atomic"
+	"fmt"
 	"github.com/hpb-project/go-hpb/common/log"
+	"sync/atomic"
+	"unsafe"
 	//"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 type BoeHandle struct {
-   // boeEvent *event.SyncEvent
-    boeInit  bool
+	// boeEvent *event.SyncEvent
+	boeInit bool
 }
 
-
 type TVersion struct {
-    H int
-    M int
-    F int 
-    D int
+	H int
+	M int
+	F int
+	D int
 }
 
 /*const (
@@ -66,41 +65,41 @@ type TVersion struct {
 )*/
 
 var (
-    boeRecoverPubTps         = int32(0)
-    bcontinue                = false
-    boeHandle                = &BoeHandle{ boeInit:false}
+	boeRecoverPubTps = int32(0)
+	bcontinue        = false
+	boeHandle        = &BoeHandle{boeInit: false}
 )
 
-func BoeGetInstance() (*BoeHandle) {
-    return boeHandle
+func BoeGetInstance() *BoeHandle {
+	return boeHandle
 }
 
-func (boe *BoeHandle) Init()(error) {
-    if boe.boeInit {
-        return nil
-    }
+func (boe *BoeHandle) Init() error {
+	if boe.boeInit {
+		return nil
+	}
 
-    ret := C.boe_init()
-    if ret == C.BOE_OK {
-        boe.boeInit = true
-        bcontinue = true
-        return nil
-    }
-    //fmt.Printf("[boe]Init ecode:%d\r\n", uint32(ret.ecode))
-    C.boe_err_free(ret)
-    return ErrInitFailed
+	ret := C.boe_init()
+	if ret == C.BOE_OK {
+		boe.boeInit = true
+		bcontinue = true
+		return nil
+	}
+	//fmt.Printf("[boe]Init ecode:%d\r\n", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return ErrInitFailed
 }
 
-func (boe *BoeHandle) Release() (error) {
+func (boe *BoeHandle) Release() error {
 
-    bcontinue = false
-    ret := C.boe_release()
-    if ret == C.BOE_OK {
-        return nil
-    }
-    fmt.Printf("[boe]Release ecode:%d\r\n", uint32(ret.ecode))
-    C.boe_err_free(ret)
-    return ErrInitFailed
+	bcontinue = false
+	ret := C.boe_release()
+	if ret == C.BOE_OK {
+		return nil
+	}
+	fmt.Printf("[boe]Release ecode:%d\r\n", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return ErrInitFailed
 }
 
 /*func (boe *BoeHandle) SubscribeEvent(event event.EventType) (event.Subscriber,error) {
@@ -111,210 +110,206 @@ func (boe *BoeHandle) Release() (error) {
     return nil,ErrUnknownEvent
 }*/
 
-
-func (boe *BoeHandle) GetBindAccount()(string, error){
-    var acc = make([]byte, 42)
-    ret := C.boe_get_bind_account((*C.uchar)(unsafe.Pointer(&acc[0])))
-    if ret == C.BOE_OK{
-        var str string = string(acc[:])
-        return str,nil
-    }
-    log.Info("GetBindAccount","ecode:", uint32(ret.ecode))
-    C.boe_err_free(ret)
-    return "",ErrGetAccountFailed
+func (boe *BoeHandle) GetBindAccount() (string, error) {
+	var acc = make([]byte, 42)
+	ret := C.boe_get_bind_account((*C.uchar)(unsafe.Pointer(&acc[0])))
+	if ret == C.BOE_OK {
+		var str string = string(acc[:])
+		return str, nil
+	}
+	log.Info("GetBindAccount", "ecode:", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return "", ErrGetAccountFailed
 
 }
 
-func (boe *BoeHandle) GetVersion() (TVersion,error) {
-    var H,M,F,D C.uchar
-    ret := C.boe_get_version(&H, &M, &F, &D)
-    if ret == C.BOE_OK {
-        var v TVersion = TVersion{H:int(H), M:int(M), F:int(F), D:int(D)}
-        return v,nil
-    }
-    //fmt.Printf("[boe]GetVersion ecode:%d\r\n", uint32(ret.ecode))
-    log.Info("GetVersion","ecode:", uint32(ret.ecode))
-    C.boe_err_free(ret)
-    var v TVersion
-    return v,ErrInitFailed
+func (boe *BoeHandle) GetVersion() (TVersion, error) {
+	var H, M, F, D C.uchar
+	ret := C.boe_get_version(&H, &M, &F, &D)
+	if ret == C.BOE_OK {
+		var v TVersion = TVersion{H: int(H), M: int(M), F: int(F), D: int(D)}
+		return v, nil
+	}
+	//fmt.Printf("[boe]GetVersion ecode:%d\r\n", uint32(ret.ecode))
+	log.Info("GetVersion", "ecode:", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	var v TVersion
+	return v, ErrInitFailed
 }
 
-
-func (boe *BoeHandle) GetRandom() ([]byte){
-    var ran = make([]byte, 32)
-    C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
-    return ran
+func (boe *BoeHandle) GetRandom() []byte {
+	var ran = make([]byte, 32)
+	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
+	return ran
 }
 
-func (boe *BoeHandle) GetBoeId() (string,error){
-    var sn string
-    ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
-    if ret != C.BOE_OK{
-        fmt.Printf("[boe]ecode:%d\r\n", uint32(ret.ecode))
-        C.boe_err_free(ret)
-        return "", ErrGetSNFailed
-    }
-    return sn,nil
+func (boe *BoeHandle) GetBoeId() (string, error) {
+	var sn string
+	ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
+	if ret != C.BOE_OK {
+		fmt.Printf("[boe]ecode:%d\r\n", uint32(ret.ecode))
+		C.boe_err_free(ret)
+		return "", ErrGetSNFailed
+	}
+	return sn, nil
 }
 
-func (boe *BoeHandle) FWUpdate() error{
-    // download version record file.
-    // get board version info.
-    // get correct update image url.
-    // download update image.
-    // call C api to update.
-    version,err := boe.GetVersion()
-    if err != nil {
-        fmt.Println("board connect failed, update abort.")
-        return ErrUpdateFailed
-    }
-    image, err := downloadrelease(version.H, version.M, version.F, version.D)
-    if err == ErrNoNeedUpdate {
-        fmt.Println("You are using the newest firmware.")
-        return nil
-    }
-    if err != nil {
-        fmt.Println("download firmware failed.")
-        return err
-    }
-    var len = len(image)
-    fmt.Println("image len = %d", len)
+func (boe *BoeHandle) FWUpdate() error {
+	// download version record file.
+	// get board version info.
+	// get correct update image url.
+	// download update image.
+	// call C api to update.
+	version, err := boe.GetVersion()
+	if err != nil {
+		fmt.Println("board connect failed, update abort.")
+		return ErrUpdateFailed
+	}
+	image, err := downloadrelease(version.H, version.M, version.F, version.D)
+	if err == ErrNoNeedUpdate {
+		fmt.Println("You are using the newest firmware.")
+		return nil
+	}
+	if err != nil {
+		fmt.Println("download firmware failed.")
+		return err
+	}
+	var len = len(image)
+	fmt.Println("image len = %d", len)
 
-    C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
-    var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(len))
-    if ret == C.BOE_OK {
-        fmt.Println("upgrade successed.")
-        return nil
-    }
-    fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n",uint32(ret.ecode))
-    C.boe_err_free(ret)
-    return ErrUpdateFailed
+	C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
+	var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(len))
+	if ret == C.BOE_OK {
+		fmt.Println("upgrade successed.")
+		return nil
+	}
+	fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return ErrUpdateFailed
 }
 
-func (boe *BoeHandle) FWUpdateAbort() error{
-    var ret = C.boe_upgrade_abort()
-    if ret == C.BOE_OK {
-        return nil
-    }
-    fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n",uint32(ret.ecode))
-    C.boe_err_free(ret)
-    return ErrUpdateAbortFailed
+func (boe *BoeHandle) FWUpdateAbort() error {
+	var ret = C.boe_upgrade_abort()
+	if ret == C.BOE_OK {
+		return nil
+	}
+	fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return ErrUpdateAbortFailed
 }
 
 func (boe *BoeHandle) HWCheck() bool {
-    var ret = C.boe_hw_check()
-    if ret == C.BOE_OK {
-        log.Info("boe board is ok.")
-        return true
-    }else {
-        log.Info("boe board not find.")
-        return false
-    }
+	var ret = C.boe_hw_check()
+	if ret == C.BOE_OK {
+		log.Info("boe board is ok.")
+		return true
+	} else {
+		log.Info("boe board not find.")
+		return false
+	}
 }
 
 func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
-    var signature = make([]byte, 64)
-    if len(random) != 32 {
-        return nil, ErrHWSignFailed
-    }
-    var ret = C.boe_hw_sign((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
-    if ret == C.BOE_OK {
-        return signature, nil
-    } 
-    log.Info("boe hwsign failed", " ecode:", ret.ecode)
-    return nil, ErrHWSignFailed
+	var signature = make([]byte, 64)
+	if len(random) != 32 {
+		return nil, ErrHWSignFailed
+	}
+	var ret = C.boe_hw_sign((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
+	if ret == C.BOE_OK {
+		return signature, nil
+	}
+	log.Info("boe hwsign failed", " ecode:", ret.ecode)
+	return nil, ErrHWSignFailed
 }
 
-func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid[]byte, signature []byte) bool {
-    if len(random) != 32 || len(hid) != 32 || len(cid) != 64 || len(signature) != 64 {
-        return false
-    }
-    var ret = C.boe_p256_verify((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&hid[0])),
-(*C.uchar)(unsafe.Pointer(&cid[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
-    if ret == C.BOE_OK {
-        return true
-    } 
-    return false
+func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid []byte, signature []byte) bool {
+	if len(random) != 32 || len(hid) != 32 || len(cid) != 64 || len(signature) != 64 {
+		return false
+	}
+	var ret = C.boe_p256_verify((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&hid[0])),
+		(*C.uchar)(unsafe.Pointer(&cid[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
+	if ret == C.BOE_OK {
+		return true
+	}
+	return false
 }
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
 
-    atomic.AddInt32(&boeRecoverPubTps, 1)
-    var result = make([]byte, 65)
+	atomic.AddInt32(&boeRecoverPubTps, 1)
+	var result = make([]byte, 65)
 
-    var (
-        m_sig  = make([]byte, 97)
-        c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-    )
-    copy(m_sig[32-len(r):32], r)
-    copy(m_sig[64-len(s):64], s)
-    copy(m_sig[96-len(hash):96], hash)
-    m_sig[96] = v
+	var (
+		m_sig = make([]byte, 97)
+		//c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+	)
+	copy(m_sig[32-len(r):32], r)
+	copy(m_sig[64-len(s):64], s)
+	copy(m_sig[96-len(hash):96], hash)
+	m_sig[96] = v
 
+	//c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+	////loushl change to debug
+	//if c_ret == C.BOE_OK {
+	//    log.Trace("boe validate sign success")
+	//    result[0] = 4
+	//    return result,nil
+	//}
 
-    c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-    //loushl change to debug
-    if c_ret == C.BOE_OK {
-        log.Trace("boe validate sign success")
-        result[0] = 4
-        return result,nil
-    }
+	var (
+		sig = make([]byte, 65)
+	)
+	copy(sig[32-len(r):32], r)
+	copy(sig[64-len(s):64], s)
+	sig[64] = v
+	pub, err := crypto.Ecrecover(hash[:], sig)
+	if err != nil {
+		return nil, ErrSignCheckFailed
+	}
+	copy(result[:], pub[0:])
+	log.Trace("software validate sign success")
 
-    var (
-        sig = make([]byte, 65)
-    )
-    copy(sig[32-len(r):32], r)
-    copy(sig[64-len(s):64], s)
-    sig[64] = v
-    pub, err := crypto.Ecrecover(hash[:], sig)
-    if(err != nil) {
-        return nil, ErrSignCheckFailed
-    }
-    copy(result[:], pub[0:])
-    log.Trace("software validate sign success")
+	return result, nil
 
-    return result, nil
+	// need boe validate without boe //TODO to debug the function of boe
+	/* if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "bootnode" || config.GetHpbConfigInstance().Network.RoleType == "synnode"{
+	       // use software
+	       var (
+	           sig = make([]byte, 65)
+	       )
+	       copy(sig[32-len(r):32], r)
+	       copy(sig[64-len(s):64], s)
+	       sig[64] = v
+	       pub, err := crypto.Ecrecover(hash[:], sig)
+	       if(err != nil) {
+	           return nil, ErrSignCheckFailed
+	       }
+	       copy(result[:], pub[0:])
+	       log.Trace("software   validate sign success")
 
-    // need boe validate without boe //TODO to debug the function of boe
-   /* if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "bootnode" || config.GetHpbConfigInstance().Network.RoleType == "synnode"{
-        // use software
-        var (
-            sig = make([]byte, 65)
-        )
-        copy(sig[32-len(r):32], r)
-        copy(sig[64-len(s):64], s)
-        sig[64] = v
-        pub, err := crypto.Ecrecover(hash[:], sig)
-        if(err != nil) {
-            return nil, ErrSignCheckFailed
-        }
-        copy(result[:], pub[0:])
-        log.Trace("software   validate sign success")
-
-        return result, nil
-    }else {
-        c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-        //loushl change to debug
-        if c_ret == C.BOE_OK {
-            log.Trace("boe validate sign success")
-            result[0] = 4
-            return result,nil
-        }else {
-            panic("Boe validate sign fail")
-        }
-    }*/
+	       return result, nil
+	   }else {
+	       c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+	       //loushl change to debug
+	       if c_ret == C.BOE_OK {
+	           log.Trace("boe validate sign success")
+	           result[0] = 4
+	           return result,nil
+	       }else {
+	           panic("Boe validate sign fail")
+	       }
+	   }*/
 }
 
-
 func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
-    var result = make([]byte, 32)
-    if len(hash) != 32 {
-        return nil, ErrGetNextHashFailed
-    }
-    var ret = C.boe_get_s_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
-    if ret == C.BOE_OK {
-        return result, nil
-    } 
-    log.Error("boe getnexthash", " ecode :", ret.ecode)
-    return nil, ErrGetNextHashFailed
+	var result = make([]byte, 32)
+	if len(hash) != 32 {
+		return nil, ErrGetNextHashFailed
+	}
+	var ret = C.boe_get_s_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+	if ret == C.BOE_OK {
+		return result, nil
+	}
+	log.Error("boe getnexthash", " ecode :", ret.ecode)
+	return nil, ErrGetNextHashFailed
 }

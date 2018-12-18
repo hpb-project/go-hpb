@@ -406,6 +406,9 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 		p.KnownTxsAdd(tx.Hash())
 	}
+	//log.Error("before add txs", "test : txs number", len(txs))
+	//before := time.Now()
 	txpool.GetTxPool().AddTxs(txs)
+	//log.Error("end add txs", "test add txs spend time", time.Now().Sub(before))
 	return nil
 }

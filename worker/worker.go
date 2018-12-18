@@ -470,17 +470,21 @@ func (self *worker) startNewMinerRound() {
 	//if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 	//	misc.ApplyDAOHardFork(work.state)
 	//}
+	//fuhy
+	//var du time.Duration
+	//du = time.Duration(config.GetHpbConfigInstance().Prometheus.Period-1)*time.Second
+	//time.Sleep(du)
 	pending, err := txpool.GetTxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 	//log.Error("----read tx from pending is ", "number is", len(pending))
-	processbefore := time.Now() //startNewMinerRound
+	//processbefore := time.Now() //startNewMinerRound
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 
 	work.commitTransactions(self.mux, txs, self.coinbase)
-	log.Error("startNewMinerRound NewTransactionsByPriceAndNonce process spend time", "value", time.Now().Sub(processbefore))
+	//log.Error("startNewMinerRound NewTransactionsByPriceAndNonce process spend time", "value", time.Now().Sub(processbefore))
 	// compute uncles for the new block.
 	var (
 		uncles    []*types.Header

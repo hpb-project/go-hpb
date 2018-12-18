@@ -1068,7 +1068,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
-		log.Error("process insertchain process spend time", "value", time.Now().Sub(processbefore))
+		log.Error("process insertchain process spend time", "block number", block.Number(), "txs", len(block.Transactions()), "value", time.Now().Sub(processbefore))
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
