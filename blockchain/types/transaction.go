@@ -58,7 +58,6 @@ type Transaction struct {
 	hash    atomic.Value
 	size    atomic.Value
 	from    atomic.Value
-	fromP2P bool
 }
 
 type txdata struct {
@@ -73,6 +72,8 @@ type txdata struct {
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
+
+	Forward bool `json:"forward" gencodec:"required"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -308,9 +309,13 @@ func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
 //TODO for test use
+/*
+func (tx *Transaction) GetFromSigCache() atomic.Value { return tx.from}
+func (tx *Transaction) SetFromSigCache(from SigCache) { tx.from.Store(from) }
+*/
 func (tx *Transaction) SetFrom(from common.Address) { tx.from.Store(from) }
-func (tx *Transaction) SetFromP2P(fromP2P bool)     { tx.fromP2P = fromP2P }
-func (tx *Transaction) IsFromP2P() bool             { return tx.fromP2P }
+func (tx *Transaction) SetForward(forward bool)     { tx.data.Forward = forward }
+func (tx *Transaction) IsForward() bool             { return tx.data.Forward }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
