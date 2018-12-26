@@ -67,6 +67,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 
+	go func(txs []*types.Transaction) {
+		synsigner := types.MakeSigner(p.config)
+		//types.ASynSender(synsigner, nil)
+		for _, tx := range txs {
+			types.ASynSender(synsigner, tx)
+		}
+	}(block.Transactions())
+
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
@@ -90,6 +98,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+	go func(txs []*types.Transaction) {
+		synsigner := types.MakeSigner(p.config)
+		//types.ASynSender(synsigner, nil)
+		for _, tx := range txs {
+			types.Deletesynsinger(synsigner, tx)
+		}
+	}(block.Transactions())
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
 		return nil, nil, nil, errfinalize
