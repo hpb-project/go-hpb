@@ -46,7 +46,7 @@ import (
 )
 
 const (
-    MaxMsgSize = 50 * 1024 * 1024
+	MaxMsgSize = 50 * 1024 * 1024
 
 	sskLen = 16 // ecies.MaxSharedKeyLength(pubKey) / 2
 	sigLen = 65 // elliptic S256
@@ -63,7 +63,7 @@ const (
 
 	// total timeout for encryption handshake and protocol
 	// handshake in both directions.
-	handshakeTimeout = 5 * time.Second
+	handshakeTimeout = 10 * time.Second
 
 	// This is the timeout for sending the disconnect reason.
 	// This is shorter than the usual timeout because we don't want
