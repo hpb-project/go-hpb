@@ -821,6 +821,10 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 
 	mapaddrbandwithres := make(map[common.Address]*BandWithStatics)
 	for i := number - consensus.NumberBackBandwith; i < number-100; i++ {
+		if nil == chain.GetHeaderByNumber(i) {
+			log.Error("GetBandwithRes GetHeaderByNumber fail", "nmuber", i)
+			return nil, errors.New("GetBandwithRes GetHeaderByNumber fail")
+		}
 		//statistics prehp node bandwith
 		tempaddr1 := chain.GetHeaderByNumber(i).CandAddress
 		tempBandwith1 := chain.GetHeaderByNumber(i).Nonce[6]
