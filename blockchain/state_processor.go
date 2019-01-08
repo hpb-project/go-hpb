@@ -66,9 +66,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
-
+	synsigner := types.MakeSigner(p.config)
 	go func(txs []*types.Transaction) {
-		synsigner := types.MakeSigner(p.config)
 		//types.ASynSender(synsigner, nil)
 		for _, tx := range txs {
 			types.ASynSender(synsigner, tx)
@@ -86,11 +85,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if len(msg.Data()) != 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		} else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		}
@@ -99,7 +100,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	go func(txs []*types.Transaction) {
-		synsigner := types.MakeSigner(p.config)
 		//types.ASynSender(synsigner, nil)
 		for _, tx := range txs {
 			types.Deletesynsinger(synsigner, tx)
