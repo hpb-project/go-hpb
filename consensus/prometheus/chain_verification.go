@@ -370,7 +370,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get balance ranking res
 	balancerank, errbalance := c.GetRankingRes(allbalances, addrlist)
 	if errvote != nil || errbandwith != nil || errbalance != nil {
-		return nil, nil, err
+		return nil, nil, errors.New("get ranking fail")
 	}
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
