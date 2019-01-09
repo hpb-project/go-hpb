@@ -505,4 +505,5 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
         return result, nil
     }
     return nil, ErrGetNextHashFailed
+
 }
