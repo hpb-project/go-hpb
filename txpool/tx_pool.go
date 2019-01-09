@@ -344,11 +344,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	from, err := types.ASynSender(pool.signer, tx)
 	if err != nil {
-		log.Debug("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
+		log.Trace("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
 		from2, err := types.Sender(pool.signer, tx)
 
 		if err != nil {
-			log.Info("validateTx Sender ErrInvalidSender", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
+			log.Error("validateTx Sender ErrInvalidSender", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
 			return ErrInvalidSender
 		}
 		copy(from[0:],from2[0:])
@@ -446,11 +446,11 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 
 				from, err := types.ASynSender(pool.signer, tx) // already validated
 				if err != nil{
-					log.Info("addTxsLocked ASynSender Error","tx.bash",tx.Hash())
+					log.Trace("addTxsLocked ASynSender Error","tx.bash",tx.Hash())
 
 					from2, err := types.Sender(pool.signer, tx) // already validated
 					if err != nil{
-						log.Info("addTxsLocked Sender Error","tx.bash",tx.Hash())
+						log.Error("addTxsLocked Sender Error","tx.bash",tx.Hash())
 					}
 
 					copy(from[0:], from2[0:])
@@ -496,10 +496,10 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 	if !replace {
 		from, err := types.ASynSender(pool.signer, tx) // already validated
 		if err != nil {
-			log.Info("addTxLocked ASynSender Error","tx.bash",tx.Hash())
+			log.Trace("addTxLocked ASynSender Error","tx.bash",tx.Hash())
 			from2, err := types.Sender(pool.signer, tx) // already validated
 			if err != nil {
-				log.Info("addTxLocked Sender Error","tx.bash",tx.Hash())
+				log.Error("addTxLocked Sender Error","tx.bash",tx.Hash())
 			}
 			copy(from[0:],from2[0:])
 		}
@@ -522,10 +522,10 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	from, err := types.ASynSender(pool.signer, tx) // already validated
 
 	if err != nil{
-		log.Info("add ASynSender error","tx.hash",tx.Hash())
+		log.Trace("add ASynSender error","tx.hash",tx.Hash())
 		from2, err := types.Sender(pool.signer, tx) // already validated
 		if err !=nil{
-			log.Info("add Sender error")
+			log.Error("add Sender error")
 		}
 		copy(from[0:],from2[0:])
 	}
@@ -607,11 +607,6 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 	// Gather all the accounts potentially needing updates
-	var accFlag bool
-	if accounts == nil {
-		accFlag=true
-	}
-
 	if accounts == nil {
 		accounts = make([]common.Address, 0, len(pool.queue))
 		for addr := range pool.queue {
@@ -668,13 +663,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.queue, addr)
 		}
 	}
-	if accFlag {
 
-		pool.keepFit()
-	}else{
-
-		pool.keepFitSend()
-	}
+	pool.keepFit()
 }
 
 // demoteUnexecutables removes invalid and processed transactions from the pools
@@ -1083,8 +1073,8 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 
 // State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
-	pool.mu.RLock()
-	defer pool.mu.RUnlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	return pool.pendingState
 }
