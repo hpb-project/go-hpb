@@ -222,7 +222,7 @@ func PostRecoverPubkey() {
                 rs.Sig[64] = fullsig[96]
                 copy(rs.Pub, pubkey65)
             }else{
-                log.Error("boe async callback recover pubkey failed, and goto soft recover.")
+                log.Debug("boe async callback recover pubkey failed, and goto soft recover.")
                 copy(rs.Hash, fullsig[64:96])
                 copy(rs.Sig[0:32], fullsig[0:32])
                 copy(rs.Sig[32:64],fullsig[32:64])
