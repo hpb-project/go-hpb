@@ -208,7 +208,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			for addr := range pool.queue {
 				// Any old enough should be removed
-				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
+				if false {//time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					for _, tx := range pool.queue[addr].Flatten() {
 						pool.removeTx(tx.Hash())
 					}

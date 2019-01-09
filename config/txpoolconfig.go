@@ -43,5 +43,5 @@ var DefaultTxPoolConfig = TxPoolConfiguration{
 	AccountQueue: 12000,
 	GlobalQueue:  200000,
 
-	Lifetime: 10 * time.Minute,
+	Lifetime: 3 * time.Minute,
 }
