@@ -263,20 +263,20 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			}
 			parentheader := chain.GetHeader(header.ParentHash, number-1)
 			if parentheader == nil {
-				log.Debug("verifySeal GetHeaderByNumber", "fail", "header is nil")
+				log.Error("verifySeal GetHeaderByNumber", "fail", "header is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) == 0 {
-				log.Debug("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
+				log.Error("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
-			newrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom)
+			newrand, err := c.GetNextRand(parentheader.HardwareRandom, number)
 			if err != nil {
-				log.Debug("verifySeal GetNextHash", "fail", err)
+				log.Error("verifySeal GetNextHash", "fail", err)
 				return consensus.ErrInvalidblockbutnodrop
 			}
 			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
-				log.Debug("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
+				log.Error("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
 				return consensus.Errrandcheck
 			}
 		}
