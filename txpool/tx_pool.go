@@ -409,6 +409,18 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
+
+	// If the transaction txpool pending is full
+	pendingnum := 0
+	for _, listnum := range pool.pending {
+		pendingnum += listnum.Len()
+	}
+	if uint64(pendingnum) >= pool.config.GlobalSlots {
+		log.Warn("TxPool pending is full", "pending size", pendingnum,
+			"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
+		return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
+	}
+
 	var t_start = time.Now().UnixNano()/1000
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
@@ -420,8 +432,9 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
-	t_end := time.Now().UnixNano()/1000
+
 	recerr := pool.addTxLocked(tx)
+	t_end := time.Now().UnixNano()/1000
 	if recerr != nil {
 		deleteErr := types.SMapDelete(types.Asynsinger, pool.signer.Hash(tx))
 		if deleteErr != nil {

@@ -69,8 +69,8 @@ func SMapDelete(m *Smap, khash common.Hash) error {
 }
 
 func SMapGet(m *Smap, khash common.Hash) (common.Address, error) {
-	m.L.RLock()
-	defer m.L.RUnlock()
+	m.L.Lock()
+	defer m.L.Unlock()
 
 	kvalue, ok := m.Data[khash]
 	if ok != true {
