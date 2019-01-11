@@ -36,6 +36,7 @@ import (
 	"strings"
 	"path/filepath"
 	"os"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -355,7 +356,7 @@ func (srv *Server) Start() (err error) {
 	srv.ntab = ntab
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: MsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
+	srv.ourHandshake = &protoHandshake{Version: config.VersionID, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
