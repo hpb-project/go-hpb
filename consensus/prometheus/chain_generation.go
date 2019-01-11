@@ -123,6 +123,15 @@ func InstancePrometheus() *Prometheus {
 // 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
+func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
+	if number < consensus.StageNumberIV {
+		return c.hboe.GetNextHash(lastrand)
+	} else {
+		return c.hboe.GetNextHash_v2(lastrand)
+	}
+
+}
+
 // 实现引擎的Prepare函数
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
 
@@ -154,7 +163,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Debug("parentheader.HardwareRandom is nil or length is not 32")
 			}
-			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
+			if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
 				return err
 			} else {
 				if len(boehwrand) != 0 {

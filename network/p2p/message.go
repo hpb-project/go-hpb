@@ -30,7 +30,7 @@ import (
 
 
 // message of control
-const MsgVersion  uint64 = 0x0001
+
 const (
 	handshakeMsg    uint64 = 0x0000
 	discMsg         uint64 = 0x0001

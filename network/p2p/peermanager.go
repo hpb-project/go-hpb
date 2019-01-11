@@ -363,7 +363,8 @@ func (prm *PeerManager) Protocol() []Protocol {
 type PeerInfo struct {
 	ID      string `json:"id"`     // Unique node identifier (also the encryption key)
 	Name    string `json:"name"`   // Name of the node, including client type, version, OS, custom data
-	Remote  string `json:"remote"` //Remote node type
+	Version string `json:"version"`// Ghpb version
+	Remote  string `json:"remote"` // Remote node type
 	Cap     string `json:"cap"`    // Sum-protocols advertised by this particular peer
 	Network struct {
 		Local  string `json:"local"`  // Local endpoint of the TCP data connection
@@ -375,7 +376,6 @@ type PeerInfo struct {
 }
 
 type HpbInfo struct {
-	Version uint     `json:"version"`     // Hpb protocol version negotiated
 	TD      *big.Int `json:"handshakeTD"` // Total difficulty of the peer's blockchain
 	Head    string   `json:"handshakeHD"` // SHA3 hash of the peer's best owned block
 }
@@ -389,6 +389,7 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 		info := &PeerInfo{
 			ID:     p.ID().TerminalString(),
 			Name:   p.Name(),
+			Version:p.Version(),
 			Remote: p.remoteType.ToString(),
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
@@ -412,7 +413,6 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Start:  p.beatStart.String(),
 			Beat:   strconv.FormatUint(p.count, 10),
 			HPB: &HpbInfo{
-				Version: p.version,
 				TD:      td,
 				Head:    hash.Hex(),
 			},
