@@ -108,6 +108,11 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DirectoryString{config.DefaultDataDir()},
 	}
+	ConfigFileFlag = cli.StringFlag{
+		Name:  "ConfigFile",
+		Usage: "config file directory for test",
+		Value: "",
+	}
 	KeyStoreDirFlag = DirectoryFlag{
 		Name:  "keystore",
 		Usage: "Directory for the keystore (default = inside the datadir)",
@@ -891,6 +896,12 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 			consensus.StageNumberIII = uint64(res[1])
 		}
 
+	}
+	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
+		res := ctx.GlobalString(ConfigFileFlag.Name)
+		if res != "" {
+			cfg.Node.FNameConsensusCfg = res
+		}
 	}
 	// Override any default configs for hard coded networks.
 	switch {

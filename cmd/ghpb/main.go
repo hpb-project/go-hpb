@@ -111,7 +111,7 @@ var (
 		utils.RPCVirtualHostsFlag,
 		utils.TestCodeStageFlag,
 
-		configFileFlag,
+		utils.ConfigFileFlag,
 	}
 
 	rpcFlags = []cli.Flag{
