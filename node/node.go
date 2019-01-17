@@ -17,6 +17,7 @@
 package node
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -265,7 +266,68 @@ func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 	return nil
 }
 
+type ConsensuscfgF struct {
+	HpNodesNum       int      //`json:"HpNodesNum"` 			//hp nodes number
+	HpVotingRndScope int      //`json:"HpVotingRndScope"`		//hp voting rand selection scope
+	FinalizeRetErrIg bool     //`json:"FinalizeRetErrIg"`	 	//finalize return err ignore
+	Time             int      //`json:"Time"`					//gen block interval
+	Nodeids          []string //`json:"Nodeids"`				//bootnode`s nodeid only add one
+}
+
+func parseConsensusConfigFile(conf *config.HpbConfig) {
+
+	path := conf.Node.DataDir + "/" + conf.Node.FNameConsensusCfg
+	_, err := os.Stat(path) //os.Stat获取文件信息
+	if err != nil {
+		if os.IsExist(err) {
+			log.Info("parse consensus config file success", "err", err)
+		} else {
+			log.Warn("parse consensus config file fail", "err", err)
+			return
+		}
+	}
+
+	cfgfile := ConsensuscfgF{}
+	//ReadFile函数会读取文件的全部内容，并将结果以[]byte类型返回
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Error("ioutil.ReadFile fail", "err", err)
+		return
+	}
+
+	//读取的数据为json格式，需要进行解码
+	err = json.Unmarshal(data, &cfgfile)
+	if err != nil {
+		log.Error("json.Unmarshal fail", "err", err)
+		return
+	}
+
+	//v,_ := hexutil.DecodeUint64(cfgfile.HpNodesNum)
+	consensus.HpbNodenumber = cfgfile.HpNodesNum
+	consensus.NumberPrehp = cfgfile.HpVotingRndScope
+	consensus.IgnoreRetErr = cfgfile.FinalizeRetErrIg
+	conf.Prometheus.Period = uint64(cfgfile.Time)
+
+	config.MainnetBootnodes = config.MainnetBootnodes[:0]
+	for _, v := range cfgfile.Nodeids {
+		config.MainnetBootnodes = append(config.MainnetBootnodes, v)
+	}
+
+	log.Info("consensus.HpbNodenumber", "value", consensus.HpbNodenumber)
+	log.Info("consensus.NumberPrehp", "value", consensus.NumberPrehp)
+	log.Info("consensus.IgnoreRetErr", "value", consensus.IgnoreRetErr)
+	log.Info("conf.Prometheus.Period", "value", conf.Prometheus.Period)
+	for _, v := range config.MainnetBootnodes {
+		log.Info("config.MainnetBootnodes", "value", v)
+	}
+
+}
+
 func (hpbnode *Node) Start(conf *config.HpbConfig) error {
+
+	if conf.Node.FNameConsensusCfg != "" {
+		parseConsensusConfigFile(conf)
+	}
 
 	if config.GetHpbConfigInstance().Node.TestCodeParam == 1 {
 		consensus.SetTestParam()
