@@ -231,6 +231,12 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if number == 0 {
 		return consensus.ErrUnknownBlock
 	}
+	var parentheader *types.Header
+	if len(parents) > 0 {
+		parentheader = parents[len(parents)-1]
+	} else {
+		parentheader = chain.GetHeader(header.ParentHash, number-1)
+	}
 
 	// Resolve the authorization key and check against signers
 	signer, err := consensus.Ecrecover(header, c.signatures)
@@ -254,14 +260,14 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// false &&
-	if mode == config.FullSync && config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
+	if /*mode == config.FullSync && */ config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
 		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
 
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
 			if !c.hboe.HWCheck() {
 				return consensus.Errboehwcheck
 			}
-			parentheader := chain.GetHeader(header.ParentHash, number-1)
+			//parentheader := chain.GetHeader(header.ParentHash, number-1)
 			if parentheader == nil {
 				log.Error("verifySeal GetHeaderByNumber", "fail", "header is nil")
 				return consensus.ErrInvalidblockbutnodrop
@@ -281,15 +287,17 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			}
 		}
 
-		//Ensure that the difficulty corresponds to the turn-ness of the signerHash
-		inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
-		if inturn {
-			if header.Difficulty.Cmp(diffInTurn) != 0 {
-				return consensus.ErrInvalidDifficulty
-			}
-		} else { //inturn is false
-			if header.Difficulty.Cmp(diffNoTurn) != 0 {
-				return consensus.ErrInvalidDifficulty
+		if mode == config.FullSync {
+			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
+			inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+			if inturn {
+				if header.Difficulty.Cmp(diffInTurn) != 0 {
+					return consensus.ErrInvalidDifficulty
+				}
+			} else { //inturn is false
+				if header.Difficulty.Cmp(diffNoTurn) != 0 {
+					return consensus.ErrInvalidDifficulty
+				}
 			}
 		}
 
@@ -370,7 +378,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get balance ranking res
 	balancerank, errbalance := c.GetRankingRes(allbalances, addrlist)
 	if errvote != nil || errbandwith != nil || errbalance != nil {
-		return nil, nil, err
+		return nil, nil, errors.New("get ranking fail")
 	}
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
