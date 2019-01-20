@@ -110,8 +110,12 @@ var (
 		utils.TestModeFlag,
 		utils.RPCVirtualHostsFlag,
 		utils.TestCodeStageFlag,
-
 		utils.ConfigFileFlag,
+		utils.HpNumFlag,
+		utils.HpVoteRndSelScpFlag,
+		utils.IgnRewardRetErrFlag,
+		utils.GenBlkSecsFlag,
+		utils.BNodeidsFlag,
 	}
 
 	rpcFlags = []cli.Flag{

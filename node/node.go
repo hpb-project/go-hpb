@@ -312,15 +312,6 @@ func parseConsensusConfigFile(conf *config.HpbConfig) {
 	for _, v := range cfgfile.Nodeids {
 		config.MainnetBootnodes = append(config.MainnetBootnodes, v)
 	}
-
-	log.Info("consensus.HpbNodenumber", "value", consensus.HpbNodenumber)
-	log.Info("consensus.NumberPrehp", "value", consensus.NumberPrehp)
-	log.Info("consensus.IgnoreRetErr", "value", consensus.IgnoreRetErr)
-	log.Info("conf.Prometheus.Period", "value", conf.Prometheus.Period)
-	for _, v := range config.MainnetBootnodes {
-		log.Info("config.MainnetBootnodes", "value", v)
-	}
-
 }
 
 func (hpbnode *Node) Start(conf *config.HpbConfig) error {
@@ -331,6 +322,14 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 
 	if config.GetHpbConfigInstance().Node.TestCodeParam == 1 {
 		consensus.SetTestParam()
+	}
+
+	log.Info("consensus.HpbNodenumber", "value", consensus.HpbNodenumber)
+	log.Info("consensus.NumberPrehp", "value", consensus.NumberPrehp)
+	log.Info("consensus.IgnoreRetErr", "value", consensus.IgnoreRetErr)
+	log.Info("conf.Prometheus.Period", "value", conf.Prometheus.Period)
+	for _, v := range config.MainnetBootnodes {
+		log.Info("config.MainnetBootnodes", "value", v)
 	}
 	log.Info("--------------StageNumberII----------------", "value", consensus.StageNumberII)
 	log.Info("--------------StageNumberIII---------------", "value", consensus.StageNumberIII)

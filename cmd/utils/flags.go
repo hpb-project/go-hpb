@@ -459,6 +459,30 @@ var (
 		Usage: "Run ghpb with test code stage and boe need",
 		Value: nil,
 	}
+	HpNumFlag = cli.IntFlag{
+		Name:  "hpnum",
+		Usage: "Run ghpb having hpnodes not better than HpNum, just for testing",
+		Value: 31,
+	}
+	HpVoteRndSelScpFlag = cli.IntFlag{
+		Name:  "hpvoterndselscp",
+		Usage: "Set hpnodes voting random select scope, just for testing",
+		Value: 20,
+	}
+	IgnRewardRetErrFlag = cli.BoolFlag{
+		Name:  "ignrewardreterr",
+		Usage: "Run ghpb ignore finailize rewards return err, just for testing",
+	}
+	GenBlkSecsFlag = cli.IntFlag{
+		Name:  "genblksecs",
+		Usage: "Run ghpb with GenBlkSecsFlag seconds gen one block, just for testing",
+		Value: 6,
+	}
+	BNodeidsFlag = cli.StringSliceFlag{
+		Name:  "bnodeids",
+		Usage: "Run ghpb with boot nodes with nodeids, and remove default bootnodesids, just for testing",
+		Value: nil,
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -929,6 +953,32 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 			return
 		}
 		cfg.Node.DataDir = absdatadir
+	}
+
+	if ctx.GlobalIsSet(HpNumFlag.Name) {
+		res := ctx.GlobalInt(HpNumFlag.Name)
+		consensus.HpbNodenumber = res
+	}
+	if ctx.GlobalIsSet(HpVoteRndSelScpFlag.Name) {
+		res := ctx.GlobalInt(HpVoteRndSelScpFlag.Name)
+		consensus.NumberPrehp = res
+	}
+	if ctx.GlobalIsSet(IgnRewardRetErrFlag.Name) {
+		res := ctx.GlobalBool(IgnRewardRetErrFlag.Name)
+		consensus.IgnoreRetErr = res
+	}
+	if ctx.GlobalIsSet(GenBlkSecsFlag.Name) {
+		res := ctx.GlobalInt(GenBlkSecsFlag.Name)
+		cfg.Prometheus.Period = uint64(res)
+	}
+	if ctx.GlobalIsSet(BNodeidsFlag.Name) {
+		res := ctx.GlobalStringSlice(BNodeidsFlag.Name)
+		if nil != res && len(res) > 0 {
+			config.MainnetBootnodes = config.MainnetBootnodes[:0]
+			for _, v := range res {
+				config.MainnetBootnodes = append(config.MainnetBootnodes, v)
+			}
+		}
 	}
 
 	setNodeUserIdent(ctx, &cfg.Node)
