@@ -193,4 +193,5 @@ func SigHash(header *types.Header) (hash common.Hash) {
 func SetTestParam() {
 	StageNumberII = 1
 	StageNumberIII = 0
+	StageNumberIV = 1
 }

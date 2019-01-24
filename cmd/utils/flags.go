@@ -920,6 +920,12 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 			consensus.StageNumberIII = uint64(res[1])
 		}
 
+		if nil != res || len(res) == 3 {
+			consensus.StageNumberII = uint64(res[0])
+			consensus.StageNumberIII = uint64(res[1])
+			consensus.StageNumberIV = uint64(res[2])
+		}
+
 	}
 	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		res := ctx.GlobalString(ConfigFileFlag.Name)
