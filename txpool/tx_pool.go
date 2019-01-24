@@ -208,7 +208,7 @@ func (pool *TxPool) loop() {
 			pool.mu.Lock()
 			for addr := range pool.queue {
 				// Any old enough should be removed
-				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
+				if false {//time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					for _, tx := range pool.queue[addr].Flatten() {
 						pool.removeTx(tx.Hash())
 					}
@@ -344,11 +344,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	from, err := types.ASynSender(pool.signer, tx)
 	if err != nil {
-		log.Debug("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
+		log.Trace("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
 		from2, err := types.Sender(pool.signer, tx)
 
 		if err != nil {
-			log.Info("validateTx Sender ErrInvalidSender", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
+			log.Error("validateTx Sender ErrInvalidSender", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
 			return ErrInvalidSender
 		}
 		copy(from[0:],from2[0:])
@@ -409,6 +409,18 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
+
+	// If the transaction txpool pending is full
+	pendingnum := 0
+	for _, listnum := range pool.pending {
+		pendingnum += listnum.Len()
+	}
+	if uint64(pendingnum) >= pool.config.GlobalSlots {
+		log.Warn("TxPool pending is full", "pending size", pendingnum,
+			"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
+		return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
+	}
+
 	var t_start = time.Now().UnixNano()/1000
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
@@ -420,8 +432,9 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
-	t_end := time.Now().UnixNano()/1000
+
 	recerr := pool.addTxLocked(tx)
+	t_end := time.Now().UnixNano()/1000
 	if recerr != nil {
 		deleteErr := types.SMapDelete(types.Asynsinger, pool.signer.Hash(tx))
 		if deleteErr != nil {
@@ -446,11 +459,11 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 
 				from, err := types.ASynSender(pool.signer, tx) // already validated
 				if err != nil{
-					log.Info("addTxsLocked ASynSender Error","tx.bash",tx.Hash())
+					log.Trace("addTxsLocked ASynSender Error","tx.bash",tx.Hash())
 
 					from2, err := types.Sender(pool.signer, tx) // already validated
 					if err != nil{
-						log.Info("addTxsLocked Sender Error","tx.bash",tx.Hash())
+						log.Error("addTxsLocked Sender Error","tx.bash",tx.Hash())
 					}
 
 					copy(from[0:], from2[0:])
@@ -496,10 +509,10 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 	if !replace {
 		from, err := types.ASynSender(pool.signer, tx) // already validated
 		if err != nil {
-			log.Info("addTxLocked ASynSender Error","tx.bash",tx.Hash())
+			log.Trace("addTxLocked ASynSender Error","tx.bash",tx.Hash())
 			from2, err := types.Sender(pool.signer, tx) // already validated
 			if err != nil {
-				log.Info("addTxLocked Sender Error","tx.bash",tx.Hash())
+				log.Error("addTxLocked Sender Error","tx.bash",tx.Hash())
 			}
 			copy(from[0:],from2[0:])
 		}
@@ -522,10 +535,10 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	from, err := types.ASynSender(pool.signer, tx) // already validated
 
 	if err != nil{
-		log.Info("add ASynSender error","tx.hash",tx.Hash())
+		log.Trace("add ASynSender error","tx.hash",tx.Hash())
 		from2, err := types.Sender(pool.signer, tx) // already validated
 		if err !=nil{
-			log.Info("add Sender error")
+			log.Error("add Sender error")
 		}
 		copy(from[0:],from2[0:])
 	}
@@ -607,11 +620,6 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 	// Gather all the accounts potentially needing updates
-	var accFlag bool
-	if accounts == nil {
-		accFlag=true
-	}
-
 	if accounts == nil {
 		accounts = make([]common.Address, 0, len(pool.queue))
 		for addr := range pool.queue {
@@ -668,13 +676,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.queue, addr)
 		}
 	}
-	if accFlag {
 
-		pool.keepFit()
-	}else{
-
-		pool.keepFitSend()
-	}
+	pool.keepFit()
 }
 
 // demoteUnexecutables removes invalid and processed transactions from the pools
@@ -1083,8 +1086,8 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 
 // State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
-	pool.mu.RLock()
-	defer pool.mu.RUnlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	return pool.pendingState
 }

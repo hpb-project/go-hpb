@@ -162,11 +162,23 @@ func (p *PeerBase) ID() discover.NodeID {
 	return p.rw.id
 }
 
+
+func (p *PeerBase) Version() string {
+
+	log.Info("version","v",p.rw.their.Version,"n",p.rw.their.Name)
+	switch p.rw.their.Version {
+	case 0x0001:
+		return "1.0.3.1"
+	case 0x0002:
+		return "1.0.3.2"
+	}
+	return "UnknownNode"
+}
+
 // Name returns the node name that the remote node advertised.
 func (p *PeerBase) Name() string {
 	return p.rw.their.Name
 }
-
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *PeerBase) Caps() []Cap {
 	// TODO: maybe return copy

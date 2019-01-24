@@ -222,7 +222,7 @@ func PostRecoverPubkey() {
                 rs.Sig[64] = fullsig[96]
                 copy(rs.Pub, pubkey65)
             }else{
-                log.Error("boe async callback recover pubkey failed, and goto soft recover.")
+                log.Debug("boe async callback recover pubkey failed, and goto soft recover.")
                 copy(rs.Hash, fullsig[64:96])
                 copy(rs.Sig[0:32], fullsig[0:32])
                 copy(rs.Sig[32:64],fullsig[32:64])
@@ -269,7 +269,7 @@ func (boe *BoeHandle) Release() (error) {
     if ret == C.BOE_OK {
         return nil
     }
-    fmt.Printf("[boe]Release ecode:%d\r\n", uint32(ret.ecode))
+    log.Error("boe", "Release ecode:", uint32(ret.ecode))
     C.boe_err_free(ret)
     return ErrInitFailed
 }
@@ -285,7 +285,7 @@ func (boe *BoeHandle) GetBindAccount()(string, error){
         var str string = string(acc[:])
         return str,nil
     }
-    fmt.Printf("[boe]GetBindAccount ecode:%d\r\n", uint32(ret.ecode))
+    log.Debug("boe","GetBindAccount ecode", uint32(ret.ecode))
     C.boe_err_free(ret)
     return "",ErrGetAccountFailed
 
@@ -298,7 +298,8 @@ func (boe *BoeHandle) GetVersion() (TVersion,error) {
         var v TVersion = TVersion{H:int(H), M:int(M), F:int(F), D:int(D)}
         return v,nil
     }
-    //fmt.Printf("[boe]GetVersion ecode:%d\r\n", uint32(ret.ecode))
+    log.Debug("boe","GetVersion ecode", uint32(ret.ecode))
+
     C.boe_err_free(ret)
     var v TVersion
     return v,ErrInitFailed
@@ -315,7 +316,8 @@ func (boe *BoeHandle) GetBoeId() (string,error){
     var sn string
     ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
     if ret != C.BOE_OK{
-        fmt.Printf("[boe]ecode:%d\r\n", uint32(ret.ecode))
+        log.Debug("boe","GetBoeId ecode", uint32(ret.ecode))
+
         C.boe_err_free(ret)
         return "", ErrGetSNFailed
     }
@@ -416,11 +418,9 @@ func (boe *BoeHandle) ASyncValidateSign(hash []byte, r []byte, s []byte, v byte)
 
     c_ret := C.boe_valid_sign_recover_pub_async(c_sig)
     if c_ret == C.BOE_OK {
-        //log.Error("boe async valid sign success")
         return nil
     }else {
-        log.Error("boe async validate sign failed")
-        fmt.Printf("error code = %d.\n", uint32(c_ret.ecode));
+        log.Debug("boe async validate sign failed", "error code ", uint32(c_ret.ecode))
     }
     return ErrSignCheckFailed
 }
@@ -446,7 +446,7 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
         result[0] = 4
         return result,nil
     }else {
-        log.Error("boe validate sign timeout")
+        log.Debug("boe validate sign failed","error code",uint32(c_ret.ecode))
     }
 
     var (
@@ -460,38 +460,9 @@ func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]b
         return nil, ErrSignCheckFailed
     }
     copy(result[:], pub[0:])
-    log.Trace("software   validate sign success")
+    log.Debug("software   validate sign success")
 
     return result, nil
-
-    // need boe validate without boe //TODO to debug the function of boe
-   /* if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "bootnode" || config.GetHpbConfigInstance().Network.RoleType == "synnode"{
-        // use software
-        var (
-            sig = make([]byte, 65)
-        )
-        copy(sig[32-len(r):32], r)
-        copy(sig[64-len(s):64], s)
-        sig[64] = v
-        pub, err := crypto.Ecrecover(hash[:], sig)
-        if(err != nil) {
-            return nil, ErrSignCheckFailed
-        }
-        copy(result[:], pub[0:])
-        log.Trace("software   validate sign success")
-
-        return result, nil
-    }else {
-        c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-        //loushl change to debug
-        if c_ret == C.BOE_OK {
-            log.Trace("boe validate sign success")
-            result[0] = 4
-            return result,nil
-        }else {
-            panic("Boe validate sign fail")
-        }
-    }*/
 }
 
 
@@ -505,4 +476,30 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
         return result, nil
     }
     return nil, ErrGetNextHashFailed
+
+}
+
+/*
+ *  New Hash algorithm, supported by boe firmware v1.0.0.2
+ */
+func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
+    var result = make([]byte, 32)
+    if len(hash) != 32 {
+        return nil, ErrGetNextHashFailed
+    }
+    version,err := boe.GetVersion()
+    if err != nil {
+        return nil, ErrGetNextHashFailed
+    }
+    // The Hash_v2 is added at version v1.0.0.2.
+    if version.F > 0 || version.D >= 2 {
+        var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+        if ret == C.BOE_OK {
+            return result, nil
+        }
+    }else {
+        log.Error("BOE firmware version is too low, not support Hash_v2.")
+    }
+    return nil, ErrGetNextHashFailed
+
 }

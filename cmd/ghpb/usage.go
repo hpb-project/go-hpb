@@ -149,6 +149,11 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.TestModeFlag,
 			utils.RPCVirtualHostsFlag,
 			utils.TestCodeStageFlag,
+			utils.HpNumFlag,
+			utils.HpVoteRndSelScpFlag,
+			utils.IgnRewardRetErrFlag,
+			utils.GenBlkSecsFlag,
+			utils.BNodeidsFlag,
 		},
 	},
 	{

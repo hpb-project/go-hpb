@@ -183,6 +183,9 @@ type Nodeconfig struct {
 
 	//1:test code  0:release code
 	TestCodeParam uint8
+
+	//consensus config file name
+	FNameConsensusCfg string
 }
 
 // NodeDB returns the path to the discovery node database.
