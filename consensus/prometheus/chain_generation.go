@@ -408,7 +408,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
-		if config.GetHpbConfigInstance().Node.TestMode != 1 || consensus.IgnoreRetErr == true {
+		if config.GetHpbConfigInstance().Node.TestMode != 1 || consensus.IgnoreRetErr != true {
 			return nil, err
 		}
 	}
