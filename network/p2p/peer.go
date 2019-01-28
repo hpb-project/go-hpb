@@ -168,7 +168,7 @@ func (p *PeerBase) Version() string {
 	log.Info("version","v",p.rw.their.Version,"n",p.rw.their.Name)
 	switch p.rw.their.Version {
 	case 0x0001:
-		return "1.0.3.1"
+		return "1.0.3.1 or before"
 	case 0x0002:
 		return "1.0.3.2"
 	}

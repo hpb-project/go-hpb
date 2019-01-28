@@ -408,6 +408,7 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 		info := &PeerInfo{
 			ID:     p.ID().TerminalString(),
 			Name:   p.Name(),
+			Version:p.Version(),
 			Remote: p.remoteType.ToString(),
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
