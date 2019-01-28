@@ -51,7 +51,7 @@ var (
 
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
-	StageNumberIV  uint64 = 1200000
+	StageNumberIV  uint64 = 120000000000
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
 )
