@@ -214,6 +214,10 @@ func boecheck(ctx *cli.Context) error {
 	log.Trace("start boe hardware check")
 	boehandle.HWCheck()
 	log.Trace("boe hardware check complete")
+	version,err := boehandle.GetVersion()
+	if err == nil {
+		log.Info("boe ","firmware version",version.VersionString())
+	}
 	return nil
 }
 

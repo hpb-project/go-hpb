@@ -26,6 +26,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/network/p2p"
 )
 
@@ -50,11 +51,29 @@ The output of this command is supposed to be machine-readable.
 )
 
 func version(ctx *cli.Context) error {
+
+	boehandle := boe.BoeGetInstance()
+	err := boehandle.Init()
+	var boeversion = ""
+
+	if err != nil {
+		boeversion = "Have no boe"
+	} else {
+		version, e := boehandle.GetVersion()
+		if e != nil {
+			boeversion = "Get failed"
+		} else {
+			boeversion = version.VersionString()
+		}
+	}
+
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", config.Version)
 	if gitCommit != "" {
 		fmt.Println("Git Commit:", gitCommit)
 	}
+
+	fmt.Println("BOE Firmware:", boeversion)
 	fmt.Println("Architecture:", runtime.GOARCH)
 	fmt.Println("Protocol Versions:", p2p.ProtocolVersions)
 	fmt.Println("Network Id:", config.DefaultConfig.NetworkId)
