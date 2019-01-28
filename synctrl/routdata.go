@@ -121,7 +121,7 @@ func routBlock(block *types.Block, propagate bool) {
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
-
+/*
 // routingTx will propagate a transaction to peers by type which are not known to
 // already have the given transaction.
 func routTx(hash common.Hash, tx *types.Transaction) {
@@ -165,6 +165,108 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 		default:
 			break
 		}
+	}
+
+	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+*/
+
+
+// routingTx will propagate a transaction to peers by type which are not known to
+// already have the given transaction.
+func routTx(hash common.Hash, tx *types.Transaction) {
+	// Broadcast transaction to a batch of peers not knowing about it
+
+	if tx.IsForward() {
+		routForwardTx(hash,tx)
+	} else {
+		tx.SetForward(true)
+		routNativeTx(hash,tx)
+	}
+}
+
+func routNativeTx(hash common.Hash, tx *types.Transaction) {
+	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
+	if len(peers) == 0 { return }
+
+	switch p2p.PeerMgrInst().GetLocalType() {
+	case discover.HpNode:
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			}
+		}
+		break
+	case discover.PreNode:
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			}
+		}
+
+		toPreCount := 0
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.PreNode:
+				sendTransactions(peer, types.Transactions{tx})
+				toPreCount += 1
+				break
+			}
+			if toPreCount >= 1 {
+				break
+			}
+		}
+
+		break
+	case discover.SynNode:
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			}
+		}
+
+		toPreCount := 0
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.PreNode:
+				sendTransactions(peer, types.Transactions{tx})
+				toPreCount += 1
+				break
+			}
+
+			if toPreCount >= 1 {
+				break
+			}
+		}
+		break
+	}
+	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+}
+
+func routForwardTx(hash common.Hash, tx *types.Transaction) {
+	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
+	if len(peers) == 0 { return }
+
+	switch p2p.PeerMgrInst().GetLocalType() {
+	case discover.HpNode:
+		break
+	case discover.PreNode:
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+				break
+			}
+		}
+		break
+	case discover.SynNode:
+		break
 	}
 
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))

@@ -170,7 +170,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*PeerBase, 
 	nodes := s.ntab.FindNodes()
 	for _, n := range nodes {
 		if addDial(dynDialedConn, n) {
-			log.Debug("Add node to dial task.", "id", n.ID)
+			log.Trace("Add node to dial task.", "id", n.ID)
 		}
 	}
 
@@ -232,7 +232,7 @@ func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	}
 	for _, v := range dialHistroyAddr {
 		if v == addr.String() {
-			log.Debug("dile histroy", "len=", len(dialHistroyAddr), "restime:", time.Now().Unix()-fronttime)
+			log.Trace("dile histroy", "len=", len(dialHistroyAddr), "restime:", time.Now().Unix()-fronttime)
 			return false
 		}
 	}

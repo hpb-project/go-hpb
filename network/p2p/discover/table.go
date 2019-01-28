@@ -125,7 +125,8 @@ func (tab *Table) FindNodes()(buf []*Node) {
 		}
 	}
 
-	log.Trace("Read all nodes from boot","cont",count,"buf",buf)
+	log.Debug("Read all nodes from boot", "count", count)
+	log.Trace("Read all nodes from boot", "cont", count, "buf", buf)
 	return buf
 }
 

@@ -26,6 +26,11 @@ const (
 	ProtocolV111    uint = 100 // match up protocol versions and messages versions
 	SubProtocolV111 uint = 100 // Light Hpb Sub-protocol versions
 )
+
+/*
+!!!every change of version should sub VersionID one number!!!
+ */
+const VersionID  uint64 = 0x0002
 const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release

@@ -123,6 +123,15 @@ func InstancePrometheus() *Prometheus {
 // 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
+func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
+	if number < consensus.StageNumberIV {
+		return c.hboe.GetNextHash(lastrand)
+	} else {
+		return c.hboe.GetNextHash_v2(lastrand)
+	}
+
+}
+
 // 实现引擎的Prepare函数
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
 
@@ -154,7 +163,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Debug("parentheader.HardwareRandom is nil or length is not 32")
 			}
-			if boehwrand, err := c.hboe.GetNextHash(parentheader.HardwareRandom); err != nil {
+			if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
 				return err
 			} else {
 				if len(boehwrand) != 0 {
@@ -400,7 +409,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
-		if config.GetHpbConfigInstance().Node.TestMode != 1 {
+		if config.GetHpbConfigInstance().Node.TestMode != 1 && consensus.IgnoreRetErr != true {
 			return nil, err
 		}
 	}

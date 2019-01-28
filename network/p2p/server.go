@@ -36,6 +36,7 @@ import (
 	"strings"
 	"path/filepath"
 	"os"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -355,7 +356,7 @@ func (srv *Server) Start() (err error) {
 	srv.ntab = ntab
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: MsgVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
+	srv.ourHandshake = &protoHandshake{Version: config.VersionID, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End:ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -503,8 +504,19 @@ running:
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
 			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
+			err := srv.encHandshakeChecks(peers, c)
+			if err == DiscAlreadyConnected {
+				log.Debug("####discAlreadyConnected", "nid", c.id[0:8])
+				nid := c.id
+				delete(peers, nid)
+				shortid := fmt.Sprintf("%x", nid[0:8])
+				if err := PeerMgrInst().unregister(shortid); err != nil {
+					log.Debug("Peer removal failed", "peer", shortid, "err", err)
+				}
+				srv.ntab.RemoveNode(nid)
+			}
 			select {
-			case c.cont <- srv.encHandshakeChecks(peers, c):
+			case c.cont <- err:
 			case <-srv.quit:
 				break running
 			}
@@ -541,8 +553,8 @@ running:
 			// A peer disconnected.
 			nid := pd.ID()
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Info("Removing p2p peer", "duration", d)
-			pd.log.Debug("Removing p2p peer", "duration", d, "req", pd.requested, "err", pd.err)
+			//pd.log.Info("Removing p2p peer", "duration", d)
+			pd.log.Info("Removing p2p peer", "id", nid, "duration", d, "req", pd.requested, "err", pd.err)
 			delete(peers, nid)
 
 			shortid := fmt.Sprintf("%x", nid[0:8])
@@ -594,6 +606,8 @@ func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *
 func (srv *Server) encHandshakeChecks(peers map[discover.NodeID]*PeerBase, c *conn) error {
 	switch {
 	case peers[c.id] != nil:
+		p := peers[c.id]
+		go p.Disconnect(DiscAlreadyConnected)
 		return DiscAlreadyConnected
 	case c.id == srv.Self().ID:
 		return DiscSelf
@@ -678,8 +692,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
-	srv.setupLock.Lock()
-	defer  srv.setupLock.Unlock()
+	//srv.setupLock.Lock()
+	//defer srv.setupLock.Unlock()
 
 	// Run the encryption handshake.
 	var err error
@@ -798,7 +812,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 func  (srv *Server) updateHdtab(pairs [] HwPair, boot bool) error {
 
-	log.Debug("hw pairs from prometheus","boot",boot,"pairs",pairs)
+	log.Trace("hw pairs from prometheus", "boot", boot, "pairs", pairs)
 
 	if len(srv.hdtab) == len(pairs) {
 		theSame := true
@@ -824,7 +838,8 @@ func  (srv *Server) updateHdtab(pairs [] HwPair, boot bool) error {
 		}
 	}
 
-	log.Info("server need to update hardware table","boot", boot, "our", len(srv.hdtab), "there", len(pairs),"hdtab",pairs)
+	log.Trace("server need to update hardware table", "boot", boot, "our", len(srv.hdtab), "there", len(pairs), "hdtab", pairs)
+	log.Debug("server need to update hardware table", "boot", boot, "our", len(srv.hdtab), "there", len(pairs))
 	srv.hdlock.Lock()
 	defer srv.hdlock.Unlock()
 	srv.hdtab = pairs

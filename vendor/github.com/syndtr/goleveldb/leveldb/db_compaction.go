@@ -763,6 +763,14 @@ func (db *DB) mCompaction() {
 		}
 	}
 }
+func (db *DB) resumeWrite() bool {
+	v := db.s.version()
+	defer v.release()
+	if v.tLen(0) < db.s.o.GetWriteL0PauseTrigger() {
+		return true
+	}
+	return false
+}
 
 func (db *DB) tCompaction() {
 	var x cCmd
@@ -794,6 +802,13 @@ func (db *DB) tCompaction() {
 			case <-db.closeC:
 				return
 			default:
+			}
+			if len(ackQ) > 0 && db.resumeWrite() {
+				for i := range ackQ {
+					ackQ[i].ack(nil)
+					ackQ[i] = nil
+				}
+				ackQ = ackQ[:0]
 			}
 		} else {
 			for i := range ackQ {

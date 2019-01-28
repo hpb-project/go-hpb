@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	mrand "math/rand"
 	"net"
 	"sync"
@@ -41,12 +40,11 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/golang/snappy"
 	"github.com/hpb-project/go-hpb/common/log"
 )
 
 const (
-    MaxMsgSize = 50 * 1024 * 1024
+	MaxMsgSize = 50 * 1024 * 1024
 
 	sskLen = 16 // ecies.MaxSharedKeyLength(pubKey) / 2
 	sigLen = 65 // elliptic S256
@@ -63,7 +61,7 @@ const (
 
 	// total timeout for encryption handshake and protocol
 	// handshake in both directions.
-	handshakeTimeout = 5 * time.Second
+	handshakeTimeout = 10 * time.Second
 
 	// This is the timeout for sending the disconnect reason.
 	// This is shorter than the usual timeout because we don't want
@@ -141,8 +139,6 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("write error: %v", err)
 	}
-	// If the protocol version supports Snappy encoding, upgrade immediately
-	t.rw.snappy = their.Version >= snappyProtocolVersion
 
 	return their, nil
 }
@@ -629,18 +625,6 @@ func newRLPXFrameRW(conn io.ReadWriter, s secrets) *rlpxFrameRW {
 func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	ptype, _ := rlp.EncodeToBytes(msg.Code)
 
-	// if snappy is enabled, compress message now
-	if rw.snappy {
-		if msg.Size > MaxMsgSize {
-			log.Error("Write message length >= 16MB.")
-			return errPlainMessageTooLarge
-		}
-		payload, _ := ioutil.ReadAll(msg.Payload)
-		payload = snappy.Encode(nil, payload)
-
-		msg.Payload = bytes.NewReader(payload)
-		msg.Size = uint32(len(payload))
-	}
 	// write header
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size
@@ -737,27 +721,6 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	msg.Size = uint32(content.Len())
 	msg.Payload = content
 
-	// if snappy is enabled, verify and decompress message
-	if rw.snappy {
-		payload, err := ioutil.ReadAll(msg.Payload)
-		if err != nil {
-			log.Debug("rlpx frame head snappy","err",err)
-			return msg, err
-		}
-		size, err := snappy.DecodedLen(payload)
-		if err != nil {
-			return msg, err
-		}
-		if size > int(MaxMsgSize) {
-			log.Error("Read message size overflows uint24.")
-			//return msg, errPlainMessageTooLarge
-		}
-		payload, err = snappy.Decode(nil, payload)
-		if err != nil {
-			return msg, err
-		}
-		msg.Size, msg.Payload = uint32(size), bytes.NewReader(payload)
-	}
 	return msg, nil
 }
 

@@ -19,11 +19,13 @@ package p2p
 import (
 	"fmt"
 	"math/big"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"time"
-	"runtime/debug"
 )
 
 // Protocol represents a P2P subprotocol implementation.
@@ -176,6 +178,9 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	// main loop. handle incoming messages.
 	p.log.Info("Start hpb message loop.")
+	if p.localType != discover.BootNode && p.remoteType == discover.BootNode {
+		go hp.proBondall(p)
+	}
 	for {
 		if err := hp.handleMsg(p); err != nil {
 
@@ -230,6 +235,9 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
 			p.log.Debug("Handle nodes information message.","msg",msg,"err",err)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 
@@ -243,7 +251,10 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			p.log.Trace("Process syn get msg","msg",msg,"err",err)
+			p.log.Debug("Process syn get msg", "msg", msg, "err", err)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 
@@ -309,6 +320,7 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 		}
 	case <-timeout.C:
 		p.log.Error("Send node to remote timeout")
+		return DiscReadTimeout
 	}
 
 	return nil
@@ -327,26 +339,82 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 	toBondNode := make([]*discover.Node, 0, len(request.Nodes))
 	//log.Error("############","self",self,"Nodes",request.Nodes)
 	//log.Error("############","Peers",PeerMgrInst().PeersAll())
+	nodes := p.ntab.FindNodes()
+	log.Info("Received nodes from remote", "requestlen", len(request.Nodes), "len buckets", len(nodes))
+	log.Trace("nodeInfo", "received:", request.Nodes, "buckets", nodes)
+	btest := true
 	for _, n := range request.Nodes {
 		if self == n.ID {
 			continue
 		}
-
+		bInbuckets := false
 		pid := fmt.Sprintf("%x", n.ID[0:8])
 		//p.log.Error("############","pid",pid,"peer", PeerMgrInst().Peer(pid))
-		if PeerMgrInst().Peer(pid) == nil{
-			toBondNode = append(toBondNode,n)
+		if btest {
+			for _, node := range nodes {
+				nodeid := fmt.Sprintf("%x", node.ID[0:8])
+				if pid == nodeid {
+					bInbuckets = true
+					break
+				}
+			}
+			if bInbuckets {
+				continue
+			}
+		}
+		if PeerMgrInst().Peer(pid) == nil {
+			toBondNode = append(toBondNode, n)
+			p.chbond <- n
 		}
 	}
 
-	//log.Error("############","len",len(toBondNode))
-	if len(toBondNode) > 0{
-		log.Trace("Discovery new nodes to bonding.","Nodes",toBondNode)
-		go p.ntab.Bondall(toBondNode)
-	}
+	//if len(toBondNode) > 0 {
+	//	log.Trace("Discovery new nodes to bonding.", "Nodes", toBondNode)
+	//	go p.ntab.Bondall(toBondNode)
 
+	//}
 
 	return nil
 }
 
-
+func (hp *HpbProto) proBondall(p *Peer) {
+	log.Info("proBondall start")
+	timer := time.NewTimer(15 * time.Second)
+	defer timer.Stop()
+	toBondNode := make([]*discover.Node, 0, 100)
+	var lock sync.RWMutex
+	//这里还缺少一个退出机制
+	for {
+		select {
+		case <-timer.C:
+			if len(toBondNode) > 0 {
+				log.Info("start proBondall", "lenbond", len(toBondNode))
+				lock.RLock()
+				p.ntab.Bondall(toBondNode)
+				lock.RUnlock()
+				lock.Lock()
+				toBondNode = append(toBondNode[0:0], toBondNode[0:0]...)
+				lock.Unlock()
+				log.Info("end proBondall", "lenbond", len(toBondNode))
+			}
+			timer.Reset(15 * time.Second)
+		case bondnode := <-p.chbond:
+			btobond := true
+			bondnodeid := fmt.Sprintf("%x", bondnode.ID[:])
+			//log.Info("node:", "bondinfo", bondnodeid)
+			for _, node := range toBondNode {
+				tobondid := fmt.Sprintf("%x", node.ID[:])
+				//log.Info("node:", "nodeinfo", tobondid)
+				if tobondid == bondnodeid {
+					btobond = false
+					break
+				}
+			}
+			if btobond {
+				lock.Lock()
+				toBondNode = append(toBondNode, bondnode)
+				lock.Unlock()
+			}
+		}
+	}
+}

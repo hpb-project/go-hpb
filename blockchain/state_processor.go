@@ -66,6 +66,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
+	synsigner := types.MakeSigner(p.config)
+	go func(txs []*types.Transaction) {
+		//types.ASynSender(synsigner, nil)
+		for _, tx := range txs {
+			types.ASynSender(synsigner, tx)
+		}
+	}(block.Transactions())
 
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
@@ -78,11 +85,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if len(msg.Data()) != 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		} else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		}
@@ -90,6 +99,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+	go func(txs []*types.Transaction) {
+		//types.ASynSender(synsigner, nil)
+		for _, tx := range txs {
+			types.Deletesynsinger(synsigner, tx)
+		}
+	}(block.Transactions())
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
 		return nil, nil, nil, errfinalize

@@ -428,15 +428,16 @@ func (ps *peerSet) Register(p *peerConnection) error {
 // actions to/from that particular entity.
 func (ps *peerSet) Unregister(id string) error {
 	ps.lock.Lock()
+	defer ps.lock.Unlock()
 	p, ok := ps.peers[id]
 	if !ok {
-		defer ps.lock.Unlock()
-		return errNotRegistered
+		log.Debug("peer is not fond in list.")
+		return nil
 	}
-	delete(ps.peers, id)
-	ps.lock.Unlock()
-
 	ps.peerDropFeed.Send(p)
+	delete(ps.peers, id)
+
+
 	return nil
 }
 

@@ -136,6 +136,7 @@ type Peer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
+	chbond      chan *discover.Node
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 }
@@ -161,11 +162,23 @@ func (p *PeerBase) ID() discover.NodeID {
 	return p.rw.id
 }
 
+
+func (p *PeerBase) Version() string {
+
+	log.Info("version","v",p.rw.their.Version,"n",p.rw.their.Name)
+	switch p.rw.their.Version {
+	case 0x0001:
+		return "1.0.3.1"
+	case 0x0002:
+		return "1.0.3.2"
+	}
+	return "UnknownNode"
+}
+
 // Name returns the node name that the remote node advertised.
 func (p *PeerBase) Name() string {
 	return p.rw.their.Name
 }
-
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *PeerBase) Caps() []Cap {
 	// TODO: maybe return copy
@@ -334,7 +347,7 @@ func (p *PeerBase) updateNodesLoop() {
 				return
 			}
 			//p.log.Info("######Update nodes form BootNode start.")
-			nodeTime.Reset(nodereqInterval)
+			nodeTime.Reset(8 * nodereqInterval)
 		case <-p.closed:
 			p.log.Debug("PeerBase update nodes loop CLOSED")
 			return
@@ -482,6 +495,7 @@ func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),
+		chbond:      make(chan *discover.Node, 1),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
