@@ -253,7 +253,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		}
 		if _, ok := snap.Signers[signer]; !ok {
 			for _, v := range snap.Signers {
-				log.Debug("verify fail consensus.ErrUnauthorized", "snap.Signer", v)
+				log.Trace("verify fail consensus.ErrUnauthorized", "snap.Signer", v)
 			}
 			return consensus.ErrUnauthorized
 		}
@@ -383,7 +383,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
 		rankingmap[v] = float64(bandrank[v])*0.5 + float64(balancerank[v])*0.15 + float64(voterank[v])*0.35
-		log.Debug("**********************+three item ranking info******************", "addr", v, "bandwith", bandrank[v], "balance", balancerank[v], "vote", voterank[v], "number", number)
+		log.Trace("**********************+three item ranking info******************", "addr", v, "bandwith", bandrank[v], "balance", balancerank[v], "vote", voterank[v], "number", number)
 	}
 
 	random := crypto.Keccak256(header.Number.Bytes())

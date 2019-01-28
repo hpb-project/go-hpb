@@ -453,7 +453,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		A.Quo(A, big.NewFloat(float64(c.config.Period)))
 		A.Mul(A, secondsfloat)
 	}
-	log.Debug("CalculateRewards calc reward mining one block", "hpb coin", A)
+	log.Trace("CalculateRewards calc reward mining one block", "hpb coin", A)
 
 	//mul 2/3
 	A.Mul(A, big.NewFloat(2))
@@ -491,7 +491,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 			for _, v := range hpsnap.GetHpbNodes() {
 				state.AddBalance(v, finalhpbrewards)
-				log.Debug(">>>>>>>>>reward hpnode in the snapshot<<<<<<<<<<<<", "addr", v, "reward value", finalhpbrewards)
+				log.Trace(">>>>>>>>>reward hpnode in the snapshot<<<<<<<<<<<<", "addr", v, "reward value", finalhpbrewards)
 			}
 		} else {
 			return err
@@ -527,7 +527,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 				for _, caddress := range csnap.CanAddresses {
 					state.AddBalance(caddress, cadReward) //reward every cad node average
-					log.Debug("<<<<<<<<<<<<<<<reward prenode in the snapshot>>>>>>>>>>", "addr", caddress, "reward value", cadReward)
+					log.Trace("<<<<<<<<<<<<<<<reward prenode in the snapshot>>>>>>>>>>", "addr", caddress, "reward value", cadReward)
 				}
 			}
 
@@ -697,7 +697,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
 		tempaddrvotefloat.Int(tempreward)
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		log.Debug("++++++++++reward node with the vote contract++++++++++++", "addr", addr, "reward value", tempreward)
+		log.Trace("++++++++++reward node with the vote contract++++++++++++", "addr", addr, "reward value", tempreward)
 	}
 
 	return nil
@@ -817,7 +817,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	if votecounts.Cmp(big.NewInt(0)) == 0 {
 		return nil, nil, nil
 	}
-	log.Debug(">>>>>>>>>>>>>>get vote result<<<<<<<<<<<<<<<<<", "value", voteres)
+	log.Trace(">>>>>>>>>>>>>>get vote result<<<<<<<<<<<<<<<<<", "value", voteres)
 
 	return nil, votecounts, voteres
 }
@@ -829,33 +829,42 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 		return nil, nil
 	}
 
+	var bCalcZero = true
+	if number < consensus.StageNumberIV {
+		bCalcZero = false
+	}
+
 	mapaddrbandwithres := make(map[common.Address]*BandWithStatics)
 	for i := number - consensus.NumberBackBandwith; i < number-100; i++ {
 		if nil == chain.GetHeaderByNumber(i) {
-			log.Error("GetBandwithRes GetHeaderByNumber fail", "nmuber", i)
+			log.Warn("GetBandwithRes GetHeaderByNumber fail", "nmuber", i)
 			return nil, errors.New("GetBandwithRes GetHeaderByNumber fail")
 		}
 		//statistics prehp node bandwith
 		tempaddr1 := chain.GetHeaderByNumber(i).CandAddress
 		tempBandwith1 := chain.GetHeaderByNumber(i).Nonce[6]
-		if 0 != tempBandwith1 && 0xff != tempBandwith1 {
-			if v, ok := mapaddrbandwithres[tempaddr1]; !ok {
-				mapaddrbandwithres[tempaddr1] = &BandWithStatics{uint64(tempBandwith1), 1}
-			} else {
-				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith1)) / (v.Num + 1)
-				v.Num += 1
+		if 0xff != tempBandwith1 {
+			if 0 != tempBandwith1 || bCalcZero {
+				if v, ok := mapaddrbandwithres[tempaddr1]; !ok {
+					mapaddrbandwithres[tempaddr1] = &BandWithStatics{uint64(tempBandwith1), 1}
+				} else {
+					v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith1)) / (v.Num + 1)
+					v.Num += 1
+				}
 			}
 		}
 
 		//statistics comaddress node bandwith
 		tempaddr2 := chain.GetHeaderByNumber(i).ComdAddress
 		tempBandwith2 := chain.GetHeaderByNumber(i).Nonce[7]
-		if 0 != tempBandwith2 && 0xff != tempBandwith2 {
-			if v, ok := mapaddrbandwithres[tempaddr2]; !ok {
-				mapaddrbandwithres[tempaddr2] = &BandWithStatics{uint64(tempBandwith2), 1}
-			} else {
-				v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith2)) / (v.Num + 1)
-				v.Num += 1
+		if 0xff != tempBandwith2 {
+			if 0 != tempBandwith2 || bCalcZero {
+				if v, ok := mapaddrbandwithres[tempaddr2]; !ok {
+					mapaddrbandwithres[tempaddr2] = &BandWithStatics{uint64(tempBandwith2), 1}
+				} else {
+					v.AverageValue = (v.AverageValue*v.Num + uint64(tempBandwith2)) / (v.Num + 1)
+					v.Num += 1
+				}
 			}
 		}
 		//log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
@@ -944,7 +953,7 @@ func (c *Prometheus) GetAllBalances(addrlist []common.Address, state *state.Stat
 	}
 	for _, v := range arrayaddrwith {
 		mapBalance[v] = *state.GetBalance(v)
-		log.Debug("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(v))
+		log.Trace("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(v))
 	}
 	return mapBalance, nil
 }
@@ -1093,7 +1102,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		}
 		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
-	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
+	log.Trace(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
 
 	return nil, res
 }
@@ -1103,7 +1112,7 @@ func PreDealNodeInfo(pairs []p2p.HwPair) (error, []p2p.HwPair) {
 		return consensus.Errnilparam, nil
 	}
 	res := make([]p2p.HwPair, 0, len(pairs))
-	log.Debug("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", pairs) //for test
+	log.Trace("PrepareBlockHeader from p2p.PeerMgrInst().HwInfo() return", "value", pairs) //for test
 	for i := 0; i < len(pairs); i++ {
 		if len(pairs[i].Adr) != 0 {
 			pairs[i].Adr = strings.Replace(pairs[i].Adr, " ", "", -1)
@@ -1113,7 +1122,7 @@ func PreDealNodeInfo(pairs []p2p.HwPair) (error, []p2p.HwPair) {
 	if 0 == len(res) {
 		return errors.New("input node info addr all zero"), nil
 	}
-	log.Debug(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res, "length", len(res))
+	log.Trace(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res, "length", len(res))
 
 	return nil, res
 }
