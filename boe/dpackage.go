@@ -16,7 +16,7 @@ import (
 type Release struct {
     Hv      int `json:"hv"`
     Mv      int `json:"mv"`
-    Fv      int `json:"lv"`
+    Fv      int `json:"fv"`
     Dv      int `json:"dv"`
     File     string `json:"file"`
     Time     string `json:"time"`
@@ -125,7 +125,7 @@ func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
             nmver := release.Mv
             nfver := release.Fv
             ndver := release.Dv
-            //fmt.Printf("hv:%d, mv:%d, lv:%d\n", hver, mver, lver)
+            //fmt.Printf("nhver=0x%02x,finfo.Hv=0x%02x\n", nhver, finfo.Hv)
             if vMajor(nhver) == vMajor(finfo.Hv) {
                 nvcnt := nmver * 1000000 + nfver * 1000 + ndver 
                 ovcnt := finfo.Mv * 1000000 + finfo.Fv * 1000 + finfo.Dv

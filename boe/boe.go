@@ -192,6 +192,11 @@ func cArrayToGoArray(ca unsafe.Pointer, goArray []byte, size int) {
     }
 }
 
+func (t TVersion) VersionString() string {
+    var v = fmt.Sprintf("%d.%d.%d.%d",t.H,t.M,t.F,t.D)
+    return v
+}
+
 
 func PostRecoverPubkey() {
     var r *C.SResult
