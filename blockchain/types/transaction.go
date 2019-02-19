@@ -73,8 +73,7 @@ type txdata struct {
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
 
-	Forward bool `json:"forward" gencodec:"required"`
-
+	Forward bool `json:"forward" rlp:"-"`
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -341,7 +340,10 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
+	temp := tx.IsForward()
+	tx.SetForward(false)
 	v := rlpHash(tx)
+	tx.SetForward(temp)
 	tx.hash.Store(v)
 	return v
 }
