@@ -760,6 +760,16 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 	setNAT(ctx, &cfg.Network)
 	setListenAddress(ctx, &cfg.Network)
+
+	if ctx.GlobalIsSet(BNodeidsFlag.Name) {
+		res := ctx.GlobalStringSlice(BNodeidsFlag.Name)
+		if nil != res && len(res) > 0 {
+			config.MainnetBootnodes = config.MainnetBootnodes[:0]
+			for _, v := range res {
+				config.MainnetBootnodes = append(config.MainnetBootnodes, v)
+			}
+		}
+	}
 	setBootstrapNodes(ctx, &cfg.Network)
 	setHTTP(ctx, &cfg.Network)
 	setWS(ctx, &cfg.Network)
@@ -976,15 +986,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(GenBlkSecsFlag.Name) {
 		res := ctx.GlobalInt(GenBlkSecsFlag.Name)
 		cfg.Prometheus.Period = uint64(res)
-	}
-	if ctx.GlobalIsSet(BNodeidsFlag.Name) {
-		res := ctx.GlobalStringSlice(BNodeidsFlag.Name)
-		if nil != res && len(res) > 0 {
-			config.MainnetBootnodes = config.MainnetBootnodes[:0]
-			for _, v := range res {
-				config.MainnetBootnodes = append(config.MainnetBootnodes, v)
-			}
-		}
 	}
 
 	setNodeUserIdent(ctx, &cfg.Node)
