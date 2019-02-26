@@ -350,7 +350,7 @@ func ASynrecoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, e
 
 	err := boe.BoeGetInstance().ASyncValidateSign(sighash.Bytes(), r, s, V)
 	if err != nil {
-		log.Error("boe validatesign error")
+		log.Trace("boe validatesign error")
 		return common.Address{}, err
 	}
 	log.Trace("ASynrecoverPlain Send to BOE OK", "sighash", sighash)
