@@ -70,10 +70,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	go func(txs []*types.Transaction) {
 		//types.ASynSender(synsigner, nil)
 		for _, tx := range txs {
-			_, err := types.ASynSender(synsigner, tx)
-			if err != nil {
-				synsigner.Sender(tx)
-			}
+			types.ASynSender(synsigner, tx)
 		}
 	}(block.Transactions())
 

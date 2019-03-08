@@ -493,10 +493,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 func (pool *TxPool) GoTxsAsynSender(txs []*types.Transaction) error {
 	for _, tx := range txs {
 		log.Trace("goTxsAsynSender ASynSender","tx.hash",tx.Hash())
-		_, err := types.ASynSender(pool.signer, tx) // already ASynSender
-		if err != nil {
-			pool.signer.Sender(tx)
-		}
+		types.ASynSender(pool.signer, tx) // already ASynSender
 	}
 	return nil
 }
