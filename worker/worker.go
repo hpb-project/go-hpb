@@ -18,22 +18,24 @@ package worker
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
-	
-	"gopkg.in/fatih/set.v0"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/blockchain/types"
+
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/txpool"
+	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -91,10 +93,10 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux          *sub.TypeMux
-	pool         *txpool.TxPool
-	txCh         chan bc.TxPreEvent
-	txSub		 sub.Subscription
+	mux   *sub.TypeMux
+	pool  *txpool.TxPool
+	txCh  chan bc.TxPreEvent
+	txSub sub.Subscription
 	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
@@ -103,7 +105,7 @@ type worker struct {
 	wg           sync.WaitGroup
 
 	producers map[Producer]struct{}
-	recv   chan *Result
+	recv      chan *Result
 
 	chain   *bc.BlockChain
 	proc    bc.Validator
@@ -125,35 +127,34 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address, /*eth Backend,*/ mux *sub.TypeMux) *worker {
+func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address /*eth Backend,*/, mux *sub.TypeMux) *worker {
 	worker := &worker{
-		config:         config,
-		engine:         engine,
-		mux:            mux,
+		config: config,
+		engine: engine,
+		mux:    mux,
 		/*txCh:           make(chan bc.TxPreEvent, txChanSize),*/
 		chainHeadCh:    make(chan bc.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan bc.ChainSideEvent, chainSideChanSize),
-		chainDb:        nil,//hpbdb.ChainDbInstance(),
+		chainDb:        nil, //hpbdb.ChainDbInstance(),
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          bc.InstanceBlockChain(),
 		proc:           bc.InstanceBlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
-		producers:         make(map[Producer]struct{}),
+		producers:      make(map[Producer]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
 	// Subscribe TxPreEvent for tx pool
 	//TODO new event system
 	/*txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.TxPreEvent:
-				log.Error("--------receive txpreevent-------", "msg", msg.Message.Nonce())
-				this.routingTx(msg.Message.Hash(), msg.Message)
-				//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
-			}
-		})*/
-
+	func(payload interface{}) {
+		switch msg := payload.(type) {
+		case event.TxPreEvent:
+			log.Error("--------receive txpreevent-------", "msg", msg.Message.Nonce())
+			this.routingTx(msg.Message.Hash(), msg.Message)
+			//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
+		}
+	})*/
 
 	worker.pool = txpool.GetTxPool()
 	worker.txCh = make(chan bc.TxPreEvent, txChanSize)
@@ -250,35 +251,35 @@ func (self *worker) unregister(producer Producer) {
 }
 
 func (self *worker) eventListener() {
-	
+
 	defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
 	//TODO new event system
 	/*txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
-		func(payload interface{}) {
-			switch msg := payload.(type) {
-			case event.TxPreEvent:
-				if msg.Message.Nonce() % 10000  == 0{
-					log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
-				}
-
-				//worker.txCh <- msg.Message
-				if atomic.LoadInt32(&self.mining) == 0 {
-					self.currentMu.Lock()
-					acc, _ := types.Sender(self.current.signer, msg.Message)
-					txs := map[common.Address]types.Transactions{acc: {msg.Message}}
-					txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-
-					self.current.commitTransactions(self.mux, txset, self.coinbase)
-					self.currentMu.Unlock()
-				}
-
-
-
+	func(payload interface{}) {
+		switch msg := payload.(type) {
+		case event.TxPreEvent:
+			if msg.Message.Nonce() % 10000  == 0{
+				log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
 			}
-		})*/
+
+			//worker.txCh <- msg.Message
+			if atomic.LoadInt32(&self.mining) == 0 {
+				self.currentMu.Lock()
+				acc, _ := types.Sender(self.current.signer, msg.Message)
+				txs := map[common.Address]types.Transactions{acc: {msg.Message}}
+				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
+
+				self.current.commitTransactions(self.mux, txset, self.coinbase)
+				self.currentMu.Unlock()
+			}
+
+
+
+		}
+	})*/
 
 	for {
 		// A real event arrived, process interesting content
@@ -295,7 +296,6 @@ func (self *worker) eventListener() {
 
 		// Handle TxPreEvent
 
-		
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
@@ -307,7 +307,6 @@ func (self *worker) eventListener() {
 				self.current.commitTransactions(self.mux, txset, self.coinbase)
 				self.currentMu.Unlock()
 			}
-		
 
 		// System stopped
 		//case <-self.txSub.Err():
@@ -455,17 +454,20 @@ func (self *worker) startNewMinerRound() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-	
+
 	pstate, _ := self.chain.StateAt(parent.Root())
-	
-	if err := self.engine.PrepareBlockHeader(self.chain, header,pstate); err != nil {
+
+	if err := self.engine.PrepareBlockHeader(self.chain, header, pstate); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
-	
+
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
+		return
+	}
+	if p2p.PeerMgrInst().GetLocalType() == discover.SynNode || p2p.PeerMgrInst().GetLocalType() == discover.PreNode {
 		return
 	}
 	// Create the current work task and check any fork transitions needed
@@ -614,17 +616,17 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Address, gp *bc.GasPool) (error, []*types.Log) {
 
 	var receipt *types.Receipt
-	var err      error
+	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
 	if len(tx.Data()) != 0 {
-		receipt, _, err = bc.ApplyTransaction(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+		receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
 			return err, nil
 		}
-	}else {
-		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain,  &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+	} else {
+		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
 			return err, nil

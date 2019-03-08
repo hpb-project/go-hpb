@@ -97,7 +97,7 @@ func (this *SynCtrl) txsyncLoop() {
 		select {
 		case s := <-this.txsyncCh:
 			pending[s.p.ID()] = s
-			if !sending {
+			if !sending && s.p.RemoteType() != discover.SynNode {
 				send(s)
 			}
 		case err := <-done:

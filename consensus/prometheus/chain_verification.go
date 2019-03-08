@@ -307,6 +307,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainReader, header *types.Header, number uint64, verify bool) ([]*snapshots.CadWinner, []byte, error) {
 
+	if state == nil {
+		return nil, nil, errors.New("chain stateAt return nil")
+	}
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Error("GetNodeinfoFromContract err", "value", err)
