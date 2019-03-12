@@ -211,9 +211,13 @@ func boecheck(ctx *cli.Context) error {
 		log.Error("boe init failed", " ", error)
 		return error
 	}
-	log.Trace("start boe hardware check")
-	boehandle.HWCheck()
-	log.Trace("boe hardware check complete")
+	exist := boehandle.HWCheck()
+	if exist {
+		log.Info("boe is ok")
+	} else {
+		log.Info("boe not found")
+	}
+	
 	version,err := boehandle.GetVersion()
 	if err == nil {
 		log.Info("boe ","firmware version",version.VersionString())
