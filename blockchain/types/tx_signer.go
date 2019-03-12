@@ -242,7 +242,7 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	V.Sub(V, big8)
 
-	return ASynrecoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
@@ -335,7 +335,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	return addr, nil
 }
 
-func ASynrecoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
+func ASynrecoverPlain(txhash common.Hash, sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
 
 	if Vb.BitLen() > 8 {
 		log.Error("ASynrecoverPlain Vb.BitLen() > 8")
@@ -348,7 +348,7 @@ func ASynrecoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, e
 	}
 	r, s := R.Bytes(), S.Bytes()
 
-	err := boe.BoeGetInstance().ASyncValidateSign(sighash.Bytes(), r, s, V)
+	err := boe.BoeGetInstance().ASyncValidateSign(txhash.Bytes(), sighash.Bytes(), r, s, V)
 	if err != nil {
 		log.Trace("boe validatesign error")
 		return common.Address{}, err

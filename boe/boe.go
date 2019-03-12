@@ -26,10 +26,12 @@ package boe
 #include <stdio.h>
 
 #define RESULT_QUEUE_LEN (10000)
+#define HASH_LEN (32)
 #define SIG_LEN (97)
 #define PUB_LEN (64)
 
 typedef struct SResult{
+    unsigned char *txhash;
     unsigned char *sig;
     unsigned char *pub;
     unsigned int  flag;
@@ -38,6 +40,7 @@ typedef struct SResult{
 SResult *rsNew()
 {
     SResult *ret = (SResult*)malloc(sizeof(SResult));
+    ret->txhash = (unsigned char *)malloc(HASH_LEN);
     ret->sig = (unsigned char *)malloc(SIG_LEN);
     ret->pub = (unsigned char *)malloc(PUB_LEN+1);
     ret->flag = 0;
@@ -52,6 +55,8 @@ void rsFree(SResult *r)
             free(r->pub);
         if(r->sig)
             free(r->sig);
+        if(r->txhash)
+            free(r->txhash);
         free(r);
     }
 }
@@ -111,7 +116,7 @@ static void hex_dump(unsigned char * data, int len)
     printf("\n");
 }
 
-int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *userdata)
+int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, int param_len)
 {
     SResult *r = rsNew();
     if(sig)
@@ -120,6 +125,11 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *userdat
         //hex_dump(sig, SIG_LEN);
         memcpy(r->sig, sig, SIG_LEN);
     }
+    if(param)
+    {
+        memcpy(r->txhash, param, HASH_LEN);
+    }
+    
     if(pub)
     {
         //printf("%s: pub ", "recover_pubkey_callback");
@@ -161,6 +171,7 @@ type TVersion struct {
 
 // result for recover pubkey
 type RecoverPubkey struct {
+    TxHash []byte
     Hash []byte
     Sig  []byte
     Pub  []byte
@@ -224,8 +235,9 @@ func PostRecoverPubkey(boe *BoeHandle) {
             //time.Sleep(time.Duration(1)*time.Second)
         }else {
             var fullsig = make([]byte, 97)
-            rs := RecoverPubkey{Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
+            rs := RecoverPubkey{TxHash:make([]byte, 32), Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
 
+            cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
             cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
 //          log.Info("got result", "fullsig:", hex.EncodeToString(fullsig))
             if r.flag == 0 {
@@ -518,11 +530,12 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error){
     return result, nil
 }
 
-func (boe *BoeHandle) ASyncValidateSign(hash []byte, r []byte, s []byte, v byte) (error) {
+func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) (error) {
 
     var (
         m_sig  = make([]byte, 97)
         c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+        c_param = (*C.uchar)(unsafe.Pointer(&txhash[0]))
     )
 
     copy(m_sig[32-len(r):32], r)
@@ -530,11 +543,12 @@ func (boe *BoeHandle) ASyncValidateSign(hash []byte, r []byte, s []byte, v byte)
     copy(m_sig[96-len(hash):96], hash)
     m_sig[96] = v
 
-    c_ret := C.boe_valid_sign_recover_pub_async(c_sig)
+    c_ret := C.boe_valid_sign_recover_pub_async(c_sig, c_param, (C.int)(32))
     if c_ret == C.BOE_OK {
         return nil
     }else {
-        rs := RecoverPubkey{Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
+        rs := RecoverPubkey{TxHash:make([]byte, 32),Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
+        copy(rs.TxHash, txhash)
         copy(rs.Hash, hash)
         copy(rs.Sig[32-len(r):32], r)
         copy(rs.Sig[64-len(s):64], s)
