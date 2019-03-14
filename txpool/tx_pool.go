@@ -393,9 +393,9 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 		// If the transaction fails basic validation, discard it
 		if err := pool.validateTx(tx); err != nil {
 			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
-			deleteErr := types.SMapDelete(types.Asynsinger, pool.signer.Hash(tx))
+			deleteErr := types.SMapDelete(types.Asynsinger, tx.Hash())
 			if deleteErr != nil {
-				log.Error("txpool SMapDelete err", "tx.hash", tx.Hash(), "signer.hash", pool.signer.Hash(tx))
+				log.Error("txpool SMapDelete err", "tx.hash", tx.Hash())
 			}
 
 			return err
@@ -436,9 +436,9 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	recerr := pool.addTxLocked(tx)
 	t_end := time.Now().UnixNano()/1000
 	if recerr != nil {
-		deleteErr := types.SMapDelete(types.Asynsinger, pool.signer.Hash(tx))
+		deleteErr := types.SMapDelete(types.Asynsinger, tx.Hash())
 		if deleteErr != nil {
-			log.Error("txpool SMapDelete err", "tx.hash", tx.Hash(), "signer.hash", pool.signer.Hash(tx))
+			log.Error("txpool SMapDelete err", "tx.hash", tx.Hash())
 		}
 
 		log.Debug("AddTx err","cost",t_end - t_start)

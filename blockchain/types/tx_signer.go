@@ -96,7 +96,7 @@ func SMapSet(m *Smap, khash common.Hash, kaddress common.Address) error {
 }
 func Deletesynsinger(signer Signer, tx *Transaction) {
 	log.Trace("lenSigner", "len(synsigner)", len(Asynsinger.Data))
-	SMapDelete(Asynsinger, signer.Hash(tx))
+	SMapDelete(Asynsinger, tx.Hash())
 }
 
 // MakeSigner returns a Signer based on the given chain config and block number.
@@ -131,13 +131,13 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// call is not the same as used current, invalidate
 		// the cache.2
 		if sigCache.signer.Equal(signer) {
-			log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash(), "signer.Hash(tx)", signer.Hash(tx))
+			log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
 			return sigCache.from, nil
 		}
 	}
-	asynAddress, err := SMapGet(Asynsinger, signer.Hash(tx))
+	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
 	if err == nil {
-		log.Debug("SenderFunc find ASynSenderCache OK", "common.Address", asynAddress, "signer.Hash(tx)", signer.Hash(tx), "tx.hash", tx.Hash())
+		log.Debug("SenderFunc find ASynSenderCache OK", "common.Address", asynAddress,  "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: asynAddress})
 		return asynAddress, nil
 	}
@@ -147,11 +147,11 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		return common.Address{}, err
 	}
 	tx.from.Store(sigCache{signer: signer, from: addr})
-	errSet := SMapSet(Asynsinger, signer.Hash(tx), addr)
+	errSet := SMapSet(Asynsinger, tx.Hash(), addr)
 	if errSet != nil {
 		log.Info("Sender SMapSet error!")
 	}
-	log.Trace("Sender send ok", "tx.hash", tx.Hash(), "signer.Hash(tx)", signer.Hash(tx))
+	log.Trace("Sender send ok", "tx.hash", tx.Hash())
 	return addr, nil
 }
 func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
@@ -164,9 +164,9 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	asynAddress, err := SMapGet(Asynsinger, signer.Hash(tx))
+	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
 	if err == nil {
-		log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "signer.Hash(tx)", signer.Hash(tx), "tx.hash", tx.Hash())
+		log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: asynAddress})
 		return asynAddress, nil
 	}
@@ -382,12 +382,12 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	copy(addr[:], crypto.Keccak256(rs.Pub[1:])[12:])
 
 	var comhash common.Hash
-	copy(comhash[0:], rs.Hash[0:])
+	copy(comhash[0:], rs.TxHash[0:])
 
 	errSet := SMapSet(Asynsinger, comhash, addr)
 	if errSet != nil {
 		log.Error("boecallback SMapSet error!")
 	}
-	log.Trace("boecallback boe rec singer data success", "comhash", comhash, "rs.hash", rs.Hash, "addr", addr)
+	log.Trace("boecallback boe rec singer data success", "rs.txhash", rs.TxHash, "addr", addr)
 
 }

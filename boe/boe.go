@@ -357,13 +357,14 @@ func (boe *BoeHandle) Init()(error) {
         go boe.asyncSoftRecoverPubTask(boe.thPool[i].queue)
     }
 
-    C.initRQ()
-    go PostRecoverPubkey(boe)
+
     go postCallback(boe)
 
     ret := C.boe_init()
     if ret == C.BOE_OK {
         boe.boeInit = true
+	    C.initRQ()
+	    go PostRecoverPubkey(boe)
 
         C.boe_valid_sign_callback((C.BoeValidSignCallback)(unsafe.Pointer(C.recover_pubkey_callback)))
         return nil
