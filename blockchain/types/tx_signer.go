@@ -135,22 +135,13 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 			return sigCache.from, nil
 		}
 	}
-	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
-	if err == nil {
-		log.Debug("SenderFunc find ASynSenderCache OK", "common.Address", asynAddress,  "tx.hash", tx.Hash())
-		tx.from.Store(sigCache{signer: signer, from: asynAddress})
-		return asynAddress, nil
-	}
 
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
 	}
 	tx.from.Store(sigCache{signer: signer, from: addr})
-	errSet := SMapSet(Asynsinger, tx.Hash(), addr)
-	if errSet != nil {
-		log.Info("Sender SMapSet error!")
-	}
+
 	log.Trace("Sender send ok", "tx.hash", tx.Hash())
 	return addr, nil
 }
