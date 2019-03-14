@@ -44,32 +44,48 @@ func routBlock(block *types.Block, propagate bool) {
 			log.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
 			return
 		}
+
+		if int64(2) == block.Header().Difficulty.Int64() {
+			for _, peer := range peers {
+				switch peer.LocalType() {
+				case discover.HpNode:
+					switch peer.RemoteType() {
+					case discover.HpNode:
+						sendNewBlock(peer, block, td)
+						log.Debug("")
+						break
+					default:
+						break
+					}
+					break
+				default:
+					break
+				}
+			}
+		}
+
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
 			switch peer.LocalType() {
-			case discover.PreNode:
+			case discover.HpNode:
 				switch peer.RemoteType() {
-				case discover.PreNode:
+				case discover.HpNode:
 					sendNewBlock(peer, block, td)
 					break
-				case discover.SynNode:
+				case discover.PreNode:
 					sendNewBlock(peer, block, td)
 					break
 				default:
 					break
 				}
 				break
-			case discover.HpNode:
+			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
 					sendNewBlock(peer, block, td)
 					break
-				case discover.HpNode:
-					sendNewBlock(peer, block, td)
-					break
 				case discover.SynNode:
-					//ONLY FOR TEST
 					sendNewBlock(peer, block, td)
 					break
 				default:
@@ -83,12 +99,16 @@ func routBlock(block *types.Block, propagate bool) {
 		log.Trace("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
+
 	// Otherwise if the block is indeed in out own chain, announce it
 	if bc.InstanceBlockChain().HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
 			switch peer.LocalType() {
-			case discover.PreNode:
+			case discover.HpNode:
 				switch peer.RemoteType() {
+				case discover.HpNode:
+					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
+					break
 				case discover.PreNode:
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
@@ -99,12 +119,9 @@ func routBlock(block *types.Block, propagate bool) {
 					break
 				}
 				break
-			case discover.HpNode:
+			case discover.PreNode:
 				switch peer.RemoteType() {
 				case discover.PreNode:
-					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
-					break
-				case discover.HpNode:
 					sendNewBlockHashes(peer, []common.Hash{hash}, []uint64{block.NumberU64()})
 					break
 				case discover.SynNode:
@@ -121,62 +138,11 @@ func routBlock(block *types.Block, propagate bool) {
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
-/*
-// routingTx will propagate a transaction to peers by type which are not known to
-// already have the given transaction.
-func routTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	for _, peer := range peers {
-		switch peer.LocalType() {
-		case discover.PreNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.HpNode:
-			switch peer.RemoteType() {
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.SynNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		default:
-			break
-		}
-	}
-
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
-}
-*/
-
 
 // routingTx will propagate a transaction to peers by type which are not known to
 // already have the given transaction.
 func routTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
-
 	if tx.IsForward() {
 		routForwardTx(hash,tx)
 	} else {

@@ -107,6 +107,10 @@ type blockBody struct {
 type blockBodiesData []*blockBody
 
 func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
+	if peer.KnownBlockHas(block.Hash()){
+		log.Warn("Has send block msg.", "peerid", peer.ID(),"blockhash",block.Hash())
+		return nil
+	}
 	peer.KnownBlockAdd(block.Hash())
 	return p2p.SendData(peer, p2p.NewBlockMsg, []interface{}{block, td})
 }
