@@ -554,7 +554,7 @@ running:
 			nid := pd.ID()
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			//pd.log.Info("Removing p2p peer", "duration", d)
-			pd.log.Info("Removing p2p peer", "id", nid, "duration", d, "req", pd.requested, "err", pd.err)
+			pd.log.Info("Removing p2p peer", "id", nid, "duration", d, "type", pd.localType.ToString(), "req", pd.requested, "err", pd.err)
 			delete(peers, nid)
 
 			shortid := fmt.Sprintf("%x", nid[0:8])
