@@ -84,14 +84,14 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	bc := InstanceBlockChain()
 
 	var receipt *types.Receipt
-	var err      error
+	var err error
 
-	if len(tx.Data()) != 0 {
+	if tx.To() == nil || len(b.statedb.GetCode(*tx.To())) > 0 {
 		receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
 		if err != nil {
 
 		}
-	}else{
+	} else {
 		receipt, _, err = ApplyTransactionNonContract(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
 		if err != nil {
 		}
@@ -246,7 +246,6 @@ func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
 	return db, blockchain, err
 }
 */
-
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
 func makeHeaderChain(parent *types.Header, n int, db hpbdb.Database, seed int) []*types.Header {

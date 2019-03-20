@@ -18,12 +18,13 @@ package worker
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/network/p2p"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -35,7 +36,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/txpool"
-	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -619,7 +619,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	if len(tx.Data()) != 0 {
+	if tx.To() == nil || len(env.state.GetCode(*tx.To())) > 0 {
 		receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)

@@ -77,12 +77,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		msg, err := tx.AsMessage(types.MakeSigner(p.config))
-		if err != nil {
-			return nil, nil, nil, err
-		}
+		//msg, err := tx.AsMessage(types.MakeSigner(p.config))
+		//if err != nil {
+		//	return nil, nil, nil, err
+		//}
 		//the tx without contract
-		if len(msg.Data()) != 0 {
+		if tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
 				types.Deletesynsinger(synsigner, tx)
