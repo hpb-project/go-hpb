@@ -761,8 +761,8 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	//TODO update the new event system
 	//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
 	//TODO old event  system
-	//go pool.txFeed.Send(bc.TxPreEvent{tx})
-	pool.txFeed.Send(bc.TxPreEvent{tx})
+	go pool.txFeed.Send(bc.TxPreEvent{tx})
+	//pool.txFeed.Send(bc.TxPreEvent{tx})
 	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
 }
 
