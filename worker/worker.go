@@ -36,6 +36,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/txpool"
+	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -49,6 +50,8 @@ const (
 	chainHeadChanSize = 10
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	blockMaxTxs = 5000 * 9
 )
 
 // Agent can register themself with the worker
@@ -541,6 +544,9 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 
 	for {
 		// Retrieve the next transaction and abort if all done
+		if len(env.txs) >= blockMaxTxs {
+			break
+		}
 		tx := txs.Peek()
 		if tx == nil {
 			break
