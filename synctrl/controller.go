@@ -176,15 +176,23 @@ func (this *SynCtrl) Start() {
 }
 
 func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
-	// start new peer syn
-	this.newPeerCh <- peer
-
 	ps := &PeerSyn{peer}
 	this.syncTransactions(peer)
-	return this.syner.RegisterPeer(peer.GetID(), peer.GetVersion(), ps)
+	log.Debug("register net peer","pid",peer.GetID())
+
+	err := this.syner.RegisterPeer(peer.GetID(), peer.GetVersion(), ps)
+	if err != nil {
+		return err
+	}
+
+	// start new peer syn
+	time.Sleep(time.Millisecond*10)
+	this.newPeerCh <- peer
+	return nil
 }
 
 func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
+	log.Debug("unregister net peer","pid",peer.GetID())
 	return this.syner.UnregisterPeer(peer.GetID())
 }
 
