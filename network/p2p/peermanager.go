@@ -364,6 +364,7 @@ type PeerInfo struct {
 	ID      string `json:"id"`     // Unique node identifier (also the encryption key)
 	Name    string `json:"name"`   // Name of the node, including client type, version, OS, custom data
 	Version string `json:"version"`// Ghpb version
+	BoeVer  string `json:"boever"` // Boe version
 	Remote  string `json:"remote"` // Remote node type
 	Cap     string `json:"cap"`    // Sum-protocols advertised by this particular peer
 	Network struct {
@@ -389,7 +390,8 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 		info := &PeerInfo{
 			ID:     p.ID().TerminalString(),
 			Name:   p.Name(),
-			Version:p.Version(),
+			Version:p.Caps()[1].String(),
+			BoeVer :"BOOT-NO-BOE",
 			Remote: p.remoteType.ToString(),
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
@@ -408,7 +410,8 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 		info := &PeerInfo{
 			ID:     p.ID().TerminalString(),
 			Name:   p.Name(),
-			Version:p.Version(),
+			Version:p.Caps()[1].String(),
+			BoeVer: p.Caps()[2].String(),
 			Remote: p.remoteType.ToString(),
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
