@@ -120,6 +120,7 @@ func ErrResp(code errCode, format string, v ...interface{}) error {
 func (hp *HpbProto) handle(p *Peer) error {
 
 	defer func() {
+		p.msgLooping = false
 		if r := recover(); r != nil {
 			debug.PrintStack()
 			p.log.Error("Handle hpb message panic.","r",r)
@@ -173,6 +174,9 @@ func (hp *HpbProto) handle(p *Peer) error {
 	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
+		p.msgLooping = true
+
+		defer hp.onDropPeer(p)
 		p.log.Info("Network has register peer to syncer")
 	}
 
@@ -181,13 +185,9 @@ func (hp *HpbProto) handle(p *Peer) error {
 	if p.localType != discover.BootNode && p.remoteType == discover.BootNode {
 		go hp.proBondall(p)
 	}
+
 	for {
 		if err := hp.handleMsg(p); err != nil {
-
-			if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode && hp.onDropPeer != nil {
-				hp.onDropPeer(p)
-				p.log.Debug("Network has drop peer to notify syncer")
-			}
 			p.log.Debug("Stop hpb message loop.","error",err)
 			return err
 		}
@@ -223,7 +223,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 
 	if msg.Size > MaxMsgSize {
 		log.Error("Hpb protocol massage too large.","msg",msg)
-		return ErrResp(ErrMsgTooLarge, "%v > %v", msg.Size, MaxMsgSize)
+		return ErrResp(ErrMsgTooLarge, "msg too large %v > %v", msg.Size, MaxMsgSize)
 	}
 
 	// Handle the message depending on its contents

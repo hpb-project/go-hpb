@@ -120,6 +120,8 @@ type PeerBase struct {
 
 	beatStart  time.Time
 	count      uint64
+	msgLooping bool
+
 
 }
 
@@ -296,6 +298,7 @@ loop:
 	}
 
 
+	p.msgLooping = false
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
