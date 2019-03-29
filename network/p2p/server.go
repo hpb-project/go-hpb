@@ -360,6 +360,14 @@ func (srv *Server) Start() (err error) {
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
+	srv.ourHandshake.Caps = append(srv.ourHandshake.Caps,Cap{config.Version, 0})
+	v, err := boe.BoeGetInstance().GetVersion()
+	if err == nil{
+		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps,Cap{v.VersionString(), 0})
+	}else {
+		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps,Cap{"N.A", 0})
+		log.Error("p2p get boe version","error",err)
+	}
 	srv.ourHandshake.CoinBase = srv.CoinBase
 
 	if srv.ListenAddr == "" {

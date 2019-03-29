@@ -45,7 +45,7 @@ type Cap struct {
 }
 
 func (cap Cap) String() string {
-	return fmt.Sprintf("%s/%d", cap.Name, cap.Version)
+	return fmt.Sprintf("[%s/%d]", cap.Name, cap.Version)
 }
 
 ////////////////////////////////////////////////////////
