@@ -137,6 +137,12 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		//}
 	}
 
+	address, err := SMapGet(Asynsinger, tx.Hash())
+	if err == nil {
+		//log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
+		tx.from.Store(sigCache{signer: signer, from: address})
+		return address, nil
+	}
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
@@ -378,7 +384,7 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 
 	errSet := SMapSet(Asynsinger, comhash, addr)
 	if errSet != nil {
-		log.Error("boecallback SMapSet error!")
+		//log.Error("boecallback SMapSet error!")
 	}
 	log.Trace("boecallback boe rec singer data success", "rs.txhash", hex.EncodeToString(rs.TxHash), "addr", addr)
 

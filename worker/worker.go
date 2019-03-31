@@ -98,8 +98,8 @@ type worker struct {
 	// update loop
 	mux   *sub.TypeMux
 	pool  *txpool.TxPool
-	txCh  chan bc.TxPreEvent
-	txSub sub.Subscription
+	//txCh  chan bc.TxPreEvent
+	//txSub sub.Subscription
 	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
@@ -160,8 +160,8 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 	})*/
 
 	worker.pool = txpool.GetTxPool()
-	worker.txCh = make(chan bc.TxPreEvent, txChanSize)
-	worker.txSub = worker.pool.SubscribeTxPreEvent(worker.txCh)
+	//worker.txCh = make(chan bc.TxPreEvent, txChanSize)
+	//worker.txSub = worker.pool.SubscribeTxPreEvent(worker.txCh)
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	//对以上事件的监听
@@ -255,7 +255,7 @@ func (self *worker) unregister(producer Producer) {
 
 func (self *worker) eventListener() {
 
-	defer self.txSub.Unsubscribe()
+	//defer self.txSub.Unsubscribe()
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
@@ -298,28 +298,23 @@ func (self *worker) eventListener() {
 			self.uncleMu.Unlock()
 
 		// Handle TxPreEvent
-
-		case ev := <-self.txCh:
-			// Apply transaction to the pending state if we're not mining
-			if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
-				self.currentMu.Lock()
-				//acc, _ := types.Sender(self.current.signer, ev.Tx)
-				acc, err := types.ASynSender(self.current.signer, ev.Tx)
-				if err != nil {
-					log.Trace("ASynSender ErrInvalid")
-					from2, err := types.Sender(self.current.signer, ev.Tx)
-					if err != nil {
-						log.Error("Sender ErrInvalidSender")
-					}
-					copy(acc[0:], from2[0:])
-				}
-
-				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-
-				self.current.commitTransactions(self.mux, txset, self.coinbase)
-				self.currentMu.Unlock()
-			}
+		//
+		//case ev := <-self.txCh:
+		//	// Apply transaction to the pending state if we're not mining
+		//	if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
+		//		//log.Debug("worker.eventListener get txpreevent","len(txCh)", len(self.txCh))
+		//		self.currentMu.Lock()
+		//		//log.Debug("worker.eventListener get the currentMu lock")
+		//		acc, _ := types.Sender(self.current.signer, ev.Tx)
+		//		txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
+		//		txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
+		//
+		//		self.current.commitTransactions(self.mux, txset, self.coinbase)
+		//		self.currentMu.Unlock()
+		//		//log.Debug("worker.eventListener release the currentMu lock")
+		//	}else {
+		//		//log.Debug("worker.eventListener get txpreevent","len(txCh)", len(self.txCh))
+		//	}
 
 		// System stopped
 		//case <-self.txSub.Err():

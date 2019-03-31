@@ -396,7 +396,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 			deleteErr := types.SMapDelete(types.Asynsinger, tx.Hash())
 			if deleteErr != nil {
-				log.Error("txpool SMapDelete err", "tx.hash", tx.Hash())
+				//log.Error("txpool SMapDelete err", "tx.hash", tx.Hash())
 			}
 
 			return err
@@ -460,11 +460,11 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 
 				from, err := types.ASynSender(pool.signer, tx) // already validated
 				if err != nil {
-					log.Trace("addTxsLocked ASynSender Error", "tx.bash", tx.Hash())
+					//log.Trace("addTxsLocked ASynSender Error", "tx.bash", tx.Hash())
 
 					from2, err := types.Sender(pool.signer, tx) // already validated
 					if err != nil {
-						log.Error("addTxsLocked Sender Error", "tx.bash", tx.Hash())
+						//log.Error("addTxsLocked Sender Error", "tx.bash", tx.Hash())
 					}
 
 					copy(from[0:], from2[0:])
@@ -514,7 +514,7 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 			log.Trace("addTxLocked ASynSender Error", "tx.bash", tx.Hash())
 			from2, err := types.Sender(pool.signer, tx) // already validated
 			if err != nil {
-				log.Error("addTxLocked Sender Error", "tx.bash", tx.Hash())
+				//log.Error("addTxLocked Sender Error", "tx.bash", tx.Hash())
 			}
 			copy(from[0:], from2[0:])
 		}
@@ -592,10 +592,10 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 
 	from, err := types.ASynSender(pool.signer, tx) // already validated
 	if err != nil {
-		log.Info("enqueueTx ASynSender error", "tx.hash", tx.Hash())
+		//log.Info("enqueueTx ASynSender error", "tx.hash", tx.Hash())
 		from2, err := types.Sender(pool.signer, tx) // already validated
 		if err != nil {
-			log.Info("enqueueTx Sender error", "tx.bash", tx.Hash())
+			//log.Info("enqueueTx Sender error", "tx.bash", tx.Hash())
 		}
 		copy(from[0:], from2[0:])
 	}
@@ -762,7 +762,6 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
 	//TODO old event  system
 	go pool.txFeed.Send(bc.TxPreEvent{tx})
-	//pool.txFeed.Send(bc.TxPreEvent{tx})
 	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
 }
 
