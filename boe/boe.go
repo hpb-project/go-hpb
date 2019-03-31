@@ -199,10 +199,14 @@ type BoeHandle struct {
 }
 
 var (
-	boeHandle = &BoeHandle{boeInit: false, rpFunc: nil, maxThNum: 2}
+    boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:2}
+    soft_cnt                 uint32
+    hard_cnt                 uint32
+    async_call               uint32
+    sync_call                uint32
 )
 
-func BoeGetInstance() *BoeHandle {
+func BoeGetInstance() (*BoeHandle) {
 	return boeHandle
 }
 
@@ -237,7 +241,6 @@ func PostRecoverPubkey(boe *BoeHandle) {
 
 			cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
 			cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
-			//          log.Info("got result", "fullsig:", hex.EncodeToString(fullsig))
 			if r.flag == 0 {
 				//log.Error("boe async callback recover pubkey success.")
 				pubkey65 := make([]byte, 65)
@@ -246,7 +249,7 @@ func PostRecoverPubkey(boe *BoeHandle) {
 				copy(rs.Sig[0:32], fullsig[0:32])
 				copy(rs.Sig[32:64], fullsig[32:64])
 				rs.Sig[64] = fullsig[96]
-
+				hard_cnt++
 				copy(rs.Pub, pubkey65)
 				boe.postResult(&rs, err)
 			} else {
@@ -329,12 +332,37 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 			if err == nil {
 				copy(rs.Pub, pub)
 			}
+			soft_cnt++
 			boe.postResult(&rs, err)
 		}
 	}
 }
 
-func (boe *BoeHandle) Init() error {
+func (boe *BoeHandle) performance(){
+    duration := time.Second * 1
+    timer := time.NewTimer(duration)
+    defer timer.Stop()
+
+    soft_cnt = 0
+    hard_cnt = 0
+    for {
+        timer.Reset(duration)
+        select {
+        case <- timer.C:
+            if !boe.bcontinue {
+                return
+            }
+            if soft_cnt > 0 || hard_cnt > 0 {
+                log.Debug("boe performance","hard_cnt", hard_cnt, "soft_cnt", soft_cnt, "async_call", async_call, "sync_call", sync_call)
+            }
+            soft_cnt = 0
+            hard_cnt = 0
+            async_call = 0
+            sync_call = 0
+        }
+    }
+}
+func (boe *BoeHandle) Init() (error) {
 	if boe.bcontinue {
 		return nil
 	}
@@ -354,6 +382,7 @@ func (boe *BoeHandle) Init() error {
 	}
 
 	go postCallback(boe)
+	go boe.performance()
 
 	ret := C.boe_init()
 	if ret == C.BOE_OK {
@@ -369,7 +398,7 @@ func (boe *BoeHandle) Init() error {
 	return ErrInitFailed
 }
 
-func (boe *BoeHandle) Release() error {
+func (boe *BoeHandle) Release() (error) {
 
 	boe.bcontinue = false
 	ret := C.boe_release()
@@ -412,7 +441,7 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	return v, ErrInitFailed
 }
 
-func (boe *BoeHandle) GetRandom() []byte {
+func (boe *BoeHandle) GetRandom() ([]byte) {
 	var ran = make([]byte, 32)
 	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
 	return ran
@@ -450,11 +479,11 @@ func (boe *BoeHandle) FWUpdate() error {
 		fmt.Println("download firmware failed.")
 		return err
 	}
-	var len = len(image)
-	fmt.Println("image len = %d", len)
+	var ilen = len(image)
+	fmt.Printf("image len = %d\n", ilen)
 
 	C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
-	var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(len))
+	var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(ilen))
 	if ret == C.BOE_OK {
 		fmt.Println("upgrade successed.")
 		return nil
@@ -525,7 +554,19 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 	return result, nil
 }
 
-func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
+func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) (error) {
+    async_call = async_call + 1
+    if (async_call >= 100) && (async_call %2 == 0) {
+        rs := RecoverPubkey{TxHash:make([]byte, 32),Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
+        copy(rs.TxHash, txhash)
+        copy(rs.Hash, hash)
+        copy(rs.Sig[32-len(r):32], r)
+        copy(rs.Sig[64-len(s):64], s)
+        rs.Sig[64] = v
+        boe.postToSoft(&rs)
+
+        return nil
+    }
 
 	var (
 		m_sig   = make([]byte, 97)
@@ -556,21 +597,22 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
 
-	var (
-		result = make([]byte, 65)
-		m_sig  = make([]byte, 97)
-		c_sig  = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-	)
-	copy(m_sig[32-len(r):32], r)
-	copy(m_sig[64-len(s):64], s)
-	copy(m_sig[96-len(hash):96], hash)
-	m_sig[96] = v
+    //var (
+    //    result = make([]byte, 65)
+    //    m_sig  = make([]byte, 97)
+    //    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+    //)
+    //sync_call = sync_call + 1
+    //copy(m_sig[32-len(r):32], r)
+    //copy(m_sig[64-len(s):64], s)
+    //copy(m_sig[96-len(hash):96], hash)
+    //m_sig[96] = v
 
-	c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-	if c_ret == C.BOE_OK {
-		result[0] = 4
-		return result, nil
-	}
+    //c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+    //if c_ret == C.BOE_OK {
+    //    result[0] = 4
+    //    return result,nil
+    //}
 
 	return softRecoverPubkey(hash, r, s, v)
 }
