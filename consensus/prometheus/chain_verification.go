@@ -312,7 +312,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	}
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
-		log.Error("GetNodeinfoFromContract err", "value", err)
+		log.Debug("GetNodeinfoFromContract err", "value", err)
 		//return err
 	GETBOOTNODEINFO:
 		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()

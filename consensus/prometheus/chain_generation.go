@@ -208,7 +208,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
 			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
-		log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
+		log.Trace(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
 
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
@@ -278,7 +278,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Debug("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
+	log.Debug("GenBlockWithSig signer's address", "signer", signer.Hex(), "number", number)
 
 	c.lock.RUnlock()
 

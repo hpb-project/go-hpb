@@ -340,7 +340,7 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 	//log.Error("############","self",self,"Nodes",request.Nodes)
 	//log.Error("############","Peers",PeerMgrInst().PeersAll())
 	nodes := p.ntab.FindNodes()
-	log.Info("Received nodes from remote", "requestlen", len(request.Nodes), "len buckets", len(nodes))
+	log.Debug("Received nodes from remote", "requestlen", len(request.Nodes), "len buckets", len(nodes))
 	log.Trace("nodeInfo", "received:", request.Nodes, "buckets", nodes)
 	btest := true
 	for _, n := range request.Nodes {
