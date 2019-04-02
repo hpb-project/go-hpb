@@ -132,7 +132,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	}
 	for i := 0; i < len(delhpsmap); i++ {
 		bestCadWinners = append(bestCadWinners, &snapshots.CadWinner{NetworkId: "", Address: delhpsmap[i], VoteIndex: uint64(rankingdata[delhpsmap[i]] * 100)})
-		log.Debug("bestCadWinners-----------info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
+		log.Debug("bestCadWinners info", "addr", delhpsmap[i], "ranking", uint64(rankingdata[delhpsmap[i]]))
 	}
 
 	if len(bestCadWinners) == 0 {
