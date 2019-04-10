@@ -124,7 +124,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
-	if number < consensus.StageNumberIV {
+	if number < consensus.StageNumberV {
 		return c.hboe.GetNextHash(lastrand)
 	} else {
 		return c.hboe.GetNextHash_v2(lastrand)
