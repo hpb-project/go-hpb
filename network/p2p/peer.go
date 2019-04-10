@@ -120,6 +120,8 @@ type PeerBase struct {
 
 	beatStart  time.Time
 	count      uint64
+	msgLooping bool
+
 
 }
 
@@ -164,14 +166,15 @@ func (p *PeerBase) ID() discover.NodeID {
 
 
 func (p *PeerBase) Version() string {
+	if len(p.Caps()) >= 3 {
+		return p.Caps()[1].String()+"&"+p.Caps()[2].String()
+	}
 
-	log.Info("version","v",p.rw.their.Version,"n",p.rw.their.Name)
 	switch p.rw.their.Version {
 	case 0x0001:
-		return "1.0.3.1 or before"
-	case 0x0002:
-		return "1.0.3.2"
+		return "[1.0.3.1 or before]&[N.A/0]"
 	}
+
 	return "UnknownNode"
 }
 
@@ -296,6 +299,7 @@ loop:
 	}
 
 
+	p.msgLooping = false
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()

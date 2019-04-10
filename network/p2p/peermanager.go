@@ -329,6 +329,11 @@ func (prm *PeerManager) BestPeer() *Peer {
 		if p.remoteType == discover.SynNode {
 			continue
 		}
+
+		if p.msgLooping == false {
+			continue
+		}
+
 		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
 			bestPeer, bestTd = p, td
 		}

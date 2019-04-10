@@ -55,9 +55,9 @@ func deriveSigner(V *big.Int) Signer {
 type Transaction struct {
 	data txdata
 	// caches
-	hash    atomic.Value
-	size    atomic.Value
-	from    atomic.Value
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
 }
 
 type txdata struct {
@@ -382,7 +382,12 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	}
 
 	var err error
-	msg.from, err = Sender(s, tx)
+	//msg.from, err = Sender(s, tx)
+	msg.from, err = ASynSender(s, tx)
+	if err != nil {
+		//log.Trace("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
+		msg.from, err = Sender(s, tx)
+	}
 	return msg, err
 }
 
@@ -540,8 +545,14 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price based heap with the head transactions
+	var block_max_txs = 45000
+	var cnt = 0
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {
+		cnt += 1
+		if cnt >= block_max_txs {
+			break
+		}
 		heads = append(heads, accTxs[0])
 		// Ensure the sender address is from the signer
 		acc, _ := Sender(signer, accTxs[0])

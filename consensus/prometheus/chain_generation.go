@@ -208,7 +208,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
 			header.ComdAddress = cadWinner[1].Address // 设置地址
 		}
-		log.Debug(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
+		log.Trace(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
 
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
@@ -278,7 +278,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RLock()
 	signer, signFn := c.signer, c.signFn
 
-	log.Debug("GenBlockWithSig-------------+++++ signer's address", "signer", signer.Hex(), "number", number)
+	log.Debug("GenBlockWithSig signer's address", "signer", signer.Hex(), "number", number)
 
 	c.lock.RUnlock()
 
@@ -421,6 +421,10 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 
 // 计算奖励
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) error {
+	if header.Number.Uint64()%consensus.HpbNodeCheckpointInterval != 0 && header.Number.Uint64() > consensus.StageNumberIV {
+		log.Debug("CalculateRewards number is not 200 mulitple, do not reward", "number", header.Number)
+		return nil
+	}
 	// Select the correct block reward based on chain progression
 	var bigIntblocksoneyear = new(big.Int)
 	secondsoneyesr := big.NewFloat(60 * 60 * 24 * 365)                         //seconds in one year
@@ -448,7 +452,9 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		seconds.Sub(fromtime, tempheader.Time)
 		secondsfloat := big.NewFloat(0)
 		secondsfloat.SetInt(seconds)
-		secondsfloat.Quo(secondsfloat, big.NewFloat(200))
+		if header.Number.Uint64() <= consensus.StageNumberIV {
+			secondsfloat.Quo(secondsfloat, big.NewFloat(200))
+		}
 
 		A.Quo(A, big.NewFloat(float64(c.config.Period)))
 		A.Mul(A, secondsfloat)

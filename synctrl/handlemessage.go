@@ -407,7 +407,12 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		p.KnownTxsAdd(tx.Hash())
 	}
 	//batch TxsAsynSender
-	go txpool.GetTxPool().GoTxsAsynSender(txs)
-	txpool.GetTxPool().AddTxs(txs)
+	if len(txs) > 1 {
+		go txpool.GetTxPool().GoTxsAsynSender(txs)
+		go txpool.GetTxPool().AddTxs(txs)
+	}else {
+		go txpool.GetTxPool().AddTxs(txs)
+	}
+
 	return nil
 }

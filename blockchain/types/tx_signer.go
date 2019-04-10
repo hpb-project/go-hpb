@@ -18,6 +18,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -32,8 +33,8 @@ import (
 )
 
 var (
-	ErrInvalidChainId        = errors.New("invalid chain id for signer")
-	ErrInvalidAsynsinger     = errors.New("invalid chain id  Asyn Send OK for signer")
+	ErrInvalidChainId    = errors.New("invalid chain id for signer")
+	ErrInvalidAsynsinger = errors.New("invalid chain id  Asyn Send OK for signer")
 )
 
 // sigCache is used to cache the derived sender and contains
@@ -61,7 +62,7 @@ func SMapDelete(m *Smap, khash common.Hash) error {
 	delete(m.Data, khash)
 	kvalue, ok := m.Data[khash]
 	if ok == true {
-		log.Debug("SMapDelete err", "m.Data[khash]", kvalue)
+		log.Trace("SMapDelete err", "m.Data[khash]", kvalue)
 		return errors.New("SMapDelete err")
 	}
 	log.Trace(" SMapDelete OK", "khash", khash, "kvalue", kvalue)
@@ -74,7 +75,7 @@ func SMapGet(m *Smap, khash common.Hash) (common.Address, error) {
 
 	kvalue, ok := m.Data[khash]
 	if ok != true {
-		log.Debug("SMapGet hash values is null error", "m.Data[khash]", m.Data[khash])
+		log.Trace("SMapGet hash values is null error", "m.Data[khash]", m.Data[khash])
 		return common.Address{}, errors.New("SMapGet hash values is null")
 	}
 	log.Trace(" SMapGet OK", "khash", khash, "kvalue", kvalue)
@@ -88,7 +89,7 @@ func SMapSet(m *Smap, khash common.Hash, kaddress common.Address) error {
 	m.Data[khash] = kaddress
 	from, ok := m.Data[khash]
 	if ok != true {
-		log.Error("SMapSet hash values is null error", "from", from)
+		log.Trace("SMapSet hash values is null error", "from", from)
 		return errors.New("SMapSet hash values is null")
 	}
 	log.Trace("SMapSet ok", "SMapSet from", from)
@@ -96,7 +97,7 @@ func SMapSet(m *Smap, khash common.Hash, kaddress common.Address) error {
 }
 func Deletesynsinger(signer Signer, tx *Transaction) {
 	log.Trace("lenSigner", "len(synsigner)", len(Asynsinger.Data))
-	SMapDelete(Asynsinger, signer.Hash(tx))
+	SMapDelete(Asynsinger, tx.Hash())
 }
 
 // MakeSigner returns a Signer based on the given chain config and block number.
@@ -130,43 +131,40 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
 		// the cache.2
-		if sigCache.signer.Equal(signer) {
-			log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash(), "signer.Hash(tx)", signer.Hash(tx))
-			return sigCache.from, nil
-		}
-	}
-	asynAddress, err := SMapGet(Asynsinger, signer.Hash(tx))
-	if err == nil {
-		log.Debug("SenderFunc find ASynSenderCache OK", "common.Address", asynAddress, "signer.Hash(tx)", signer.Hash(tx), "tx.hash", tx.Hash())
-		tx.from.Store(sigCache{signer: signer, from: asynAddress})
-		return asynAddress, nil
+		//if sigCache.signer.Equal(signer) {
+		//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
+		return sigCache.from, nil
+		//}
 	}
 
+	address, err := SMapGet(Asynsinger, tx.Hash())
+	if err == nil {
+		//log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
+		tx.from.Store(sigCache{signer: signer, from: address})
+		return address, nil
+	}
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
 	}
 	tx.from.Store(sigCache{signer: signer, from: addr})
-	errSet := SMapSet(Asynsinger, signer.Hash(tx), addr)
-	if errSet != nil {
-		log.Info("Sender SMapSet error!")
-	}
-	log.Trace("Sender send ok", "tx.hash", tx.Hash(), "signer.Hash(tx)", signer.Hash(tx))
+
+	log.Trace("Sender send ok", "tx.hash", tx.Hash())
 	return addr, nil
 }
 func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
-		if sigCache.signer.Equal(signer) {
-			log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
-			return sigCache.from, nil
-		}
+		//if sigCache.signer.Equal(signer) {
+		//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
+		return sigCache.from, nil
+		//}
 	}
 
-	asynAddress, err := SMapGet(Asynsinger, signer.Hash(tx))
+	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
 	if err == nil {
-		log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "signer.Hash(tx)", signer.Hash(tx), "tx.hash", tx.Hash())
+		log.Trace("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: asynAddress})
 		return asynAddress, nil
 	}
@@ -242,7 +240,7 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	V.Sub(V, big8)
 
-	return ASynrecoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
@@ -335,7 +333,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	return addr, nil
 }
 
-func ASynrecoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
+func ASynrecoverPlain(txhash common.Hash, sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
 
 	if Vb.BitLen() > 8 {
 		log.Error("ASynrecoverPlain Vb.BitLen() > 8")
@@ -348,7 +346,7 @@ func ASynrecoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, e
 	}
 	r, s := R.Bytes(), S.Bytes()
 
-	err := boe.BoeGetInstance().ASyncValidateSign(sighash.Bytes(), r, s, V)
+	err := boe.BoeGetInstance().ASyncValidateSign(txhash.Bytes(), sighash.Bytes(), r, s, V)
 	if err != nil {
 		log.Trace("boe validatesign error")
 		return common.Address{}, err
@@ -382,12 +380,12 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	copy(addr[:], crypto.Keccak256(rs.Pub[1:])[12:])
 
 	var comhash common.Hash
-	copy(comhash[0:], rs.Hash[0:])
+	copy(comhash[0:], rs.TxHash[0:])
 
 	errSet := SMapSet(Asynsinger, comhash, addr)
 	if errSet != nil {
-		log.Error("boecallback SMapSet error!")
+		//log.Error("boecallback SMapSet error!")
 	}
-	log.Trace("boecallback boe rec singer data success", "comhash", comhash, "rs.hash", rs.Hash, "addr", addr)
+	log.Trace("boecallback boe rec singer data success", "rs.txhash", hex.EncodeToString(rs.TxHash), "addr", addr)
 
 }
