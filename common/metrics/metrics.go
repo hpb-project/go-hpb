@@ -23,13 +23,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deathowl/go-metrics-prometheus"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
-	"net/http"
+	//"net/http"
+	//"github.com/deathowl/go-metrics-prometheus"
+	//"github.com/prometheus/client_golang/prometheus"
+	//"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
@@ -41,26 +41,28 @@ var Enabled = true
 // Init enables or disables the metrics system. Since we need this to run before
 // any other code gets to create meters and timers, we'll actually do an ugly hack
 // and peek into the command line args for the metrics flag.
-func Start() {
+func init() {
 	for _, arg := range os.Args {
 		if strings.TrimLeft(arg, "-") == MetricsEnabledFlag {
 			log.Info("Enabling metrics collection")
 			Enabled = true
 		}
 	}
-	prometheusRegistry := prometheus.NewRegistry()
-	prometheusRegistry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
-	prometheusRegistry.MustRegister(prometheus.NewGoCollector())
-	metricsRegistry := metrics.DefaultRegistry
-	pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "go_hpb", "", prometheusRegistry, 1*time.Second)
-	go pClient.UpdatePrometheusMetrics()
-	exp.Exp(metricsRegistry)
-	go func() {
-		http.Handle("/metrics", promhttp.InstrumentMetricHandler(
-			prometheusRegistry, promhttp.HandlerFor(prometheusRegistry, promhttp.HandlerOpts{}),
-		))
-		http.ListenAndServe("0.0.0.0:8080", nil)
-	}()
+	exp.Exp(metrics.DefaultRegistry)
+
+	//prometheusRegistry := prometheus.NewRegistry()
+	//prometheusRegistry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	//prometheusRegistry.MustRegister(prometheus.NewGoCollector())
+	//metricsRegistry := metrics.DefaultRegistry
+	//pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "go_hpb", "", prometheusRegistry, 1*time.Second)
+	//go pClient.UpdatePrometheusMetrics()
+	//
+	//go func() {
+	//	http.Handle("/metrics", promhttp.InstrumentMetricHandler(
+	//		prometheusRegistry, promhttp.HandlerFor(prometheusRegistry, promhttp.HandlerOpts{}),
+	//	))
+	//	http.ListenAndServe("0.0.0.0:8080", nil)
+	//}()
 }
 
 // NewCounter create a new metrics Counter, either a real one of a NOP stub depending
