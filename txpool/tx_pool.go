@@ -88,6 +88,7 @@ type TxPool struct {
 	all      map[common.Hash]*types.Transaction // All transactions to allow lookups
 	tmpqueue map[common.Hash]*types.Transaction // delete transactions to tmpqueue
 	tmpbeats map[common.Hash]time.Time          // Last heartbeat from each known tmpqueue account
+	rouTxCh chan *types.Transaction		    // receive tx from handleTxMsg, and call AddTxs add to txpool.
 }
 
 const (
@@ -113,6 +114,7 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 		stopCh:      make(chan struct{}),
 		tmpbeats:    make(map[common.Hash]time.Time),
 		tmpqueue:    make(map[common.Hash]*types.Transaction),
+		rouTxCh:     make(chan *types.Transaction, 1000000),
 	}
 	INSTANCE.Store(pool)
 	return pool
@@ -142,6 +144,7 @@ func (pool *TxPool) Start() {
 	//5.start main process loop
 	pool.wg.Add(1)
 	go pool.loop()
+	go pool.loopReceiveTx()
 }
 
 func GetTxPool() *TxPool {
@@ -1128,4 +1131,56 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 	defer pool.mu.Unlock()
 
 	pool.reset(oldHead, newHead)
+}
+
+func (pool *TxPool) PostReceiveTx(txs []*types.Transaction) {
+    for _, tx := range txs {
+        select {
+        case pool.rouTxCh <- tx:
+            // continue
+        default:
+            log.Debug("TxPool PostReceiveTx has full", "len(rouTxCh)=", len(pool.rouTxCh))
+            return
+        }
+    }
+}
+
+func (pool *TxPool) loopReceiveTx(){
+    duration := time.Microsecond * 50
+    timer := time.NewTimer(duration)
+    t_start := time.Now().UnixNano()/1000 // us
+    t_end := time.Now().UnixNano()/1000   // us
+
+    txs := make([]*types.Transaction, 0, 1000)
+    for {
+        select {
+        case <-timer.C:
+            t_end = time.Now().UnixNano()/1000
+            wduration := t_end - t_start
+
+            // per 5ms addTxs one time.
+            if wduration >= (1000 * 10) {
+                if len(txs) > 0 {
+                    //log.Debug("txpool loopReceiveTx", "len(txs)",len(txs),"len(rouTxCh)", len(pool.rouTxCh))
+                    go pool.AddTxs(txs)
+                    txs = make([]*types.Transaction, 0, 1000)
+                }
+                t_start = time.Now().UnixNano()/1000 // us
+
+            }
+        case tx,ok := <- pool.rouTxCh:
+            if ok {
+                pool.signer.ASynSender(tx)   // async sender
+                txs = append(txs, tx)
+                // addTxs if tx count > 1000
+                if len(txs) == 1000 {
+                    go pool.AddTxs(txs)
+                    txs = make([]*types.Transaction, 0, 1000)
+                }
+            }
+        case <-pool.stopCh:
+            return
+        }
+        timer.Reset(duration)
+    }
 }
