@@ -351,6 +351,8 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 		log.Error("Start hpbpeermanager error")
 		return errors.New(`start peermanager error ".ipc"`)
 	}
+	hpbnode.Hpbpeermanager.RegStatMining(hpbnode.miner.Mining)
+
 	hpbnode.SetNodeAPI()
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	hpbnode.Hpbtxpool.Start()

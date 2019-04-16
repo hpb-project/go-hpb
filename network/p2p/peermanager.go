@@ -115,6 +115,10 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	prm.hpbpro.regMsgProcess(ReqBWTestMsg, prm.HandleReqBWTestMsg)
 	prm.hpbpro.regMsgProcess(ResBWTestMsg, prm.HandleResBWTestMsg)
 
+	prm.hpbpro.regMsgProcess(ReqRemoteStateMsg, HandleReqRemoteStateMsg)
+	prm.hpbpro.regMsgProcess(ResRemoteStateMsg, HandleResRemoteStateMsg)
+
+
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
 	localType := discover.PreNode
@@ -375,8 +379,9 @@ type PeerInfo struct {
 		Local  string `json:"local"`  // Local endpoint of the TCP data connection
 		Remote string `json:"remote"` // Remote endpoint of the TCP data connection
 	} `json:"network"`
-	Start string      `json:"start"` //
-	Beat  string      `json:"beat"`  //
+	Start   string      `json:"start"` //
+	Beat    string      `json:"beat"`  //
+	Mining  string      `json:"mining"`  //
 	HPB   interface{} `json:"hpb"`   // Sub-protocol specific metadata fields
 }
 
@@ -389,6 +394,16 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
+	req := statusRes{Version:0x01}
+	req.Status = append(req.Status, StatDetail{0x00, ""})
+	for _, p := range prm.peers {
+		if p.remoteType == discover.PreNode || p.remoteType == discover.HpNode {
+			SendData(p,ReqRemoteStateMsg,req)
+		}
+	}
+	time.Sleep(time.Second)
+
+
 	allinfos := make([]*PeerInfo, 0, len(prm.boots)+len(prm.peers))
 	for _, p := range prm.boots {
 		info := &PeerInfo{
@@ -399,6 +414,7 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
 			Beat:   strconv.FormatUint(p.count, 10),
+			Mining: p.statMining,
 			HPB:    "",
 		}
 		info.Network.Local = p.LocalAddr().String()
@@ -418,6 +434,7 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 			Cap:    p.Caps()[0].String(),
 			Start:  p.beatStart.String(),
 			Beat:   strconv.FormatUint(p.count, 10),
+			Mining: p.statMining,
 			HPB: &HpbInfo{
 				TD:      td,
 				Head:    hash.Hex(),
@@ -492,6 +509,11 @@ func (prm *PeerManager) RegOnDropPeer(cb OnDropPeerCB) {
 	return
 }
 
+func (prm *PeerManager) RegStatMining(cb StatMining) {
+	prm.hpbpro.regStatMining(cb)
+	log.Debug("StatMining has been register")
+	return
+}
 ////////////////////////////////////////////////////////////////////
 const bindInfoFileName = "binding.json"
 
