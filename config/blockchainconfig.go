@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-
 package config
 
 import (
-	"math/big"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -30,38 +29,37 @@ var (
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 )
 
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-var	MainnetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(1),
-		Prometheus: &PrometheusConfig{
-			Period: 3,
-			Epoch:  30000,
-		},
+// MainnetChainConfig is the chain parameters to run a node on the main network.
+var MainnetChainConfig = &ChainConfig{
+	ChainId: big.NewInt(269),
+	Prometheus: &PrometheusConfig{
+		Period: 3,
+		Epoch:  30000,
+	},
 }
-
 
 //同步控制逻辑参数
 const (
-	forceSyncCycle      = 10 * time.Second //区块同步周期时间
-	txChanSize          = 20000            //接收交易事件缓冲，等待广播
+	forceSyncCycle = 10 * time.Second //区块同步周期时间
+	txChanSize     = 20000            //接收交易事件缓冲，等待广播
 	// This is the target size for the packs of transactions sent by txsyncLoop.
 	// A pack can get larger than this if a single transactions exceeds this size.
-	txsyncPackSize = 100 * 1024            // 一般情况下状态包的大小，为了减小发送次数
+	txsyncPackSize = 100 * 1024 // 一般情况下状态包的大小，为了减小发送次数
 )
 
 //同步peer的记忆配置
 const (
 	//记忆peer的最大交易数量
-	maxKnownTxs      = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //记忆peer的最大区块数量
-	maxKnownBlocks   = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownTxs    = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //记忆peer的最大区块数量
+	maxKnownBlocks = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
 )
 
 //同步对peer的配置
 const (
 	//同步的peer最大允许缺少hash项
-	maxLackingHashes  = 4096 // Maximum number of entries allowed on the list or lacking items
+	maxLackingHashes = 4096 // Maximum number of entries allowed on the list or lacking items
 	//计算吞吐量的一个参数
-	measurementImpact = 0.1  // The impact a single measurement has on a peer's final throughput value.
+	measurementImpact = 0.1 // The impact a single measurement has on a peer's final throughput value.
 )
 
 //同步任务队列最大缓冲区块数
@@ -90,11 +88,11 @@ var (
 	MaxStateFetch   = 384 // Amount of node state values to allow fetching per request
 
 	MaxForkAncestry  = 3 * EpochDuration // Maximum chain reorganisation
-	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for sync requests
-	rttMaxEstimate   = 20 * time.Second         // Maximum rount-trip time to target for sync requests
-	rttMinConfidence = 0.1                      // Worse confidence factor in our estimated RTT value
-	ttlScaling       = 3                        // Constant scaling factor for RTT -> TTL conversion
-	ttlLimit         = time.Minute              // Maximum TTL allowance to prevent reaching crazy timeouts
+	rttMinEstimate   = 2 * time.Second   // Minimum round-trip time to target for sync requests
+	rttMaxEstimate   = 20 * time.Second  // Maximum rount-trip time to target for sync requests
+	rttMinConfidence = 0.1               // Worse confidence factor in our estimated RTT value
+	ttlScaling       = 3                 // Constant scaling factor for RTT -> TTL conversion
+	ttlLimit         = time.Minute       // Maximum TTL allowance to prevent reaching crazy timeouts
 
 	qosTuningPeers   = 5    // Number of peers to tune based on (best peers)
 	qosConfidenceCap = 10   // Number of peers above which not to modify RTT confidence
@@ -111,27 +109,32 @@ var (
 	fsMinFullBlocks        = 64         // Number of blocks to retrieve fully even in fast sync
 	fsCriticalTrials       = uint32(32) // Number of times to retry in the cricical section before bailing
 )
+
+//可兼容的ChainID : 除了当前ChainId 还能兼容的另外的ChainId
+var (
+	CompatibleChainId = big.NewInt(1)
+)
+
 type ChainConfig struct {
-	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
+	ChainId    *big.Int          `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
 	Prometheus *PrometheusConfig `json:"prometheus"`
 }
 
 var DefaultBlockChainConfig = ChainConfig{
-	ChainId: MainnetChainConfig.ChainId,
+	ChainId:    MainnetChainConfig.ChainId,
 	Prometheus: &DefaultPrometheusConfig,
 }
 
 var (
 	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(100000000)               // Gas limit of the Genesis block. //for testnet
+	GenesisGasLimit        = big.NewInt(100000000)             // Gas limit of the Genesis block. //for testnet
 	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
 	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )
-
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
@@ -180,9 +183,6 @@ func (c *ChainConfig) String() string {
 	)
 }
 
-
-
 func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
-

@@ -57,6 +57,8 @@ type HpbProto struct {
 	chanStatus  ChanStatusCB
 	onAddPeer   OnAddPeerCB
 	onDropPeer  OnDropPeerCB
+
+	statMining  StatMining
 }
 
 // HPB 支持的协议消息
@@ -69,6 +71,9 @@ type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock com
 
 type OnAddPeerCB  func(p *Peer) error
 type OnDropPeerCB func(p *Peer) error
+
+type StatMining func() bool
+
 
 type errCode int
 
@@ -210,6 +215,10 @@ func (hp *HpbProto) regOnDropPeer(cb OnDropPeerCB) {
 	hp.onDropPeer = cb
 }
 
+func (hp *HpbProto) regStatMining(cb StatMining) {
+	hp.statMining = cb
+}
+
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (hp *HpbProto) handleMsg(p *Peer) error {
@@ -272,29 +281,18 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		}
 		return nil
 
+	case ReqRemoteStateMsg,ResRemoteStateMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil{
+			err := cb(p,msg)
+			p.log.Trace("Process syn new msg","msg",msg,"err",err)
+		}
+		return nil
+
 	default:
 		p.log.Error("there is no handle to process msg","code", msg.Code)
 	}
 	return nil
 }
-
-//func (hp *HpbProto) protocolRemovePeer(id string) {
-//	// Short circuit if the peer was already removed
-//	peer := PeerMgrInst().Peer(id)
-//	if peer == nil {
-//		return
-//	}
-//	log.Error("###### NEED P2P TO REMOVE PEER! ######", "peer", id)
-//
-//	// Unregister the peer from the downloader and Hpb peer set
-//	if err := PeerMgrInst().unregister(id); err != nil {
-//		log.Error("Peer removal failed", "peer", id, "err", err)
-//	}
-//	// Hard disconnect at the networking layer
-//	if peer != nil {
-//		peer.Disconnect(DiscUselessPeer)
-//	}
-//}
 
 ////////////////////////////////////////////////////////
 type nodeRes struct {
@@ -376,6 +374,7 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 
 	return nil
 }
+////////////////////////////////////////////////////////
 
 func (hp *HpbProto) proBondall(p *Peer) {
 	log.Info("proBondall start")
@@ -418,3 +417,71 @@ func (hp *HpbProto) proBondall(p *Peer) {
 		}
 	}
 }
+
+
+
+////////////////////////////////////////////////////////
+type StatDetail struct {
+	ID      uint
+	Detail  string
+}
+
+type statusRes struct {
+	Version    uint64
+	Status     []StatDetail
+}
+
+func HandleReqRemoteStateMsg(p *Peer, msg Msg) error {
+	resp := statusRes{Version:0x01}
+
+	mining := "false"
+	if PeerMgrInst().hpbpro.statMining() {
+		mining = "true"
+	}
+	resp.Status = append(resp.Status, StatDetail{0x00, mining})
+
+	// Send in a new thread
+	errc := make(chan error, 1)
+	go func() {
+		errc <- SendData(p,ResRemoteStateMsg, &resp)
+	}()
+	timeout := time.NewTimer(time.Second*5)
+	defer timeout.Stop()
+	select {
+	case err := <-errc:
+		if err != nil {
+			return err
+		}
+	case <-timeout.C:
+		p.log.Error("Send status to remote timeout")
+		return DiscReadTimeout
+	}
+
+	return nil
+}
+
+
+
+func HandleResRemoteStateMsg(p *Peer, msg Msg) error {
+	var request statusRes
+	if err := msg.Decode(&request); err != nil {
+		log.Error("Received status from remote","msg", msg, "error", err)
+		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	log.Trace("Received status from remote","request", request)
+
+	for _, sta := range request.Status {
+		switch {
+		case sta.ID == 0x00:
+			p.statMining = sta.Detail
+			break
+
+		default:
+			break
+		}
+	}
+
+	return nil
+}
+
+////////////////////////////////////////////////////////

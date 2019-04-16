@@ -50,7 +50,8 @@ const (
 	ResNodesMsg        uint64 = 0x1021
 	ReqBWTestMsg       uint64 = 0x1030
 	ResBWTestMsg       uint64 = 0x1031
-
+	ReqRemoteStateMsg  uint64 = 0x1040
+	ResRemoteStateMsg  uint64 = 0x1041
 
 	NewBlockHashesMsg  uint64 = 0x2012
 	TxMsg              uint64 = 0x2013
@@ -65,6 +66,8 @@ const (
 	ReceiptsMsg        uint64 = 0x201c
 
 	NewHashBlockMsg    uint64 = 0x2020
+
+
 )
 
 
