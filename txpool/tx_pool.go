@@ -1151,8 +1151,7 @@ func (pool *TxPool) loopReceiveTx(){
     t_start := time.Now().UnixNano()/1000 // us
     t_end := time.Now().UnixNano()/1000   // us
 
-    count := 5000
-    txs := make([]*types.Transaction, 0, count)
+    txs := make([]*types.Transaction, 0, 1000)
     for {
         select {
         case <-timer.C:
@@ -1160,11 +1159,11 @@ func (pool *TxPool) loopReceiveTx(){
             wduration := t_end - t_start
 
             // per 5ms addTxs one time.
-            if wduration >= (1000 * 500) {
+            if wduration >= (1000 * 10) {
                 if len(txs) > 0 {
                     //log.Debug("txpool loopReceiveTx", "len(txs)",len(txs),"len(rouTxCh)", len(pool.rouTxCh))
                     go pool.AddTxs(txs)
-                    txs = make([]*types.Transaction, 0, count)
+                    txs = make([]*types.Transaction, 0, 1000)
                 }
                 t_start = time.Now().UnixNano()/1000 // us
 
@@ -1174,9 +1173,9 @@ func (pool *TxPool) loopReceiveTx(){
                 pool.signer.ASynSender(tx)   // async sender
                 txs = append(txs, tx)
                 // addTxs if tx count > 1000
-                if len(txs) == count {
+                if len(txs) == 1000 {
                     go pool.AddTxs(txs)
-                    txs = make([]*types.Transaction, 0, count)
+                    txs = make([]*types.Transaction, 0, 1000)
                 }
             }
         case <-pool.stopCh:
