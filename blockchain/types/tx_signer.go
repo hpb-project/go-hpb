@@ -131,10 +131,10 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
 		// the cache.2
-		//if sigCache.signer.Equal(signer) {
-		//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
-		return sigCache.from, nil
-		//}
+		if sigCache.signer.Equal(signer) {
+			//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
+			return sigCache.from, nil
+		}
 	}
 
 	address, err := SMapGet(Asynsinger, tx.Hash())
@@ -156,10 +156,10 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
-		//if sigCache.signer.Equal(signer) {
-		//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
-		return sigCache.from, nil
-		//}
+		if sigCache.signer.Equal(signer) {
+			//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
+			return sigCache.from, nil
+		}
 	}
 
 	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
@@ -195,6 +195,10 @@ type BoeSigner struct {
 	chainId, chainIdMul *big.Int
 }
 
+func CheckChainIdCompatible(chainId *big.Int) bool {
+	return chainId.Cmp(config.CompatibleChainId) == 0
+}
+
 func NewBoeSigner(chainId *big.Int) BoeSigner {
 	if chainId == nil {
 		chainId = new(big.Int)
@@ -209,7 +213,8 @@ func NewBoeSigner(chainId *big.Int) BoeSigner {
 
 func (s BoeSigner) Equal(s2 Signer) bool {
 	eip155, ok := s2.(BoeSigner)
-	return ok && eip155.chainId.Cmp(s.chainId) == 0
+
+	return ok && (CheckChainIdCompatible(eip155.chainId) || (eip155.chainId.Cmp(s.chainId) == 0))
 }
 
 var big8 = big.NewInt(8)
@@ -219,7 +224,7 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 		//return HomesteadSigner{}.Sender(tx)
 		//TODO transaction can be unprotected ?
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
+	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
@@ -233,7 +238,7 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		log.Warn("ASynSender tx.Protected()")
 		//TODO transaction can be unprotected ?
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
+	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
 	}
