@@ -21,16 +21,16 @@ import (
 	"math/big"
 
 	//"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm/native"
-	"github.com/hpb-project/go-hpb/common/constant"
-	"github.com/hpb-project/go-hpb/blockchain/state"
 )
 
 var (
@@ -68,15 +68,16 @@ type StateTransition struct {
 	native     bool
 	header     *types.Header
 	author     *common.Address
-	evm			*evm.EVM
+	evm        *evm.EVM
 }
+
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
 //
 // TODO convert to uint64
 func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	igas := new(big.Int)
-	if contractCreation{
+	if contractCreation {
 		igas.SetUint64(config.TxGasContractCreation)
 	} else {
 		igas.SetUint64(config.TxGas)
@@ -97,6 +98,7 @@ func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	}
 	return igas
 }
+
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
 	//nativeCall := len(msg.Data()) == 0
@@ -109,10 +111,10 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 		value:      msg.Value(),
 		data:       msg.Data(),
 		//native:     nativeCall,
-		state:      evm.StateDB,
+		state: evm.StateDB,
 	}
 }
-func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
+func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
 	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
 		//evm:        evm,
@@ -124,8 +126,8 @@ func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.Stat
 		data:       msg.Data(),
 		header:     header,
 		//native:     nativeCall,
-		state:      statedb,
-		author:     author,
+		state:  statedb,
+		author: author,
 	}
 }
 
@@ -134,7 +136,7 @@ func NewStateTransitionNonEVM( msg hvm.Message, gp *GasPool, statedb *state.Stat
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
 func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
-	st := NewStateTransitionNonEVM( msg, gp, statedb, header, author)
+	st := NewStateTransitionNonEVM(msg, gp, statedb, header, author)
 
 	ret, _, gasUsed, failed, err := st.TransitionOnNative(bc)
 	return ret, gasUsed, failed, err
@@ -235,7 +237,8 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	from := st.msg.From()
 	to := st.to().Address()
 
-	intrinsicGas := new(big.Int).SetUint64(config.TxGas)
+	//intrinsicGas := new(big.Int).SetUint64(config.TxGas)
+	intrinsicGas := IntrinsicGas(st.data, st.msg.To() == nil)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
@@ -266,6 +269,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 
 	return ret, requiredGas, st.gasUsed(), false, err
 }
+
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
