@@ -644,13 +644,13 @@ func (p *Peer) readStatus(network uint64, status *statusData, genesis common.Has
 		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	if status.GenesisBlock != genesis {
-		return ErrResp(ErrGenesisBlockMismatch, "%x (!= %x)", status.GenesisBlock[:8], genesis[:8])
+		return ErrResp(ErrGenesisBlockMismatch, "GenesisBlock %x (!= %x)", status.GenesisBlock[:8], genesis[:8])
 	}
 	if status.NetworkId != network {
-		return ErrResp(ErrNetworkIdMismatch, "%d (!= %d)", status.NetworkId, network)
+		return ErrResp(ErrNetworkIdMismatch, "NetworkId %d (!= %d)", status.NetworkId, network)
 	}
 	if uint(status.ProtocolVersion) != p.version {
-		return ErrResp(ErrProtocolVersionMismatch, "%d (!= %d)", status.ProtocolVersion, p.version)
+		return ErrResp(ErrProtocolVersionMismatch, "ProtocolVersion %d (!= %d)", status.ProtocolVersion, p.version)
 	}
 
 	return nil
