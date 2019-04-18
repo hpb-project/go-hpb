@@ -297,7 +297,7 @@ func (s BoeSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-		s.chainId, uint(0), uint(0),
+		tx.ChainId(), uint(0), uint(0),
 	})
 }
 
