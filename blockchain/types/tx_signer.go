@@ -219,6 +219,12 @@ func (s BoeSigner) Equal(s2 Signer) bool {
 
 var big8 = big.NewInt(8)
 
+func compableV(v *big.Int) bool {
+	// we compable the transaction with chainId = 1,
+	// so matched v value is 37 or 38. (v = chainId * 2 + 35 or v = chainId * 2 + 36)
+	return (v.Cmp(big.NewInt(37)) == 0) || (v.Cmp(big.NewInt(38)) == 0)
+}
+
 func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.Protected() {
 		//return HomesteadSigner{}.Sender(tx)
@@ -227,9 +233,17 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	if compableV(tx.data.V) {
+		compableChainId := config.CompatibleChainId
+		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
+		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
+		V.Sub(V, big8)
+		return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	} else {
+		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+		V.Sub(V, big8)
+		return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	}
 }
 
 func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
@@ -242,10 +256,19 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
-	V.Sub(V, big8)
 
-	return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+	if compableV(tx.data.V) {
+		compableChainId := config.CompatibleChainId
+		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
+		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
+		V.Sub(V, big8)
+		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+	} else {
+		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+		V.Sub(V, big8)
+		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+	}
+
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
