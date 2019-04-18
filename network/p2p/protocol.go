@@ -243,7 +243,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case ReqNodesMsg, ResNodesMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			p.log.Debug("Handle nodes information message.","msg",msg,"err",err)
+			p.log.Trace("Handle nodes information message.","msg",msg,"err",err)
 			if err != nil {
 				return err
 			}
@@ -260,7 +260,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
-			p.log.Debug("Process syn get msg", "msg", msg, "err", err)
+			p.log.Trace("Process syn get msg", "msg", msg, "err", err)
 			if err != nil {
 				return err
 			}
