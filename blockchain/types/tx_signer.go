@@ -186,6 +186,8 @@ type Signer interface {
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
 	// Hash returns the hash to be signed.
 	Hash(tx *Transaction) common.Hash
+	// Compable Hash, returns the hash with tx.ChainId(), only used to recover pubkey, can't used to signTx.
+	CompableHash(tx *Transaction) common.Hash
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
 }
@@ -230,6 +232,7 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 		//return HomesteadSigner{}.Sender(tx)
 		//TODO transaction can be unprotected ?
 	}
+	//log.Error("Sender", "tx.data.v", tx.data.V, "tx.Chainid", tx.ChainId(), "s.hash(tx)", hex.EncodeToString(s.Hash(tx).Bytes()))
 	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
@@ -238,7 +241,7 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
 		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
 		V.Sub(V, big8)
-		return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+		return recoverPlain(s.CompableHash(tx), tx.data.R, tx.data.S, V)
 	} else {
 		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 		V.Sub(V, big8)
@@ -262,7 +265,7 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
 		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
 		V.Sub(V, big8)
-		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+		return ASynrecoverPlain(tx.Hash(), s.CompableHash(tx), tx.data.R, tx.data.S, V)
 	} else {
 		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 		V.Sub(V, big8)
@@ -290,6 +293,19 @@ func (s BoeSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.In
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s BoeSigner) Hash(tx *Transaction) common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+		s.chainId, uint(0), uint(0),
+	})
+}
+
+// CompableHash returns the hash with tx.ChainId(), used to recover the pubkey , can't use to signTx.
+func (s BoeSigner) CompableHash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
 		tx.data.AccountNonce,
 		tx.data.Price,
