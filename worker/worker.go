@@ -36,7 +36,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/txpool"
-	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -96,8 +95,8 @@ type worker struct {
 	mu sync.Mutex
 
 	// update loop
-	mux   *sub.TypeMux
-	pool  *txpool.TxPool
+	mux  *sub.TypeMux
+	pool *txpool.TxPool
 	//txCh  chan bc.TxPreEvent
 	//txSub sub.Subscription
 	//txSub        sub.Subscription
@@ -640,7 +639,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	if tx.To() == nil || len(env.state.GetCode(*tx.To())) > 0 {
+	if tx.To() == nil || (len(env.state.GetCode(*tx.To())) > 0 && len(tx.Data()) > 0) {
 		receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
