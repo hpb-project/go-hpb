@@ -36,6 +36,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/txpool"
+	"gopkg.in/fatih/set.v0"
 )
 
 const (
