@@ -238,7 +238,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	to := st.to().Address()
 
 	//intrinsicGas := new(big.Int).SetUint64(config.TxGas)
-	intrinsicGas := IntrinsicGas(st.data, st.msg.To() == nil)
+	intrinsicGas := IntrinsicGas(st.data, false)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
