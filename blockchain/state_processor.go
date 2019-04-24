@@ -80,7 +80,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//	return nil, nil, nil, err
 		//}
 		//the tx without contract
-		if tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0 {
+		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
 				types.Deletesynsinger(synsigner, tx)

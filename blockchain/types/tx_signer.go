@@ -131,10 +131,10 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
 		// the cache.2
-		//if sigCache.signer.Equal(signer) {
-		//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
-		return sigCache.from, nil
-		//}
+		if sigCache.signer.Equal(signer) {
+			//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
+			return sigCache.from, nil
+		}
 	}
 
 	address, err := SMapGet(Asynsinger, tx.Hash())
@@ -156,10 +156,10 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
-		//if sigCache.signer.Equal(signer) {
-		//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
-		return sigCache.from, nil
-		//}
+		if sigCache.signer.Equal(signer) {
+			//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
+			return sigCache.from, nil
+		}
 	}
 
 	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
@@ -186,6 +186,8 @@ type Signer interface {
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
 	// Hash returns the hash to be signed.
 	Hash(tx *Transaction) common.Hash
+	// Compable Hash, returns the hash with tx.ChainId(), only used to recover pubkey, can't used to signTx.
+	CompableHash(tx *Transaction) common.Hash
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
 }
@@ -193,6 +195,10 @@ type Signer interface {
 // EIP155Transaction implements Signer using the EIP155 rules.
 type BoeSigner struct {
 	chainId, chainIdMul *big.Int
+}
+
+func CheckChainIdCompatible(chainId *big.Int) bool {
+	return chainId.Cmp(config.CompatibleChainId) == 0
 }
 
 func NewBoeSigner(chainId *big.Int) BoeSigner {
@@ -209,22 +215,38 @@ func NewBoeSigner(chainId *big.Int) BoeSigner {
 
 func (s BoeSigner) Equal(s2 Signer) bool {
 	eip155, ok := s2.(BoeSigner)
-	return ok && eip155.chainId.Cmp(s.chainId) == 0
+
+	return ok && (CheckChainIdCompatible(eip155.chainId) || (eip155.chainId.Cmp(s.chainId) == 0))
 }
 
 var big8 = big.NewInt(8)
+
+func compableV(v *big.Int) bool {
+	// we compable the transaction with chainId = 269,
+	// so matched v value is 573 or 574. (v = chainId * 2 + 35 or v = chainId * 2 + 36)
+	return (v.Cmp(big.NewInt(573)) == 0) || (v.Cmp(big.NewInt(574)) == 0)
+}
 
 func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.Protected() {
 		//return HomesteadSigner{}.Sender(tx)
 		//TODO transaction can be unprotected ?
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
+	//log.Error("Sender", "tx.data.v", tx.data.V, "tx.Chainid", tx.ChainId(), "s.hash(tx)", hex.EncodeToString(s.Hash(tx).Bytes()))
+	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	if compableV(tx.data.V) {
+		compableChainId := config.CompatibleChainId
+		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
+		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
+		V.Sub(V, big8)
+		return recoverPlain(s.CompableHash(tx), tx.data.R, tx.data.S, V)
+	} else {
+		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+		V.Sub(V, big8)
+		return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V)
+	}
 }
 
 func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
@@ -233,14 +255,23 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		log.Warn("ASynSender tx.Protected()")
 		//TODO transaction can be unprotected ?
 	}
-	if tx.ChainId().Cmp(s.chainId) != 0 {
+	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
-	V.Sub(V, big8)
 
-	return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+	if compableV(tx.data.V) {
+		compableChainId := config.CompatibleChainId
+		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
+		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
+		V.Sub(V, big8)
+		return ASynrecoverPlain(tx.Hash(), s.CompableHash(tx), tx.data.R, tx.data.S, V)
+	} else {
+		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+		V.Sub(V, big8)
+		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+	}
+
 }
 
 // WithSignature returns a new transaction with the given signature. This signature
@@ -270,6 +301,19 @@ func (s BoeSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Amount,
 		tx.data.Payload,
 		s.chainId, uint(0), uint(0),
+	})
+}
+
+// CompableHash returns the hash with tx.ChainId(), used to recover the pubkey , can't use to signTx.
+func (s BoeSigner) CompableHash(tx *Transaction) common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+		tx.ChainId(), uint(0), uint(0),
 	})
 }
 
