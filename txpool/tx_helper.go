@@ -17,7 +17,7 @@ type SendTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	ExData     hexutil.Bytes   `json:"exdata" rlp:"-"`
+	ExData     types.TxExdata   `json:"exdata" rlp:"-"`
 	//ExData     hexutil.Bytes   `json:"exdata"`
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 }
