@@ -42,10 +42,13 @@ var (
 
 //Definition of transaction'exdata'
 //Transaction Version Number and Transfer Transaction Occupy 16 Bytes of 'exdata' Field
-const (
-    txversion  uint64 = 0x0001  //Transaction Version Number
-	txtransfer uint64 = 0x0002  //Types of Transfer Transactions
-)
+type txexdata struct {
+	 txversion  byte   //Transaction Version Number  0x00
+	 txtype     byte   //Types of Transfer Transactions 0x00
+	 vmversion  byte   //vm version 0x00
+	 txflag     byte   //tx flag 0x00
+	 reserve [28]byte  //orther  0x00
+}
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
