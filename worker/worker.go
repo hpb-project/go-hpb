@@ -51,7 +51,7 @@ const (
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
 
-	blockMaxTxs = 5000 * 9
+	blockMaxTxs = 24000
 )
 
 // Agent can register themself with the worker
