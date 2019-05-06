@@ -17,9 +17,9 @@ type SendTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	ExData     types.TxExdata   `json:"exdata" rlp:"-"`
+	ExData   types.TxExdata  `json:"exdata" rlp:"-"`
 	//ExData     hexutil.Bytes   `json:"exdata"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
+	Nonce *hexutil.Uint64 `json:"nonce"`
 }
 
 const (
@@ -49,7 +49,7 @@ func (args *SendTxArgs) setDefaults() error {
 
 func (args *SendTxArgs) toTransaction() *types.Transaction {
 	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data,args.ExData)
+		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data, args.ExData)
 	}
-	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data,args.ExData)
+	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data, args.ExData)
 }

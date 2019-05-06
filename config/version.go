@@ -20,7 +20,6 @@ import (
 	"fmt"
 )
 
-
 // hpb protocol version control
 const (
 	ProtocolV111    uint = 100 // match up protocol versions and messages versions
@@ -29,8 +28,8 @@ const (
 
 /*
 !!!every change of version should sub VersionID one number!!!
- */
-const VersionID  uint64 = 0x0002
+*/
+const VersionID uint64 = 0x0002
 const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release
@@ -39,10 +38,9 @@ const (
 	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 
-
 // Version holds the textual version string.
 var Version = func() string {
-	v := fmt.Sprintf("%d.%d.%d.%d", VersionMajor, VersionHardv,VersionMinor, VersionPatch)
+	v := fmt.Sprintf("%d.%d.%d.%d", VersionMajor, VersionHardv, VersionMinor, VersionPatch)
 	if VersionMeta != "" {
 		v += "-" + VersionMeta
 	}
