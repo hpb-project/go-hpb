@@ -40,6 +40,16 @@ var (
 	errNoSigner   = errors.New("missing signing methods")
 )
 
+//Definition of transaction'exdata'
+//Transaction Version Number and Transfer Transaction Occupy 16 Bytes of 'exdata' Field
+type TxExdata struct {
+	 Txversion  byte `json:"txversion" rlp:"-"`  //Transaction Version Number  0x00
+	 Txtype     byte  `json:"txtype" rlp:"-"` //Types of Transfer Transactions 0x00
+	 Vmversion  byte  `json:"vmversion" rlp:"-"` //vm version 0x00
+	 Txflag     byte  `json:"txflag" rlp:"-"` //tx flag 0x00
+	 Reserve [28]byte `json:"reserve" rlp:"-"` //orther  0x00
+}
+
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return NewBoeSigner(deriveChainId(V))
@@ -67,7 +77,8 @@ type txdata struct {
 	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
-	PayloadData  []byte          `json:"tempdata"   rlp:"-"`
+	ExData       TxExdata          `json:"exdata"   rlp:"-"`
+	//ExData      []byte          `json:"exdata"`
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
@@ -84,21 +95,21 @@ type txdataMarshaling struct {
 	GasLimit     *hexutil.Big
 	Amount       *hexutil.Big
 	Payload      hexutil.Bytes
-	PayloadData  hexutil.Bytes
+	ExData      hexutil.Bytes
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
 }
 
-func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte, dataload []byte) *Transaction {
-	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data, dataload)
+func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte, exdata TxExdata) *Transaction {
+	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data, exdata)
 }
 
-func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data []byte, dataload []byte) *Transaction {
-	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data, dataload)
+func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data []byte, exdata TxExdata) *Transaction {
+	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data, exdata)
 }
 
-func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte, dataload []byte) *Transaction {
+func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte, exdata TxExdata) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
@@ -106,7 +117,7 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
-		PayloadData:  dataload,
+		ExData:      exdata,
 		Amount:       new(big.Int),
 		GasLimit:     new(big.Int),
 		Price:        new(big.Int),
@@ -198,7 +209,8 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		Recipient    *common.Address `json:"to"       rlp:"nil"`
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
-		PayloadData  hexutil.Bytes   `json:"tempdata" rlp:"-"`
+		ExData  TxExdata    `json:"exdata" rlp:"-"`
+		//ExData  hexutil.Bytes    `json:"exdata"`
 		V            *hexutil.Big    `json:"v" gencodec:"required"`
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
@@ -211,7 +223,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.Recipient = t.Recipient
 	enc.Amount = (*hexutil.Big)(t.Amount)
 	enc.Payload = t.Payload
-	enc.PayloadData = t.PayloadData
+	enc.ExData = t.ExData
 	enc.V = (*hexutil.Big)(t.V)
 	enc.R = (*hexutil.Big)(t.R)
 	enc.S = (*hexutil.Big)(t.S)
@@ -227,7 +239,8 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		Recipient    *common.Address `json:"to"       rlp:"nil"`
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
-		PayloadData  hexutil.Bytes   `json:"tempdata" rlp:"-"`
+		ExData      TxExdata  `json:"exdata" rlp:"-"`
+		//ExData      hexutil.Bytes  `json:"exdata"`
 		V            *hexutil.Big    `json:"v" gencodec:"required"`
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
@@ -260,10 +273,10 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'input' for txdata")
 	}
 	t.Payload = dec.Payload
-	if dec.PayloadData == nil {
-		return errors.New("missing required field 'tempdata' for txdata")
-	}
-	t.PayloadData = dec.PayloadData
+	//if dec.ExData == nil {
+	//	return errors.New("missing required field 'exdata' for txdata")
+	//}
+	t.ExData = dec.ExData
 	if dec.V == nil {
 		return errors.New("missing required field 'v' for txdata")
 	}
@@ -310,7 +323,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) DataLoad() []byte   { return common.CopyBytes(tx.data.PayloadData) }
+func (tx *Transaction) ExData() TxExdata       { return tx.data.ExData }
 func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
@@ -388,7 +401,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
-		dataload:   tx.data.PayloadData,
+		exdata:       tx.data.ExData,
 		checkNonce: true,
 	}
 
@@ -457,7 +470,7 @@ func (tx *Transaction) String() string {
 	GasLimit  %#x
 	Value:    %#x
 	Data:     0x%x
-	DataLoad: 0x%x
+	ExData: 0x%x
 	V:        %#x
 	R:        %#x
 	S:        %#x
@@ -472,7 +485,7 @@ func (tx *Transaction) String() string {
 		tx.data.GasLimit,
 		tx.data.Amount,
 		tx.data.Payload,
-		tx.data.PayloadData,
+		tx.data.ExData,
 		tx.data.V,
 		tx.data.R,
 		tx.data.S,
@@ -558,7 +571,7 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price based heap with the head transactions
-	var block_max_txs = 24000
+	var block_max_txs = 45000
 	var cnt = 0
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {
@@ -616,11 +629,12 @@ type Message struct {
 	nonce                   uint64
 	amount, price, gasLimit *big.Int
 	data                    []byte
-	dataload                []byte
+	exdata                TxExdata
 	checkNonce              bool
+
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, dataload []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte,exdata TxExdata, checkNonce bool) Message {
 	return Message{
 		from:       from,
 		to:         to,
@@ -629,7 +643,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, g
 		price:      price,
 		gasLimit:   gasLimit,
 		data:       data,
-		dataload:   dataload,
+		exdata:       exdata,
 		checkNonce: checkNonce,
 	}
 }
@@ -641,5 +655,5 @@ func (m Message) Value() *big.Int      { return m.amount }
 func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) DataLoad() []byte     { return m.dataload }
+func (m Message) ExData() TxExdata         { return m.exdata }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
