@@ -636,6 +636,7 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
  */
 func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 	var result = make([]byte, 32)
+	var status byte
 	if len(hash) != 32 {
 		return nil, ErrGetNextHashFailed
 	}
@@ -645,7 +646,7 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 	}
 	// The Hash_v2 is added at version v1.0.0.2.
 	if version.F > 0 || version.D >= 2 {
-		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])), (*C.uchar)(unsafe.Pointer(&status)))
 		if ret == C.BOE_OK {
 			return result, nil
 		}
