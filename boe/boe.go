@@ -189,6 +189,8 @@ type postParam struct {
 	err error
 }
 
+type Brandom [32]byte
+
 type BoeHandle struct {
 	boeInit   bool
 	bcontinue bool
@@ -442,12 +444,6 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	return v, ErrInitFailed
 }
 
-func (boe *BoeHandle) GetRandom() ([]byte) {
-	var ran = make([]byte, 32)
-	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
-	return ran
-}
-
 func (boe *BoeHandle) GetBoeId() (string, error) {
 	var sn string
 	ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
@@ -657,7 +653,14 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 
 }
 
+/*
+ * Get real-random from boe hardware.
+ */
+func (boe *BoeHandle) GetRandom() (Brandom, error) {
+	var r Brandom
+	return r,nil
+}
+
 func (boe *BoeHandle) HashVerify(old []byte, next []byte) (error) {
 	return ErrGetNextHashFailed
-
 }
