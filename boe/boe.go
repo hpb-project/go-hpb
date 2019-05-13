@@ -631,24 +631,25 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
  *  New Hash algorithm, supported by boe firmware v1.0.0.2
  */
 func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
-//	var result = make([]byte, 32)
-//	var status byte
-//	if len(hash) != 32 {
-//		return nil, ErrGetNextHashFailed
-//	}
-//	version, err := boe.GetVersion()
-//	if err != nil {
-//		return nil, ErrGetNextHashFailed
-//	}
-//	// The Hash_v2 is added at version v1.0.1.0.
-//	if version.F >= 1 {
-//		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])), (*C.uchar)(unsafe.Pointer(&status)))
-//		if ret == C.BOE_OK {
-//			return result, nil
-//		}
-//	} else {
-//		log.Error("BOE firmware version is too low, not support Hash_v2.")
-//	}
+	var result = make([]byte, 32)
+	if len(hash) != 32 {
+		return nil, ErrGetNextHashFailed
+	}
+	version, err := boe.GetVersion()
+	if err != nil {
+		return nil, ErrGetNextHashFailed
+	}
+	// The Hash_v2 is added at version v1.0.1.0.
+	if version.F >= 1 {
+		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
+		if ret == C.BOE_OK {
+			return result, nil
+		}else {
+			log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+		}
+	} else {
+		log.Error("BOE firmware version is too low, not support Hash_v2.")
+	}
 	return nil, ErrGetNextHashFailed
 
 }
@@ -662,5 +663,24 @@ func (boe *BoeHandle) GetRandom() (Brandom, error) {
 }
 
 func (boe *BoeHandle) HashVerify(old []byte, next []byte) (error) {
-	return ErrGetNextHashFailed
+	if len(old) != 32 || len(next) != 32 {
+		return ErrInvalidParams
+	}
+	version, err := boe.GetVersion()
+	if err != nil {
+		return ErrHashVerifyFailed
+	}
+	// The hashVerify is added at version v1.0.1.0.
+	if version.F >= 1 {
+		var ret = C.boe_check_random((*C.uchar)(unsafe.Pointer(&old[0])), (*C.uchar)(unsafe.Pointer(&next[0])))
+		if ret == C.BOE_OK {
+			return nil
+		}else {
+			log.Debug("Boe HashVerify failed", "ecode:", uint32(ret.ecode))
+		}
+	} else {
+		log.Error("BOE firmware version is too low, not support hashVerify.")
+	}
+	
+	return ErrHashVerifyFailed
 }

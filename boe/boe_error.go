@@ -18,4 +18,5 @@ var (
     ErrGetNextHashFailed     = errors.New("get next hash failed")
     ErrGetSNFailed           = errors.New("get sn failed")
     ErrNoNeedUpdate          = errors.New("no need update")
+    ErrHashVerifyFailed      = errors.New("verify hash failed")
 )
