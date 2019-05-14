@@ -314,15 +314,22 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// Update all accounts to the latest known pending nonce
 	wg := sync.WaitGroup{}
+	var nmap sync.Map
 	for addr, list := range pool.pending {
 		wg.Add(1)
 		go func() {
 			txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-			pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
+			nmap.Store(addr, txs[len(txs)-1].Nonce()+1)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
+	nmap.Range(func(k, v interface{}) bool {
+		a, _ := k.(common.Address)
+		n, _ := v.(uint64)
+		pool.pendingState.SetNonce(a, n)
+		return true
+	})
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
