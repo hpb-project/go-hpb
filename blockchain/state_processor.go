@@ -75,21 +75,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		//msg, err := tx.AsMessage(types.MakeSigner(p.config))
-		//if err != nil {
-		//	return nil, nil, nil, err
-		//}
 		//the tx without contract
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
 			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
-				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		} else {
 			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 			if errs != nil {
-				types.Deletesynsinger(synsigner, tx)
 				return nil, nil, nil, errs
 			}
 		}
@@ -97,12 +91,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
-	go func(txs []*types.Transaction) {
-		//types.ASynSender(synsigner, nil)
-		for _, tx := range txs {
-			types.Deletesynsinger(synsigner, tx)
-		}
-	}(block.Transactions())
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
 		return nil, nil, nil, errfinalize
