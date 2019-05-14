@@ -18,12 +18,9 @@ package types
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
-
-	"sync"
 
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
@@ -42,62 +39,6 @@ var (
 type sigCache struct {
 	signer Signer
 	from   common.Address
-}
-
-//var singerRWLock sync.RWMutex
-
-type Smap struct {
-	Data map[common.Hash]common.Address
-	L    sync.RWMutex
-}
-
-var (
-	Asynsinger = &Smap{Data: make(map[common.Hash]common.Address)}
-)
-
-func SMapDelete(m *Smap, khash common.Hash) error {
-	m.L.Lock()
-	defer m.L.Unlock()
-
-	delete(m.Data, khash)
-	kvalue, ok := m.Data[khash]
-	if ok == true {
-		log.Trace("SMapDelete err", "m.Data[khash]", kvalue)
-		return errors.New("SMapDelete err")
-	}
-	log.Trace(" SMapDelete OK", "khash", khash, "kvalue", kvalue)
-	return nil
-}
-
-func SMapGet(m *Smap, khash common.Hash) (common.Address, error) {
-	m.L.Lock()
-	defer m.L.Unlock()
-
-	kvalue, ok := m.Data[khash]
-	if ok != true {
-		log.Trace("SMapGet hash values is null error", "m.Data[khash]", m.Data[khash])
-		return common.Address{}, errors.New("SMapGet hash values is null")
-	}
-	log.Trace(" SMapGet OK", "khash", khash, "kvalue", kvalue)
-	return kvalue, nil
-}
-
-func SMapSet(m *Smap, khash common.Hash, kaddress common.Address) error {
-	m.L.Lock()
-	defer m.L.Unlock()
-
-	m.Data[khash] = kaddress
-	from, ok := m.Data[khash]
-	if ok != true {
-		log.Trace("SMapSet hash values is null error", "from", from)
-		return errors.New("SMapSet hash values is null")
-	}
-	log.Trace("SMapSet ok", "SMapSet from", from)
-	return nil
-}
-func Deletesynsinger(signer Signer, tx *Transaction) {
-	log.Trace("lenSigner", "len(synsigner)", len(Asynsinger.Data))
-	SMapDelete(Asynsinger, tx.Hash())
 }
 
 // MakeSigner returns a Signer based on the given chain config and block number.
@@ -123,9 +64,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	//if (tx.from.Load() != nil && reflect.TypeOf(tx.from.Load()) == reflect.TypeOf(common.Address{}) && tx.from.Load().(common.Address) != common.Address{}) {
-	//	return tx.from.Load().(common.Address), nil
-	//}
+
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
 		// If the signer used to derive from in a previous
@@ -136,8 +75,8 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 			return sigCache.from, nil
 		}
 	}
-
-	address, err := SMapGet(Asynsinger, tx.Hash())
+	txhash := tx.Hash()
+	address, err := Sendercache.Get(txhash)
 	if err == nil {
 		//log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: address})
@@ -147,9 +86,10 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
+	Sendercache.GetOrSet(txhash, addr)
 	tx.from.Store(sigCache{signer: signer, from: addr})
 
-	log.Trace("Sender send ok", "tx.hash", tx.Hash())
+	//log.Trace("Sender send ok", "tx.hash", txhash)
 	return addr, nil
 }
 func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
@@ -162,17 +102,13 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	asynAddress, err := SMapGet(Asynsinger, tx.Hash())
+	asynAddress, err := Sendercache.Get(tx.Hash())
 	if err == nil {
-		log.Trace("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
+		//log.Trace("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: asynAddress})
 		return asynAddress, nil
 	}
-	addr, err := signer.ASynSender(tx)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return addr, ErrInvalidAsynsinger
+	return signer.ASynSender(tx)
 }
 
 // Signer encapsulates transaction signature handling. Note that this interface is not a
@@ -318,31 +254,6 @@ func (s BoeSigner) CompableHash(tx *Transaction) common.Hash {
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error) {
-	//if Vb.BitLen() > 8 {
-	//	return common.Address{}, ErrInvalidSig
-	//}
-	//V := byte(Vb.Uint64() - 27)
-	////TODO replace homestead param
-	//if !crypto.ValidateSignatureValues(V, R, S, true) {
-	//	return common.Address{}, ErrInvalidSig
-	//}
-	//// encode the snature in uncompressed format
-	//r, s := R.Bytes(), S.Bytes()
-	//// recover the public key from the snature
-	////pub, err := crypto.Ecrecover(sighash[:], sig)
-	////64 bytes public key returned.
-	//pub, err := boe.BoeGetInstance().ValidateSign(sighash[:], r, s, V)
-	////xInt, yInt := elliptic.Unmarshal(crypto.S256(), result)
-	////pub := &ecdsa.PublicKey{Curve: crypto.S256(), X: xInt, Y: yInt}
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	//if len(pub) == 0 { //|| pub[0] != 4
-	//	return common.Address{}, errors.New("invalid public key")
-	//}
-	//var addr common.Address
-	//copy(addr[:], crypto.Keccak256(pub[0:])[12:])
-	//return addr, nil
 	if Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
 	}
@@ -353,21 +264,13 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 
 	// encode the snature in uncompressed format
 	r, s := R.Bytes(), S.Bytes()
-	//sig := make([]byte, 65)
-	/*copy(sig[32-len(r):32], r)
-	copy(sig[64-len(s):64], s)
-	sig[64] = V*/
 
 	pub, err := boe.BoeGetInstance().ValidateSign(sighash.Bytes(), r, s, V)
 	if err != nil {
 		log.Trace("boe validatesign error")
 		return common.Address{}, err
 	}
-	// recover the public key from the snature
-	/*pub, err := crypto.Ecrecover(sighash[:], sig)
-	if err != nil {
-		return common.Address{}, err
-	}*/
+
 	if len(pub) == 0 || pub[0] != 4 {
 		return common.Address{}, errors.New("invalid public key")
 	}
@@ -426,10 +329,7 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	var comhash common.Hash
 	copy(comhash[0:], rs.TxHash[0:])
 
-	errSet := SMapSet(Asynsinger, comhash, addr)
-	if errSet != nil {
-		//log.Error("boecallback SMapSet error!")
-	}
-	log.Trace("boecallback boe rec singer data success", "rs.txhash", hex.EncodeToString(rs.TxHash), "addr", addr)
+	Sendercache.GetOrSet(comhash, addr)
+	//log.Trace("boecallback boe rec singer data success", "rs.txhash", hex.EncodeToString(rs.TxHash), "addr", addr)
 
 }
