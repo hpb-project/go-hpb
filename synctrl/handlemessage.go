@@ -26,8 +26,8 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
 	"math/big"
-	"sync/atomic"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -391,8 +391,9 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 // HandleTxMsg deal received TxMsg
 var (
 	handlTxmap = make(map[common.Hash]int, 200000)
-	handlTxMu     sync.RWMutex
+	handlTxMu  sync.RWMutex
 )
+
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
@@ -404,28 +405,19 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&txs); err != nil {
 		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 	}
+	var newtx = make([]*types.Transaction, 0)
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
 			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
 		}
 		p.KnownTxsAdd(tx.Hash())
-		handlTxMu.Lock()
-		if cnt, ok := handlTxmap[tx.Hash()] ; !ok {
-			handlTxmap[tx.Hash()] = 1
-		}else {
-			handlTxmap[tx.Hash()] = cnt + 1
-			log.Info("tx repeated", "hash ", tx.Hash(), "cnt ", cnt + 1)
+		if _, gerr := types.Sendercache.Get(tx.Hash()); gerr != nil {
+			newtx = append(newtx, tx)
 		}
-		handlTxMu.Unlock()
 	}
 	//batch TxsAsynSender
-	if len(txs) > 1 {
-		go txpool.GetTxPool().GoTxsAsynSender(txs)
-		go txpool.GetTxPool().AddTxs(txs)
-	}else {
-		go txpool.GetTxPool().AddTxs(txs)
-	}
+	go txpool.GetTxPool().AddTxs(newtx)
 
 	return nil
 }

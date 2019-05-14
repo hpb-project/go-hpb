@@ -313,10 +313,16 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.demoteUnexecutables()
 
 	// Update all accounts to the latest known pending nonce
+	wg := sync.WaitGroup{}
 	for addr, list := range pool.pending {
-		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
+		wg.Add(1)
+		go func() {
+			txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
+			pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
@@ -430,7 +436,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	if len(txs) > 10 {
-		go txpool.GetTxPool().GoTxsAsynSender(txs)
+		pool.GoTxsAsynSender(txs)
 	}
 	//concurrent validate tx before pool's lock.
 	pool.mu.Lock()
@@ -445,11 +451,6 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 		// If the transaction fails basic validation, discard it
 		if err := pool.softvalidateTx(tx); err != nil {
 			log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
-			deleteErr := types.SMapDelete(types.Asynsinger, tx.Hash())
-			if deleteErr != nil {
-				//log.Error("txpool SMapDelete err", "tx.hash", tx.Hash())
-			}
-
 			return err
 		}
 	}
@@ -488,12 +489,6 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	recerr := pool.addTxLocked(tx)
 	t_end := time.Now().UnixNano() / 1000
 	if recerr != nil {
-		deleteErr := types.SMapDelete(types.Asynsinger, tx.Hash())
-		if deleteErr != nil {
-			log.Trace("txpool SMapDelete err", "tx.hash", tx.Hash())
-		}
-
-		log.Trace("AddTx err", "cost", t_end-t_start)
 		return recerr
 	}
 	log.Trace("AddTx success", "cost", t_end-t_start)
@@ -546,7 +541,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 func (pool *TxPool) GoTxsAsynSender(txs []*types.Transaction) error {
 	for _, tx := range txs {
 		log.Trace("goTxsAsynSender ASynSender", "tx.hash", tx.Hash())
-		types.ASynSender(pool.signer, tx) // already ASynSender
+		types.ASynSender(pool.signer, tx)
 	}
 	return nil
 }
@@ -560,14 +555,9 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 	}
 	// If we added a new transaction, run promotion checks and return
 	if !replace {
-		from, err := types.ASynSender(pool.signer, tx) // already validated
+		from, err := types.Sender(pool.signer, tx) // already validated
 		if err != nil {
-			log.Trace("addTxLocked ASynSender Error", "tx.bash", tx.Hash())
-			from2, err := types.Sender(pool.signer, tx) // already validated
-			if err != nil {
-				//log.Error("addTxLocked Sender Error", "tx.bash", tx.Hash())
-			}
-			copy(from[0:], from2[0:])
+			return nil
 		}
 		pool.promoteExecutables([]common.Address{from})
 	}
