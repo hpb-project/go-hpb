@@ -27,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/txpool"
 	"math/big"
 	"sync/atomic"
+	"sync"
 	"time"
 )
 
@@ -388,6 +389,10 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 }
 
 // HandleTxMsg deal received TxMsg
+var (
+	handlTxmap = make(map[common.Hash]int, 200000)
+	handlTxMu     sync.RWMutex
+)
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
@@ -405,6 +410,14 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
 		}
 		p.KnownTxsAdd(tx.Hash())
+		handlTxMu.Lock()
+		if cnt, ok := handlTxmap[tx.Hash()] ; !ok {
+			handlTxmap[tx.Hash()] = 1
+		}else {
+			handlTxmap[tx.Hash()] = cnt + 1
+			log.Info("tx repeated", "hash ", tx.Hash(), "cnt ", cnt + 1)
+		}
+		handlTxMu.Unlock()
 	}
 	//batch TxsAsynSender
 	if len(txs) > 1 {
