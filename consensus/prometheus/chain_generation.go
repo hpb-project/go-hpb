@@ -189,8 +189,19 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
 	}
 	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()) {
-		header.Difficulty = diffInTurn
+	if number < consensus.StageNumberV {
+		if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()) {
+			header.Difficulty = diffInTurn
+		}
+	} else {
+		//statistics the miners` addresses donnot care repeat address
+		signersgenblks := make([]types.Header, 0, consensus.ContinuousGenBlkLimit)
+		for i := uint64(0); i < consensus.ContinuousGenBlkLimit; i++ {
+			signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
+		}
+		if snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), signersgenblks) {
+			header.Difficulty = diffInTurn
+		}
 	}
 
 	c.lock.RLock()

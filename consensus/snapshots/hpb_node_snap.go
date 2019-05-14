@@ -145,6 +145,29 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 	return (number % uint64(len(signers))) == uint64(offset)
 }
 
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, headers []types.Header) bool {
+
+	//calc all the have been generated blocks signers; overlap is ok because these signers will be eliminated
+	signersgenblks := make([]common.Address, 0, len(headers))
+	for _, v := range headers {
+		signersgenblks = append(signersgenblks, v.Coinbase)
+	}
+	signers, offset := s.GetHpbNodes(), 0
+	for _, signergenblk := range signersgenblks {
+		for k, signer := range signers {
+			if signergenblk == signer {
+				signers = append(signers[:k], signers[k+1:]...)
+				break
+			}
+		}
+	}
+
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
+	}
+	return (number % uint64(len(signers))) == uint64(offset)
+}
+
 // 判断当前的次序
 func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {
 	// 实际开发中，从硬件中获取
