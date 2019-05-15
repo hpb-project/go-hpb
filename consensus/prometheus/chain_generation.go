@@ -212,7 +212,18 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		//set last number header hardware real random signature
 		header.SignLastHWRealRnd = make([]byte, len(parentheader.SignLastHWRealRnd))
 		signer, signFn := c.signer, c.signFn
-		hashHWRealRnd := sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
+
+		var hashHWRealRnd []byte
+		//from 400 execute seed switch because block 0 has no SignLastHWRealRnd
+		if number%200 == 0 && number > 200 {
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentheader.SignLastHWRealRnd)
+			bigsignlsthwrnd.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
+			hashHWRealRnd = sha3.NewKeccak256().Sum(seedswitchheader.HWRealRnd)
+		} else {
+			hashHWRealRnd = sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
+		}
+
 		SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
 		if err != nil {
 			return err
