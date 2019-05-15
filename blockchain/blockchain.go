@@ -1056,23 +1056,30 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		// Process block using the parent state as reference point.
+		s1 := time.Now().UnixNano() / 1000 / 1000
 		receipts, logs, usedGas, err := bc.processor.Process(block, state)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+		s2 := time.Now().UnixNano() / 1000 / 1000
+		log.Debug("blockchain process", "cost time(ms) ", s2-s1)
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+		s3 := time.Now().UnixNano() / 1000 / 1000
+		log.Debug("blockchain validateState", "cost time(ms) ", s3-s2)
 		// Write the block to the chain and get the status.
 		log.Info("----> Write Block and State From Outside", "number", block.Number(), "hash", block.Hash(), "difficulty", block.Difficulty())
 		status, err := bc.WriteBlockAndState(block, receipts, state)
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+		s4 := time.Now().UnixNano() / 1000 / 1000
+		log.Debug("blockchain WriteBlockAndState", "cost time(ms) ", s4-s3)
 		switch status {
 		case CanonStatTy:
 			log.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(), "uncles", len(block.Uncles()),
