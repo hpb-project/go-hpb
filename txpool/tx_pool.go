@@ -319,7 +319,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		wg.Add(1)
 		go func() {
 			txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-			nmap.Store(addr, txs[len(txs)-1].Nonce()+1)
+			if len(txs) != 0 {
+				nmap.Store(addr, txs[len(txs)-1].Nonce()+1)
+			}
+
 			wg.Done()
 		}()
 	}
