@@ -17,6 +17,7 @@ package prometheus
 
 import (
 	"bytes"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"math/big"
 	"sync"
 	"time"
@@ -158,6 +159,24 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
 		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+		//set header hareware real random
+		header.HWRealRnd = make([]byte, len(parentheader.HardwareRandom))
+		HWRealRand := consensus.Gen32BRandom()
+		log.Info("software gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
+		copy(header.HWRealRnd, HWRealRand[:])
+
+		//if number > 1 {    //block 0 has no HWRealRnd, so from block 2 beginning set SignLastHWRealRnd
+		//	//set last number header hardware real random signature
+		//	header.SignLastHWRealRnd = make([]byte, len(parentheader.SignLastHWRealRnd))
+		//	signer, signFn := c.signer, c.signFn
+		//	hashHWRealRnd := sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
+		//	SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	log.Info("last number header hardware real random signature", "value", common.Bytes2Hex(SignLastHWRealRnd[:]))
+		//	copy(header.SignLastHWRealRnd, SignLastHWRealRnd[:])
+		//}
 	} else {
 		if c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
@@ -173,9 +192,33 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					return errors.New("c.hboe.GetNextHash success but output random length is 0")
 				}
 			}
+
+			//set header real random getting from boe
+			header.HWRealRnd = make([]byte, len(parentheader.HardwareRandom))
+			HWRealRand, err := c.hboe.GetRandom()
+			if err != nil {
+				log.Error("boe gen real random fail", "error", err)
+				return err
+			}
+			log.Info("boe gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
+			copy(header.HWRealRnd, HWRealRand[:])
 		} else {
 			return errors.New("boe check fail")
 		}
+	}
+
+	//block 0 has no HWRealRnd, so from block 2 beginning set SignLastHWRealRnd
+	if number > 1 {
+		//set last number header hardware real random signature
+		header.SignLastHWRealRnd = make([]byte, len(parentheader.SignLastHWRealRnd))
+		signer, signFn := c.signer, c.signFn
+		hashHWRealRnd := sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
+		SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
+		if err != nil {
+			return err
+		}
+		log.Info("last number header hardware real random signature", "value", common.Bytes2Hex(SignLastHWRealRnd[:]))
+		copy(header.SignLastHWRealRnd, SignLastHWRealRnd[:])
 	}
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)

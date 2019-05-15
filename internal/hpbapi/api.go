@@ -558,7 +558,7 @@ type CallArgs struct {
 	GasPrice hexutil.Big     `json:"gasPrice"`
 	Value    hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	ExData     types.TxExdata   `json:"exdata"`
+	ExData   types.TxExdata  `json:"exdata"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg evm.Config) ([]byte, *big.Int, bool, error) {
@@ -729,28 +729,30 @@ func FormatLogs(structLogs []evm.StructLog) []StructLogRes {
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
-		"number":           (*hexutil.Big)(head.Number),
-		"hash":             b.Hash(),
-		"parentHash":       head.ParentHash,
-		"nonce":            head.Nonce,
-		"mixHash":          head.MixDigest,
-		"sha3Uncles":       head.UncleHash,
-		"logsBloom":        head.Bloom,
-		"stateRoot":        head.Root,
-		"miner":            head.Coinbase,
-		"candAddress":      head.CandAddress,
-		"comdAddress":      head.ComdAddress,
-		"voteIndex":        (*hexutil.Big)(head.VoteIndex),
-		"difficulty":       (*hexutil.Big)(head.Difficulty),
-		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
-		"extraData":        hexutil.Bytes(head.Extra),
-		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
-		"gasLimit":         (*hexutil.Big)(head.GasLimit),
-		"gasUsed":          (*hexutil.Big)(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
-		"transactionsRoot": head.TxHash,
-		"receiptsRoot":     head.ReceiptHash,
-		"hardwareRandom":   hexutil.Bytes(head.HardwareRandom),
+		"number":            (*hexutil.Big)(head.Number),
+		"hash":              b.Hash(),
+		"parentHash":        head.ParentHash,
+		"nonce":             head.Nonce,
+		"mixHash":           head.MixDigest,
+		"sha3Uncles":        head.UncleHash,
+		"logsBloom":         head.Bloom,
+		"stateRoot":         head.Root,
+		"miner":             head.Coinbase,
+		"candAddress":       head.CandAddress,
+		"comdAddress":       head.ComdAddress,
+		"voteIndex":         (*hexutil.Big)(head.VoteIndex),
+		"difficulty":        (*hexutil.Big)(head.Difficulty),
+		"totalDifficulty":   (*hexutil.Big)(s.b.GetTd(b.Hash())),
+		"extraData":         hexutil.Bytes(head.Extra),
+		"size":              hexutil.Uint64(uint64(b.Size().Int64())),
+		"gasLimit":          (*hexutil.Big)(head.GasLimit),
+		"gasUsed":           (*hexutil.Big)(head.GasUsed),
+		"timestamp":         (*hexutil.Big)(head.Time),
+		"transactionsRoot":  head.TxHash,
+		"receiptsRoot":      head.ReceiptHash,
+		"hardwareRandom":    hexutil.Bytes(head.HardwareRandom),
+		"HWRealRnd":         hexutil.Bytes(head.HWRealRnd),
+		"SignLastHWRealRnd": hexutil.Bytes(head.SignLastHWRealRnd),
 	}
 
 	if inclTx {
@@ -794,7 +796,7 @@ type RPCTransaction struct {
 	GasPrice         *hexutil.Big    `json:"gasPrice"`
 	Hash             common.Hash     `json:"hash"`
 	Input            hexutil.Bytes   `json:"input"`
-	ExData        types.TxExdata   `json:"exdata"`
+	ExData           types.TxExdata  `json:"exdata"`
 	Nonce            hexutil.Uint64  `json:"nonce"`
 	To               *common.Address `json:"to"`
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
@@ -820,7 +822,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
 		Input:    hexutil.Bytes(tx.Data()),
-		ExData:    tx.ExData(),
+		ExData:   tx.ExData(),
 		Nonce:    hexutil.Uint64(tx.Nonce()),
 		To:       tx.To(),
 		Value:    (*hexutil.Big)(tx.Value()),
@@ -1039,7 +1041,7 @@ type SendTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
-	ExData     types.TxExdata   `json:"exdata"`
+	ExData   types.TxExdata  `json:"exdata"`
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 }
 

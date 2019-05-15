@@ -67,25 +67,27 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Hpb blockchain.
 type Header struct {
-	ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash      common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase       common.Address `json:"miner"            gencodec:"required"`
-	CandAddress    common.Address `json:"candAddress"      gencodec:"required"`
-	ComdAddress    common.Address `json:"comdAddress"      gencodec:"required"`
-	VoteIndex      *big.Int       `json:"voteIndex"        gencodec:"required"`
-	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty     *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number         *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed        *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra          []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest      common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce          BlockNonce     `json:"nonce"            gencodec:"required"`
-	HardwareRandom []byte         `json:"hardwareRandom"   gencodec:"required"`
+	ParentHash        common.Hash    `json:"parentHash"       gencodec:"required"`
+	UncleHash         common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	Coinbase          common.Address `json:"miner"            gencodec:"required"`
+	CandAddress       common.Address `json:"candAddress"      gencodec:"required"`
+	ComdAddress       common.Address `json:"comdAddress"      gencodec:"required"`
+	VoteIndex         *big.Int       `json:"voteIndex"        gencodec:"required"`
+	Root              common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash            common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash       common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	Bloom             Bloom          `json:"logsBloom"        gencodec:"required"`
+	Difficulty        *big.Int       `json:"difficulty"       gencodec:"required"`
+	Number            *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit          *big.Int       `json:"gasLimit"         gencodec:"required"`
+	GasUsed           *big.Int       `json:"gasUsed"          gencodec:"required"`
+	Time              *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra             []byte         `json:"extraData"        gencodec:"required"`
+	MixDigest         common.Hash    `json:"mixHash"          gencodec:"required"`
+	Nonce             BlockNonce     `json:"nonce"            gencodec:"required"`
+	HardwareRandom    []byte         `json:"hardwareRandom"   gencodec:"required"`
+	HWRealRnd         []byte         `json:"HWRealRnd" gencodec:"required"`
+	SignLastHWRealRnd []byte         `json:"SignLastHWRealRnd"   gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -261,6 +263,16 @@ func CopyHeader(h *Header) *Header {
 		cpy.HardwareRandom = make([]byte, len(h.HardwareRandom))
 		copy(cpy.HardwareRandom, h.HardwareRandom)
 	}
+
+	if len(h.HWRealRnd) > 0 {
+		cpy.HWRealRnd = make([]byte, len(h.HWRealRnd))
+		copy(cpy.HWRealRnd, h.HWRealRnd)
+	}
+
+	if len(h.SignLastHWRealRnd) > 0 {
+		cpy.SignLastHWRealRnd = make([]byte, len(h.SignLastHWRealRnd))
+		copy(cpy.SignLastHWRealRnd, h.SignLastHWRealRnd)
+	}
 	return &cpy
 }
 
@@ -315,18 +327,20 @@ func (b *Block) GasUsed() *big.Int    { return new(big.Int).Set(b.header.GasUsed
 func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
 
-func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
-func (b *Block) Nonce() uint64            { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
-func (b *Block) Bloom() Bloom             { return b.header.Bloom }
-func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
-func (b *Block) Root() common.Hash        { return b.header.Root }
-func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
-func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
-func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
-func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
-func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
-func (b *Block) Hardwarerandom() []byte   { return common.CopyBytes(b.header.HardwareRandom) }
+func (b *Block) NumberU64() uint64         { return b.header.Number.Uint64() }
+func (b *Block) MixDigest() common.Hash    { return b.header.MixDigest }
+func (b *Block) Nonce() uint64             { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
+func (b *Block) Bloom() Bloom              { return b.header.Bloom }
+func (b *Block) Coinbase() common.Address  { return b.header.Coinbase }
+func (b *Block) Root() common.Hash         { return b.header.Root }
+func (b *Block) ParentHash() common.Hash   { return b.header.ParentHash }
+func (b *Block) TxHash() common.Hash       { return b.header.TxHash }
+func (b *Block) ReceiptHash() common.Hash  { return b.header.ReceiptHash }
+func (b *Block) UncleHash() common.Hash    { return b.header.UncleHash }
+func (b *Block) Extra() []byte             { return common.CopyBytes(b.header.Extra) }
+func (b *Block) Hardwarerandom() []byte    { return common.CopyBytes(b.header.HardwareRandom) }
+func (b *Block) HWRealRnd() []byte         { return common.CopyBytes(b.header.HWRealRnd) }
+func (b *Block) SignLastHWRealRnd() []byte { return common.CopyBytes(b.header.SignLastHWRealRnd) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -423,7 +437,9 @@ func (h *Header) String() string {
 	MixDigest:      %x
 	Nonce:		    %x
 	hardwarerandom: %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.CandAddress, h.ComdAddress, h.VoteIndex, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom)
+	HWRealRnd: %x
+	SignLastHWRealRnd: %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.CandAddress, h.ComdAddress, h.VoteIndex, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom, h.HWRealRnd, h.SignLastHWRealRnd)
 }
 
 type Blocks []*Block

@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"errors"
+	"math/rand"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -197,4 +198,13 @@ func SetTestParam() {
 	StageNumberII = 1
 	StageNumberIII = 0
 	StageNumberIV = 1
+}
+
+func Gen32BRandom() [32]byte {
+
+	var Res [32]byte
+	for i := 0; i < 32; i++ {
+		Res[i] = byte(rand.Intn(256)) //返回[0,256)的随机整数
+	}
+	return Res
 }
