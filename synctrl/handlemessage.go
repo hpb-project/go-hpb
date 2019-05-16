@@ -26,7 +26,6 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
 	"math/big"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -389,11 +388,6 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 }
 
 // HandleTxMsg deal received TxMsg
-var (
-	handlTxmap = make(map[common.Hash]int, 200000)
-	handlTxMu  sync.RWMutex
-)
-
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
@@ -405,6 +399,7 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&txs); err != nil {
 		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 	}
+	go txpool.GetTxPool().GoTxsAsynSender(txs)
 	var newtx = make([]*types.Transaction, 0)
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
