@@ -45,13 +45,13 @@ const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 
 var (
-	HpbNodenumber = 31    //hpb nodes number
-	NumberPrehp   = 20    //nodes num from 151 nodes select
+	HpbNodenumber = 2    //hpb nodes number
+	NumberPrehp   = 2    //nodes num from 151 nodes select
 	IgnoreRetErr  = false //ignore finalize return err
 
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
-	StageNumberIV  uint64 = 2560000
+	StageNumberIV  uint64 = 300
 	StageNumberV   uint64 = 999999000000 // 暂不启用
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔

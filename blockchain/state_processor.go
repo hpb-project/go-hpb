@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
+	"time"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -67,10 +68,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 	synsigner := types.MakeSigner(p.config)
-	txs := block.Transactions()
-	for _, tx := range txs {
-		types.ASynSender(synsigner, tx)
-	}
+	go func(txs types.Transactions) {
+		for _, tx := range txs {
+			types.ASynSender(synsigner, tx)
+		}
+	}(block.Transactions())
 
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
@@ -92,7 +94,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
+	s1 := time.Now().UnixNano()/1000/1000
+	_, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts);
+	s2 := time.Now().UnixNano()/1000/1000
+	log.Debug("block process--Finalize", "cost time(ms)", s2-s1)
+	if nil != errfinalize {
 		return nil, nil, nil, errfinalize
 	}
 
@@ -151,11 +157,14 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+	s1 := time.Now().UnixNano()/1000
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
 		return nil, nil, err
 	}
+	s2 := time.Now().UnixNano()/1000
+	log.Debug("ApplyTransaction AsMessage", "cost time(us)", s2 - s1)
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
@@ -163,13 +172,24 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 		log.Error("ApplyMessageNonContract err", "err", err)
 		return nil, nil, err
 	}
+	s3 := time.Now().UnixNano()/1000
+	log.Debug("ApplyTransaction NonContract", "cost time(us)", s3 - s2)
 
 	// Update the state with pending changes
 	var root []byte
 
 	statedb.Finalise(true)
-	usedGas.Add(usedGas, gas)
+	s4 := time.Now().UnixNano()/1000
+	log.Debug("ApplyTransaction Finalise", "cost time(us)", s4 - s3)
 
+	usedGas.Add(usedGas, gas)
+	s5 := time.Now().UnixNano()/1000
+	log.Debug("ApplyTransaction Add", "cost time(us)", s5 - s4)
+
+	defer func() {
+		s6 := time.Now().UnixNano()/1000
+		log.Debug("ApplyTransaction Receipt", "cost time(us)", s6 - s5)
+	}()
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
@@ -184,5 +204,7 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 	if receipt == nil {
 	}
+
+
 	return receipt, gas, err
 }
