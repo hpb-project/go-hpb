@@ -18,11 +18,10 @@ package consensus
 
 import (
 	"errors"
-	"math/rand"
-
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
+	"math/rand"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -207,4 +206,17 @@ func Gen32BRandom() [32]byte {
 		Res[i] = byte(rand.Intn(256)) //返回[0,256)的随机整数
 	}
 	return Res
+}
+
+func VerifyHWRlRndSign(HWRlRnd []byte, Sign []byte) (common.Address, error) {
+	hash := crypto.Keccak256(HWRlRnd)
+	// 还原公钥
+	pubkey, err := crypto.Ecrecover(hash, Sign)
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
 }

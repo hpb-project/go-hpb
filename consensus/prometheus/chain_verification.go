@@ -244,6 +244,26 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
+	if number > 1 {
+		var realrandom []byte
+		if number%200 == 0 && number > 200 {
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentheader.SignLastHWRealRnd)
+			bigsignlsthwrnd.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
+			realrandom = seedswitchheader.HWRealRnd
+		} else {
+			realrandom = parentheader.HWRealRnd
+		}
+
+		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, header.SignLastHWRealRnd)
+		if err != nil {
+			return err
+		}
+		if signer != rndsigner {
+			return errors.New("HW Real Random signer is not miner")
+		}
+	}
+
 	var snap *snapshots.HpbNodeSnap
 	if mode == config.FullSync {
 		snap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
