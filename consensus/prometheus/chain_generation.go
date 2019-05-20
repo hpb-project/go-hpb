@@ -470,7 +470,10 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	var bigA13 = new(big.Float)                       //1/3 one block reward
 	bigA23.Set(A)                                     //为了cad奖励的时候使用
 	bigA13.Set(A)                                     //为了cad奖励的时候使用
-	bigA13.Quo(bigA13,big.NewFloat(200.0))
+	if consensus.StageNumberVI < header.Number.Uint64() {
+		bigA13.Quo(bigA13,big.NewFloat(200.0))
+	}
+
 
 	bighobBlockReward := A.Mul(A, big.NewFloat(0.35)) //reward hpb coin for hpb nodes
 
