@@ -222,7 +222,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			bigsignlsthwrnd.Sub(bigsignlsthwrnd, big.NewInt(200))
 			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
-			hashHWRealRnd = sha3.NewKeccak256().Sum(seedswitchheader.HWRealRnd)
+			hashHWRealRnd = sha3.NewKeccak256().Sum(seedswitchheader.SignLastHWRealRnd)
 		} else {
 			hashHWRealRnd = sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
 		}

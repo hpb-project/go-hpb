@@ -253,7 +253,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			bigsignlsthwrnd.Sub(bigsignlsthwrnd, big.NewInt(200))
 			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
-			realrandom = seedswitchheader.HWRealRnd
+			realrandom = seedswitchheader.SignLastHWRealRnd
 		} else {
 			realrandom = parentheader.HWRealRnd
 		}
