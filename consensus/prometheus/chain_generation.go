@@ -217,7 +217,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		//from 400 execute seed switch because block 0 has no SignLastHWRealRnd
 		if number%200 == 0 && number > 200 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentheader.SignLastHWRealRnd)
-			bigsignlsthwrnd.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+			bigsignlsthwrndmod := big.NewInt(0)
+			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+			bigsignlsthwrnd.Sub(bigsignlsthwrnd, big.NewInt(200))
+			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
 			hashHWRealRnd = sha3.NewKeccak256().Sum(seedswitchheader.HWRealRnd)
 		} else {
