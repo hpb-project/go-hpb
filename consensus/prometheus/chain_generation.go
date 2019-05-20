@@ -639,7 +639,12 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
-	rewardsnum := consensus.HpbNodeCheckpointInterval //test
+	var rewardsnum int
+	if header.Number.Uint64() > consensus.StageNumberVI {
+		rewardsnum = 1
+	} else {
+		rewardsnum = consensus.HpbNodeCheckpointInterval
+	}
 
 	addrbigcount := new(big.Int).SetBytes(resultvote[64 : 64+32])
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32) {
