@@ -470,6 +470,8 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	var bigA13 = new(big.Float)                       //1/3 one block reward
 	bigA23.Set(A)                                     //为了cad奖励的时候使用
 	bigA13.Set(A)                                     //为了cad奖励的时候使用
+	bigA13.Quo(bigA13,big.NewFloat(200.0))
+
 	bighobBlockReward := A.Mul(A, big.NewFloat(0.35)) //reward hpb coin for hpb nodes
 
 	ether2weis := big.NewInt(10)
@@ -616,7 +618,15 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 
 	//use read contract addr and funstr get vote result
-	realaddr := common.BytesToAddress(resultaddr)
+	var realaddr common.Address
+	if consensus.StageNumberVI < header.Number.Uint64() {
+		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
+	}else {
+		realaddr = common.BytesToAddress(resultaddr)
+	}
+	//
+
+
 	funparamstr := new([8]byte)
 	copy(funparamstr[:], resultfun[66:66+8])
 	funparam := common.Hex2Bytes(string(funparamstr[:]))
@@ -767,7 +777,14 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	}
 
 	//use read contract addr and funstr get vote result
-	realaddr := common.BytesToAddress(resultaddr)
+	var realaddr common.Address
+	if consensus.StageNumberVI < header.Number.Uint64() {
+		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
+	}else {
+		realaddr = common.BytesToAddress(resultaddr)
+	}
+	//
+
 	funparamstr := new([8]byte)
 	copy(funparamstr[:], resultfun[66:66+8])
 	funparam := common.Hex2Bytes(string(funparamstr[:]))
