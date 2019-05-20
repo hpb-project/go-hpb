@@ -152,6 +152,7 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
 	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
 
+	go TxsPoolLoop()
 	return synctrl, nil
 }
 
@@ -178,7 +179,7 @@ func (this *SynCtrl) Start() {
 func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 	ps := &PeerSyn{peer}
 	this.syncTransactions(peer)
-	log.Debug("register net peer","pid",peer.GetID())
+	log.Debug("register net peer", "pid", peer.GetID())
 
 	err := this.syner.RegisterPeer(peer.GetID(), peer.GetVersion(), ps)
 	if err != nil {
@@ -186,13 +187,13 @@ func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 	}
 
 	// start new peer syn
-	time.Sleep(time.Millisecond*10)
+	time.Sleep(time.Millisecond * 10)
 	this.newPeerCh <- peer
 	return nil
 }
 
 func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
-	log.Debug("unregister net peer","pid",peer.GetID())
+	log.Debug("unregister net peer", "pid", peer.GetID())
 	return this.syner.UnregisterPeer(peer.GetID())
 }
 

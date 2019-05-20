@@ -455,8 +455,14 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	if len(txs) == 0 {
 		return nil
 	}
+	st1 := time.Now().UnixNano() / 1000
 	pool.smu.Lock()
 	defer pool.smu.Unlock()
+	st2 := time.Now().UnixNano() / 1000
+	defer func() {
+		st3 := time.Now().UnixNano() / 1000
+		log.Debug("AddTxs", "wait lock cost time(us)", st2-st1, "addTx cost time(us)", st3-st2, "total cost time(us)", st3-st1)
+	}()
 
 	for _, tx := range txs {
 		// If the transaction fails basic validation, discard it
