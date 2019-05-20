@@ -461,7 +461,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	st2 := time.Now().UnixNano() / 1000
 	defer func() {
 		st3 := time.Now().UnixNano() / 1000
-		log.Debug("AddTxs", "wait lock cost time(us)", st2-st1, "addTx cost time(us)", st3-st2, "total cost time(us)", st3-st1)
+		log.Debug("AddTxs", "len(txs)", len(txs), "wait lock cost time(us)", st2-st1, "addTx cost time(us)", st3-st2, "total cost time(us)", st3-st1)
 	}()
 
 	for _, tx := range txs {

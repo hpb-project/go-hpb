@@ -408,15 +408,6 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	return nil
 }
 
-var handleKnownTxs = set.New()
-
-func handleKnownTxsAdd(hash common.Hash) {
-	if handleKnownTxs.Size() >= 1000000 {
-		handleKnownTxs.Clear()
-	}
-	handleKnownTxs.Add(hash)
-}
-
 var poolTxsCh chan *types.Transaction
 
 func TxsPoolLoop() {
@@ -471,10 +462,9 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 		p.KnownTxsAdd(tx.Hash())
 
-		if handleKnownTxs.Has(tx.Hash()) {
+		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) {
 			continue
 		} else {
-			handleKnownTxsAdd(tx.Hash())
 			poolTxsCh <- tx
 		}
 	}
