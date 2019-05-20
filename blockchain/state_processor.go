@@ -71,7 +71,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	for _, tx := range txs {
 		types.ASynSender(synsigner, tx)
 	}
-	bNewVersion := block.Number().Uint64() > consensus.StageNumberIII
+
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
@@ -80,33 +80,17 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//	return nil, nil, nil, err
 		//}
 		//the tx without contract
-		if bNewVersion {
-			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
-				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
-					return nil, nil, nil, errs
-				}
-			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
-					return nil, nil, nil, errs
-				}
+		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
+			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
+				return nil, nil, nil, errs
 			}
 		} else {
-			if len(tx.Data()) > 0 {
-				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
-					return nil, nil, nil, errs
-				}
-			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
-					return nil, nil, nil, errs
-				}
+			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+			if errs != nil {
+				types.Deletesynsinger(synsigner, tx)
+				return nil, nil, nil, errs
 			}
 		}
 

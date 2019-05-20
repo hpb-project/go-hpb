@@ -110,8 +110,7 @@ int upgrade_call_back_cgo(int progress, char *msg)
 static void hex_dump(unsigned char * data, int len)
 {
     printf("0x");
-    int i = 0;
-    for(i = 0; i < len; i++)
+    for(int i = 0; i < len; i++)
         printf("%02x", data[i]);
 
     printf("\n");
@@ -189,8 +188,6 @@ type postParam struct {
 	err error
 }
 
-type Brandom [32]byte
-
 type BoeHandle struct {
 	boeInit   bool
 	bcontinue bool
@@ -202,14 +199,14 @@ type BoeHandle struct {
 }
 
 var (
-    boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:2}
-    soft_cnt                 uint32
-    hard_cnt                 uint32
-    async_call               uint32
-    sync_call                uint32
+	boeHandle  = &BoeHandle{boeInit: false, rpFunc: nil, maxThNum: 2}
+	soft_cnt   uint32
+	hard_cnt   uint32
+	async_call uint32
+	sync_call  uint32
 )
 
-func BoeGetInstance() (*BoeHandle) {
+func BoeGetInstance() *BoeHandle {
 	return boeHandle
 }
 
@@ -341,31 +338,31 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 	}
 }
 
-func (boe *BoeHandle) performance(){
-    duration := time.Second * 1
-    timer := time.NewTimer(duration)
-    defer timer.Stop()
+func (boe *BoeHandle) performance() {
+	duration := time.Second * 1
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
 
-    soft_cnt = 0
-    hard_cnt = 0
-    for {
-        timer.Reset(duration)
-        select {
-        case <- timer.C:
-            if !boe.bcontinue {
-                return
-            }
-            if soft_cnt > 0 || hard_cnt > 0 {
-                log.Debug("boe performance","hard_cnt", hard_cnt, "soft_cnt", soft_cnt, "async_call", async_call, "sync_call", sync_call)
-            }
-            soft_cnt = 0
-            hard_cnt = 0
-            async_call = 0
-            sync_call = 0
-        }
-    }
+	soft_cnt = 0
+	hard_cnt = 0
+	for {
+		timer.Reset(duration)
+		select {
+		case <-timer.C:
+			if !boe.bcontinue {
+				return
+			}
+			if soft_cnt > 0 || hard_cnt > 0 {
+				log.Debug("boe performance", "hard_cnt", hard_cnt, "soft_cnt", soft_cnt, "async_call", async_call, "sync_call", sync_call)
+			}
+			soft_cnt = 0
+			hard_cnt = 0
+			async_call = 0
+			sync_call = 0
+		}
+	}
 }
-func (boe *BoeHandle) Init() (error) {
+func (boe *BoeHandle) Init() error {
 	if boe.bcontinue {
 		return nil
 	}
@@ -401,7 +398,7 @@ func (boe *BoeHandle) Init() (error) {
 	return ErrInitFailed
 }
 
-func (boe *BoeHandle) Release() (error) {
+func (boe *BoeHandle) Release() error {
 
 	boe.bcontinue = false
 	ret := C.boe_release()
@@ -442,6 +439,12 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	C.boe_err_free(ret)
 	var v TVersion
 	return v, ErrInitFailed
+}
+
+func (boe *BoeHandle) GetRandom() []byte {
+	var ran = make([]byte, 32)
+	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
+	return ran
 }
 
 func (boe *BoeHandle) GetBoeId() (string, error) {
@@ -551,19 +554,19 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 	return result, nil
 }
 
-func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) (error) {
-    async_call = async_call + 1
-    if (async_call >= 100) && (async_call %2 == 0) {
-        rs := RecoverPubkey{TxHash:make([]byte, 32),Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
-        copy(rs.TxHash, txhash)
-        copy(rs.Hash, hash)
-        copy(rs.Sig[32-len(r):32], r)
-        copy(rs.Sig[64-len(s):64], s)
-        rs.Sig[64] = v
-        boe.postToSoft(&rs)
+func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
+	async_call = async_call + 1
+	if (async_call >= 100) && (async_call%2 == 0) {
+		rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
+		copy(rs.TxHash, txhash)
+		copy(rs.Hash, hash)
+		copy(rs.Sig[32-len(r):32], r)
+		copy(rs.Sig[64-len(s):64], s)
+		rs.Sig[64] = v
+		boe.postToSoft(&rs)
 
-        return nil
-    }
+		return nil
+	}
 
 	var (
 		m_sig   = make([]byte, 97)
@@ -594,22 +597,22 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
 
-    //var (
-    //    result = make([]byte, 65)
-    //    m_sig  = make([]byte, 97)
-    //    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-    //)
-    //sync_call = sync_call + 1
-    //copy(m_sig[32-len(r):32], r)
-    //copy(m_sig[64-len(s):64], s)
-    //copy(m_sig[96-len(hash):96], hash)
-    //m_sig[96] = v
+	//var (
+	//    result = make([]byte, 65)
+	//    m_sig  = make([]byte, 97)
+	//    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+	//)
+	//sync_call = sync_call + 1
+	//copy(m_sig[32-len(r):32], r)
+	//copy(m_sig[64-len(s):64], s)
+	//copy(m_sig[96-len(hash):96], hash)
+	//m_sig[96] = v
 
-    //c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-    //if c_ret == C.BOE_OK {
-    //    result[0] = 4
-    //    return result,nil
-    //}
+	//c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+	//if c_ret == C.BOE_OK {
+	//    result[0] = 4
+	//    return result,nil
+	//}
 
 	return softRecoverPubkey(hash, r, s, v)
 }
@@ -639,48 +642,15 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 	if err != nil {
 		return nil, ErrGetNextHashFailed
 	}
-	// The Hash_v2 is added at version v1.0.1.0.
-	if version.F >= 1 {
+	// The Hash_v2 is added at version v1.0.0.2.
+	if version.F > 0 || version.D >= 2 {
 		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
 		if ret == C.BOE_OK {
 			return result, nil
-		}else {
-			log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
 		}
 	} else {
 		log.Error("BOE firmware version is too low, not support Hash_v2.")
 	}
 	return nil, ErrGetNextHashFailed
 
-}
-
-/*
- * Get real-random from boe hardware.
- */
-func (boe *BoeHandle) GetRandom() (Brandom, error) {
-	var r Brandom
-	return r,nil
-}
-
-func (boe *BoeHandle) HashVerify(old []byte, next []byte) (error) {
-	if len(old) != 32 || len(next) != 32 {
-		return ErrInvalidParams
-	}
-	version, err := boe.GetVersion()
-	if err != nil {
-		return ErrHashVerifyFailed
-	}
-	// The hashVerify is added at version v1.0.1.0.
-	if version.F >= 1 {
-		var ret = C.boe_check_random((*C.uchar)(unsafe.Pointer(&old[0])), (*C.uchar)(unsafe.Pointer(&next[0])))
-		if ret == C.BOE_OK {
-			return nil
-		}else {
-			log.Debug("Boe HashVerify failed", "ecode:", uint32(ret.ecode))
-		}
-	} else {
-		log.Error("BOE firmware version is too low, not support hashVerify.")
-	}
-	
-	return ErrHashVerifyFailed
 }
