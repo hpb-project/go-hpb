@@ -222,9 +222,9 @@ func (s BoeSigner) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func compableV(v *big.Int) bool {
-	// we compable the transaction with chainId = 269,
-	// so matched v value is 573 or 574. (v = chainId * 2 + 35 or v = chainId * 2 + 36)
-	return (v.Cmp(big.NewInt(573)) == 0) || (v.Cmp(big.NewInt(574)) == 0)
+    // we compable the transaction with chainId = 1,
+    // so matched v value is 37 or 38. (v = chainId * 2 + 35 or v = chainId * 2 + 36)
+    return (v.Cmp(big.NewInt(37)) == 0) || (v.Cmp(big.NewInt(38)) == 0)
 }
 
 func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {

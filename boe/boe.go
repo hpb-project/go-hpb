@@ -110,7 +110,8 @@ int upgrade_call_back_cgo(int progress, char *msg)
 static void hex_dump(unsigned char * data, int len)
 {
     printf("0x");
-    for(int i = 0; i < len; i++)
+    int i = 0;
+    for(i = 0; i < len; i++)
         printf("%02x", data[i]);
 
     printf("\n");
