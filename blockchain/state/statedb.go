@@ -354,6 +354,13 @@ func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 	addr := stateObject.Address()
 	self.setError(self.trie.TryDelete(addr[:]))
 }
+func (self *StateDB) GetStateObjects() []common.Address {
+	stateAddress := []common.Address{}
+	for addr, _ := range self.stateObjects {
+		stateAddress = append(stateAddress, addr)
+	}
+	return stateAddress
+}
 
 // Retrieve a state object given my the address. Returns nil if not found.
 func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
