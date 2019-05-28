@@ -151,10 +151,11 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return address.(common.Address), nil
 	}
 	// 从头文件中获取extra-data
-	if len(header.Extra) < ExtraSeal {
-		return common.Address{}, ErrMissingSignature
+	extraDetail, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return common.Address{}, err
 	}
-	signature := header.Extra[len(header.Extra)-ExtraSeal:]
+	signature := extraDetail.GetSeal()
 
 	// 还原公钥
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
@@ -171,6 +172,7 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 // 对区块头部进行签名，最小65Byte
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
+	extraDetail, _ := types.BytesToExtraDetail(header.Extra)
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
@@ -185,7 +187,7 @@ func SigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-65],
+		extraDetail.ExceptSealToBytes(),
 		header.MixDigest,
 		header.Nonce,
 	})

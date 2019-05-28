@@ -152,6 +152,15 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if len(parentheader.HardwareRandom) == 0 {
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
+	extra, _ := types.BytesToExtraDetail(header.Extra)
+	defer func() {
+		header.Extra = common.CopyBytes(extra.ToBytes())
+	}()
+
+	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
+	if err != nil {
+		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err)
+	}
 
 	if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "synnode" {
 		//panic("boe broke, please contact with hpb")
@@ -160,10 +169,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
 		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 		//set header hareware real random
-		header.HWRealRnd = make([]byte, len(parentheader.HardwareRandom))
 		HWRealRand := consensus.Gen32BRandom()
 		log.Info("software gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
-		copy(header.HWRealRnd, HWRealRand[:])
+		extra.SetRealRND(HWRealRand[:])
 
 		//if number > 1 {    //block 0 has no HWRealRnd, so from block 2 beginning set SignLastHWRealRnd
 		//	//set last number header hardware real random signature
@@ -194,14 +202,13 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			}
 
 			//set header real random getting from boe
-			header.HWRealRnd = make([]byte, len(parentheader.HardwareRandom))
 			HWRealRand, err := c.hboe.GetRandom()
 			if err != nil {
 				log.Error("boe gen real random fail", "error", err)
 				return err
 			}
 			log.Info("boe gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
-			copy(header.HWRealRnd, HWRealRand[:])
+			extra.SetRealRND(HWRealRand[:])
 		} else {
 			return errors.New("boe check fail")
 		}
@@ -210,21 +217,21 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	//block 0 has no HWRealRnd, so from block 2 beginning set SignLastHWRealRnd
 	if number > 1 {
 		//set last number header hardware real random signature
-		header.SignLastHWRealRnd = make([]byte, len(parentheader.SignLastHWRealRnd))
 		signer, signFn := c.signer, c.signFn
 
 		var hashHWRealRnd []byte
 		//from 400 execute seed switch because block 0 has no SignLastHWRealRnd
 		if number%200 == 0 && number > 200 {
-			bigsignlsthwrnd := new(big.Int).SetBytes(parentheader.SignLastHWRealRnd)
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
 			bigsignlsthwrndmod := big.NewInt(0)
 			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
 			bigsignlsthwrnd.Sub(bigsignlsthwrnd, big.NewInt(200))
 			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
-			hashHWRealRnd = sha3.NewKeccak256().Sum(seedswitchheader.SignLastHWRealRnd)
+			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+			hashHWRealRnd = sha3.NewKeccak256().Sum(tmpExtra.GetSignedLastRND())
 		} else {
-			hashHWRealRnd = sha3.NewKeccak256().Sum(parentheader.HWRealRnd)
+			hashHWRealRnd = sha3.NewKeccak256().Sum(parentExtra.GetRealRND())
 		}
 
 		SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
@@ -232,7 +239,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			return err
 		}
 		log.Info("last number header hardware real random signature", "value", common.Bytes2Hex(SignLastHWRealRnd[:]))
-		copy(header.SignLastHWRealRnd, SignLastHWRealRnd[:])
+		extra.SetSignedLastRND(SignLastHWRealRnd[:])
 	}
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
@@ -295,20 +302,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	c.lock.RUnlock()
 
 	// 检查头部的组成情况
-	if len(header.Extra) < consensus.ExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
-	}
-
-	header.Extra = header.Extra[:consensus.ExtraVanity]
-
 	//在投票周期的时候，放入全部的Address
 	if number%consensus.HpbNodeCheckpointInterval == 0 {
-		for _, signer := range snap.GetHpbNodes() {
-			header.Extra = append(header.Extra, signer[:]...)
-		}
+		extra.SetNodes(snap.GetHpbNodes())
 	}
 
-	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
 	//获取父亲的节点

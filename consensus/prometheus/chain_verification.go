@@ -103,15 +103,18 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	//	return consensus.ErrInvalidCheckpointVote
 	//}
 	// Check that the extra-data contains both the vanity and signature
-	if len(header.Extra) < consensus.ExtraVanity {
-		return consensus.ErrMissingVanity
+	extra, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return err
 	}
-	if len(header.Extra) < consensus.ExtraVanity+consensus.ExtraSeal {
-		return consensus.ErrMissingSignature
-	}
+	//if len(header.Extra) < consensus.ExtraVanity {
+	//	return consensus.ErrMissingVanity
+	//}
+	//if len(header.Extra) < consensus.ExtraVanity+consensus.ExtraSeal {
+	//	return consensus.ErrMissingSignature
+	//}
 	// Ensure that the extra-data contains a signerHash list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - consensus.ExtraVanity - consensus.ExtraSeal
-	if !checkpoint && signersBytes != 0 {
+	if !checkpoint && len(extra.GetNodes()) != 0 {
 		return consensus.ErrExtraSigners
 	}
 	//if checkpoint && signersBytes%common.AddressLength != 0 {
