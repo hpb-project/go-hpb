@@ -751,8 +751,8 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"transactionsRoot":  head.TxHash,
 		"receiptsRoot":      head.ReceiptHash,
 		"hardwareRandom":    hexutil.Bytes(head.HardwareRandom),
-		"HWRealRnd":         hexutil.Bytes(head.HWRealRnd),
-		"SignLastHWRealRnd": hexutil.Bytes(head.SignLastHWRealRnd),
+		"HWRealRnd":         hexutil.Bytes(b.HWRealRND()),
+		"SignLastRealRnd": hexutil.Bytes(b.SignedLastRND()),
 	}
 
 	if inclTx {

@@ -241,6 +241,12 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		parentheader = chain.GetHeader(header.ParentHash, number-1)
 	}
 
+	extra, _ := types.BytesToExtraDetail(header.Extra)
+	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
+	if err != nil {
+		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err)
+		return err
+	}
 	// Resolve the authorization key and check against signers
 	signer, err := consensus.Ecrecover(header, c.signatures)
 	if err != nil {
@@ -250,18 +256,20 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	if number > 1 {
 		var realrandom []byte
 		if number%200 == 0 && number > 200 {
-			bigsignlsthwrnd := new(big.Int).SetBytes(parentheader.SignLastHWRealRnd)
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
 			bigsignlsthwrndmod := big.NewInt(0)
 			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
 			bigsignlsthwrnd.Sub(bigsignlsthwrnd, big.NewInt(200))
 			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
-			realrandom = seedswitchheader.SignLastHWRealRnd
+			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+
+			realrandom = tmpExtra.GetSignedLastRND()
 		} else {
-			realrandom = parentheader.HWRealRnd
+			realrandom = parentExtra.GetRealRND()
 		}
 
-		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, header.SignLastHWRealRnd)
+		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetRealRND())
 		if err != nil {
 			return err
 		}
