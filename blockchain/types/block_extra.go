@@ -59,7 +59,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 		} else {
 			detail.NodesAddr = common.Addresses{}
 		}
-		copy(detail.Seal[:], data[offset:offset+ExtraRealRNDLength])
+		copy(detail.Seal[:], data[offset:offset+ExtraSealLength])
 		offset += ExtraSealLength
 
 	} else {
@@ -260,7 +260,7 @@ func (this *ExtraDetail) SetRealRND(rnd []byte) error {
 }
 
 func (this *ExtraDetail) GetSignedLastRND() []byte {
-	return this.RealRND[:]
+	return this.SignedLastRND[:]
 }
 
 func (this *ExtraDetail) SetSignedLastRND(signedRnd []byte) error {

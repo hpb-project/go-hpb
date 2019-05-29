@@ -250,6 +250,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	// Resolve the authorization key and check against signers
 	signer, err := consensus.Ecrecover(header, c.signatures)
 	if err != nil {
+		log.Debug("verifySeal", "recover signer failed", err)
 		return err
 	}
 
@@ -269,8 +270,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			realrandom = parentExtra.GetRealRND()
 		}
 
-		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetRealRND())
+		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())
 		if err != nil {
+			log.Debug("verifyHwRnd", "recover signer failed", err)
 			return err
 		}
 		if signer != rndsigner {
