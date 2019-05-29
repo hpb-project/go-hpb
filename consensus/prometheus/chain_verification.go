@@ -22,7 +22,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -266,9 +265,10 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
 			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
 
-			realrandom = sha3.NewKeccak256().Sum(tmpExtra.GetRealRND())
+			realrandom = tmpExtra.GetRealRND()
 		} else {
-			realrandom = sha3.NewKeccak256().Sum(parentExtra.GetSignedLastRND())
+			signRnd := parentExtra.GetSignedLastRND()
+			realrandom = signRnd[0:32]
 		}
 
 		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())

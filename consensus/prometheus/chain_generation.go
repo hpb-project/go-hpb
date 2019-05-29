@@ -18,7 +18,6 @@ package prometheus
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"math/big"
 	"sync"
 	"time"
@@ -234,9 +233,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			bigsignlsthwrnd.Add(bigsignlsthwrnd, bigsignlsthwrndmod)
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
 			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
-			hashHWRealRnd = sha3.NewKeccak256().Sum(tmpExtra.GetRealRND())
+			hashHWRealRnd = tmpExtra.GetRealRND()
 		} else {
-			hashHWRealRnd = sha3.NewKeccak256().Sum(parentExtra.GetSignedLastRND())
+			signRnd := parentExtra.GetSignedLastRND()
+			hashHWRealRnd = signRnd[0:32]
+
 		}
 
 		SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
