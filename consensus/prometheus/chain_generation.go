@@ -169,7 +169,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
 		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 		//set header hareware real random
-		if header.Number.Uint64() >= consensus.StageNumberV {
+		if header.Number.Uint64() >= consensus.StageNumberVI {
 			HWRealRand := consensus.Gen32BRandom()
 			log.Info("software gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
 			extra.SetRealRND(HWRealRand[:])
@@ -204,7 +204,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			}
 
 			//set header real random getting from boe
-			if header.Number.Uint64() >= consensus.StageNumberV {
+			if header.Number.Uint64() >= consensus.StageNumberVI {
 				HWRealRand, err := c.hboe.GetRandom()
 				if err != nil {
 					log.Error("boe gen real random fail", "error", err)
@@ -219,7 +219,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	//block 0 has no HWRealRnd, so from block 1 beginning set SignLastHWRealRnd
-	if number > consensus.StageNumberV {
+	if number > consensus.StageNumberVI {
 		//set last number header hardware real random signature
 		signer, signFn := c.signer, c.signFn
 

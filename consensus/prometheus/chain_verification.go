@@ -254,7 +254,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	if number > consensus.StageNumberV {
+	if number > consensus.StageNumberVI {
 		var realrandom []byte
 		if number%200 == 0 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())

@@ -54,7 +54,8 @@ var (
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 2560000
-	StageNumberV   uint64 = 999999000000 // 暂不启用
+	StageNumberV   uint64 = 9999900 // 用于启用新的hash算法和去除重复出块.
+	StageNumberVI   uint64 = 200 // 用于启用随机数功能
 
 	ContinuousGenBlkLimit uint64 = 2
 
@@ -161,7 +162,6 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 
 	// 还原公钥
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
-	log.Info("Ecrecover", "headerSighash", hex.EncodeToString(SigHash(header).Bytes()), "signature", hex.EncodeToString(signature))
 	if err != nil {
 		return common.Address{}, err
 	}
