@@ -155,6 +155,7 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
 import "C"
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -189,8 +190,6 @@ type postParam struct {
 	rs  RecoverPubkey
 	err error
 }
-
-type Brandom [32]byte
 
 type BoeHandle struct {
 	boeInit   bool
@@ -658,9 +657,15 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 /*
  * Get real-random from boe hardware.
  */
-func (boe *BoeHandle) GetRandom() (Brandom, error) {
-	var r Brandom
-	return r, nil
+func (boe *BoeHandle) GetRandom() ([]byte, error) {
+	var result = make([]byte, 32)
+	var ret = C.boe_get_random((*C.uchar)(unsafe.Pointer(&result[0])))
+	if ret == C.BOE_OK {
+		return result, nil
+	} else {
+		log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+		return nil, errors.New("Get random failed ")
+	}
 }
 
 func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
