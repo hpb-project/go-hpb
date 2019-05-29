@@ -17,12 +17,10 @@
 package consensus
 
 import (
-	"encoding/hex"
 	"errors"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/common/log"
 	"math/rand"
 
 	"github.com/hashicorp/golang-lru"
