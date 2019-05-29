@@ -17,10 +17,12 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"errors"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/common/log"
 	"math/rand"
 
 	"github.com/hashicorp/golang-lru"
@@ -159,6 +161,7 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 
 	// 还原公钥
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
+	log.Info("Ecrecover", "headerSighash", hex.EncodeToString(SigHash(header).Bytes()), "signature", hex.EncodeToString(signature))
 	if err != nil {
 		return common.Address{}, err
 	}

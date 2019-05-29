@@ -17,6 +17,7 @@ package prometheus
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math/big"
 	"sync"
 	"time"
@@ -168,9 +169,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
 		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 		//set header hareware real random
-		HWRealRand := consensus.Gen32BRandom()
-		log.Info("software gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
-		extra.SetRealRND(HWRealRand[:])
+		if header.Number.Uint64() >= consensus.StageNumberV {
+			HWRealRand := consensus.Gen32BRandom()
+			log.Info("software gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
+			extra.SetRealRND(HWRealRand[:])
+		}
 
 		//if number > 1 {    //block 0 has no HWRealRnd, so from block 2 beginning set SignLastHWRealRnd
 		//	//set last number header hardware real random signature
@@ -201,13 +204,15 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			}
 
 			//set header real random getting from boe
-			HWRealRand, err := c.hboe.GetRandom()
-			if err != nil {
-				log.Error("boe gen real random fail", "error", err)
-				return err
+			if header.Number.Uint64() >= consensus.StageNumberV {
+				HWRealRand, err := c.hboe.GetRandom()
+				if err != nil {
+					log.Error("boe gen real random fail", "error", err)
+					return err
+				}
+				log.Info("boe gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
+				extra.SetRealRND(HWRealRand[:])
 			}
-			log.Info("boe gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
-			extra.SetRealRND(HWRealRand[:])
 		} else {
 			return errors.New("boe check fail")
 		}
@@ -400,6 +405,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	// 签名交易，signFn为回掉函数
 	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
+	log.Info("chain_generation", "headerHash", hex.EncodeToString(consensus.SigHash(header).Bytes()), "sighash", hex.EncodeToString(sighash))
 	if err != nil {
 		return nil, err
 	}
