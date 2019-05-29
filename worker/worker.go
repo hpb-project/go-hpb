@@ -458,7 +458,7 @@ func (self *worker) startNewMinerRound() {
 		Time:       big.NewInt(tstamp),
 	}
 	var extra *types.ExtraDetail
-	if header.Number.Uint64() > consensus.StageNumberV {
+	if header.Number.Uint64() >= consensus.StageNumberVI {
 		extra, _ = types.NewExtraDetail(types.ExtraVersion)
 	} else {
 		extra, _ = types.NewExtraDetail(0)

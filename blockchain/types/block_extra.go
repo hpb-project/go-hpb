@@ -98,14 +98,13 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 
 func (this *ExtraDetail) String() string {
 	return fmt.Sprintf(`[
-	version:	    %d
-	Vanity:		    %x
-	NodesNum:	    %x
-    RealRND:	    %x
-	SignedRND:	    %x
-    Reserved:       %x
-	Seal:		    %x
-]`, this.Version, this.Vanity, this.NodesNum, this.RealRND, this.SignedLastRND, this.Reserved, this.Seal)
+version: %d
+Vanity:	0x%x
+NodesNum: %d
+RealRND: 0x%x
+SignedRND: 0x%x
+Seal: 0x%x
+]`, this.Version, this.Vanity, this.NodesNum, this.RealRND, this.SignedLastRND, this.Seal)
 }
 
 func (this *ExtraDetail) ToBytes() []byte {
