@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 	"github.com/hpb-project/go-hpb/common"
 )
 
@@ -93,6 +94,18 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 		return nil, errors.New("Invalid ExtraData, Unmatched length. ")
 	}
 	return detail, nil
+}
+
+func (this *ExtraDetail) String() string {
+	return fmt.Sprintf(`[
+	version:	    %d
+	Vanity:		    %x
+	NodesNum:	    %x
+    RealRND:	    %x
+	SignedRND:	    %x
+    Reserved:       %x
+	Seal:		    %x
+]`, this.Version, this.Vanity, this.NodesNum, this.RealRND, this.SignedLastRND, this.Reserved, this.Seal)
 }
 
 func (this *ExtraDetail) ToBytes() []byte {
