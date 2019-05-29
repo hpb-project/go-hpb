@@ -254,9 +254,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	if number > 1 {
+	if number > consensus.StageNumberV {
 		var realrandom []byte
-		if number%200 == 0 && number > 200 {
+		if number%200 == 0 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
 			bigsignlsthwrndmod := big.NewInt(0)
 			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
@@ -265,9 +265,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			seedswitchheader := chain.GetHeaderByNumber(bigsignlsthwrnd.Uint64())
 			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
 
-			realrandom = tmpExtra.GetSignedLastRND()
+			realrandom = tmpExtra.GetRealRND()
 		} else {
-			realrandom = parentExtra.GetRealRND()
+			realrandom = parentExtra.GetSignedLastRND()
 		}
 
 		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())
