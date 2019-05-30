@@ -212,9 +212,9 @@ func Gen32BRandom() [32]byte {
 }
 
 func VerifyHWRlRndSign(HWRlRnd []byte, Sign []byte) (common.Address, error) {
-	hash := crypto.Keccak256(HWRlRnd)
+	//log.Info("VerifyHWRlRndSign", "hash", hex.EncodeToString(hash), "rnd", hex.EncodeToString(HWRlRnd))
 	// 还原公钥
-	pubkey, err := crypto.Ecrecover(hash, Sign)
+	pubkey, err := crypto.Ecrecover(HWRlRnd, Sign)
 	if err != nil {
 		return common.Address{}, err
 	}

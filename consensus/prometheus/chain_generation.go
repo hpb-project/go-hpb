@@ -154,7 +154,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	extra, _ := types.BytesToExtraDetail(header.Extra)
 	defer func() {
-		header.Extra = common.CopyBytes(extra.ToBytes())
+		header.Extra = extra.ToBytes()
 	}()
 
 	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
@@ -219,7 +219,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	//block 0 has no HWRealRnd, so from block 1 beginning set SignLastHWRealRnd
-	if number > consensus.StageNumberVI {
+	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && number > consensus.StageNumberVI {
 		//set last number header hardware real random signature
 		signer, signFn := c.signer, c.signFn
 
