@@ -11,7 +11,6 @@ const (
 	ExtraSealLength          = 65
 	ExtraRealRNDLength       = 32
 	ExtraSignedLastRNDLength = 65
-	ExtraReservedLength      = 256
 	ExtraVersion             = 1 // Version(0) means data before defined ExtraDetail.
 
 )
@@ -23,8 +22,9 @@ type ExtraDetail struct {
 	NodesAddr     common.Addresses
 	RealRND       [ExtraRealRNDLength]byte
 	SignedLastRND [ExtraSignedLastRNDLength]byte
-	Reserved      [ExtraReservedLength]byte
 	Seal          [ExtraSealLength]byte
+	//Warning: if you need add new field, you need modify BytesToExtraDetail/ToBytes/ExceptSealToBytes either.
+	//And total length can't mod(common.AddressLength)== 0.
 }
 
 func NewExtraDetail(version uint8) (*ExtraDetail, error) {
@@ -85,10 +85,9 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 		offset += ExtraRealRNDLength
 		copy(detail.SignedLastRND[:], data[offset:offset+ExtraSignedLastRNDLength])
 		offset += ExtraSignedLastRNDLength
-		copy(detail.Reserved[:], data[offset:offset+ExtraReservedLength])
-		offset += ExtraReservedLength
 		copy(detail.Seal[:], data[offset:offset+ExtraSealLength])
 		offset += ExtraSealLength
+
 	}
 	if len(data) != offset {
 		return nil, errors.New("Invalid ExtraData, Unmatched length. ")
@@ -99,7 +98,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 func (this *ExtraDetail) String() string {
 	return fmt.Sprintf(`[
 version: %d
-Vanity:	0x%x
+Vanity:	%s
 NodesNum: %d
 RealRND: 0x%x
 SignedRND: 0x%x
@@ -126,7 +125,7 @@ func (this *ExtraDetail) ToBytes() []byte {
 		copy(data[offset:offset+ExtraSealLength], this.Seal[:])
 		return data
 	} else {
-		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraReservedLength + ExtraSealLength
+		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraSealLength
 		if this.NodesNum > 0 {
 			datalen += int(this.NodesNum * common.AddressLength)
 		}
@@ -153,9 +152,6 @@ func (this *ExtraDetail) ToBytes() []byte {
 
 		copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
 		offset += ExtraSignedLastRNDLength
-
-		copy(data[offset:offset+ExtraReservedLength], this.Reserved[:])
-		offset += ExtraReservedLength
 
 		copy(data[offset:offset+ExtraSealLength], this.Seal[:])
 		offset += ExtraSealLength
@@ -184,7 +180,7 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 		}
 		return data
 	} else {
-		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraReservedLength
+		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength
 		if this.NodesNum > 0 {
 			datalen += int(this.NodesNum * common.AddressLength)
 		}
@@ -211,9 +207,6 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 
 		copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
 		offset += ExtraSignedLastRNDLength
-
-		copy(data[offset:offset+ExtraReservedLength], this.Reserved[:])
-		offset += ExtraReservedLength
 
 		return data
 	}

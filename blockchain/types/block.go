@@ -124,6 +124,11 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
+func (h *Header) Vanity() []byte {
+	extra, _ := BytesToExtraDetail(h.Extra)
+	return extra.GetVanity()
+}
+
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions and uncles) together.
 type Body struct {
