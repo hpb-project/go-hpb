@@ -124,9 +124,9 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
-func (h *Header) Vanity() []byte {
+func (h *Header) FriendlyExtra() string {
 	extra, _ := BytesToExtraDetail(h.Extra)
-	return extra.GetVanity()
+	return extra.String()
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
