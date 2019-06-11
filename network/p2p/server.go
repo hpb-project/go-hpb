@@ -572,7 +572,7 @@ running:
 
 			srv.ntab.RemoveNode(nid)
 
-			expire := time.Second*time.Duration(10+rand.Intn(20))
+			expire := time.Second*time.Duration(10+rand.Intn(5))
 			srv.delHist.add(nid, time.Now().Add(expire))
 			log.Debug("Server running: add node to history.","expire",expire)
 
@@ -700,8 +700,8 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
-	//srv.setupLock.Lock()
-	//defer srv.setupLock.Unlock()
+	srv.setupLock.Lock()
+	defer srv.setupLock.Unlock()
 
 	// Run the encryption handshake.
 	var err error
