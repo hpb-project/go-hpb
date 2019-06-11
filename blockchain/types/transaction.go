@@ -572,7 +572,7 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price based heap with the head transactions
-	var block_max_txs = 75000
+	var block_max_txs = 50000
 	var cnt = 0
 	log.Error("NewTransactionsByPriceAndNonce", "len(txs)", len(txs))
 	heads := make(TxByPrice, 0, len(txs))
