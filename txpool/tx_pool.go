@@ -85,7 +85,10 @@ type TxPool struct {
 	pending  sync.Map //map[common.Address]*txList   //All currently processable transactions
 	queue    sync.Map //map[common.Address]*txList   // Queued but non-processable transactions
 
-	smu           sync.RWMutex        // mutex for below.
+	pendingmu sync.RWMutex // mutex for below.
+
+	smu sync.RWMutex // mutex for below.
+
 	currentState  *state.StateDB      // Current state in the blockchain head
 	pendingState  *state.ManagedState // Pending state tracking virtual nonces
 	currentMaxGas *big.Int            // Current gas limit for transaction caps
@@ -710,6 +713,8 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
+	pool.pendingmu.Lock()
+	defer pool.pendingmu.Unlock()
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
 		accounts = make([]common.Address, 0, LenSynMap(pool.queue))
@@ -782,6 +787,8 @@ func (pool *TxPool) demoteUnexecutables() {
 	if pool.currentState == nil {
 		return
 	}
+	pool.pendingmu.Lock()
+	defer pool.pendingmu.Unlock()
 
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr := k.(common.Address)
@@ -1340,6 +1347,8 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
+	pool.pendingmu.Lock()
+	defer pool.pendingmu.Unlock()
 	pending := make(map[common.Address]types.Transactions)
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr := k.(common.Address)
