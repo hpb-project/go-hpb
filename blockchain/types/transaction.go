@@ -26,10 +26,10 @@ import (
 
 	"encoding/json"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/hexutil"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/config"
 )
@@ -572,7 +572,7 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price based heap with the head transactions
-	var block_max_txs = 75000
+	var block_max_txs = 50000
 	var cnt = 0
 	log.Error("NewTransactionsByPriceAndNonce", "len(txs)", len(txs))
 	heads := make(TxByPrice, 0, len(txs))
@@ -581,10 +581,12 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 		if cnt >= block_max_txs {
 			break
 		}
-		heads = append(heads, accTxs[0])
-		// Ensure the sender address is from the signer
-		acc, _ := Sender(signer, accTxs[0])
-		txs[acc] = accTxs[1:]
+		if accTxs != nil && len(accTxs) > 0 {
+			heads = append(heads, accTxs[0])
+			// Ensure the sender address is from the signer
+			acc, _ := Sender(signer, accTxs[0])
+			txs[acc] = accTxs[1:]
+		}
 	}
 	heap.Init(&heads)
 
