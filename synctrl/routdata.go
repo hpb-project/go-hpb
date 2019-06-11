@@ -23,6 +23,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"math"
 	"math/big"
 	"time"
 )
@@ -64,37 +65,37 @@ func routBlock(block *types.Block, propagate bool) {
 		}
 		//
 		//// Send the block to a subset of our peers
-		//transfer := peers[:int(math.Sqrt(float64(len(peers))))]
-		//for _, peer := range transfer {
-		//	switch peer.LocalType() {
-		//	case discover.HpNode:
-		//		switch peer.RemoteType() {
-		//		case discover.HpNode:
-		//			sendNewBlock(peer, block, td)
-		//			break
-		//		case discover.PreNode:
-		//			sendNewBlock(peer, block, td)
-		//			break
-		//		default:
-		//			break
-		//		}
-		//		break
-		//	case discover.PreNode:
-		//		switch peer.RemoteType() {
-		//		case discover.PreNode:
-		//			sendNewBlock(peer, block, td)
-		//			break
-		//		case discover.SynNode:
-		//			sendNewBlock(peer, block, td)
-		//			break
-		//		default:
-		//			break
-		//		}
-		//		break
-		//	default:
-		//		break
-		//	}
-		//}
+		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+		for _, peer := range transfer {
+			switch peer.LocalType() {
+			case discover.HpNode:
+				switch peer.RemoteType() {
+				case discover.HpNode:
+					sendNewBlock(peer, block, td)
+					break
+				case discover.PreNode:
+					sendNewBlock(peer, block, td)
+					break
+				default:
+					break
+				}
+				break
+			case discover.PreNode:
+				switch peer.RemoteType() {
+				case discover.PreNode:
+					sendNewBlock(peer, block, td)
+					break
+				case discover.SynNode:
+					sendNewBlock(peer, block, td)
+					break
+				default:
+					break
+				}
+				break
+			default:
+				break
+			}
+		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
 	}
