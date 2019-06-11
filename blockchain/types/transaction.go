@@ -26,6 +26,7 @@ import (
 
 	"encoding/json"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/hexutil"
@@ -573,6 +574,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	// Initialize a price based heap with the head transactions
 	var block_max_txs = 45000
 	var cnt = 0
+	log.Error("NewTransactionsByPriceAndNonce", "len(txs)", len(txs))
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {
 		cnt += 1

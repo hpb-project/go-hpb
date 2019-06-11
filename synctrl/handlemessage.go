@@ -416,9 +416,9 @@ func TxsPoolLoop() {
 	duration := time.Millisecond * 500
 	timer := time.NewTimer(duration)
 
-	txCap := 1000
+	txCap := 5000
 	txs := make([]*types.Transaction, 0, txCap)
-	poolTxsCh = make(chan *types.Transaction, 200)
+	poolTxsCh = make(chan *types.Transaction, 2000)
 
 	for {
 		select {
@@ -448,14 +448,25 @@ func TxsPoolLoop() {
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
+	st:=time.Now().UnixNano()/1000
+	defer func(){
+		log.Debug("HandleTxMsg receive every")
+	}()
+
 	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+		log.Debug("HandleTxMsg Instance is accepttxs")
 		return nil
 	}
+
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
+		log.Debug("HandleTxMsg decode failed")
 		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 	}
+	defer func(){
+		log.Debug("HandleTxMsg receive tx from", "peer",p.GetID(),"tx[0]",txs[0].Hash())
+	}()
 	go txpool.GetTxPool().GoTxsAsynSender(txs)
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
@@ -467,7 +478,11 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) {
 			continue
 		} else {
-			poolTxsCh <- tx
+			go func(){
+				poolTxsCh <- tx
+			}()
+			se:=time.Now().UnixNano()/1000
+			log.Debug("HandleTxMsg ", "cost time(us)", se-st)
 		}
 	}
 

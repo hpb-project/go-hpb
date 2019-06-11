@@ -570,6 +570,11 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 		if err != nil {
 			return nil
 		}
+		st := time.Now().UnixNano()
+		defer func() {
+			se := time.Now().UnixNano()
+			log.Error("addTxLocked", "promoteExecutables cost time (us)", (st-se)/1000)
+		}()
 		pool.promoteExecutables([]common.Address{from})
 	}
 	return nil

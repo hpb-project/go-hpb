@@ -3,9 +3,9 @@ package synctrl
 import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/compress"
+//	"github.com/hpb-project/go-hpb/common/compress"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/common/rlp"
+//	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"math/big"
 	"sync"
@@ -63,7 +63,7 @@ func init() {
 			//	fmt.Println("loop waitSendMap", time.Now().Format("2006-01-02 15:04:05"), "map size:", len(waitSendMap))
 			waitSendMap.lock.Lock()
 			for _, e := range waitSendMap.m {
-				e.sendDataTxs()
+				//e.sendDataTxs()
 				log.Debug("send condition in ticker", "peer", e.Peer.RemoteAddr().String())
 			}
 			waitSendMap.Clear()
@@ -96,69 +96,69 @@ type HashNum struct {
 	Numbers []uint64
 }
 
-func CacheSendDataTransactions(peer *p2p.Peer, txs types.Transactions) {
-	len, size := 0, 0
-	for _, tx := range txs {
-		peer.KnownTxsAdd(tx.Hash())
-		len++
-		size += tx.GetDataSize()
-	}
-	if cache, ok := waitSendMap.Get(peer.GetID()); ok {
-		cache.Status.LastMsgLen += len
-		cache.Status.LastMsgSize += size
-		cache.Txs = cache.Txs.Append(txs)
-		if cache.isNeedSend() {
-			cache.sendDataTxs()
-			waitSendMap.Delete(cache.Peer.GetID())
-		}
-	} else {
-		c := &CachePeerOfBlocks{
-			Peer: peer,
-			Txs:  txs,
-			Status: CacheStatus{
-				LastSendTime: time.Now().Unix(),
-				LastMsgLen:   len,
-				LastMsgSize:  size,
-			},
-		}
-		waitSendMap.Put(peer.GetID(), c)
-	}
-}
-
-func (cache *CachePeerOfBlocks) isNeedSend() bool {
-	if cache.Status.LastMsgSize > maxCacheBlockSize ||
-		cache.Status.LastMsgLen > maxCacheBlocksLen {
-		//||cache.Status.LastSendTime + interval < time.Now().Unix()
-		log.Debug("send condition", "lastMsgSize", cache.Status.LastMsgSize, "lastMsgLen", cache.Status.LastMsgLen, "lastSendTime", cache.Status.LastSendTime, "nowTime", time.Now().Unix())
-		return true
-	}
-	return false
-}
-
-func (cache *CachePeerOfBlocks) sendDataTxs() {
-	log.Debug("tx number", "", cache.Peer.RemoteAddr(), "", cache.Txs.Len())
-	size, reader, err := rlp.EncodeToReader(cache.Txs)
-
-	if err != nil {
-		return
-	}
-	p := make([]byte, size)
-	n, err := reader.Read(p)
-	if n > 0 {
-		p = p[:n]
-	}
-	result, err := compress.ZlibCompress(p, compress.BestCompression)
-	if err != nil {
-		log.Error("zlib compress error", "", err)
-		return
-	}
-	err = p2p.SendData(cache.Peer, p2p.CompressTxMsg, []interface{}{&result})
-	if err != nil {
-		log.Error("send data to peer error", "", err)
-		return
-	}
-	cache.Status.LastSendTime = time.Now().Unix()
-}
+//func CacheSendDataTransactions(peer *p2p.Peer, txs types.Transactions) {
+//	len, size := 0, 0
+//	for _, tx := range txs {
+//		peer.KnownTxsAdd(tx.Hash())
+//		len++
+//		size += tx.GetDataSize()
+//	}
+//	if cache, ok := waitSendMap.Get(peer.GetID()); ok {
+//		cache.Status.LastMsgLen += len
+//		cache.Status.LastMsgSize += size
+//		cache.Txs = cache.Txs.Append(txs)
+//		if cache.isNeedSend() {
+//			cache.sendDataTxs()
+//			waitSendMap.Delete(cache.Peer.GetID())
+//		}
+//	} else {
+//		c := &CachePeerOfBlocks{
+//			Peer: peer,
+//			Txs:  txs,
+//			Status: CacheStatus{
+//				LastSendTime: time.Now().Unix(),
+//				LastMsgLen:   len,
+//				LastMsgSize:  size,
+//			},
+//		}
+//		waitSendMap.Put(peer.GetID(), c)
+//	}
+//}
+//
+//func (cache *CachePeerOfBlocks) isNeedSend() bool {
+//	if cache.Status.LastMsgSize > maxCacheBlockSize ||
+//		cache.Status.LastMsgLen > maxCacheBlocksLen {
+//		//||cache.Status.LastSendTime + interval < time.Now().Unix()
+//		log.Debug("send condition", "lastMsgSize", cache.Status.LastMsgSize, "lastMsgLen", cache.Status.LastMsgLen, "lastSendTime", cache.Status.LastSendTime, "nowTime", time.Now().Unix())
+//		return true
+//	}
+//	return false
+//}
+//
+//func (cache *CachePeerOfBlocks) sendDataTxs() {
+//	log.Debug("tx number", "", cache.Peer.RemoteAddr(), "", cache.Txs.Len())
+//	size, reader, err := rlp.EncodeToReader(cache.Txs)
+//
+//	if err != nil {
+//		return
+//	}
+//	p := make([]byte, size)
+//	n, err := reader.Read(p)
+//	if n > 0 {
+//		p = p[:n]
+//	}
+//	result, err := compress.ZlibCompress(p, compress.BestCompression)
+//	if err != nil {
+//		log.Error("zlib compress error", "", err)
+//		return
+//	}
+//	err = p2p.SendData(cache.Peer, p2p.CompressTxMsg, []interface{}{&result})
+//	if err != nil {
+//		log.Error("send data to peer error", "", err)
+//		return
+//	}
+//	cache.Status.LastSendTime = time.Now().Unix()
+//}
 
 /*func CacheSendDataBlockTd(peer *p2p.Peer, block *types.Block, td *big.Int){
 	size, _, err := rlp.EncodeToReader(block)

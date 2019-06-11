@@ -194,7 +194,7 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 		for _, peer := range peers {
 			switch peer.RemoteType() {
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				//sendTransactions(peer, types.Transactions{tx})
 				break
 			}
 		}
@@ -203,7 +203,7 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 		for _, peer := range peers {
 			switch peer.RemoteType() {
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				//sendTransactions(peer, types.Transactions{tx})
 				break
 			}
 		}
@@ -212,7 +212,7 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 		for _, peer := range peers {
 			switch peer.RemoteType() {
 			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
+				//sendTransactions(peer, types.Transactions{tx})
 				toPreCount += 1
 				break
 			}
@@ -260,7 +260,7 @@ func routForwardTx(hash common.Hash, tx *types.Transaction) {
 		for _, peer := range peers {
 			switch peer.RemoteType() {
 			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
+				//sendTransactions(peer, types.Transactions{tx})
 				break
 			}
 		}
@@ -276,5 +276,6 @@ func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
 	for _, tx := range txs {
 		peer.KnownTxsAdd(tx.Hash())
 	}
+	log.Debug("senTransaction ", "peer", peer.GetID(), "txs count ", len(txs))
 	return p2p.SendData(peer, p2p.TxMsg, txs)
 }
