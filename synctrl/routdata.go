@@ -254,6 +254,7 @@ func routForwardTx(hash common.Hash, tx *types.Transaction) {
 
 func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
 	for _, tx := range txs {
+		log.Debug("sendTransactions peerKnownAdd", "txhash", tx.Hash())
 		peer.KnownTxsAdd(tx.Hash())
 	}
 	log.Debug("senTransaction ", "peer", peer.GetID(), "txs count ", len(txs))
