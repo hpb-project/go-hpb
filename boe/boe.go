@@ -659,7 +659,7 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
  */
 func (boe *BoeHandle) GetRandom() ([]byte, error) {
 	var result = make([]byte, 32)
-	var ret = C.boe_get_random((*C.uchar)(unsafe.Pointer(&result[0])))
+	var ret = C.boe_reg_random_read((*C.uchar)(unsafe.Pointer(&result[0])))
 	if ret == C.BOE_OK {
 		return result, nil
 	} else {

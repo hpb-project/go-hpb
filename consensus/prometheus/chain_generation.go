@@ -411,7 +411,12 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	}
 
 	//将签名后的结果返给到Extra中
-	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
+	extra, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return nil, err
+	}
+	extra.SetSeal(sighash)
+	header.Extra = common.CopyBytes(extra.ToBytes())
 
 	return block.WithSeal(header), nil
 }
