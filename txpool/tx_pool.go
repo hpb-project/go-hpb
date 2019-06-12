@@ -193,7 +193,9 @@ func (pool *TxPool) loop() {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
+				log.Debug("pool.chainHeadCh wait TxpoolLock")
 				pool.smu.Lock()
+				log.Debug("pool.chainHeadCh got TxpoolLock")
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 
@@ -459,9 +461,11 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 		return nil
 	}
 	st1 := time.Now().UnixNano() / 1000
+	log.Debug("AddTxs wait TxpoolLock")
 	pool.smu.Lock()
 	defer pool.smu.Unlock()
 	st2 := time.Now().UnixNano() / 1000
+	log.Debug("AddTxs got TxpoolLock")
 	defer func() {
 		st3 := time.Now().UnixNano() / 1000
 		log.Debug("AddTxs", "len(txs)", len(txs), "wait lock cost time(us)", st2-st1, "addTx cost time(us)", st3-st2, "total cost time(us)", st3-st1)
@@ -498,8 +502,9 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return fmt.Errorf("known transaction: %x", hash)
 	}
-
+	log.Debug("AddTx wait TxpoolLock")
 	pool.smu.Lock()
+	log.Debug("AddTx got TxpoolLock")
 	defer pool.smu.Unlock()
 	// If the transaction fails basic validation, discard it
 	if err := pool.softvalidateTx(tx); err != nil {
@@ -1366,7 +1371,9 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 
 // State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
+	log.Debug("State wait TxpoolLock")
 	pool.smu.Lock()
+	log.Debug("State got TxpoolLock")
 	defer pool.smu.Unlock()
 
 	return pool.pendingState
@@ -1409,7 +1416,9 @@ func (pool *TxPool) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscriptio
 // SetGasPrice updates the minimum price required by the transaction pool for a
 // new transaction
 func (pool *TxPool) SetGasPrice(price *big.Int) {
+	log.Debug("SetGasPrice wait TxpoolLock")
 	pool.smu.Lock()
+	log.Debug("SetGasPrice got TxpoolLock")
 	defer pool.smu.Unlock()
 
 	pool.gasPrice = price
@@ -1418,7 +1427,9 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 
 // For test code.
 func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
+	log.Debug("lockedReset wait TxpoolLock")
 	pool.smu.Lock()
+	log.Debug("lockedReset got TxpoolLock")
 	defer pool.smu.Unlock()
 
 	pool.reset(oldHead, newHead)

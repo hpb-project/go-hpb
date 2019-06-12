@@ -45,8 +45,8 @@ const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 
 var (
-	HpbNodenumber = 2    //hpb nodes number
-	NumberPrehp   = 2    //nodes num from 151 nodes select
+	HpbNodenumber = 8     //hpb nodes number
+	NumberPrehp   = 8     //nodes num from 151 nodes select
 	IgnoreRetErr  = false //ignore finalize return err
 
 	StageNumberII  uint64 = 260000
