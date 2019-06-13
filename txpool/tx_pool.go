@@ -527,7 +527,9 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	for _, tx := range txs {
+		log.Debug("addTxsLocked add tx before.")
 		if replace, err := pool.add(tx); err == nil {
+			log.Debug("addTxsLocked add tx after.")
 			if !replace {
 
 				from, err := types.Sender(pool.signer, tx) // already validated
@@ -626,8 +628,9 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	var ul = new(sync.RWMutex)
 	ulk, _ := pool.userlock.LoadOrStore(from, ul)
 	userlk := ulk.(*sync.RWMutex)
-
+	log.Debug("txpool add, wait userlk", "addr", from)
 	userlk.Lock()
+	log.Debug("txpool add, got userlk", "addr", from)
 	defer userlk.Unlock()
 	if lv, ok := pool.pending.Load(from); ok {
 		if list, ok := lv.(*txList); ok && list.Overlaps(tx) {
@@ -736,7 +739,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		ul, _ := pool.userlock.Load(addr)
 		userlk := ul.(*sync.RWMutex)
 		userlk.Lock()
-		defer userlk.Unlock()
 
 		if list, ok := v.(*txList); ok && list != nil {
 			// Drop all transactions that are deemed too old (low nonce)
@@ -777,6 +779,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				pool.queue.Delete(addr)
 			}
 		}
+		userlk.Unlock()
 
 		return true
 	})
@@ -1187,7 +1190,7 @@ func (pool *TxPool) keepFit() {
 				if size := uint64(list.Len()); size <= drop {
 					for _, tx := range list.Flatten() {
 						pool.removeTxLocked(tx.Hash())
-						log.Trace("Removed fairness-exceeding Queue transaction", "hash", tx.Hash())
+						log.Debug("Removed fairness-exceeding Queue transaction", "hash", tx.Hash())
 					}
 					drop -= size
 					userlk.Unlock()
@@ -1198,7 +1201,7 @@ func (pool *TxPool) keepFit() {
 
 				for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
 					pool.removeTxLocked(txs[i].Hash())
-					log.Trace("Removed fairness-exceeding Queue transaction", "hash", txs[i].Hash())
+					log.Debug("Removed fairness-exceeding Queue transaction", "hash", txs[i].Hash())
 					drop--
 				}
 
