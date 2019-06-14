@@ -313,24 +313,37 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				log.Error("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
-			if err = c.hboe.HashVerify(parentheader.HardwareRandom, header.HardwareRandom); err != nil {
-				log.Error("verify fail HashVerify", "error", err)
-				return consensus.Errrandcheck
+			if number >= consensus.StageNumberV {
+				if err = c.hboe.HashVerify(parentheader.HardwareRandom, header.HardwareRandom); err != nil {
+					log.Error("verify fail HashVerify", "error", err)
+					return consensus.Errrandcheck
+				}
+			} else {
+				newrand, err := c.GetNextRand(parentheader.HardwareRandom, number)
+				if err != nil {
+					log.Error("verifySeal GetNextHash", "fail", err)
+					return consensus.ErrInvalidblockbutnodrop
+				}
+				if bytes.Compare(newrand, header.HardwareRandom) != 0 {
+					log.Error("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
+					return consensus.Errrandcheck
+				}
 			}
-			//newrand, err := c.GetNextRand(parentheader.HardwareRandom, number)
-			//if err != nil {
-			//	log.Error("verifySeal GetNextHash", "fail", err)
-			//	return consensus.ErrInvalidblockbutnodrop
-			//}
-			//if bytes.Compare(newrand, header.HardwareRandom) != 0 {
-			//	log.Error("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
-			//	return consensus.Errrandcheck
-			//}
 		}
 
 		if mode == config.FullSync {
+			var inturn bool
+			if number < consensus.StageNumberV {
+				inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger())
+			} else {
+				//statistics the miners` addresses donnot care repeat address
+				signersgenblks := make([]types.Header, 0, consensus.ContinuousGenBlkLimit)
+				for i := uint64(0); i < consensus.ContinuousGenBlkLimit; i++ {
+					signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
+				}
+				inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), signersgenblks)
+			}
 			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
-			inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			if inturn {
 				if header.Difficulty.Cmp(diffInTurn) != 0 {
 					return consensus.ErrInvalidDifficulty
