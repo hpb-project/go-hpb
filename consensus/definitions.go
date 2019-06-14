@@ -52,7 +52,9 @@ var (
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 300
-	StageNumberV   uint64 = 999999000000 // 暂不启用
+	StageNumberV   uint64 = 200 // 暂不启用
+
+	ContinuousGenBlkLimit uint64 = 2
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
 )

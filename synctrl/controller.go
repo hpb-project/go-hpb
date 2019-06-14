@@ -204,8 +204,8 @@ func (this *SynCtrl) minedRoutingLoop() {
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
-			routBlock(ev.Block, true)  // First propagate block to peers
-			routBlock(ev.Block, false) // Only then announce to the rest
+			go routBlock(ev.Block, true) // First propagate block to peers
+			//routBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }
