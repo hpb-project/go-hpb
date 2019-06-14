@@ -334,14 +334,14 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		if mode == config.FullSync {
 			var inturn bool
 			if number < consensus.StageNumberV {
-				inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger())
+				inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
 				signersgenblks := make([]types.Header, 0, consensus.ContinuousGenBlkLimit)
 				for i := uint64(0); i < consensus.ContinuousGenBlkLimit; i++ {
 					signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
 				}
-				inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), signersgenblks)
+				inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, signersgenblks)
 			}
 			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 			if inturn {
