@@ -62,7 +62,7 @@ func routBlock(block *types.Block, propagate bool) {
 					break
 				}
 			}
-			log.Trace("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+			log.Debug("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		}
 		//
 		//// Send the block to a subset of our peers
@@ -137,7 +137,7 @@ func routBlock(block *types.Block, propagate bool) {
 					break
 				}
 			}
-			log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+			log.Debug("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		}
 	}
 }

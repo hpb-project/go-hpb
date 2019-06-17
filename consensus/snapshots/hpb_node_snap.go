@@ -18,6 +18,7 @@ package snapshots
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
@@ -148,14 +149,16 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, headers []types.Header) bool {
 
 	//calc all the have been generated blocks signers; overlap is ok because these signers will be eliminated
+	log.Debug("CalcCurrentMiner start ", "number", number, "signer", hex.EncodeToString(signer.Bytes()))
 	signersgenblks := make([]common.Address, 0, len(headers))
 	for _, v := range headers {
 		signersgenblks = append(signersgenblks, v.Coinbase)
 	}
 	signers, offset := s.GetHpbNodes(), 0
 	for _, signergenblk := range signersgenblks {
-		for k, signer := range signers {
-			if signergenblk == signer {
+		for k, asigner := range signers {
+			log.Debug("history", "miner", hex.EncodeToString(asigner.Bytes()))
+			if signergenblk == asigner {
 				signers = append(signers[:k], signers[k+1:]...)
 				break
 			}
