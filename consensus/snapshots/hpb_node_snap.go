@@ -154,8 +154,8 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	}
 	signers, offset := s.GetHpbNodes(), 0
 	for _, signergenblk := range signersgenblks {
-		for k, signer := range signers {
-			if signergenblk == signer {
+		for k, asigner := range signers {
+			if signergenblk == asigner {
 				signers = append(signers[:k], signers[k+1:]...)
 				break
 			}
