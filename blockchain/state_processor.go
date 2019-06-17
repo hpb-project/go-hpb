@@ -89,14 +89,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 				return nil, nil, nil, errs
 			}
 		}
+		from, _ := types.Sender(synsigner, tx)
+		log.Debug("Processed Transaction", "from", from, "to", tx.To(), "Nonce", tx.Nonce())
 
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	s1 := time.Now().UnixNano()/1000/1000
-	_, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts);
-	s2 := time.Now().UnixNano()/1000/1000
+	s1 := time.Now().UnixNano() / 1000 / 1000
+	_, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts)
+	s2 := time.Now().UnixNano() / 1000 / 1000
 	log.Debug("block process--Finalize", "cost time(ms)", s2-s1)
 	if nil != errfinalize {
 		return nil, nil, nil, errfinalize
@@ -157,14 +159,14 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
-//	s1 := time.Now().UnixNano()/1000
+	//	s1 := time.Now().UnixNano()/1000
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
 		return nil, nil, err
 	}
-//	s2 := time.Now().UnixNano()/1000
-//	log.Debug("ApplyTransaction AsMessage", "cost time(us)", s2 - s1)
+	//	s2 := time.Now().UnixNano()/1000
+	//	log.Debug("ApplyTransaction AsMessage", "cost time(us)", s2 - s1)
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
@@ -172,24 +174,24 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 		log.Error("ApplyMessageNonContract err", "err", err)
 		return nil, nil, err
 	}
-//	s3 := time.Now().UnixNano()/1000
-//	log.Debug("ApplyTransaction NonContract", "cost time(us)", s3 - s2)
+	//	s3 := time.Now().UnixNano()/1000
+	//	log.Debug("ApplyTransaction NonContract", "cost time(us)", s3 - s2)
 
 	// Update the state with pending changes
 	var root []byte
 
 	statedb.Finalise(true)
-//	s4 := time.Now().UnixNano()/1000
-//	log.Debug("ApplyTransaction Finalise", "cost time(us)", s4 - s3)
+	//	s4 := time.Now().UnixNano()/1000
+	//	log.Debug("ApplyTransaction Finalise", "cost time(us)", s4 - s3)
 
 	usedGas.Add(usedGas, gas)
-//	s5 := time.Now().UnixNano()/1000
-//	log.Debug("ApplyTransaction Add", "cost time(us)", s5 - s4)
-//
-//	defer func() {
-//		s6 := time.Now().UnixNano()/1000
-//		log.Debug("ApplyTransaction Receipt", "cost time(us)", s6 - s5)
-//	}()
+	//	s5 := time.Now().UnixNano()/1000
+	//	log.Debug("ApplyTransaction Add", "cost time(us)", s5 - s4)
+	//
+	//	defer func() {
+	//		s6 := time.Now().UnixNano()/1000
+	//		log.Debug("ApplyTransaction Receipt", "cost time(us)", s6 - s5)
+	//	}()
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
@@ -204,7 +206,6 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 	if receipt == nil {
 	}
-
 
 	return receipt, gas, err
 }
