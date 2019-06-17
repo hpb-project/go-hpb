@@ -416,7 +416,7 @@ func TxsPoolLoop() {
 	duration := time.Millisecond * 500
 	timer := time.NewTimer(duration)
 
-	txCap := 5000
+	txCap := 2000
 	txs := make([]*types.Transaction, 0, txCap)
 	poolTxsCh = make(chan *types.Transaction, 2000)
 

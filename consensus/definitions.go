@@ -45,14 +45,14 @@ const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 
 var (
-	HpbNodenumber = 8     //hpb nodes number
-	NumberPrehp   = 8     //nodes num from 151 nodes select
+	HpbNodenumber = 31     //hpb nodes number
+	NumberPrehp   = 2     //nodes num from 151 nodes select
 	IgnoreRetErr  = false //ignore finalize return err
 
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 300
-	StageNumberV   uint64 = 200 // 暂不启用
+	StageNumberV   uint64 = 200 // 开启不可连续出块功能.
 
 	ContinuousGenBlkLimit uint64 = 2
 
