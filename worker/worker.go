@@ -289,6 +289,7 @@ func (self *worker) eventListener() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			log.Debug("goto startNewMinerRound from chainHeadCh")
 			self.startNewMinerRound()
 
 		// Handle ChainSideEvent
@@ -376,6 +377,7 @@ func (self *worker) handlerSelfMinedBlock() {
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
+				log.Debug("goto startNewMinerRound from CommitNewWork")
 				self.startNewMinerRound()
 			}
 		}

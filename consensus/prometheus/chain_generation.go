@@ -192,15 +192,27 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Debug("parentheader.HardwareRandom is nil or length is not 32")
 			}
-			if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
-				return err
-			} else {
-				if len(boehwrand) != 0 {
-					header.HardwareRandom = make([]byte, len(boehwrand))
-					copy(header.HardwareRandom, boehwrand)
+
+			for {
+				log.Debug("PrepareBlockHeader GetNextRand")
+				if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
+					log.Debug("PrepareBlockHeader GetNextRand failed.")
+					return err
+					if err == boe.ErrHashTimeLimited {
+						time.Sleep(time.Millisecond * 500)
+						continue
+					} else {
+						return err
+					}
 				} else {
-					return errors.New("c.hboe.GetNextHash success but output random length is 0")
+					if len(boehwrand) != 0 {
+						header.HardwareRandom = make([]byte, len(boehwrand))
+						copy(header.HardwareRandom, boehwrand)
+					} else {
+						return errors.New("c.hboe.GetNextHash success but output random length is 0")
+					}
 				}
+				break
 			}
 
 			//set header real random getting from boe

@@ -633,7 +633,7 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
 func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 	var result = make([]byte, 32)
 	if len(hash) != 32 {
-		return nil, ErrGetNextHashFailed
+		return nil, ErrInvalidParams
 	}
 	version, err := boe.GetVersion()
 	if err != nil {
@@ -646,6 +646,9 @@ func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 			return result, nil
 		} else {
 			log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+			if uint32(ret.ecode) == e_hash_get_time_limit {
+				return nil, ErrHashTimeLimited
+			}
 		}
 	} else {
 		log.Error("BOE firmware version is too low, not support Hash_v2.")
