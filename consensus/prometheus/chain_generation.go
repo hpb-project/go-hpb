@@ -197,7 +197,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				log.Debug("PrepareBlockHeader GetNextRand")
 				if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
 					log.Debug("PrepareBlockHeader GetNextRand failed.")
-					return err
 					if err == boe.ErrHashTimeLimited {
 						time.Sleep(time.Millisecond * 500)
 						continue
