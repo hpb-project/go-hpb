@@ -290,7 +290,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		if mode == config.FullSync {
 			var inturn bool
 			if number < consensus.StageNumberV {
-				inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+				inturn = snap.CalculateCurrentMinerorigin(header.Number.Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
 				signersgenblks := make([]types.Header, 0, consensus.ContinuousGenBlkLimit)

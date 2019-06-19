@@ -190,7 +190,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	header.Difficulty = diffNoTurn
 	if number < consensus.StageNumberV {
-		if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()) {
+		if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.GetSinger()) {
 			header.Difficulty = diffInTurn
 		}
 	} else {
