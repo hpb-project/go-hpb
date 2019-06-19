@@ -621,12 +621,21 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 
 	//use read contract addr and funstr get vote result
+	// 方案一
 	var realaddr common.Address
-	if consensus.StageNumberVI < header.Number.Uint64() {
+	if (consensus.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < consensus.StageNumberVII) {
 		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
 	}else {
 		realaddr = common.BytesToAddress(resultaddr)
 	}
+
+	// 方案二
+	realaddr2 := common.BytesToAddress(resultaddr)
+	log.Debug("Get Real Address From Votes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
+	if realaddr.String() != realaddr2.String() {
+		log.Warn("Warning!!! Get Real Address From Votes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
+	}
+
 	//
 
 
@@ -780,13 +789,20 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	}
 
 	//use read contract addr and funstr get vote result
+	//方案一
 	var realaddr common.Address
-	if consensus.StageNumberVI < header.Number.Uint64() {
+	if (consensus.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < consensus.StageNumberVII){
 		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
 	}else {
 		realaddr = common.BytesToAddress(resultaddr)
 	}
-	//
+
+	// 方案二
+	realaddr2 := common.BytesToAddress(resultaddr)
+	log.Debug("Get Real Address From VoteRes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
+	if realaddr.String() != realaddr2.String() {
+		log.Warn("Warning!!! Get Real Address From VoteRes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
+	}
 
 	funparamstr := new([8]byte)
 	copy(funparamstr[:], resultfun[66:66+8])
