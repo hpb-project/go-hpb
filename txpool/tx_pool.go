@@ -613,15 +613,19 @@ func LenSynMap(m sync.Map) int64 {
 }
 
 func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
+	log.Debug("add tx enter")
 	hash := tx.Hash()
+	log.Debug("add tx before get sender")
 	from, _ := types.Sender(pool.signer, tx) // already validated
 
 	// If the transaction pool is full, reject
+	log.Debug("add tx poolcheck")
 	if allCnt++; allCnt >= poolCheck {
+		log.Debug("add tx before LenSynMap")
 		lenall := LenSynMap(pool.all)
 		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
 		if lenall >= int64(pool.config.GlobalSlots+pool.config.GlobalQueue) {
-			log.Warn("TxPool is full, reject tx", "current size", lenall,
+			log.Debug("TxPool is full, reject tx", "current size", lenall,
 				"max size", pool.config.GlobalSlots+pool.config.GlobalQueue, "hash", hash, "from", from, "to", tx.To())
 			return false, ErrTxPoolFull
 		} else {
