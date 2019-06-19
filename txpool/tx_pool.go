@@ -529,9 +529,8 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 	for _, tx := range txs {
 		log.Debug("addTxsLocked add tx before.")
 		if replace, err := pool.add(tx); err == nil {
-			log.Debug("addTxsLocked add tx after.")
-			if !replace {
 
+			if !replace {
 				from, err := types.Sender(pool.signer, tx) // already validated
 				if err != nil {
 					continue
@@ -540,8 +539,9 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 				dirty[from] = struct{}{}
 			}
 		}
-
+		log.Debug("addTxsLocked add tx after.")
 	}
+	log.Debug("addTxsLocked goto deal dirty")
 
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
@@ -550,9 +550,13 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 		for addr := range dirty {
 			addrs = append(addrs, addr)
 		}
+		log.Debug("addTxsLocked before promoteExecutables")
+
 		pool.promoteExecutables(addrs)
+		log.Debug("addTxsLocked after  promoteExecutables")
 
 	}
+	log.Debug("addTxsLocked after deal dirty")
 
 	return nil
 }
@@ -615,6 +619,7 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	// If the transaction pool is full, reject
 	if allCnt++; allCnt >= poolCheck {
 		lenall := LenSynMap(pool.all)
+		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
 		if lenall >= int64(pool.config.GlobalSlots+pool.config.GlobalQueue) {
 			log.Warn("TxPool is full, reject tx", "current size", lenall,
 				"max size", pool.config.GlobalSlots+pool.config.GlobalQueue, "hash", hash, "from", from, "to", tx.To())
@@ -625,8 +630,11 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	}
 
 	// If the transaction is replacing an already pending one, do directly
+	log.Debug("add tx before new RwMutex", "len(userlock)", LenSynMap(pool.userlock))
 	var ul = new(sync.RWMutex)
+	log.Debug("add tx after new RwMutex")
 	ulk, _ := pool.userlock.LoadOrStore(from, ul)
+	log.Debug("add tx after loadOrStore")
 	userlk := ulk.(*sync.RWMutex)
 	log.Debug("txpool add, wait userlk", "addr", from)
 	userlk.Lock()
@@ -720,9 +728,12 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-
+	log.Debug("prometeExcutables enter", "accounts is null ?", accounts == nil)
+	log.Debug("promoteExecutables wait pending lock.")
 	pool.pendingmu.Lock()
+	log.Debug("promoteExecutables got pending lock.")
 	defer pool.pendingmu.Unlock()
+	defer log.Debug("prometeExcutables exit")
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
 		accounts = make([]common.Address, 0, LenSynMap(pool.queue))
@@ -795,7 +806,9 @@ func (pool *TxPool) demoteUnexecutables() {
 	if pool.currentState == nil {
 		return
 	}
+	log.Debug("demoteUnexecutables wait pending lock")
 	pool.pendingmu.Lock()
+	log.Debug("demoteUnexecutables got pending lock")
 	defer pool.pendingmu.Unlock()
 
 	pool.pending.Range(func(k, v interface{}) bool {
@@ -1046,6 +1059,8 @@ func (pool *TxPool) keepFitSend() {
 }
 func (pool *TxPool) keepFit() {
 	// If the pending limit is overflown, start equalizing allowances
+	log.Debug("tpsdebug txpool come in keepFit")
+	defer log.Debug("tpsdebug txpool exit    keepFit")
 	pending := uint64(0)
 	pool.pending.Range(func(k, v interface{}) bool {
 		list, _ := v.(*txList)
