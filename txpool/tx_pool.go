@@ -451,7 +451,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 var (
 	allCnt     = int64(0)
 	pendingCnt = int64(0)
-	poolCheck  = int64(100000)
+	poolCheck  = int64(20000)
 )
 
 // addTxs attempts to queue a batch of transactions if they are valid.
@@ -485,7 +485,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
-	if pendingCnt++; pendingCnt >= poolCheck {
+	if pendingCnt++; (pendingCnt % poolCheck) == 0 {
 		lenall := LenSynMap(pool.pending)
 		if lenall >= int64(pool.config.GlobalSlots) {
 			log.Warn("TxPool pending is full", "pending size", lenall,
@@ -620,7 +620,7 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 
 	// If the transaction pool is full, reject
 	log.Debug("add tx poolcheck")
-	if allCnt++; allCnt >= poolCheck {
+	if allCnt++; (allCnt % poolCheck) == 0 {
 		log.Debug("add tx before LenSynMap")
 		lenall := LenSynMap(pool.all)
 		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
