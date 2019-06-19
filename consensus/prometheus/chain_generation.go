@@ -629,13 +629,6 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		realaddr = common.BytesToAddress(resultaddr)
 	}
 	log.Debug("Get Real Address From Votes:","realaddr",realaddr.String())
-	//// 方案二
-	//realaddr2 := common.BytesToAddress(resultaddr)
-	//log.Debug("Get Real Address From Votes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
-	//if realaddr.String() != realaddr2.String() {
-	//	log.Warn("Warning!!! Get Real Address From Votes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
-	//}
-	//
 
 
 	funparamstr := new([8]byte)
@@ -796,12 +789,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 		realaddr = common.BytesToAddress(resultaddr)
 	}
 	log.Debug("Get Real Address From VoteRes:","realaddr",realaddr.String())
-	//// 方案二
-	//realaddr2 := common.BytesToAddress(resultaddr)
-	//log.Debug("Get Real Address From VoteRes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
-	//if realaddr.String() != realaddr2.String() {
-	//	log.Warn("Warning!!! Get Real Address From VoteRes:","realaddr",realaddr.String(),"realaddr2",realaddr2.String())
-	//}
+
 
 	funparamstr := new([8]byte)
 	copy(funparamstr[:], resultfun[66:66+8])
