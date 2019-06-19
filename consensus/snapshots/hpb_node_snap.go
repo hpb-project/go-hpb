@@ -147,6 +147,11 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 }
 
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, headers []types.Header) bool {
+	signers, offset := s.GetHpbNodes(), 0
+	for offset < len(signers) && signers[offset] != signer {
+		offset++
+	}
+	return (number % uint64(len(signers))) == uint64(offset)
 
 	//calc all the have been generated blocks signers; overlap is ok because these signers will be eliminated
 	log.Debug("CalcCurrentMiner start ", "number", number, "signer", hex.EncodeToString(signer.Bytes()))

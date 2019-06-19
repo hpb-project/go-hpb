@@ -190,7 +190,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	header.Difficulty = diffNoTurn
 	if number < consensus.StageNumberV {
-		if snap.CalculateCurrentMinerorigin(header.Number.Uint64(), c.GetSinger()) {
+		if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()) {
 			header.Difficulty = diffInTurn
 		}
 	} else {
@@ -199,7 +199,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		for i := uint64(0); i < consensus.ContinuousGenBlkLimit; i++ {
 			signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
 		}
-		if snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), signersgenblks) {
+		if snap.CalculateCurrentMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
 			header.Difficulty = diffInTurn
 		}
 	}
