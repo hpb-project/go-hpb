@@ -85,8 +85,6 @@ type TxPool struct {
 	pending  sync.Map //map[common.Address]*txList   //All currently processable transactions
 	queue    sync.Map //map[common.Address]*txList   // Queued but non-processable transactions
 
-	pendingmu sync.RWMutex // mutex for below.
-
 	smu sync.RWMutex // mutex for below.
 
 	currentState  *state.StateDB      // Current state in the blockchain head
@@ -193,9 +191,7 @@ func (pool *TxPool) loop() {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
-				log.Debug("pool.chainHeadCh wait TxpoolLock")
 				pool.smu.Lock()
-				log.Debug("pool.chainHeadCh got TxpoolLock")
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 
@@ -527,7 +523,6 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	for _, tx := range txs {
-		log.Debug("addTxsLocked add tx before.")
 		if replace, err := pool.add(tx); err == nil {
 
 			if !replace {
@@ -539,9 +534,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 				dirty[from] = struct{}{}
 			}
 		}
-		log.Debug("addTxsLocked add tx after.")
 	}
-	log.Debug("addTxsLocked goto deal dirty")
 
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
@@ -550,13 +543,8 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 		for addr := range dirty {
 			addrs = append(addrs, addr)
 		}
-		log.Debug("addTxsLocked before promoteExecutables")
-
 		pool.promoteExecutables(addrs)
-		log.Debug("addTxsLocked after  promoteExecutables")
-
 	}
-	log.Debug("addTxsLocked after deal dirty")
 
 	return nil
 }
@@ -565,7 +553,6 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) GoTxsAsynSender(txs []*types.Transaction) error {
 	for _, tx := range txs {
-		log.Trace("goTxsAsynSender ASynSender", "tx.hash", tx.Hash())
 		types.ASynSender(pool.signer, tx)
 	}
 	return nil
@@ -594,6 +581,17 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 	return nil
 }
 
+func LenSynMap(m sync.Map) int64 {
+	var length int64
+	log.Debug("Enter LenSynMap")
+	m.Range(func(k, v interface{}) bool {
+		length++
+		return true
+	})
+	log.Debug("Exit LenSynMap")
+	return length
+}
+
 // add validates a transaction and inserts it into the non-executable queue for
 // later pending promotion and execution. If the transaction is a replacement for
 // an already pending or queued one, it overwrites the previous and returns this
@@ -603,29 +601,16 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 
-func LenSynMap(m sync.Map) int64 {
-	var length int64
-	m.Range(func(k, v interface{}) bool {
-		length++
-		return true
-	})
-	return length
-}
-
 func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
-	log.Debug("add tx enter")
 	hash := tx.Hash()
-	log.Debug("add tx before get sender")
 	from, _ := types.Sender(pool.signer, tx) // already validated
 
 	// If the transaction pool is full, reject
-	log.Debug("add tx poolcheck")
 	if allCnt++; (allCnt % poolCheck) == 0 {
-		log.Debug("add tx before LenSynMap")
 		lenall := LenSynMap(pool.all)
 		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
 		if lenall >= int64(pool.config.GlobalSlots+pool.config.GlobalQueue) {
-			log.Debug("TxPool is full, reject tx", "current size", lenall,
+			log.Warn("TxPool is full, reject tx", "current size", lenall,
 				"max size", pool.config.GlobalSlots+pool.config.GlobalQueue, "hash", hash, "from", from, "to", tx.To())
 			return false, ErrTxPoolFull
 		} else {
@@ -634,15 +619,10 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	}
 
 	// If the transaction is replacing an already pending one, do directly
-	log.Debug("add tx before new RwMutex", "len(userlock)", LenSynMap(pool.userlock))
 	var ul = new(sync.RWMutex)
-	log.Debug("add tx after new RwMutex")
 	ulk, _ := pool.userlock.LoadOrStore(from, ul)
-	log.Debug("add tx after loadOrStore")
 	userlk := ulk.(*sync.RWMutex)
-	log.Debug("txpool add, wait userlk", "addr", from)
 	userlk.Lock()
-	log.Debug("txpool add, got userlk", "addr", from)
 	defer userlk.Unlock()
 	if lv, ok := pool.pending.Load(from); ok {
 		if list, ok := lv.(*txList); ok && list.Overlaps(tx) {
@@ -732,12 +712,6 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-	log.Debug("prometeExcutables enter", "accounts is null ?", accounts == nil)
-	log.Debug("promoteExecutables wait pending lock.")
-	pool.pendingmu.Lock()
-	log.Debug("promoteExecutables got pending lock.")
-	defer pool.pendingmu.Unlock()
-	defer log.Debug("prometeExcutables exit")
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
 		accounts = make([]common.Address, 0, LenSynMap(pool.queue))
@@ -810,10 +784,6 @@ func (pool *TxPool) demoteUnexecutables() {
 	if pool.currentState == nil {
 		return
 	}
-	log.Debug("demoteUnexecutables wait pending lock")
-	pool.pendingmu.Lock()
-	log.Debug("demoteUnexecutables got pending lock")
-	defer pool.pendingmu.Unlock()
 
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr := k.(common.Address)
@@ -1374,8 +1344,6 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	pool.pendingmu.Lock()
-	defer pool.pendingmu.Unlock()
 	pending := make(map[common.Address]types.Transactions)
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr := k.(common.Address)

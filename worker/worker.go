@@ -560,17 +560,8 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		// during transaction acceptance is the transaction pool.
 		//
 		// We use the eip155 signer regardless of the current hf.
-		//from, _ := types.Sender(env.signer, tx)
-		from, err := types.ASynSender(env.signer, tx)
-		if err != nil {
-			log.Trace("ASynSender ErrInvalid")
-			from2, err := types.Sender(env.signer, tx)
-
-			if err != nil {
-				log.Error("Sender ErrInvalidSender")
-			}
-			copy(from[0:], from2[0:])
-		}
+		from, _ := types.Sender(env.signer, tx)
+		
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//TODO why tx is protected

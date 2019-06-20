@@ -121,7 +121,6 @@ func (this *SynCtrl) txRoutingLoop() {
 	for {
 		select {
 		case event := <-this.txCh:
-			log.Debug("txRoutingLoop get tx.")
 			routTx(event.Tx.Hash(), event.Tx)
 		}
 	}

@@ -89,8 +89,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 				return nil, nil, nil, errs
 			}
 		}
-		from, _ := types.Sender(synsigner, tx)
-		log.Debug("Processed Transaction", "from", from, "to", tx.To(), "Nonce", tx.Nonce())
 
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
