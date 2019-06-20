@@ -54,6 +54,7 @@ var (
 	StageNumberIV  uint64 = 2560000
 	StageNumberV   uint64 = 999999000000 // 暂不启用
 	StageNumberVI  uint64 = 2561790
+	StageNumberVII uint64 = 2896000 //待定 6月23日15时
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
 )
