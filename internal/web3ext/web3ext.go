@@ -61,23 +61,22 @@ web3._extend({
 		}),
 	]
 });
-`
-
+` 
 /*
 new web3._extend.Method({
 			name: 'getHpbNodeSnapAtHash',
 			call: 'prometheus_getHpbNodeSnapAtHash',
 			params: 1
 		}),
-
+		
 		,
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
 			getter: 'prometheus_proposals'
 		}),
-	]
-
+	] 
+	
 	new web3._extend.Method({
 			name: 'propose',
 			call: 'prometheus_propose',
@@ -377,12 +376,6 @@ const Hpb_JS = `
 web3._extend({
 	property: 'hpb',
 	methods: [
-		new web3._extend.Method({
-			name: 'getStatediffbyblock',
-			call: 'hpb_getStatediffbyblock',
-			params: 1,
-			inputFormatter: [null]
-		}),
 		new web3._extend.Method({
 			name: 'sign',
 			call: 'hpb_sign',

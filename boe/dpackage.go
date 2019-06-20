@@ -95,7 +95,7 @@ func httpdown(url string, destfile string) error {
 
 }
 func vMajor(ver int) uint8 {
-    var ret = (uint8)(ver&0x0f)
+    var ret = (uint8)(ver&0xff)>>4
     return ret
 
 }

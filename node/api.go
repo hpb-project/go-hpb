@@ -20,13 +20,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -47,33 +45,6 @@ import (
 )
 
 const defaultTraceTimeout = 5 * time.Second
-const defaultHashlen = 66
-
-type AccountDiff struct {
-	addr       common.Address
-	prebalance *big.Int
-	balance    *big.Int
-}
-
-type StateDiff struct {
-	txhash      common.Hash
-	accountdiff []AccountDiff
-}
-
-func (accountdiff AccountDiff) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"addr":   accountdiff.addr,
-		"before": accountdiff.prebalance,
-		"after":  accountdiff.balance,
-	})
-}
-
-func (statediff StateDiff) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"txhash":     statediff.txhash,
-		"state_diff": statediff.accountdiff,
-	})
-}
 
 // PublicHpbAPI provides an API to access Hpb full node-related
 // information.
@@ -99,92 +70,6 @@ func (api *PublicHpbAPI) Coinbase() (common.Address, error) {
 // Mining returns the miner is mining
 func (api *PublicHpbAPI) Mining() bool {
 	return api.e.miner.Mining()
-}
-
-func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
-	log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", data, "lendata", len(data))
-
-	blockchain := api.e.BlockChain()
-	var block *types.Block
-	if strings.Index(data, "0x") == 0 && len(data) == defaultHashlen {
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", common.HexToHash(data))
-		//先获取block
-		block = blockchain.GetBlockByHash(common.HexToHash(data))
-		//在获取交易
-	} else {
-		blockNumber, _ := strconv.ParseUint(data, 0, 64)
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blocknumber", blockNumber)
-		block = blockchain.GetBlockByNumber(blockNumber)
-	}
-
-	if block == nil {
-		return string("getblockerror")
-	}
-
-	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
-	statedbpre, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
-	if err != nil {
-		return string("getstateerror")
-	}
-
-	//processor.Process(block, statedb)
-
-	var (
-		gp            = new(bc.GasPool).AddGas(block.GasLimit())
-		header        = block.Header()
-		totalUsedGas  = big.NewInt(0)
-		allAddress    = make(map[common.Address]*big.Int)
-		allState_Diff = []StateDiff{}
-	)
-	//[hash]{[account,prebalance,balance,diff][account,prebalance,balance,diff]}
-	//[address]balance
-
-	for i, tx := range block.Transactions() {
-
-		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-
-		} else {
-			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-		}
-
-		//stateOjectspre := statedbpre.GetStateObjects()
-		//for _, addr := range stateOjectspre {
-		//	log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
-		//}
-		state_diff := StateDiff{txhash: tx.Hash()}
-		stateOjects := statedb.GetStateObjects()
-		for _, addr := range stateOjects {
-			_, ok := allAddress[addr]
-			if ok != true {
-				allAddress[addr] = statedbpre.GetBalance(addr)
-			}
-			accountdiff := AccountDiff{addr: addr, prebalance: allAddress[addr], balance: statedb.GetBalance(addr)}
-			//log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
-			state_diff.accountdiff = append(state_diff.accountdiff, accountdiff)
-			allAddress[addr] = accountdiff.balance
-			log.Debug("diff_state", "txhash", state_diff.txhash, "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
-		}
-		allState_Diff = append(allState_Diff, state_diff)
-
-		//statedb.PrintStatediff()
-		//stateOjectspre := statedbpre.GetStateObjects()
-		//for _, addr := range stateOjectspre {
-		//	log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
-		//}
-	}
-	/*
-		for _, state_diff := range allState_Diff {
-			log.Error("allState_Diff", "txhash", state_diff.txhash)
-			for _, accountdiff := range state_diff.accountdiff {
-				log.Error("accountdiff", "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
-			}
-		}
-	*/
-	jsons, errs := json.Marshal(allState_Diff)
-	log.Debug("json----", "jsons", string(jsons), "errs", errs)
-	return string(jsons)
 }
 
 // PrivateMinerAPI provides private RPC methods tso control the miner.
