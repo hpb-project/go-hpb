@@ -51,9 +51,20 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 	return s.addr, nil
 }
 
+func (s *senderFromServer) ASynSender(tx *types.Transaction) (common.Address, error) {
+	if s.blockhash == (common.Hash{}) {
+		return common.Address{}, errNotCached
+	}
+	return s.addr, nil
+}
+
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
 func (s *senderFromServer) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	panic("can't sign with senderFromServer")
+}
+// Compable Hash, returns the hash with tx.ChainId(), only used to recover pubkey, can't used to signTx.
+func (s *senderFromServer)CompableHash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
