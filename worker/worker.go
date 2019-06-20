@@ -435,8 +435,11 @@ func (self *worker) startNewMinerRound() {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
+
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
+
+	log.Debug("worker startNewMinerRound", "time",tstart.Unix())
 
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
@@ -462,14 +465,14 @@ func (self *worker) startNewMinerRound() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-
+	log.Debug("worker startNewMinerRound before stateAt", "time", time.Now().Unix())
 	pstate, _ := self.chain.StateAt(parent.Root())
-
+	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "time", time.Now().Unix())
 	if err := self.engine.PrepareBlockHeader(self.chain, header, pstate); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
-
+	log.Debug("worker startNewMinerRound before makeCurrent", "time", time.Now().Unix())
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
@@ -483,14 +486,18 @@ func (self *worker) startNewMinerRound() {
 	//if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 	//	misc.ApplyDAOHardFork(work.state)
 	//}
+	log.Debug("worker startNewMinerRound before Pending", "time", time.Now().Unix())
 	pending, err := txpool.GetTxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 	//log.Error("----read tx from pending is ", "number is", len(pending))
+	log.Debug("worker startNewMinerRound before NewTransactionsByPriceAndNonce", "time", time.Now().Unix())
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+	log.Debug("worker startNewMinerRound before commitTransactions", "time", time.Now().Unix())
 	work.commitTransactions(self.mux, txs, self.coinbase)
+	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
 	var (
 		uncles    []*types.Header
@@ -518,12 +525,14 @@ func (self *worker) startNewMinerRound() {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
+	log.Debug("worker startNewMinerRound after Finalize", "time", time.Now().Unix())
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 	self.push(work)
+	log.Debug("worker startNewMinerRound after commit", "time", time.Now().Unix())
 }
 
 func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
