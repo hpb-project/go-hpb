@@ -453,6 +453,7 @@ func (self *worker) startNewMinerRound() {
 	}
 
 	num := parent.Number()
+	lastTxNum := len(parent.Transactions())
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
@@ -496,7 +497,7 @@ func (self *worker) startNewMinerRound() {
 	log.Debug("worker startNewMinerRound before NewTransactionsByPriceAndNonce", "time", time.Now().Unix())
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	log.Debug("worker startNewMinerRound before commitTransactions", "time", time.Now().Unix())
-	work.commitTransactions(self.mux, txs, self.coinbase)
+	work.commitTransactions(self.mux, txs, self.coinbase, lastTxNum)
 	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
 	var (
@@ -550,15 +551,21 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	return nil
 }
 
-func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address) {
+func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, lastTxNum int) {
 	//log.Error("----------------committransactions--------------")
 	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
+	var capTxs int
+	if lastTxNum >= blockMaxTxs/2 {
+		capTxs = blockMaxTxs/2
+	}else {
+		capTxs = blockMaxTxs
+	}
 
 	for {
 		// Retrieve the next transaction and abort if all done
-		if len(env.txs) >= blockMaxTxs {
+		if len(env.txs) >= capTxs {
 			break
 		}
 		tx := txs.Peek()

@@ -48,15 +48,12 @@ func routBlock(block *types.Block, propagate bool) {
 			for _, peer := range peers {
 				switch peer.LocalType() {
 				case discover.HpNode:
-					sendNewBlock(peer, block, td)
-					//switch peer.RemoteType() {
-					//case discover.HpNode:
-					//	sendNewBlock(peer, block, td)
-					//	log.Debug("")
-					//	break
-					//default:
-					//	break
-					//}
+					go func() {
+						st := time.Now().UnixNano()
+						sendNewBlock(peer, block, td)
+						se := time.Now().UnixNano()
+						log.Debug("sendNewBlock ","peer",peer.GetID(), "number",block.Number().Uint64(),"cost time(ms)", (se-st)/1000/1000 )
+					}()
 					break
 				default:
 					break
