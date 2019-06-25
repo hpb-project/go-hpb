@@ -205,7 +205,7 @@ func (this *SynCtrl) minedRoutingLoop() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
 			go routBlock(ev.Block, true) // First propagate block to peers
-			//routBlock(ev.Block, false) // Only then announce to the rest
+			routBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }

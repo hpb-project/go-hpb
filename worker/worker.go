@@ -557,7 +557,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 
 	var coalescedLogs []*types.Log
 	var capTxs int
-	if lastTxNum >= blockMaxTxs/2 {
+	if lastTxNum > blockMaxTxs/2 {
 		capTxs = blockMaxTxs/2
 	}else {
 		capTxs = blockMaxTxs
