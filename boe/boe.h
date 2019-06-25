@@ -1,4 +1,4 @@
-// Copyright 2018-2022 The go-hpb Authors
+// Copyright 2018 The go-hpb Authors
 // This file is part of the go-hpb.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
