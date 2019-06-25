@@ -1,4 +1,4 @@
-// Copyright 2018-2022 The go-hpb Authors
+// Copyright 2018 The go-hpb Authors
 // Modified based on go-ethereum, which Copyright (C) 2014 The go-ethereum Authors.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
