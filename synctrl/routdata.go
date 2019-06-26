@@ -35,6 +35,7 @@ func routBlock(block *types.Block, propagate bool) {
 
 	// If propagation is requested, send to a subset of the peer
 	if propagate {
+		pst := time.Now().UnixNano()/1000/1000
 		// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 		var td *big.Int
 		if parent := bc.InstanceBlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
@@ -48,7 +49,31 @@ func routBlock(block *types.Block, propagate bool) {
 			for _, peer := range peers {
 				switch peer.LocalType() {
 				case discover.HpNode:
+					if peer.RemoteType() == discover.HpNode {
 						sendNewBlock(peer, block, td)
+					}
+
+					break
+				default:
+					break
+				}
+			}
+			pse := time.Now().UnixNano()/1000/1000
+			log.Debug("Propagated block to hpnode ", "hash", hash, "duration time(ms)", pse-pst)
+			for _, peer := range peers {
+				switch peer.LocalType() {
+				case discover.HpNode:
+					switch peer.RemoteType() {
+					case discover.PreNode:
+						sendNewBlock(peer, block, td)
+						break
+					case discover.SynNode:
+						sendNewBlock(peer, block, td)
+						break
+					default:
+						break
+					}
+
 					//switch peer.RemoteType() {
 					//case discover.HpNode:
 					//	sendNewBlock(peer, block, td)
@@ -62,7 +87,8 @@ func routBlock(block *types.Block, propagate bool) {
 					break
 				}
 			}
-			log.Debug("Propagated block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+			pse = time.Now().UnixNano()/1000/1000
+			log.Debug("Propagated block", "hash", hash, "recipients", len(peers), "duration time(ms)", pse-pst)
 		}
 		//
 		//// Send the block to a subset of our peers
