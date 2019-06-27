@@ -246,6 +246,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
+	log.Debug("txpool reset start", "time",time.Now().Unix())
 	if oldHead != nil && oldHead.Hash() != newHead.ParentHash {
 		// If the reorg is too deep, avoid doing it (will happen during fast sync)
 		oldNum := oldHead.Number.Uint64()
@@ -309,7 +310,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	go pool.GoTxsAsynSender(reinject)
 
 	// Inject any transactions discarded due to reorgs
-	log.Debug("Reinjecting stale transactions", "count", len(reinject))
+	log.Debug("txpool reset Reinjecting stale transactions", "count", len(reinject))
 
 	pool.addTxsLocked(reinject)
 
@@ -317,7 +318,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// any transactions that have been included in the block or
 	// have been invalidated because of another transaction
 	pool.demoteUnexecutables()
-
+	log.Debug("txpool reset after demoteUnexecutables", "time",time.Now().Unix())
 	// Update all accounts to the latest known pending nonce
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr, _ := k.(common.Address)
@@ -331,9 +332,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		}
 		return true
 	})
+	log.Debug("txpool reset after setNonce", "time",time.Now().Unix())
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
+	log.Debug("txpool reset after promoteExcutables", "time",time.Now().Unix())
 }
 
 func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
