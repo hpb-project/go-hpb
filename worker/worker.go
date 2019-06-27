@@ -493,10 +493,7 @@ func (self *worker) startNewMinerRound() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	//log.Error("----read tx from pending is ", "number is", len(pending))
-	log.Debug("worker startNewMinerRound before NewTransactionsByPriceAndNonce", "time", time.Now().Unix())
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	log.Debug("worker startNewMinerRound before commitTransactions", "time", time.Now().Unix())
 	work.commitTransactions(self.mux, txs, self.coinbase, lastTxNum)
 	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
@@ -599,12 +596,12 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 
 		case bc.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
-			log.Debug("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
 		case bc.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Debug("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
 		case nil:
@@ -620,6 +617,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 			txs.Shift()
 		}
 	}
+	log.Debug("worker committransactions","package txs", len(env.txs))
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined

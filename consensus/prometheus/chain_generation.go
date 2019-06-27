@@ -411,6 +411,8 @@ func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
 
 // 从当前的签名中，返回追溯到签名者
 func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
+	st := time.Now().UnixNano()
+	defer log.Debug("prometheus Author", "cost time(us)", (time.Now().UnixNano()-st)/1000)
 	return consensus.Ecrecover(header, c.signatures)
 }
 
