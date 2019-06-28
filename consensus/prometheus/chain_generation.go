@@ -203,6 +203,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.Difficulty = diffInTurn
 		}
 	}
+	if header.Difficulty == diffNoTurn {
+		return errors.New("Nont in turn")
+	}
 
 	c.lock.RLock()
 

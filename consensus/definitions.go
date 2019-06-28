@@ -52,7 +52,7 @@ var (
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 300
-	StageNumberV   uint64 = 200 // 开启不可连续出块功能.
+	StageNumberV   uint64 = 99990900 // 开启不可连续出块功能.
 
 	ContinuousGenBlkLimit uint64 = 2
 
