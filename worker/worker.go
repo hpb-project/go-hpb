@@ -453,7 +453,6 @@ func (self *worker) startNewMinerRound() {
 	}
 
 	num := parent.Number()
-	lastTxNum := len(parent.Transactions())
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
