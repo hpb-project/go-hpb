@@ -493,7 +493,8 @@ func (self *worker) startNewMinerRound() {
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	work.commitTransactions(self.mux, txs, self.coinbase, lastTxNum)
+	maxtxs := int(float32(uint64(time.Now().Unix()) - parent.Time().Uint64())/float32(self.config.Prometheus.Period) * float32(blockMaxTxs))
+	work.commitTransactions(self.mux, txs, self.coinbase, maxtxs)
 	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
 	var (
@@ -547,16 +548,16 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	return nil
 }
 
-func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, lastTxNum int) {
+func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, maxTxs int) {
 	//log.Error("----------------committransactions--------------")
 	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
 	var capTxs int
-	if lastTxNum > blockMaxTxs/2 {
-		capTxs = blockMaxTxs/2
-	}else {
+	if maxTxs > blockMaxTxs || maxTxs == 0 {
 		capTxs = blockMaxTxs
+	}else {
+		capTxs = maxTxs
 	}
 
 	for {
