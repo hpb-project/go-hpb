@@ -448,9 +448,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 }
 
 var (
-	allCnt     = int64(0)
-	pendingCnt = int64(0)
-	poolCheck  = int64(20000)
+	allCnt     = uint64(0)
+	pendingCnt = uint64(0)
+	normalQueueLen = uint64(200000) // nornal queue/pending account number
+	poolCheck  = uint64(20000)
 )
 
 // addTxs attempts to queue a batch of transactions if they are valid.
@@ -484,9 +485,9 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
-	if pendingCnt++; (pendingCnt % poolCheck) == 0 {
+	if pendingCnt++; (pendingCnt >= pool.config.GlobalSlots) && (pendingCnt % poolCheck) == 0 {
 		lenall := LenSynMap(pool.pending)
-		if lenall >= int64(pool.config.GlobalSlots) {
+		if lenall >= pool.config.GlobalSlots {
 			log.Warn("TxPool pending is full", "pending size", lenall,
 				"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
 			return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
@@ -584,8 +585,9 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 	return nil
 }
 
-func LenSynMap(m sync.Map) int64 {
-	var length int64
+// Warning: you need call this api as less as possible.
+func LenSynMap(m sync.Map) uint64 {
+	var length uint64
 	log.Debug("Enter LenSynMap")
 	m.Range(func(k, v interface{}) bool {
 		length++
@@ -609,10 +611,10 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 
 	// If the transaction pool is full, reject
-	if allCnt++; (allCnt % poolCheck) == 0 {
+	if allCnt++; (allCnt > pool.config.GlobalQueue || allCnt > pool.config.GlobalSlots) && ((allCnt % poolCheck) == 0) {
 		lenall := LenSynMap(pool.all)
 		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
-		if lenall >= int64(pool.config.GlobalSlots+pool.config.GlobalQueue) {
+		if lenall >= (pool.config.GlobalSlots + pool.config.GlobalQueue) {
 			log.Warn("TxPool is full, reject tx", "current size", lenall,
 				"max size", pool.config.GlobalSlots+pool.config.GlobalQueue, "hash", hash, "from", from, "to", tx.To())
 			return false, ErrTxPoolFull
@@ -717,7 +719,7 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
-		accounts = make([]common.Address, 0, LenSynMap(pool.queue))
+		accounts = make([]common.Address, 0, normalQueueLen)
 		pool.queue.Range(func(k, v interface{}) bool {
 			addr := k.(common.Address)
 			accounts = append(accounts, addr)
@@ -989,7 +991,7 @@ func (pool *TxPool) keepFitSend() {
 
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
-		addresses := make(addresssByHeartbeat, 0, LenSynMap(pool.queue))
+		addresses := make(addresssByHeartbeat, 0, normalQueueLen)
 		pool.queue.Range(func(k, v interface{}) bool {
 			addr := k.(common.Address)
 			if v, ok := pool.beats.Load(addr); ok {
@@ -1156,7 +1158,7 @@ func (pool *TxPool) keepFit() {
 
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
-		addresses := make(addresssByHeartbeat, 0, LenSynMap(pool.queue))
+		addresses := make(addresssByHeartbeat, 0, normalQueueLen)
 		pool.queue.Range(func(k, v interface{}) bool {
 			addr := k.(common.Address)
 			if v, ok := pool.beats.Load(addr); ok {
