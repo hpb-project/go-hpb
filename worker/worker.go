@@ -427,6 +427,11 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
+func (self *worker) calMacTxs(parent *types.Block) int{
+	ret := int(float32(uint64(time.Now().Unix()) - parent.Time().Uint64())/float32(self.config.Prometheus.Period) * float32(blockMaxTxs))
+	return ret
+}
+
 func (self *worker) startNewMinerRound() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -492,7 +497,7 @@ func (self *worker) startNewMinerRound() {
 		return
 	}
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	maxtxs := int(float32(uint64(time.Now().Unix()) - parent.Time().Uint64())/float32(self.config.Prometheus.Period) * float32(blockMaxTxs))
+	maxtxs := self.calMacTxs(parent)
 	work.commitTransactions(self.mux, txs, self.coinbase, maxtxs)
 	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
@@ -553,7 +558,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 
 	var coalescedLogs []*types.Log
 	var capTxs int
-	if maxTxs > blockMaxTxs || maxTxs == 0 {
+	if maxTxs > blockMaxTxs || maxTxs < 0 {
 		capTxs = blockMaxTxs
 	}else {
 		capTxs = maxTxs
