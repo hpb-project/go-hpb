@@ -45,7 +45,8 @@ func routBlock(block *types.Block, propagate bool) {
 			return
 		}
 
-		if int64(2) == block.Header().Difficulty.Int64() {
+		//if int64(2) == block.Header().Difficulty.Int64() {
+		if true {
 			for _, peer := range peers {
 				switch peer.LocalType() {
 				case discover.HpNode:
@@ -129,7 +130,8 @@ func routBlock(block *types.Block, propagate bool) {
 
 	// Otherwise if the block is indeed in out own chain, announce it
 	if bc.InstanceBlockChain().HasBlock(hash, block.NumberU64()) {
-		if int64(2) == block.Header().Difficulty.Int64() {
+		//if int64(2) == block.Header().Difficulty.Int64() {
+		if true {
 			for _, peer := range peers {
 				switch peer.LocalType() {
 				case discover.HpNode:
