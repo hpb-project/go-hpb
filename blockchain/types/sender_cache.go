@@ -51,7 +51,10 @@ func (this *SenderCache) Get(txhash common.Hash) (common.Address, error) {
 }
 
 func (this *SenderCache) GetOrSet(txhash common.Hash, addr common.Address) {
-	this.cache.LoadOrStore(txhash, addr)
+	_, exist := this.cache.LoadOrStore(txhash, addr)
+	if !exist {
+		atomic.AddInt64(&this.cnt, 1)
+	}
 }
 
 func (this *SenderCache) Quit() {
