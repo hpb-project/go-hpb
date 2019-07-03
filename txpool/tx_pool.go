@@ -502,17 +502,19 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return fmt.Errorf("known transaction: %x", hash)
 	}
-	log.Debug("AddTx wait TxpoolLock")
+	log.Debug("AddTx wait TxpoolLock","at time", time.Now().UnixNano()/1000)
 	pool.smu.Lock()
-	log.Debug("AddTx got TxpoolLock")
+	log.Debug("AddTx got TxpoolLock", "at time", time.Now().UnixNano()/1000)
 	defer pool.smu.Unlock()
 	// If the transaction fails basic validation, discard it
 	if err := pool.softvalidateTx(tx); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
+	log.Debug("AddTx after validate", "at time", time.Now().UnixNano()/1000)
 
 	recerr := pool.addTxLocked(tx)
+	log.Debug("AddTx after addTx", "at time", time.Now().UnixNano()/1000)
 	t_end := time.Now().UnixNano() / 1000
 	if recerr != nil {
 		return recerr
