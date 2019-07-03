@@ -235,24 +235,29 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 					sendTransactions(peer, types.Transactions{tx})
 				}
 				break
-			}
-		}
-
-		toPreCount := 0
-		for _, peer := range peers {
-			switch peer.RemoteType() {
 			case discover.PreNode:
 				if !peer.KnownTxsHas(tx.Hash()) {
 					sendTransactions(peer, types.Transactions{tx})
-					toPreCount += 1
 				}
 				break
 			}
-
-			if toPreCount >= 1 {
-				break
-			}
 		}
+
+		//toPreCount := 0
+		//for _, peer := range peers {
+		//	switch peer.RemoteType() {
+		//	case discover.PreNode:
+		//		if !peer.KnownTxsHas(tx.Hash()) {
+		//			sendTransactions(peer, types.Transactions{tx})
+		//			toPreCount += 1
+		//		}
+		//		break
+		//	}
+
+		//	if toPreCount >= 1 {
+		//		break
+		//	}
+		//}
 		break
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
