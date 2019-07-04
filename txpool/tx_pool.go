@@ -448,10 +448,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 }
 
 var (
-	allCnt     = uint64(0)
-	pendingCnt = uint64(0)
+	allCnt     = int64(0)
+	pendingCnt = int64(0)
 	normalQueueLen = uint64(200000) // nornal queue/pending account number
-	poolCheck  = uint64(20000)
 )
 
 // addTxs attempts to queue a batch of transactions if they are valid.
@@ -486,15 +485,10 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
 	s1 := time.Now().UnixNano()/1000/1000
-	if pendingCnt++; (pendingCnt >= pool.config.GlobalSlots) && (pendingCnt % poolCheck) == 0 {
-		lenall := LenSynMap(pool.pending)
-		if lenall >= pool.config.GlobalSlots {
-			log.Warn("TxPool pending is full", "pending size", lenall,
+	if uint64(pendingCnt) >= pool.config.GlobalSlots {
+			log.Warn("TxPool pending is full", "pending size", pendingCnt,
 				"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
 			return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
-		} else {
-			pendingCnt = lenall
-		}
 	}
 	s2 := time.Now().UnixNano()/1000/1000
 
@@ -589,16 +583,16 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 }
 
 // Warning: you need call this api as less as possible.
-func LenSynMap(m sync.Map) uint64 {
-	var length uint64
-	log.Debug("Enter LenSynMap")
-	m.Range(func(k, v interface{}) bool {
-		length++
-		return true
-	})
-	log.Debug("Exit LenSynMap")
-	return length
-}
+//func LenSynMap(m sync.Map) uint64 {
+//	var length uint64
+//	log.Debug("Enter LenSynMap")
+//	m.Range(func(k, v interface{}) bool {
+//		length++
+//		return true
+//	})
+//	log.Debug("Exit LenSynMap")
+//	return length
+//}
 
 // add validates a transaction and inserts it into the non-executable queue for
 // later pending promotion and execution. If the transaction is a replacement for
@@ -614,15 +608,11 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	from, _ := types.Sender(pool.signer, tx) // already validated
 
 	// If the transaction pool is full, reject
-	if allCnt++; (allCnt > pool.config.GlobalQueue || allCnt > pool.config.GlobalSlots) && ((allCnt % poolCheck) == 0) {
-		lenall := LenSynMap(pool.all)
-		log.Debug("lengthcheck in add tx", "pool.all len", lenall)
-		if lenall >= (pool.config.GlobalSlots + pool.config.GlobalQueue) {
-			log.Warn("TxPool is full, reject tx", "current size", lenall,
+	if uint64(allCnt) > pool.config.GlobalQueue || uint64(allCnt) > pool.config.GlobalSlots {
+		if uint64(allCnt) >= (pool.config.GlobalSlots + pool.config.GlobalQueue) {
+			log.Warn("TxPool is full, reject tx", "current size", allCnt,
 				"max size", pool.config.GlobalSlots+pool.config.GlobalQueue, "hash", hash, "from", from, "to", tx.To())
 			return false, ErrTxPoolFull
-		} else {
-			allCnt = lenall
 		}
 	}
 
@@ -643,8 +633,11 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 			// New transaction is better, replace old one
 			if old != nil {
 				pool.all.Delete(old.Hash())
+				atomic.AddInt64(&allCnt, -1)
 			}
 			pool.all.Store(tx.Hash(), tx)
+			atomic.AddInt64(&allCnt, 1)
+
 			pool.tmpqueue.Store(tx.Hash(), tx)
 
 			log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
@@ -688,8 +681,11 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction, userLock 
 	// Discard any previous transaction and mark this
 	if old != nil {
 		pool.all.Delete(old.Hash())
+		atomic.AddInt64(&allCnt, -1)
 	}
 	pool.all.Store(hash, tx)
+	atomic.AddInt64(&allCnt, 1)
+
 	return old != nil, nil
 }
 
@@ -711,8 +707,11 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 	// Discard any previous transaction and mark this
 	if old != nil {
 		pool.all.Delete(old.Hash())
+		atomic.AddInt64(&allCnt, -1)
 	}
 	pool.all.Store(hash, tx)
+	atomic.AddInt64(&allCnt, 1)
+
 	return old != nil, nil
 }
 
@@ -743,6 +742,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				hash := tx.Hash()
 				log.Trace("Removed old queued transaction", "hash", hash)
 				pool.all.Delete(hash)
+				atomic.AddInt64(&allCnt, -1)
 			}
 			// Drop all transactions that are too costly (low balance or out of gas)
 			drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
@@ -750,6 +750,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable queued transaction", "hash", hash)
 				pool.all.Delete(hash)
+				atomic.AddInt64(&allCnt, -1)
 			}
 
 			// Gather all executable transactions and promote them
@@ -767,6 +768,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
 				hash := tx.Hash()
 				pool.all.Delete(hash)
+				atomic.AddInt64(&allCnt, -1)
 				log.Trace("Removed cap-exceeding queued transaction", "hash", hash)
 			}
 
@@ -807,6 +809,7 @@ func (pool *TxPool) demoteUnexecutables() {
 				hash := tx.Hash()
 				log.Trace("Removed old pending transaction", "hash", hash)
 				pool.all.Delete(hash)
+				atomic.AddInt64(&allCnt, -1)
 			}
 			// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 			drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
@@ -814,6 +817,7 @@ func (pool *TxPool) demoteUnexecutables() {
 				hash := tx.Hash()
 				log.Trace("Removed unpayable pending transaction", "hash", hash)
 				pool.all.Delete(hash)
+				atomic.AddInt64(&allCnt, -1)
 			}
 			for _, tx := range invalids {
 				hash := tx.Hash()
@@ -831,6 +835,8 @@ func (pool *TxPool) demoteUnexecutables() {
 			// Delete the entire queue entry if it became empty.
 			if list.Empty() {
 				pool.pending.Delete(addr)
+				atomic.AddInt64(&pendingCnt, -1)
+
 				pool.beats.Delete(addr)
 			}
 		}
@@ -845,21 +851,29 @@ func (pool *TxPool) demoteUnexecutables() {
 func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.Transaction) {
 	// Try to insert the transaction into the pending queue
 	list := newTxList(true)
-	lv, _ := pool.pending.LoadOrStore(addr, list)
+	lv, exist := pool.pending.LoadOrStore(addr, list)
+	if !exist {
+		atomic.AddInt64(&pendingCnt, 1)
+	}
 	list = lv.(*txList)
 
 	inserted, old := list.Add(tx, pool.config.PriceBump)
 	if !inserted {
 		// An older transaction was better, discard this
 		pool.all.Delete(hash)
+		atomic.AddInt64(&allCnt, -1)
 		return
 	}
 	// Otherwise discard any previous transaction and mark this
 	if old != nil {
 		pool.all.Delete(old.Hash())
+		atomic.AddInt64(&allCnt, -1)
 	}
 	// Failsafe to work around direct pending inserts (tests)
-	pool.all.LoadOrStore(hash, tx)
+	_,exist = pool.all.LoadOrStore(hash, tx)
+	if !exist {
+		atomic.AddInt64(&allCnt, 1)
+	}
 
 	// pending transactions inserts tmpqueue
 	pool.tmpqueue.LoadOrStore(hash, tx)
@@ -934,6 +948,7 @@ func (pool *TxPool) keepFitSend() {
 									// Drop the transaction from the global pools too
 									hash := tx.Hash()
 									pool.all.Delete(hash)
+									atomic.AddInt64(&allCnt, -1)
 
 									// Update the account nonce to the dropped transaction
 									//if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
@@ -970,6 +985,7 @@ func (pool *TxPool) keepFitSend() {
 							// Drop the transaction from the global pools too
 							hash := tx.Hash()
 							pool.all.Delete(hash)
+							atomic.AddInt64(&allCnt, -1)
 
 							// Update the account nonce to the dropped transaction
 							//if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
@@ -1096,6 +1112,7 @@ func (pool *TxPool) keepFit() {
 									// Drop the transaction from the global pools too
 									hash := tx.Hash()
 									pool.all.Delete(hash)
+									atomic.AddInt64(&allCnt, -1)
 
 									// Update the account nonce to the dropped transaction
 									if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
@@ -1135,6 +1152,7 @@ func (pool *TxPool) keepFit() {
 								// Drop the transaction from the global pools too
 								hash := tx.Hash()
 								pool.all.Delete(hash)
+								atomic.AddInt64(&allCnt, -1)
 
 								// Update the account nonce to the dropped transaction
 								if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
@@ -1221,6 +1239,7 @@ func (pool *TxPool) removeTx(hash common.Hash, userLock *sync.RWMutex) {
 
 	// Remove it from the list of known transactions
 	pool.all.Delete(hash)
+	atomic.AddInt64(&allCnt, -1)
 
 	// Remove the transaction from the pending lists and reset the account nonce
 	userLock.Lock()
@@ -1232,6 +1251,7 @@ func (pool *TxPool) removeTx(hash common.Hash, userLock *sync.RWMutex) {
 			// If no more transactions are left, remove the list
 			if list.Empty() {
 				pool.pending.Delete(addr)
+				atomic.AddInt64(&pendingCnt, -1)
 				pool.beats.Delete(addr)
 			}
 
@@ -1272,6 +1292,7 @@ func (pool *TxPool) removeTxLocked(hash common.Hash) {
 			// If no more transactions are left, remove the list
 			if list.Empty() {
 				pool.pending.Delete(addr)
+				atomic.AddInt64(&pendingCnt, -1)
 				pool.beats.Delete(addr)
 			}
 
