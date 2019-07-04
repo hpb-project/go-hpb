@@ -51,7 +51,7 @@ const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
 	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 500 * time.Millisecond // 延时单位
+	wiggleTime            = 1000 * time.Millisecond // 延时单位
 	comCheckpointInterval = 2                      // 社区投票间隔
 	cadCheckpointInterval = 2                      // 社区投票间隔
 )
@@ -338,7 +338,8 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		if distance > len(snap.Signers)/2 {
 			distance = len(snap.Signers) - distance
 		}
-		delay = time.Duration(int(c.config.Period + c.config.Period/2) + distance * int(wiggleTime))
+		//delay = time.Duration(int(c.config.Period + c.config.Period/2) + distance * int(wiggleTime))
+		delay = time.Second * time.Duration(c.config.Period * 2) + time.Duration(distance)*wiggleTime
 	}
 
 	log.Debug("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay), "number", number)

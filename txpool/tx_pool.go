@@ -462,8 +462,8 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	}
 	st1 := time.Now().UnixNano() / 1000
 	log.Debug("AddTxs wait TxpoolLock")
-	pool.smu.Lock()
-	defer pool.smu.Unlock()
+	pool.smu.RLock()
+	defer pool.smu.RUnlock()
 	st2 := time.Now().UnixNano() / 1000
 	log.Debug("AddTxs got TxpoolLock")
 	defer func() {
@@ -485,6 +485,7 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
+	s1 := time.Now().UnixNano()/1000/1000
 	if pendingCnt++; (pendingCnt >= pool.config.GlobalSlots) && (pendingCnt % poolCheck) == 0 {
 		lenall := LenSynMap(pool.pending)
 		if lenall >= pool.config.GlobalSlots {
@@ -495,31 +496,31 @@ func (pool *TxPool) AddTx(tx *types.Transaction) error {
 			pendingCnt = lenall
 		}
 	}
+	s2 := time.Now().UnixNano()/1000/1000
 
-	var t_start = time.Now().UnixNano() / 1000
 	hash := tx.Hash()
 	if _, ok := pool.all.Load(hash); ok {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return fmt.Errorf("known transaction: %x", hash)
 	}
-	log.Debug("AddTx wait TxpoolLock","at time", time.Now().UnixNano()/1000)
-	pool.smu.Lock()
-	log.Debug("AddTx got TxpoolLock", "at time", time.Now().UnixNano()/1000)
-	defer pool.smu.Unlock()
+	s3 := time.Now().UnixNano()/1000/1000
+	pool.smu.RLock()
+	s4 := time.Now().UnixNano()/1000/1000
+	defer pool.smu.RUnlock()
 	// If the transaction fails basic validation, discard it
 	if err := pool.softvalidateTx(tx); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
-	log.Debug("AddTx after validate", "at time", time.Now().UnixNano()/1000)
+	s5 := time.Now().UnixNano()/1000/1000
 
 	recerr := pool.addTxLocked(tx)
-	log.Debug("AddTx after addTx", "at time", time.Now().UnixNano()/1000)
-	t_end := time.Now().UnixNano() / 1000
+	s6 := time.Now().UnixNano()/1000/1000
+	defer log.Debug("AddTx time cost","1",s2-s1,"2",s3-s2,"3",s4-s3,"4",s5-s4,"5",s6-s5,"total",s6-s1)
+
 	if recerr != nil {
 		return recerr
 	}
-	log.Trace("AddTx success", "cost", t_end-t_start)
 	return nil
 }
 
@@ -1369,9 +1370,9 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 // State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
 	log.Debug("State wait TxpoolLock")
-	pool.smu.Lock()
+	pool.smu.RLock()
 	log.Debug("State got TxpoolLock")
-	defer pool.smu.Unlock()
+	defer pool.smu.RUnlock()
 
 	return pool.pendingState
 }
