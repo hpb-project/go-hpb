@@ -133,7 +133,7 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 }
 */
 
-func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) bool {
+func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) (common.Address,bool) {
 
 	// 实际开发中，从硬件中获取
 	//rand := rand.Uint64()
@@ -142,30 +142,19 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
-	return (number % uint64(len(signers))) == uint64(offset)
+	index := number % uint64(len(signers))
+	return signers[index], index == uint64(offset)
 }
 
-func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, headers []types.Header) bool {
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chooseSigners []common.Address) (common.Address,bool) {
 
-	//calc all the have been generated blocks signers; overlap is ok because these signers will be eliminated
-	signersgenblks := make([]common.Address, 0, len(headers))
-	for _, v := range headers {
-		signersgenblks = append(signersgenblks, v.Coinbase)
-	}
-	signers, offset := s.GetHpbNodes(), 0
-	for _, signergenblk := range signersgenblks {
-		for k, asigner := range signers {
-			if signergenblk == asigner {
-				signers = append(signers[:k], signers[k+1:]...)
-				break
-			}
-		}
-	}
+	offset := 0
 
-	for offset < len(signers) && signers[offset] != signer {
+	for offset < len(chooseSigners) && chooseSigners[offset] != signer {
 		offset++
 	}
-	return (number % uint64(len(signers))) == uint64(offset)
+	index := number % uint64(len(chooseSigners))
+	return chooseSigners[index], index == uint64(offset)
 }
 
 // 判断当前的次序

@@ -28,6 +28,8 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"gopkg.in/fatih/set.v0"
+	"math"
 	"math/big"
 	"strings"
 	"time"
@@ -334,14 +336,39 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		if mode == config.FullSync {
 			var inturn bool
 			if number < consensus.StageNumberV {
-				inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+				_,inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
-				signersgenblks := make([]types.Header, 0, consensus.ContinuousGenBlkLimit)
-				for i := uint64(0); i < consensus.ContinuousGenBlkLimit; i++ {
-					signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
+				var allSnapSigners = set.New()
+				for _,v := range snap.Signers {
+					allSnapSigners.Add(v)
 				}
-				inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, signersgenblks)
+
+				chooseSet := allSnapSigners.Copy()
+				latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
+				var i = latestCheckPointNumber
+
+				for i < number && allSnapSigners.Size() > 1 {
+					nSigners := make([]common.Address,0,chooseSet.Size())
+					oldHeader := chain.GetHeaderByNumber(i)
+					chooseSet.Each(func (item interface{}) bool{
+						nSigners = append(nSigners,item.(common.Address))
+						return true
+					})
+					miner,_ := snap.CalculateCurrentMiner(new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64(), c.GetSinger(), nSigners)
+					chooseSet.Remove(miner)
+					if chooseSet.Size() == 0 {
+						chooseSet := allSnapSigners.Copy()
+						chooseSet.Remove(miner)
+					}
+					i++
+				}
+				chooseSigners := make([]common.Address,0,chooseSet.Size())
+				chooseSet.Each(func (item interface{}) bool{
+					chooseSigners = append(chooseSigners,item.(common.Address))
+					return true
+				})
+				_,inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSigners)
 			}
 			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 			if inturn {
