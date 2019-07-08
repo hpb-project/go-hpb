@@ -66,6 +66,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
+	bNewVersion := block.Number().Uint64() > consensus.StageNumberIV
 	synsigner := types.MakeSigner(p.config)
 	txs := block.Transactions()
 	for _, tx := range txs {
@@ -80,17 +81,33 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//	return nil, nil, nil, err
 		//}
 		//the tx without contract
-		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-			if errs != nil {
-				types.Deletesynsinger(synsigner, tx)
-				return nil, nil, nil, errs
+		if bNewVersion {
+			if (tx.To() == nil && len(tx.Data()) > 0) || len(statedb.GetCode(*tx.To())) > 0 {
+				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				if errs != nil {
+					types.Deletesynsinger(synsigner, tx)
+					return nil, nil, nil, errs
+				}
+			} else {
+				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				if errs != nil {
+					types.Deletesynsinger(synsigner, tx)
+					return nil, nil, nil, errs
+				}
 			}
 		} else {
-			receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
-			if errs != nil {
-				types.Deletesynsinger(synsigner, tx)
-				return nil, nil, nil, errs
+			if len(tx.Data()) > 0 {
+				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				if errs != nil {
+					types.Deletesynsinger(synsigner, tx)
+					return nil, nil, nil, errs
+				}
+			} else {
+				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				if errs != nil {
+					types.Deletesynsinger(synsigner, tx)
+					return nil, nil, nil, errs
+				}
 			}
 		}
 
