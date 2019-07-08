@@ -340,6 +340,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			} else {
 				//statistics the miners` addresses donnot care repeat address
 				var allSnapSigners = set.New()
+				removedSigners := make([]common.Address, 0, consensus.ContinuousGenBlkLimit)
 				for _,v := range snap.Signers {
 					allSnapSigners.Add(v)
 				}
@@ -356,7 +357,13 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 						return true
 					})
 					miner,_ := snap.CalculateCurrentMiner(new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64(), c.GetSinger(), nSigners)
+					removedSigners = append(removedSigners,miner)
 					chooseSet.Remove(miner)
+					if len(removedSigners) == int(consensus.ContinuousGenBlkLimit) {
+						reback := removedSigners[0]
+						chooseSet.Add(reback)
+						removedSigners = removedSigners[1:]
+					}
 					if chooseSet.Size() == 0 {
 						chooseSet := allSnapSigners.Copy()
 						chooseSet.Remove(miner)
