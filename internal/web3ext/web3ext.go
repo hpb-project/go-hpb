@@ -384,6 +384,12 @@ web3._extend({
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
+			name: 'getStatediffbyblockandTx',
+			call: 'hpb_getStatediffbyblockandTx',
+			params: 2,
+			inputFormatter: [null,null]
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'hpb_sign',
 			params: 2,
