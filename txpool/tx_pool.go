@@ -227,6 +227,10 @@ func (pool *TxPool) loop() {
 			pool.tmpbeats.Range(func(k, v interface{}) bool {
 				txTmphash := k.(common.Hash)
 				tmpBeatsV := v.(time.Time)
+				if tmpBeatsV.UnixNano() < 0 {
+					log.Debug("txpool evictTmpQueue", "found invalid beats time", tmpBeatsV.String())
+					return true
+				}
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					pool.tmpqueue.Delete(txTmphash)
 					pool.tmpbeats.Delete(txTmphash)
