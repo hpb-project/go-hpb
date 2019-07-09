@@ -46,12 +46,12 @@ const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 
 var (
 	HpbNodenumber = 31    //hpb nodes number
-	NumberPrehp   = 20    //nodes num from 151 nodes select
+	NumberPrehp   = 2    //nodes num from 151 nodes select
 	IgnoreRetErr  = false //ignore finalize return err
 
-	StageNumberII  uint64 = 260000
-	StageNumberIII uint64 = 1200000
-	StageNumberIV  uint64 = 2560000
+	StageNumberII  uint64 = 400
+	StageNumberIII uint64 = 1600
+	StageNumberIV  uint64 = 972200
 	StageNumberV   uint64 = 999999000000 // 暂不启用
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000 //待定 6月23日15时
