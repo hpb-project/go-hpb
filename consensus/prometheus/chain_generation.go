@@ -211,7 +211,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		if header.Number.Int64() > int64(chooseBackupMiner) {
 			signersgenblks := make([]types.Header, 0, chooseBackupMiner)
 			for i := uint64(0); i < uint64(chooseBackupMiner); i++ {
-				signersgenblks = append(signersgenblks, *chain.GetHeaderByNumber(number - i - 1))
+				oldHeader := chain.GetHeaderByNumber(number - i - 1)
+				if oldHeader != nil {
+					signersgenblks = append(signersgenblks, *oldHeader)
+				}
 			}
 			if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
 				return errors.New("Nont in turn")
