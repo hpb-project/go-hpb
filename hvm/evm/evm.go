@@ -24,6 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 )
@@ -86,7 +87,7 @@ type Context struct {
 type State_Diff struct {
 	from     common.Address
 	to       common.Address
-	value    *big.Int
+	tvalue   uint64
 	gaslimit uint64
 	depth    int
 	id       int
@@ -96,7 +97,7 @@ func (statediff State_Diff) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"from":     statediff.from,
 		"to":       statediff.to,
-		"value":    statediff.value,
+		"value":    statediff.tvalue,
 		"gaslimit": statediff.gaslimit,
 		"depth":    statediff.depth,
 		"id":       statediff.id,
@@ -211,16 +212,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.StateDB.CreateAccount(addr)
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
-	statediff := &State_Diff{
-		from:     caller.Address(),
-		to:       to.Address(),
-		value:    value,
-		gaslimit: gas,
-		depth:    evm.depth,
-		id:       evm.depthid[evm.depth],
-	}
-	evm.depthid[evm.depth]++
-	evm.StateDiff = append(evm.StateDiff, statediff)
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped environment for this execution context
 	// only.
@@ -235,6 +226,19 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
+	} else {
+		log.Error("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value)
+
+		statediff := &State_Diff{
+			from:     caller.Address(),
+			to:       to.Address(),
+			tvalue:   value.Uint64(),
+			gaslimit: gas,
+			depth:    evm.depth,
+			id:       evm.depthid[evm.depth],
+		}
+		evm.depthid[evm.depth]++
+		evm.StateDiff = append(evm.StateDiff, statediff)
 	}
 
 	return ret, contract.Gas, err
