@@ -199,11 +199,11 @@ type BoeHandle struct {
 }
 
 var (
-	boeHandle  = &BoeHandle{boeInit: false, rpFunc: nil, maxThNum: 2}
-	soft_cnt   uint32
-	hard_cnt   uint32
-	async_call uint32
-	sync_call  uint32
+    boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:2}
+    soft_cnt                 uint32
+    hard_cnt                 uint32
+    async_call               uint32
+    sync_call                uint32
 )
 
 func BoeGetInstance() *BoeHandle {
@@ -338,29 +338,29 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 	}
 }
 
-func (boe *BoeHandle) performance() {
-	duration := time.Second * 1
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
+func (boe *BoeHandle) performance(){
+    duration := time.Second * 1
+    timer := time.NewTimer(duration)
+    defer timer.Stop()
 
-	soft_cnt = 0
-	hard_cnt = 0
-	for {
-		timer.Reset(duration)
-		select {
-		case <-timer.C:
-			if !boe.bcontinue {
-				return
-			}
-			if soft_cnt > 0 || hard_cnt > 0 {
-				log.Debug("boe performance", "hard_cnt", hard_cnt, "soft_cnt", soft_cnt, "async_call", async_call, "sync_call", sync_call)
-			}
-			soft_cnt = 0
-			hard_cnt = 0
-			async_call = 0
-			sync_call = 0
-		}
-	}
+    soft_cnt = 0
+    hard_cnt = 0
+    for {
+        timer.Reset(duration)
+        select {
+        case <- timer.C:
+            if !boe.bcontinue {
+                return
+            }
+            if soft_cnt > 0 || hard_cnt > 0 {
+                log.Debug("boe performance","hard_cnt", hard_cnt, "soft_cnt", soft_cnt, "async_call", async_call, "sync_call", sync_call)
+            }
+            soft_cnt = 0
+            hard_cnt = 0
+            async_call = 0
+            sync_call = 0
+        }
+    }
 }
 func (boe *BoeHandle) Init() error {
 	if boe.bcontinue {
@@ -555,18 +555,18 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 }
 
 func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
-	async_call = async_call + 1
-	if (async_call >= 100) && (async_call%2 == 0) {
-		rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
-		copy(rs.TxHash, txhash)
-		copy(rs.Hash, hash)
-		copy(rs.Sig[32-len(r):32], r)
-		copy(rs.Sig[64-len(s):64], s)
-		rs.Sig[64] = v
-		boe.postToSoft(&rs)
+    async_call = async_call + 1
+    if (async_call >= 100) && (async_call %2 == 0) {
+        rs := RecoverPubkey{TxHash:make([]byte, 32),Hash:make([]byte, 32), Sig:make([]byte, 65), Pub:make([]byte, 65)}
+        copy(rs.TxHash, txhash)
+        copy(rs.Hash, hash)
+        copy(rs.Sig[32-len(r):32], r)
+        copy(rs.Sig[64-len(s):64], s)
+        rs.Sig[64] = v
+        boe.postToSoft(&rs)
 
-		return nil
-	}
+        return nil
+    }
 
 	var (
 		m_sig   = make([]byte, 97)
@@ -597,24 +597,24 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
 
-	//var (
-	//    result = make([]byte, 65)
-	//    m_sig  = make([]byte, 97)
-	//    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-	//)
-	//sync_call = sync_call + 1
-	//copy(m_sig[32-len(r):32], r)
-	//copy(m_sig[64-len(s):64], s)
-	//copy(m_sig[96-len(hash):96], hash)
-	//m_sig[96] = v
+    //var (
+    //    result = make([]byte, 65)
+    //    m_sig  = make([]byte, 97)
+    //    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+    //)
+	sync_call = sync_call + 1
+    //copy(m_sig[32-len(r):32], r)
+    //copy(m_sig[64-len(s):64], s)
+    //copy(m_sig[96-len(hash):96], hash)
+    //m_sig[96] = v
 
-	//c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-	//if c_ret == C.BOE_OK {
-	//    result[0] = 4
-	//    return result,nil
-	//}
+    //c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+    //if c_ret == C.BOE_OK {
+    //    result[0] = 4
+    //    return result,nil
+    //}
 
-	return softRecoverPubkey(hash, r, s, v)
+    return softRecoverPubkey(hash, r, s, v)
 }
 
 func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {

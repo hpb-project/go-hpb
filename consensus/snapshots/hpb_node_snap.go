@@ -133,6 +133,40 @@ func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool
 }
 */
 
+func (s *HpbNodeSnap) CalculateBackupMiner(number uint64, signer common.Address, headers []types.Header) bool {
+
+	signersgenblks := make([]common.Address, 0, len(headers))
+	for _, v := range headers {
+		signersgenblks = append(signersgenblks, v.Coinbase)
+	}
+
+	signersgenblks = append(signersgenblks, signer)
+
+	signers, _ := s.GetHpbNodes(), 0
+	choose := make([]common.Address, 0, len(signersgenblks))
+	for _, signergenblk := range signersgenblks {
+		for _, asigner := range signers {
+			if signergenblk == asigner {
+				choose = append(choose,asigner)
+				break
+			}
+		}
+	}
+	for j,k := 0,0; k < len(signers)/2; j += 2 {
+		if j < len(choose) {
+			if choose[j] == signer {
+				return true
+			} else {
+				k++
+			}
+		} else {
+			break
+		}
+	}
+
+	return false
+}
+
 func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) bool {
 
 	// 实际开发中，从硬件中获取
@@ -142,8 +176,10 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
+	log.Debug("worker calculate miner","miner",signers[number%uint64(len(signers))].String())
 	return (number % uint64(len(signers))) == uint64(offset)
 }
+
 
 // 判断当前的次序
 func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {

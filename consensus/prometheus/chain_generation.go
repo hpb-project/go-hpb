@@ -44,7 +44,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"math"
-	"math/rand"
 	"strings"
 )
 
@@ -52,7 +51,7 @@ const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
 	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 500 * time.Millisecond // 延时单位
+	wiggleTime            = 1000 * time.Millisecond // 延时单位
 	comCheckpointInterval = 2                      // 社区投票间隔
 	cadCheckpointInterval = 2                      // 社区投票间隔
 )
@@ -193,6 +192,25 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		header.Difficulty = diffInTurn
 	}
 
+	if header.Difficulty == diffNoTurn {
+		// check mine backup block.
+		var chooseBackupMiner = 100
+		if header.Number.Int64() > int64(chooseBackupMiner) {
+			signersgenblks := make([]types.Header, 0, chooseBackupMiner)
+			for i := uint64(0); i < uint64(chooseBackupMiner); i++ {
+				oldHeader := chain.GetHeaderByNumber(number - i - 1)
+				if oldHeader != nil {
+					signersgenblks = append(signersgenblks, *oldHeader)
+				}
+			}
+			if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
+				return errors.New("Nont in turn")
+			}
+		} else {
+			return errors.New("Nont in turn")
+		}
+	}
+
 	c.lock.RLock()
 
 	if cadWinner, nonce, err := c.GetSelectPrehp(state, chain, header, number, false); nil == err {
@@ -303,7 +321,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	// 比较难度值，确定是否为适合的时间
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		//	// It's not our turn explicitly to sign, delay it a bit
-		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
 		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
 		//log.Error("-----genblocksig---------test for waiting 8 minutes--------------", "primemineraddr", primemineraddr, "primeoffset", currentminer, "number", number)
 		myoffset := snap.GetOffset(header.Number.Uint64(), signer)
@@ -311,12 +328,8 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		if distance > len(snap.Signers)/2 {
 			distance = len(snap.Signers) - distance
 		}
-		if distance > len(snap.Signers)/consensus.StepLength { //if signers length is smaller than 3,  it means myoffset smaller than currentminer have high priority
-			delay += time.Duration(len(snap.Signers)-distance+10+rand.Intn(5)) * wiggleTime
-		} else {
-			wiggle = time.Duration(500+rand.Intn(len(snap.Signers))) * wiggleTime
-			delay += wiggle
-		}
+		//delay = time.Duration(int(c.config.Period + c.config.Period/2) + distance * int(wiggleTime))
+		delay = time.Second * time.Duration(c.config.Period * 2) + time.Duration(distance)*wiggleTime
 	}
 
 	log.Debug("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay), "number", number)

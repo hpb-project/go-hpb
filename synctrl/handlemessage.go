@@ -25,10 +25,13 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
+	"gopkg.in/fatih/set.v0"
 	"math/big"
 	"sync/atomic"
 	"time"
 )
+
+var handleKnownBlocks = set.New()
 
 // HandleGetBlockHeadersMsg deal received GetBlockHeadersMsg
 func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
@@ -321,6 +324,12 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 
 	// Mark the peer as owning the block and schedule it for import
 	p.KnownBlockAdd(request.Block.Hash())
+	if handleKnownBlocks.Has(request.Block.Hash()) {
+		log.Debug("handleKnownBlocks~~~~~~", "msgsize", msg.Size)
+		return nil
+	} else {
+		handleKnownBlocksAdd(request.Block.Hash())
+	}
 	InstanceSynCtrl().puller.Enqueue(p.GetID(), request.Block)
 
 	// Assuming the block is importable by the peer, but possibly not yet done so,
@@ -341,6 +350,13 @@ func HandleNewBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 		}
 	}
 	return nil
+}
+
+func handleKnownBlocksAdd(hash common.Hash) {
+	if handleKnownBlocks.Size() >= 1000000 {
+		handleKnownBlocks.Clear()
+	}
+	handleKnownBlocks.Add(hash)
 }
 
 // HandleNewBlockMsg deal received NewBlockMsg
@@ -365,6 +381,11 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	////////////////////////////////////////////////
 	// Mark the peer as owning the block and schedule it for import
 	p.KnownBlockAdd(newBlock.Hash())
+	if handleKnownBlocks.Has(newBlock.Hash()) {
+		return nil
+	} else {
+		handleKnownBlocksAdd(newBlock.Hash())
+	}
 	InstanceSynCtrl().puller.Enqueue(p.GetID(), newBlock)
 
 	// Assuming the block is importable by the peer, but possibly not yet done so,
@@ -387,31 +408,79 @@ func HandleNewHashBlockMsg(p *p2p.Peer, msg p2p.Msg) error {
 	return nil
 }
 
+var poolTxsCh chan *types.Transaction
+
+func TxsPoolLoop() {
+	duration := time.Millisecond * 500
+	timer := time.NewTimer(duration)
+
+	txCap := 2000
+	txs := make([]*types.Transaction, 0, txCap)
+	poolTxsCh = make(chan *types.Transaction, 2000)
+
+	for {
+		select {
+		case <-timer.C:
+			if len(txs) > 0 {
+				log.Debug("TxsPoolLoop timeout", "len(txs)", len(txs), "len(poolTxsCh)", len(poolTxsCh))
+				go txpool.GetTxPool().AddTxs(txs)
+				txs = make([]*types.Transaction, 0, txCap)
+			}
+		case tx, ok := <-poolTxsCh:
+			if ok {
+				txs = append(txs, tx)
+				if len(txs) >= txCap {
+					log.Debug("TxsPoolLoop full", "len(txs)", len(txs), "len(poolTxsCh)", len(poolTxsCh))
+					go txpool.GetTxPool().AddTxs(txs)
+					txs = make([]*types.Transaction, 0, txCap)
+				}
+			}
+
+		}
+		timer.Reset(duration)
+	}
+}
+
 // HandleTxMsg deal received TxMsg
 func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
+	st:=time.Now().UnixNano()/1000
+	defer func(){
+		log.Trace("HandleTxMsg receive every")
+	}()
+
 	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+		log.Debug("HandleTxMsg Instance is accepttxs")
 		return nil
 	}
+
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs []*types.Transaction
 	if err := msg.Decode(&txs); err != nil {
+		log.Trace("HandleTxMsg decode failed")
 		return p2p.ErrResp(p2p.ErrDecode, "msg %v: %v", msg, err)
 	}
+	defer func(){
+		log.Trace("HandleTxMsg receive tx from", "peer",p.GetID(),"tx[0]",txs[0].Hash())
+	}()
+	go txpool.GetTxPool().GoTxsAsynSender(txs)
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
 			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
 		}
 		p.KnownTxsAdd(tx.Hash())
-	}
-	//batch TxsAsynSender
-	if len(txs) > 1 {
-		go txpool.GetTxPool().GoTxsAsynSender(txs)
-		go txpool.GetTxPool().AddTxs(txs)
-	}else {
-		go txpool.GetTxPool().AddTxs(txs)
+
+		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) {
+			continue
+		} else {
+			go func(){
+				poolTxsCh <- tx
+			}()
+			se:=time.Now().UnixNano()/1000
+			log.Trace("HandleTxMsg ", "cost time(us)", se-st)
+		}
 	}
 
 	return nil

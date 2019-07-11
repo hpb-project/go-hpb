@@ -51,7 +51,7 @@ const (
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
 
-	blockMaxTxs = 5000 * 9
+	blockMaxTxs = 5000 * 10
 )
 
 // Agent can register themself with the worker
@@ -427,6 +427,19 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
+func (self *worker) calMaxTxs(parent *types.Block) int{
+	dealTime := int(uint64(time.Now().Unix()) - parent.Time().Uint64())
+	reTime := int(self.config.Prometheus.Period) - dealTime
+	if reTime <= 0 {
+		reTime = 1
+	}
+	ret := 15000 * reTime
+	if ret > blockMaxTxs {
+		ret = blockMaxTxs
+	}
+	return ret
+}
+
 func (self *worker) startNewMinerRound() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -435,8 +448,11 @@ func (self *worker) startNewMinerRound() {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
+
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
+
+	log.Debug("worker startNewMinerRound", "time",tstart.Unix())
 
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
@@ -462,9 +478,8 @@ func (self *worker) startNewMinerRound() {
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
-
 	pstate, _ := self.chain.StateAt(parent.Root())
-
+	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "number",header.Number.Uint64(),"time", time.Now().Unix())
 	if err := self.engine.PrepareBlockHeader(self.chain, header, pstate); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -488,9 +503,10 @@ func (self *worker) startNewMinerRound() {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	//log.Error("----read tx from pending is ", "number is", len(pending))
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	work.commitTransactions(self.mux, txs, self.coinbase)
+	maxtxs := self.calMaxTxs(parent)
+	work.commitTransactions(self.mux, txs, self.coinbase, maxtxs)
+	log.Debug("worker startNewMinerRound after commitTransactions", "time", time.Now().Unix())
 	// compute uncles for the new block.
 	var (
 		uncles    []*types.Header
@@ -541,15 +557,21 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	return nil
 }
 
-func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address) {
+func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, maxTxs int) {
 	//log.Error("----------------committransactions--------------")
 	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
+	var capTxs int
+	if maxTxs > blockMaxTxs || maxTxs < 0 {
+		capTxs = blockMaxTxs
+	}else {
+		capTxs = maxTxs
+	}
 
 	for {
 		// Retrieve the next transaction and abort if all done
-		if len(env.txs) >= blockMaxTxs {
+		if len(env.txs) >= capTxs {
 			break
 		}
 		tx := txs.Peek()
@@ -560,17 +582,8 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		// during transaction acceptance is the transaction pool.
 		//
 		// We use the eip155 signer regardless of the current hf.
-		//from, _ := types.Sender(env.signer, tx)
-		from, err := types.ASynSender(env.signer, tx)
-		if err != nil {
-			log.Trace("ASynSender ErrInvalid")
-			from2, err := types.Sender(env.signer, tx)
-
-			if err != nil {
-				log.Error("Sender ErrInvalidSender")
-			}
-			copy(from[0:], from2[0:])
-		}
+		from, _ := types.Sender(env.signer, tx)
+		
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//TODO why tx is protected
@@ -613,6 +626,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 			txs.Shift()
 		}
 	}
+	log.Debug("worker committransactions","package txs", len(env.txs))
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
