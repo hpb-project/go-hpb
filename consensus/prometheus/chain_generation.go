@@ -286,6 +286,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 		chooseSet := allSnapSigners.Copy()
 		latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
+		log.Debug("chainGeneration ", "lastCheckoutPoint", latestCheckPointNumber, "current Number", number)
+
 		var i = latestCheckPointNumber
 
 		for i < number && allSnapSigners.Size() > 1 {
@@ -297,6 +299,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			})
 			miner,_ := snap.CalculateCurrentMiner(new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64(), c.GetSinger(), nSigners)
 			removedSigners = append(removedSigners,miner)
+			log.Debug("chainGeneration", "Remove old miner", miner, "at block", i)
 			chooseSet.Remove(miner)
 			if len(removedSigners) == int(consensus.ContinuousGenBlkLimit) {
 				reback := removedSigners[0]
@@ -309,9 +312,18 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			}
 			i++
 		}
+		log.Debug("chainGeneration", "chooseSet.Size()", chooseSet.Size())
+		var st = 0
 		chooseSigners := make([]common.Address,0,chooseSet.Size())
 		chooseSet.Each(func (item interface{}) bool{
-			chooseSigners = append(chooseSigners,item.(common.Address))
+
+			if addr,ok := item.(common.Address) ; ok {
+				log.Debug("chainGeneration", "chooseSet ", addr)
+				chooseSigners = append(chooseSigners,item.(common.Address))
+			}
+			st++
+			log.Debug("chainGeneration", "st",st)
+
 			return true
 		})
 		if _,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSigners); inturn {
