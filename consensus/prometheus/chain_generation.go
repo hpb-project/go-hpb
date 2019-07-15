@@ -44,7 +44,6 @@ import (
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"gopkg.in/fatih/set.v0"
 	"math"
 	"math/rand"
 	"strings"
@@ -278,56 +277,30 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		}
 	} else {
 		//statistics the miners` addresses donnot care repeat address
-		var allSnapSigners = set.New()
-		removedSigners := make([]common.Address, 0, consensus.ContinuousGenBlkLimit)
-		for _,v := range snap.Signers {
-			allSnapSigners.Add(v)
-		}
-
-		chooseSet := allSnapSigners.Copy()
 		latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
 		log.Debug("chainGeneration ", "lastCheckoutPoint", latestCheckPointNumber, "current Number", number)
+		var lastMiner common.Address
 
 		var i = latestCheckPointNumber
 
-		for i < number && allSnapSigners.Size() > 1 {
-			nSigners := make([]common.Address,0,chooseSet.Size())
-			oldHeader := chain.GetHeaderByNumber(i)
-			chooseSet.Each(func (item interface{}) bool{
-				nSigners = append(nSigners,item.(common.Address))
-				return true
-			})
-			miner,_ := snap.CalculateCurrentMiner(new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64(), c.GetSinger(), nSigners)
-			removedSigners = append(removedSigners,miner)
-			log.Debug("chainGeneration", "Remove old miner", miner, "at block", i)
-			chooseSet.Remove(miner)
-			if len(removedSigners) == int(consensus.ContinuousGenBlkLimit) {
-				reback := removedSigners[0]
-				chooseSet.Add(reback)
-				removedSigners = removedSigners[1:]
+		for i <= number {
+			var chooseSet = make([]common.Address, 0, len(snap.Signers))
+			for k,_ := range snap.Signers {
+				if k != lastMiner {
+					chooseSet = append(chooseSet,k)
+				}
 			}
-			if chooseSet.Size() == 0 {
-				chooseSet := allSnapSigners.Copy()
-				chooseSet.Remove(miner)
+			if i < number {
+				oldHeader := chain.GetHeaderByNumber(i)
+				random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
+				lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+			} else {
+				if _,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet); inturn {
+					header.Difficulty = diffInTurn
+				}
 			}
+
 			i++
-		}
-		log.Debug("chainGeneration", "chooseSet.Size()", chooseSet.Size())
-		var st = 0
-		chooseSigners := make([]common.Address,0,chooseSet.Size())
-		chooseSet.Each(func (item interface{}) bool{
-
-			if addr,ok := item.(common.Address) ; ok {
-				log.Debug("chainGeneration", "chooseSet ", addr)
-				chooseSigners = append(chooseSigners,item.(common.Address))
-			}
-			st++
-			log.Debug("chainGeneration", "st",st)
-
-			return true
-		})
-		if _,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSigners); inturn {
-			header.Difficulty = diffInTurn
 		}
 	}
 
