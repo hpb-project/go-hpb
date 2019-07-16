@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -285,20 +286,23 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		var retry = 5
 
 		for i <= number {
-			var chooseSet = make([]common.Address, 0, len(snap.Signers))
+			var chooseSet = common.Addresses{}
 			for k,_ := range snap.Signers {
+				log.Info("range snap.Signers", "k",k)
 				if k != lastMiner {
 					chooseSet = append(chooseSet,k)
 				} else {
 					log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
 				}
 			}
+			sort.Sort(chooseSet)
 
 
 			if i < number {
 				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
 					random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
 					lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+					log.Debug("PrepareHeader", "number",i, "random",hex.EncodeToString(oldHeader.HardwareRandom),"random",random,"lastMiner",lastMiner)
 				} else {
 					if retry > 0 {
 						log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)

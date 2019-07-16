@@ -30,6 +30,7 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 )
@@ -345,12 +346,14 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				var i = latestCheckPointNumber
 				var retry = 5
 				for i <= number {
-					var chooseSet = make([]common.Address, 0, len(snap.Signers))
+					var chooseSet = common.Addresses{}
+					//var chooseSet = make([]common.Address, 0, len(snap.Signers))
 					for k,_ := range snap.Signers {
 						if k != lastMiner {
 							chooseSet = append(chooseSet,k)
 						}
 					}
+					sort.Sort(chooseSet)
 					if i < number {
 						if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
 							random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
