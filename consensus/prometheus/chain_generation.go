@@ -289,8 +289,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			for k,_ := range snap.Signers {
 				if k != lastMiner {
 					chooseSet = append(chooseSet,k)
+				} else {
+					log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
 				}
 			}
+
 
 			if i < number {
 				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
@@ -308,7 +311,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					}
 				}
 			} else {
-				if _,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet); inturn {
+				m,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet)
+				log.Debug("PrepareHeader","current miner",m,"inturn",inturn)
+				if inturn {
 					header.Difficulty = diffInTurn
 				}
 			}
