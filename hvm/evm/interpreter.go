@@ -22,6 +22,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 )
@@ -69,7 +70,7 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		cfg.JumpTable = byzantiumInstructionSet
+		cfg.JumpTable = constantinopleInstructionSet
 	}
 
 	return &Interpreter{
@@ -167,6 +168,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
 		if err := operation.validateStack(stack); err != nil {
+			log.Error("validateStack")
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
@@ -180,11 +182,13 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
+				log.Error("errGasUintOverflow1", "op", op)
 				return nil, errGasUintOverflow
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
+				log.Error("errGasUintOverflow2")
 				return nil, errGasUintOverflow
 			}
 		}
@@ -194,6 +198,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 			// cost is explicitly set so that the capture state defer method cas get the proper cost
 			cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 			if err != nil || !contract.UseGas(cost) {
+				log.Error("outofgas")
 				return nil, ErrOutOfGas
 			}
 		}
@@ -221,8 +226,10 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 
 		switch {
 		case err != nil:
+			log.Error("ERRRRRR", "err", err)
 			return nil, err
 		case operation.reverts:
+			log.Error("ERRRRRR", "errExecutionReverted", errExecutionReverted)
 			return res, errExecutionReverted
 		case operation.halts:
 			return res, nil
