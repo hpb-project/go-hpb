@@ -162,22 +162,22 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 			//log.Error("--------winners[0]---------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
 			//var bigbandwith *big.Int
-			if peer.Bandwidth()/(1024*8) > consensus.BandwithLimit {
+			if peer.Bandwidth()/(1024*1024*8) > consensus.BandwithLimit {
 				//resbandwith[0] = consensus.BandwithLimit
 				resbandwith[0] = byte(rand.Intn(consensus.BandwithLimit)) //for test
 			} else {
-				resbandwith[0] = byte(peer.Bandwidth() / (1024 * 8))
+				resbandwith[0] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
 		}
 		if peer.Address() == winners[1].Address {
 			//test---------------------------------
 			//log.Error("---------winners[1]----------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
-			if peer.Bandwidth()/(1024*8) > consensus.BandwithLimit {
+			if peer.Bandwidth()/(1024* 1024 *8) > consensus.BandwithLimit {
 				//resbandwith[1] = consensus.BandwithLimit
 				resbandwith[1] = byte(rand.Intn(consensus.BandwithLimit)) //for test
 			} else {
-				resbandwith[1] = byte(peer.Bandwidth() / (1024 * 8))
+				resbandwith[1] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
 		}
 	}
