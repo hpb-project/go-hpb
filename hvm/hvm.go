@@ -1,11 +1,12 @@
 package hvm
 
 import (
+	"math/big"
+
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"math/big"
 )
 
 // Message represents a message sent to a contract.
@@ -42,6 +43,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
+
+	extra, _ := types.BytesToExtraDetail(header.Extra)
 	return evm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
@@ -53,6 +56,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Difficulty:  new(big.Int).Set(header.Difficulty),
 		GasLimit:    new(big.Int).Set(header.GasLimit),
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		Random:      extra.GetSignedLastRND()[:32],
 	}
 }
 
