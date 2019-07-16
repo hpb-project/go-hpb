@@ -282,6 +282,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		var lastMiner common.Address
 
 		var i = latestCheckPointNumber
+		var retry = 5
 
 		for i <= number {
 			var chooseSet = make([]common.Address, 0, len(snap.Signers))
@@ -290,16 +291,28 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					chooseSet = append(chooseSet,k)
 				}
 			}
+
 			if i < number {
-				oldHeader := chain.GetHeaderByNumber(i)
-				random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
-				lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
+					random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
+					lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+				} else {
+					if retry > 0 {
+						log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)
+						retry--
+						time.Sleep(time.Microsecond*100)
+						continue
+					} else {
+						log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry",retry)
+						return errors.New("chainGetHeaderByNumber failed")
+					}
+				}
 			} else {
 				if _,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet); inturn {
 					header.Difficulty = diffInTurn
 				}
 			}
-
+			retry = 5
 			i++
 		}
 	}
