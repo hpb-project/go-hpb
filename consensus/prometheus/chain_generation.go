@@ -296,6 +296,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 			sort.Sort(chooseSet)
+			for _,d := range chooseSet {
+				log.Debug("after sort ", "choost set miner", d)
+			}
 
 
 			if i < number {
@@ -316,7 +319,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			} else {
 				m,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet)
-				log.Debug("PrepareHeader","current miner",m,"inturn",inturn)
+				log.Debug("PrepareHeader","current miner",m,"inturn",inturn, "random", hex.EncodeToString(header.HardwareRandom))
 				if inturn {
 					header.Difficulty = diffInTurn
 				}
