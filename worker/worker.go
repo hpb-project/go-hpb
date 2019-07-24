@@ -427,7 +427,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	return nil
 }
 
-func (self *worker) calMaxTxs(parent *types.Block) int{
+func (self *worker) calMaxTxs(parent *types.Block) int {
 	dealTime := int(uint64(time.Now().Unix()) - parent.Time().Uint64())
 	reTime := int(self.config.Prometheus.Period) - dealTime
 	if reTime <= 0 {
@@ -448,11 +448,10 @@ func (self *worker) startNewMinerRound() {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
-
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
 
-	log.Debug("worker startNewMinerRound", "time",tstart.Unix())
+	log.Debug("worker startNewMinerRound", "time", tstart.Unix())
 
 	tstamp := tstart.Unix()
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
@@ -479,7 +478,7 @@ func (self *worker) startNewMinerRound() {
 		header.Coinbase = self.coinbase
 	}
 	pstate, _ := self.chain.StateAt(parent.Root())
-	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "number",header.Number.Uint64(),"time", time.Now().Unix())
+	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "number", header.Number.Uint64(), "time", time.Now().Unix())
 	if err := self.engine.PrepareBlockHeader(self.chain, header, pstate); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -565,7 +564,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 	var capTxs int
 	if maxTxs > blockMaxTxs || maxTxs < 0 {
 		capTxs = blockMaxTxs
-	}else {
+	} else {
 		capTxs = maxTxs
 	}
 
@@ -583,7 +582,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		//
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
-		
+
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//TODO why tx is protected
@@ -626,7 +625,7 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 			txs.Shift()
 		}
 	}
-	log.Debug("worker committransactions","package txs", len(env.txs))
+	log.Debug("worker committransactions", "package txs", len(env.txs))
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -654,8 +653,8 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	if (tx.To() == nil && len(tx.Data()) > 0) || len(env.state.GetCode(*tx.To())) > 0 {
-		receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+	if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
+		_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 		if err != nil {
 			env.state.RevertToSnapshot(snap)
 			return err, nil

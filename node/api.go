@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +47,35 @@ import (
 )
 
 const defaultTraceTimeout = 5 * time.Second
+const defaultHashlen = 66
+
+type AccountDiff struct {
+	addr       common.Address
+	prebalance *big.Int
+	balance    *big.Int
+}
+
+type StateDiff struct {
+	txhash      common.Hash
+	accountdiff []AccountDiff
+	evmdiff     string
+}
+
+func (accountdiff AccountDiff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"addr":   accountdiff.addr,
+		"before": accountdiff.prebalance,
+		"after":  accountdiff.balance,
+	})
+}
+
+func (statediff StateDiff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"txhash":     statediff.txhash,
+		"state_diff": statediff.accountdiff,
+		"evmdiff":    statediff.evmdiff,
+	})
+}
 
 // PublicHpbAPI provides an API to access Hpb full node-related
 // information.
@@ -70,6 +101,156 @@ func (api *PublicHpbAPI) Coinbase() (common.Address, error) {
 // Mining returns the miner is mining
 func (api *PublicHpbAPI) Mining() bool {
 	return api.e.miner.Mining()
+}
+
+func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) string {
+	log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", data, "lendata", len(data))
+
+	blockchain := api.e.BlockChain()
+	var block *types.Block
+	var txhash common.Hash
+	if strings.Index(data, "0x") == 0 && len(data) == defaultHashlen {
+		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", common.HexToHash(data))
+
+		block = blockchain.GetBlockByHash(common.HexToHash(data))
+
+	} else if len(data) > 0 {
+		blockNumber, _ := strconv.ParseUint(data, 0, 64)
+		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blocknumber", blockNumber)
+		block = blockchain.GetBlockByNumber(blockNumber)
+	}
+	if strings.Index(hash, "0x") == 0 && len(hash) == defaultHashlen {
+		txhash = common.HexToHash(hash)
+		log.Debug("getblockbyhash", "hash", txhash)
+		if tx, blockHash, number, _ := bc.GetTransaction(api.e.ChainDb(), txhash); tx != nil {
+			block = blockchain.GetBlock(blockHash, number)
+		}
+	}
+	if block == nil {
+		return string("getblockerror")
+	}
+
+	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
+	statedbpre, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
+	if err != nil {
+		return string("getstateerror")
+	}
+
+
+	var (
+		gp            = new(bc.GasPool).AddGas(block.GasLimit())
+		header        = block.Header()
+		totalUsedGas  = big.NewInt(0)
+		allAddress    = make(map[common.Address]*big.Int)
+		allState_Diff = []StateDiff{}
+	)
+
+	for i, tx := range block.Transactions() {
+		state_diff := StateDiff{txhash: tx.Hash()}
+		statedb.Prepare(tx.Hash(), block.Hash(), i)
+		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
+			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff)
+			state_diff.evmdiff = evmstatediff
+		} else {
+			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+		}
+
+		stateOjects := statedb.GetStateObjects()
+		for _, addr := range stateOjects {
+			_, ok := allAddress[addr]
+			if ok != true {
+				allAddress[addr] = statedbpre.GetBalance(addr)
+			}
+			accountdiff := AccountDiff{addr: addr, prebalance: allAddress[addr], balance: statedb.GetBalance(addr)}
+			//log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
+			state_diff.accountdiff = append(state_diff.accountdiff, accountdiff)
+			allAddress[addr] = accountdiff.balance
+			log.Debug("diff_state", "txhash", state_diff.txhash, "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
+		}
+		allState_Diff = append(allState_Diff, state_diff)
+		if txhash == tx.Hash() {
+			log.Debug("txhash===========tx.Hash")
+			jsons, errs := json.Marshal(state_diff)
+			log.Debug("json----", "jsons", string(jsons), "errs", errs)
+			return string(jsons)
+		}
+		
+	}
+
+	jsons, errs := json.Marshal(allState_Diff)
+	log.Debug("json----", "jsons", string(jsons), "errs", errs)
+	return string(jsons)
+}
+func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
+	log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", data, "lendata", len(data))
+
+	blockchain := api.e.BlockChain()
+	var block *types.Block
+	if strings.Index(data, "0x") == 0 && len(data) == defaultHashlen {
+		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", common.HexToHash(data))
+		block = blockchain.GetBlockByHash(common.HexToHash(data))
+	} else {
+		blockNumber, _ := strconv.ParseUint(data, 0, 64)
+		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blocknumber", blockNumber)
+		block = blockchain.GetBlockByNumber(blockNumber)
+	}
+
+	if block == nil {
+		return string("getblockerror")
+	}
+
+	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
+	statedbpre, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
+	if err != nil {
+		return string("getstateerror")
+	}
+
+	var (
+		gp            = new(bc.GasPool).AddGas(block.GasLimit())
+		header        = block.Header()
+		totalUsedGas  = big.NewInt(0)
+		allAddress    = make(map[common.Address]*big.Int)
+		allState_Diff = []StateDiff{}
+	)
+
+	for i, tx := range block.Transactions() {
+		state_diff := StateDiff{txhash: tx.Hash()}
+		statedb.Prepare(tx.Hash(), block.Hash(), i)
+		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
+			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Error("evmdiff", "evmstatediff", evmstatediff)
+			state_diff.evmdiff = evmstatediff
+		} else {
+			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+		}
+
+		stateOjects := statedb.GetStateObjects()
+		for _, addr := range stateOjects {
+			_, ok := allAddress[addr]
+			if ok != true {
+				allAddress[addr] = statedbpre.GetBalance(addr)
+			}
+			accountdiff := AccountDiff{addr: addr, prebalance: allAddress[addr], balance: statedb.GetBalance(addr)}
+			//log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
+			state_diff.accountdiff = append(state_diff.accountdiff, accountdiff)
+			allAddress[addr] = accountdiff.balance
+			log.Debug("diff_state", "txhash", state_diff.txhash, "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
+		}
+		allState_Diff = append(allState_Diff, state_diff)
+
+	}
+	/*
+		for _, state_diff := range allState_Diff {
+			log.Error("allState_Diff", "txhash", state_diff.txhash)
+			for _, accountdiff := range state_diff.accountdiff {
+				log.Error("accountdiff", "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
+			}
+		}
+	*/
+	jsons, errs := json.Marshal(allState_Diff)
+	log.Debug("json----", "jsons", string(jsons), "errs", errs)
+	return string(jsons)
 }
 
 // PrivateMinerAPI provides private RPC methods tso control the miner.
