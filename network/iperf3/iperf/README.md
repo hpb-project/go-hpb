@@ -50,9 +50,10 @@ None.
 
 ### Building ###
 
-    ./configure; make; make install
+    ./configure --prefix=XXX --disable-shared --enable-static; make; make install
 
 (Note: If configure fails, try running `./bootstrap.sh` first)
+(Note: --prefix=XXX means an absolute directory name)
 
 Invoking iperf3
 ---------------
