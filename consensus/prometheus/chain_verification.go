@@ -310,6 +310,14 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	if state == nil {
 		return nil, nil, errors.New("chain stateAt return nil")
 	}
+	//this is for test
+	errs, hpblist, coinaddresslist := c.GetCoinAddressFromContract(chain, header, state)
+	if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
+		log.Error("CoinAddress ERRRRRRRRRRRRRRR", "errs", errs)
+	}
+	log.Error("GetCoinAddressFromContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
+	//test end
+
 	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Debug("GetNodeinfoFromContract err", "value", err)
@@ -374,7 +382,15 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get bandwith ranking res
 	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
 	//get all balances
-	allbalances, err := c.GetAllBalances(addrlist, state)
+	var allbalances map[common.Address]big.Int
+	if header.Number.Uint64() > consensus.StageNumberIV {
+		allbalances, err = c.GetAllBalancesByCoin(hpblist, coinaddresslist, state)
+	} else {
+		allbalances, err = c.GetAllBalances(addrlist, state)
+	}
+	for k, v := range allbalances {
+		log.Error("Balance", "k", k, "v", v.Uint64())
+	}
 	if err != nil {
 		return nil, nil, err
 	}

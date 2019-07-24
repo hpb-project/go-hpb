@@ -86,8 +86,8 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	var receipt *types.Receipt
 	var err error
 
-	if (tx.To() == nil && len(tx.Data()) > 0) || len(b.statedb.GetCode(*tx.To())) > 0 {
-		receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
+	if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(b.statedb.GetCode(*tx.To())) > 0) {
+		_, receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
 		if err != nil {
 
 		}

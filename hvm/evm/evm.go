@@ -17,12 +17,14 @@
 package evm
 
 import (
+	"encoding/json"
 	"math/big"
 	"sync/atomic"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 )
@@ -82,6 +84,26 @@ type Context struct {
 // sure that any errors generated are to be considered faulty code.
 //
 // The EVM should never be reused and is not thread safe.
+type State_Diff struct {
+	from     common.Address
+	to       common.Address
+	tvalue   uint64
+	gaslimit uint64
+	depth    int
+	id       int
+}
+
+func (statediff State_Diff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"from":     statediff.from,
+		"to":       statediff.to,
+		"value":    statediff.tvalue,
+		"gaslimit": statediff.gaslimit,
+		"depth":    statediff.depth,
+		"id":       statediff.id,
+	})
+}
+
 type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
@@ -100,7 +122,9 @@ type EVM struct {
 	interpreter *Interpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
-	abort int32
+	abort     int32
+	StateDiff []*State_Diff
+	depthid   [config.CallCreateDepth]int
 }
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -203,6 +227,19 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
+	} else {
+		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value)
+
+		statediff := &State_Diff{
+			from:     caller.Address(),
+			to:       to.Address(),
+			tvalue:   value.Uint64(),
+			gaslimit: gas,
+			depth:    evm.depth,
+			id:       evm.depthid[evm.depth],
+		}
+		evm.depthid[evm.depth]++
+		evm.StateDiff = append(evm.StateDiff, statediff)
 	}
 	return ret, contract.Gas, err
 }
@@ -439,3 +476,6 @@ func (evm *EVM) ChainConfig() *config.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+func (evm *EVM) GetStateDiff() []*State_Diff {
+	return evm.StateDiff
+}

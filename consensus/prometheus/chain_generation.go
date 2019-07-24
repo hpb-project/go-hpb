@@ -998,7 +998,23 @@ func (c *Prometheus) GetAllBalances(addrlist []common.Address, state *state.Stat
 	}
 	return mapBalance, nil
 }
+func (c *Prometheus) GetAllBalancesByCoin(addrlist []common.Address, coinlist []common.Address, state *state.StateDB) (map[common.Address]big.Int, error) {
 
+	if addrlist == nil || len(addrlist) == 0 || state == nil || len(addrlist) != len(coinlist) {
+		return nil, consensus.ErrBadParam
+	}
+
+	mapBalance := make(map[common.Address]big.Int)
+	arrayaddrwith := make([]common.Address, 0, len(addrlist))
+	for _, v := range addrlist {
+		arrayaddrwith = append(arrayaddrwith, v)
+	}
+	for i, v := range arrayaddrwith {
+		mapBalance[v] = *state.GetBalance(coinlist[i]) //持币账户分离
+		log.Trace("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(coinlist[i]))
+	}
+	return mapBalance, nil
+}
 func (c *Prometheus) GetRankingRes(voteres map[common.Address]big.Int, addrlist []common.Address) (map[common.Address]int, error) {
 
 	//if number < consensus.NumberBackBandwith {
@@ -1166,4 +1182,54 @@ func PreDealNodeInfo(pairs []p2p.HwPair) (error, []p2p.HwPair) {
 	log.Trace(">>>>>>>>>>>>> PreDealNodeInfo <<<<<<<<<<<<<<<<", "res", res, "length", len(res))
 
 	return nil, res
+}
+func (c *Prometheus) GetCoinAddressFromContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, []common.Address, []common.Address) {
+
+	abijson := "[{\"constant\":false,\"inputs\":[{\"name\":\"a1\",\"type\":\"address\"},{\"name\":\"a2\",\"type\":\"address\"}],\"name\":\"setaddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"Miner\",\"type\":\"address[]\"},{\"name\":\"Coin\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getstring\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+	fechaddr := common.HexToAddress("0x5fcd64149a3cf1ed64032ba3fc7cf7a9e3d59c0e")
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(abijson))
+
+	//get bootnode info "addr,cid,hid"
+	packres, err := fechABI.Pack("getaddrs")
+	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	if err != nil {
+		log.Error("get bootnode info from InnerCall fail", "err", err)
+		return err, nil, nil
+	} else {
+		if resultaddr == nil || len(resultaddr) == 0 {
+			return errors.New("return bootnode info result is nil or length is 0"), nil, nil
+		}
+	}
+	var out struct {
+		Miner []common.Address
+		Coin  []common.Address
+	}
+
+	err = fechABI.Unpack(&out, "getaddrs", resultaddr)
+	n := len(out.Miner)
+	if len(out.Miner) == 0 || len(out.Coin) == 0 {
+		log.Error("return 4 parts do not match", "Coinbases", n)
+		//return errors.New("contract return 4 parts length do not match"), nil, nil
+	}
+
+	for i := 0; i < n; i++ {
+		log.Error("GetCCCCCCCCCCCCCCC", "Miner", out.Miner[i], "Coin", out.Coin[i])
+	}
+	log.Error(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", common.Bytes2Hex(resultaddr))
+
+	return nil, out.Miner, out.Coin
 }

@@ -17,6 +17,7 @@
 package bc
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -66,7 +67,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
-	bNewVersion := block.Number().Uint64() > consensus.StageNumberIV
+	bNewVersion := block.Number().Uint64() > consensus.NewContractVersion
 	synsigner := types.MakeSigner(p.config)
 	go func(txs types.Transactions) {
 		for _, tx := range txs {
@@ -75,12 +76,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	}(block.Transactions())
 
 	// Iterate over and process the individual transactions
-	author,_ := p.engine.Author(block.Header())
+	author, _ := p.engine.Author(block.Header())
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		//the tx without contract
 		if bNewVersion {
-			if (tx.To() == nil && len(tx.Data()) > 0) || len(statedb.GetCode(*tx.To())) > 0 {
+			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nill && len(statedb.GetCode(*tx.To())) > 0) {
 				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
@@ -122,11 +123,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (string, *types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	cfg := evm.Config{}
 	// Create a new context to be used in the EVM environment
@@ -136,9 +137,11 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	statediff, errs := json.Marshal(vmenv.GetStateDiff())
+	log.Debug("evm json----", "jsons", string(statediff), "errs", errs)
 	if err != nil {
 		log.Error("ApplyMessage err", "err", err)
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 
 	// Update the state with pending changes
@@ -162,7 +165,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, err
+	return string(statediff), receipt, gas, err
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
@@ -206,7 +209,6 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 
 	return receipt, gas, err
 }
-
 
 // ApplyTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. It returns the receipt
