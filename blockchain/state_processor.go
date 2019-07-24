@@ -81,7 +81,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		//the tx without contract
 		if bNewVersion {
-			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nill && len(statedb.GetCode(*tx.To())) > 0) {
+			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
 				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
