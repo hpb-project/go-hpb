@@ -31,7 +31,7 @@ var (
 
 // MainnetChainConfig is the chain parameters to run a node on the main network.
 var MainnetChainConfig = &ChainConfig{
-	ChainId: big.NewInt(1),
+	ChainId: big.NewInt(269),
 	Prometheus: &PrometheusConfig{
 		Period: 3,
 		Epoch:  30000,
@@ -112,7 +112,7 @@ var (
 
 //可兼容的ChainID : 除了当前ChainId 还能兼容的另外的ChainId
 var (
-	CompatibleChainId = big.NewInt(269)
+	CompatibleChainId = big.NewInt(1)
 )
 
 type ChainConfig struct {
