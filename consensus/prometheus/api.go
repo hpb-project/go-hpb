@@ -31,7 +31,6 @@ type API struct {
 	prometheus *Prometheus
 }
 
-// 获取最新的的快照
 func (api *API) GetHpbNodeSnap(number *rpc.BlockNumber) (*snapshots.HpbNodeSnap, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
@@ -52,7 +51,6 @@ func (api *API) GetCandidateNodeSnap(number *rpc.BlockNumber) (*snapshots.CadNod
 
 func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
-	// 获取到最新的header
 
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
@@ -66,7 +64,6 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.GetHpbNodes(), nil
 }
 
-// 获取候选节点信息
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) (snapshots.CadNodeSnap, error) {
 	var header *types.Header
 	header = api.GetLatestBlockHeader(number)
@@ -86,7 +83,6 @@ func (api *API) GetHpbNodeSnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, 
 	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents, api.prometheus.signatures, api.prometheus.config, api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-//跟根据区块号，获取最新的区块头
 func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header) {
 	//var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
@@ -116,7 +112,6 @@ func (api *API) Propose(address common.Address, confRand string, auth bool) {
 	api.prometheus.proposals[address] = auth
 }
 
-// 改变作废的方式
 func (api *API) Discard(address common.Address, confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()

@@ -31,8 +31,6 @@ type CadWinner struct {
 	VoteIndex     uint64 
 }
 
-
-// 基于用户的输入产生genesis
 func (p *prometh) makeGenesis() {
 	
 	fmt.Println()
