@@ -204,10 +204,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				}
 			}
 			if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
-				return errors.New("Nont in turn")
+				return errors.New("Not in turn")
 			}
 		} else {
-			return errors.New("Nont in turn")
+			return errors.New("Not in turn")
 		}
 	}
 

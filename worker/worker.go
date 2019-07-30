@@ -480,7 +480,7 @@ func (self *worker) startNewMinerRound() {
 	pstate, _ := self.chain.StateAt(parent.Root())
 	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "number", header.Number.Uint64(), "time", time.Now().Unix())
 	if err := self.engine.PrepareBlockHeader(self.chain, header, pstate); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
+		log.Debug("Failed to prepare header for mining", "err", err)
 		return
 	}
 
