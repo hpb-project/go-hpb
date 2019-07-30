@@ -18,8 +18,6 @@ package voting
 
 import (
 	"math"
-	//"strconv"
-	//"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -32,13 +30,6 @@ import (
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
-	//var (
-	//	headers []*types.Header
-	//snap    *snapshots.HpbNodeSnap
-	//)
-	//number = consensus.SetNumber(number)
-
-	// 首次要创建
 	if number == 0 {
 		if snapg, err := GenGenesisSnap(db, recents, signatures, config, chain); err == nil {
 			return snapg, err
@@ -137,11 +128,11 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 	return nil, nil
 }
 
-//将数据存入到缓存和数据库中
+
 func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.HpbNodeSnap, latestCheckPointHash common.Hash) error {
-	// 存入到缓存中
+
 	recents.Add(latestCheckPointHash, snap)
-	// 存入数据库
+
 	err := snap.Store(latestCheckPointHash, db)
 	if err != nil {
 		log.Trace("StoreDataToCacheAndDb hpb fail", "err", err)

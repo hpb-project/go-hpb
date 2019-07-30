@@ -17,16 +17,12 @@
 package voting
 
 import (
-	//"math"
-	//"strconv"
+
 	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
 
-	//"github.com/hpb-project/go-hpb/common"
-	//"github.com/hpb-project/go-hpb/consensus"
-	// "math/big"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 
 	"bytes"
@@ -38,12 +34,12 @@ import (
 	"math/rand"
 )
 
-// 从网络中获取最优化的
+// get the best one
 func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64) ([]*snapshots.CadWinner, []byte, error) {
 
 	bestCadWinners := []*snapshots.CadWinner{}
 	peerp2ps := p2p.PeerMgrInst().PeersAll()
-	fmt.Println("######### peers length is:", len(peerp2ps))
+	fmt.Println("peers length is:", len(peerp2ps))
 	peers := make([]*p2p.Peer, 0, len(peerp2ps))
 
 	for i := 0; i < len(peerp2ps); i++ {
@@ -81,7 +77,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	}
 
 	for i := 0; i < len(delhpsmap); i++ {
-		log.Trace(">>>>>>>>>>>>>order by there element<<<<<<<<<<<<<<<", "addr", delhpsmap[i], "ranking value", rankingdata[delhpsmap[i]])
+		log.Trace("order by there element", "addr", delhpsmap[i], "ranking value", rankingdata[delhpsmap[i]])
 	}
 
 	input := random
@@ -139,9 +135,8 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 		return nil, nil, nil
 	}
 
-	//log.Error("-------------best cad winner--------------", "addr", bestCadWinners[0], "selectres len", len(delhpsmap))
 	winners := make([]*snapshots.CadWinner, 0, 2)
-	winners = append(winners, bestCadWinners[0]) //返回最优的
+	winners = append(winners, bestCadWinners[0]) //the best
 	if len(peers) > 0 {
 		temp := rand.Intn(len(peers))
 		addr1 := peers[temp].Address()
@@ -152,33 +147,30 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 			winners = append(winners, &snapshots.CadWinner{NetworkId: "", Address: addr2, VoteIndex: uint64(rankingdata[addr2])})
 		}
 	} else {
-		winners = append(winners, bestCadWinners[1:][rand.Intn(len(bestCadWinners)-1)]) //返回随机
+		winners = append(winners, bestCadWinners[1:][rand.Intn(len(bestCadWinners)-1)]) //the rand
 	}
 
 	var resbandwith [2]byte
 	for _, peer := range peers {
 		if peer.Address() == winners[0].Address {
-			//test---------------------------------
-			//log.Error("--------winners[0]---------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
-			//var bigbandwith *big.Int
 			if peer.Bandwidth()/(1024*1024*8) > consensus.BandwithLimit {
-				//resbandwith[0] = consensus.BandwithLimit
-				resbandwith[0] = byte(rand.Intn(consensus.BandwithLimit)) //for test
+				resbandwith[0] = consensus.BandwithLimit
 			} else {
 				resbandwith[0] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
+			log.Trace("get 0 bandwith", "id", peer.GetID(),"winners0",resbandwith[0], "vaule", peer.Bandwidth()/ (1024 *1024 * 8))
+
 		}
 		if peer.Address() == winners[1].Address {
-			//test---------------------------------
-			//log.Error("---------winners[1]----------- get bandwith", "id", peer.GetID(), "vaule", peer.Bandwidth()/ (1024 * 8))
 
 			if peer.Bandwidth()/(1024* 1024 *8) > consensus.BandwithLimit {
-				//resbandwith[1] = consensus.BandwithLimit
-				resbandwith[1] = byte(rand.Intn(consensus.BandwithLimit)) //for test
+				resbandwith[1] = consensus.BandwithLimit
 			} else {
 				resbandwith[1] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
+			log.Trace("get 1 bandwith", "id", peer.GetID(),"winners1",resbandwith[1], "vaule", peer.Bandwidth()/ (1024 *1024 * 8))
+
 		}
 	}
 	return winners, resbandwith[:], nil
