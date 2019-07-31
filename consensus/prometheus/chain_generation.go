@@ -729,7 +729,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
 		tempaddrvotefloat.Int(tempreward)
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
-		log.Trace("++++++++++reward node with the vote contract++++++++++++", "addr", addr, "reward value", tempreward)
+		log.Trace("reward node with the vote contract", "addr", addr, "reward value", tempreward)
 	}
 
 	return nil
