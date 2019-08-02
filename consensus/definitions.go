@@ -40,6 +40,20 @@ const BootnodeInfoContractABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"co
 const BootnodeInfoContractAddr = "0x2251a2533556e7c6243a73f015eb96aa155c5791" //mainnet nodeinfo contract addr
 const BootnodeInfoContractMethodName = "getAllHpbNodes"
 
+const NewContractAddr = "0xf013d37a06fc9c5b960fa29bf78f75248a6918ea"
+const NewContractABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"}],\"name\":\"getInvokeContract\",\"outputs\":[{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodId\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"},{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodid\",\"type\":\"bytes4\"}],\"name\":\"setInvokeContract\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+const NewContractMethod = "getInvokeContract"
+const NewfetchAllHolderAddrs = "fetchAllHolderAddrs"
+const NewfetchAllVoteResult = "fetchAllVoteResult"
+const NewgetAllHpbNodes = "getAllHpbNodes"
+
+const NewContractInterfaceABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllVoteResult\",\"outputs\":[{\"name\":\"candidateAddrs\",\"type\":\"address[]\"},{\"name\":\"nums\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllHolderAddrs\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"_holderAddrs\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getAllHpbNodes\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+const InvokeIndexOne = 1
+const InvokeIndexTwo = 2
+const InvokeIndexThree = 3
+
 const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
@@ -56,7 +70,7 @@ var (
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
 
-	NewContractVersion        uint64 = 1850000
+	NewContractVersion        uint64 = 99999999999
 	CadNodeCheckpointInterval uint64 = 200
 )
 

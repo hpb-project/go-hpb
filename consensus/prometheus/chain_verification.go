@@ -18,6 +18,10 @@ package prometheus
 import (
 	"bytes"
 	"errors"
+	"math/big"
+	"strings"
+	"time"
+
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -28,9 +32,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
-	"math/big"
-	"strings"
-	"time"
 )
 
 // 验证头部，对外调用接口
@@ -310,15 +311,14 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	if state == nil {
 		return nil, nil, errors.New("chain stateAt return nil")
 	}
-	//this is for test
-	errs, hpblist, coinaddresslist := c.GetCoinAddressFromContract(chain, header, state)
-	if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
-		log.Error("CoinAddress ERRRRRRRRRRRRRRR", "errs", errs)
+	var err error
+	var bootnodeinfp []p2p.HwPair
+	log.Error("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		err, bootnodeinfp = c.GetNodeinfoFromNewContract(chain, header, state)
+	} else {
+		err, bootnodeinfp = c.GetNodeinfoFromContract(chain, header, state)
 	}
-	log.Error("GetCoinAddressFromContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
-	//test end
-
-	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Debug("GetNodeinfoFromContract err", "value", err)
 		//return err
@@ -368,7 +368,12 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	}
 
 	//get all votes
-	err, _, voteres := c.GetVoteRes(chain, header, state)
+	var voteres map[common.Address]big.Int
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		err, voteres = c.GetVoteResFromNewContract(chain, header, state)
+	} else {
+		err, _, voteres = c.GetVoteRes(chain, header, state)
+	}
 	if nil != err {
 		//return false, err
 		log.Debug("GetVoteRes return err, please deploy contract!")
@@ -383,14 +388,17 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
 	//get all balances
 	var allbalances map[common.Address]big.Int
-	if header.Number.Uint64() > consensus.StageNumberIV {
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		errs, hpblist, coinaddresslist := c.GetCoinAddressFromNewContract(chain, header, state)
+		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
+			log.Error("CoinAddress ERRRRRRRRRRRRRRR", "errs", errs)
+		}
+		log.Debug("GetCoinAddressFromContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
 		allbalances, err = c.GetAllBalancesByCoin(hpblist, coinaddresslist, state)
 	} else {
 		allbalances, err = c.GetAllBalances(addrlist, state)
 	}
-	for k, v := range allbalances {
-		log.Error("Balance", "k", k, "v", v.Uint64())
-	}
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -402,7 +410,7 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	rankingmap := make(map[common.Address]float64)
 	for _, v := range addrlist {
 		rankingmap[v] = float64(bandrank[v])*0.5 + float64(balancerank[v])*0.15 + float64(voterank[v])*0.35
-		log.Trace("three item ranking info", "addr", v, "bandwith", bandrank[v], "balance", balancerank[v], "vote", voterank[v], "number", number)
+		log.Trace("**********************+three item ranking info******************", "addr", v, "bandwith", bandrank[v], "balance", balancerank[v], "vote", voterank[v], "number", number)
 	}
 
 	random := crypto.Keccak256(header.Number.Bytes())
