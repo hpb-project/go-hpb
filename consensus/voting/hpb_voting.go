@@ -105,11 +105,12 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 	genesis := chain.GetHeaderByNumber(0)
-	signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-	for i := 0; i < len(signers); i++ {
-		//log.Info("miner initialization", "i:",i)
-		copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
+	extra, err := types.BytesToExtraDetail(genesis.Extra)
+	if err != nil {
+		log.Error("GenGenesisSnap", "bytesToExtraDetail failed, error", err)
+		return nil, err
 	}
+	signers := extra.GetNodes()
 	snap := snapshots.NewHistorysnap(config, signatures, 0, 0, genesis.Hash(), signers)
 	// 存入缓存和数据库中
 	if err := StoreDataToCacheAndDb(recents, db, snap, genesis.Hash()); err != nil {

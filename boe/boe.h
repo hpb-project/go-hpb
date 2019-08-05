@@ -45,6 +45,8 @@ BoeErr* boe_upgrade_abort(void);
  */
 BoeErr* boe_hw_check(void);
 BoeErr* boe_hw_connect(void);
+BoeErr* boe_reg_random_read(unsigned char *string);
+
 /*
  * let board reboot.
  */

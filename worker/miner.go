@@ -21,17 +21,16 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/synctrl"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/synctrl"
 )
-
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
@@ -47,11 +46,11 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine,coinbase common.Address) *Miner {
+func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine, coinbase common.Address) *Miner {
 	miner := &Miner{
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, coinbase, /*eth,*/ mux),
+		worker:   newWorker(config, engine, coinbase /*eth,*/, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(bc.InstanceBlockChain(), engine))
@@ -92,9 +91,9 @@ out:
 }
 
 func (self *Miner) Start(coinbase common.Address) {
-	// 
+	//
 	go self.update()
-	
+
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.worker.setHpberbase(coinbase)
 	self.coinbase = coinbase
@@ -107,6 +106,7 @@ func (self *Miner) Start(coinbase common.Address) {
 
 	log.Info("Starting mining operation")
 	self.worker.start()
+	log.Debug("goto startNewMinerRound from minerstart")
 	self.worker.startNewMinerRound()
 }
 

@@ -110,7 +110,8 @@ int upgrade_call_back_cgo(int progress, char *msg)
 static void hex_dump(unsigned char * data, int len)
 {
     printf("0x");
-    for(int i = 0; i < len; i++)
+    int i = 0;
+    for(i = 0; i < len; i++)
         printf("%02x", data[i]);
 
     printf("\n");
@@ -153,6 +154,8 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
 */
 import "C"
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -441,12 +444,6 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	return v, ErrInitFailed
 }
 
-func (boe *BoeHandle) GetRandom() []byte {
-	var ran = make([]byte, 32)
-	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
-	return ran
-}
-
 func (boe *BoeHandle) GetBoeId() (string, error) {
 	var sn string
 	ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
@@ -636,21 +633,73 @@ func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {
 func (boe *BoeHandle) GetNextHash_v2(hash []byte) ([]byte, error) {
 	var result = make([]byte, 32)
 	if len(hash) != 32 {
-		return nil, ErrGetNextHashFailed
+		return nil, ErrInvalidParams
 	}
 	version, err := boe.GetVersion()
 	if err != nil {
 		return nil, ErrGetNextHashFailed
 	}
-	// The Hash_v2 is added at version v1.0.0.2.
-	if version.F > 0 || version.D >= 2 {
+	// The Hash_v2 is added at version v1.0.1.0.
+	if version.F >= 1 {
 		var ret = C.boe_get_n_random((*C.uchar)(unsafe.Pointer(&hash[0])), (*C.uchar)(unsafe.Pointer(&result[0])))
 		if ret == C.BOE_OK {
 			return result, nil
+		} else {
+			log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+			if uint32(ret.ecode) == e_hash_get_time_limit {
+				return nil, ErrHashTimeLimited
+			}
 		}
 	} else {
 		log.Error("BOE firmware version is too low, not support Hash_v2.")
 	}
 	return nil, ErrGetNextHashFailed
 
+}
+
+/*
+ * Get real-random from boe hardware.
+ */
+func (boe *BoeHandle) GetRandom() ([]byte, error) {
+	var result = make([]byte, 32)
+	var ret = C.boe_reg_random_read((*C.uchar)(unsafe.Pointer(&result[0])))
+	if ret == C.BOE_OK {
+		return result, nil
+	} else {
+		log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+		return nil, errors.New("Get random failed ")
+	}
+}
+
+func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
+	if len(old) != 32 || len(next) != 32 {
+		return ErrInvalidParams
+	}
+	version, err := boe.GetVersion()
+	if err != nil {
+		return ErrHashVerifyFailed
+	}
+	// The hashVerify is added at version v1.0.1.0.
+	if version.F >= 1 {
+		var ret = C.boe_check_random((*C.uchar)(unsafe.Pointer(&old[0])), (*C.uchar)(unsafe.Pointer(&next[0])))
+		if ret == C.BOE_OK {
+			return nil
+		} else {
+			log.Debug("Boe HashVerify failed", "ecode:", uint32(ret.ecode))
+		}
+	} else {
+		// use old version if user not upgrade boe-firmware.
+		log.Debug("Boe HashVerify", "used lower version boefirmware", version.VersionString())
+		newrand, err := boe.GetNextHash(old)
+		if err != nil {
+			log.Error("Boe HashVerify GetNextHash", "fail", err)
+			return ErrHashVerifyFailed
+		}
+		if bytes.Compare(newrand, next) == 0 {
+			log.Debug("Boe HashVerify compare not match")
+			return nil
+		}
+	}
+
+	return ErrHashVerifyFailed
 }

@@ -124,6 +124,11 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
+func (h *Header) FriendlyExtra() string {
+	extra, _ := BytesToExtraDetail(h.Extra)
+	return extra.String()
+}
+
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions and uncles) together.
 type Body struct {
@@ -261,6 +266,7 @@ func CopyHeader(h *Header) *Header {
 		cpy.HardwareRandom = make([]byte, len(h.HardwareRandom))
 		copy(cpy.HardwareRandom, h.HardwareRandom)
 	}
+
 	return &cpy
 }
 
@@ -327,6 +333,14 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 func (b *Block) Hardwarerandom() []byte   { return common.CopyBytes(b.header.HardwareRandom) }
+func (b *Block) HWRealRND() []byte {
+	extra, _ := BytesToExtraDetail(b.header.Extra)
+	return common.CopyBytes(extra.GetRealRND())
+}
+func (b *Block) SignedLastRND() []byte {
+	extra, _ := BytesToExtraDetail(b.header.Extra)
+	return common.CopyBytes(extra.GetSignedLastRND())
+}
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -402,7 +416,11 @@ Uncles:
 }
 
 func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
+	extra, err := BytesToExtraDetail(h.Extra)
+	if err != nil {
+		return "BytesToExtraDetail failed"
+	} else {
+		return fmt.Sprintf(`Header(%x):
 [
 	ParentHash:	    %x
 	UncleHash:	    %x
@@ -423,7 +441,10 @@ func (h *Header) String() string {
 	MixDigest:      %x
 	Nonce:		    %x
 	hardwarerandom: %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.CandAddress, h.ComdAddress, h.VoteIndex, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom)
+	HWRealRnd: %x
+	SignLastRealRnd: %x
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.CandAddress, h.ComdAddress, h.VoteIndex, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce, h.HardwareRandom, extra.GetRealRND(), extra.GetSignedLastRND())
+	}
 }
 
 type Blocks []*Block

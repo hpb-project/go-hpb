@@ -1,5 +1,5 @@
 // Copyright 2018 The go-hpb Authors
-// Modified based on go-ethereum, which Copyright (C) 2014 The go-ethereum Authors.
+// This file is part of the go-hpb.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -18,10 +18,10 @@ package consensus
 
 import (
 	"errors"
-
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
+	"math/rand"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -151,10 +151,11 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return address.(common.Address), nil
 	}
 	// 从头文件中获取extra-data
-	if len(header.Extra) < ExtraSeal {
-		return common.Address{}, ErrMissingSignature
+	extraDetail, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return common.Address{}, err
 	}
-	signature := header.Extra[len(header.Extra)-ExtraSeal:]
+	signature := extraDetail.GetSeal()
 
 	// 还原公钥
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
@@ -171,6 +172,7 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 // 对区块头部进行签名，最小65Byte
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
+	extraDetail, _ := types.BytesToExtraDetail(header.Extra)
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
@@ -185,7 +187,7 @@ func SigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-65],
+		extraDetail.ExceptSealToBytes(),
 		header.MixDigest,
 		header.Nonce,
 	})
@@ -197,4 +199,26 @@ func SetTestParam() {
 	StageNumberII = 1
 	StageNumberIII = 0
 	StageNumberIV = 1
+}
+
+func Gen32BRandom() [32]byte {
+
+	var Res [32]byte
+	for i := 0; i < 32; i++ {
+		Res[i] = byte(rand.Intn(256)) //返回[0,256)的随机整数
+	}
+	return Res
+}
+
+func VerifyHWRlRndSign(HWRlRnd []byte, Sign []byte) (common.Address, error) {
+	//log.Info("VerifyHWRlRndSign", "hash", hex.EncodeToString(hash), "rnd", hex.EncodeToString(HWRlRnd))
+	// 还原公钥
+	pubkey, err := crypto.Ecrecover(HWRlRnd, Sign)
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
 }

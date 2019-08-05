@@ -289,6 +289,7 @@ func (self *worker) eventListener() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			log.Debug("goto startNewMinerRound from chainHeadCh")
 			self.startNewMinerRound()
 
 		// Handle ChainSideEvent
@@ -376,6 +377,7 @@ func (self *worker) handlerSelfMinedBlock() {
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
+				log.Debug("goto startNewMinerRound from CommitNewWork")
 				self.startNewMinerRound()
 			}
 		}
@@ -455,9 +457,17 @@ func (self *worker) startNewMinerRound() {
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   bc.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
-		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
+	var extra *types.ExtraDetail
+	if header.Number.Uint64() >= consensus.StageNumberVI {
+		extra, _ = types.NewExtraDetail(types.ExtraVersion)
+	} else {
+		extra, _ = types.NewExtraDetail(0)
+	}
+	extra.SetVanity(self.extra)
+	header.Extra = common.CopyBytes(extra.ToBytes())
+
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
@@ -640,17 +650,34 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	if (tx.To() == nil && len(tx.Data()) > 0) || len(env.state.GetCode(*tx.To())) > 0 {
-		receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
-		if err != nil {
-			env.state.RevertToSnapshot(snap)
-			return err, nil
+	bNewVersion := env.header.Number.Uint64() > consensus.StageNumberIII
+	if bNewVersion {
+		if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
+			receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
 		}
 	} else {
-		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
-		if err != nil {
-			env.state.RevertToSnapshot(snap)
-			return err, nil
+		if len(tx.Data()) > 0 {
+			receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
 		}
 	}
 
