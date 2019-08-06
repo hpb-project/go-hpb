@@ -52,9 +52,10 @@ var (
 	StageNumberII  uint64 = 400
 	StageNumberIII uint64 = 1600
 	StageNumberIV  uint64 = 972200
-	StageNumberV   uint64 = 999999000000 // 暂不启用
+	StageNumberV   uint64 = 2020000 // BOEHash_v2
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000 //待定 6月23日15时
+	StageNumberRND uint64 = StageNumberV	// BOE Real Random
 
 	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
 )
