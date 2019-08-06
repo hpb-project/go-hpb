@@ -66,13 +66,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
-	bNewVersion := block.Number().Uint64() > consensus.StageNumberIV
 	synsigner := types.MakeSigner(p.config)
 	txs := block.Transactions()
 	for _, tx := range txs {
 		types.ASynSender(synsigner, tx)
 	}
-
+	bNewVersion := block.Number().Uint64() > consensus.StageNumberIII
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
@@ -82,7 +81,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//}
 		//the tx without contract
 		if bNewVersion {
-			if (tx.To() == nil && len(tx.Data()) > 0) || len(statedb.GetCode(*tx.To())) > 0 {
+			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
 				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					types.Deletesynsinger(synsigner, tx)
