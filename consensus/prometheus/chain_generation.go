@@ -288,18 +288,11 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		for i <= number {
 			var chooseSet = common.Addresses{}
 			for k,_ := range snap.Signers {
-				log.Info("range snap.Signers", "k",k)
 				if k != lastMiner {
 					chooseSet = append(chooseSet,k)
-				} else {
-					log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
 				}
 			}
 			sort.Sort(chooseSet)
-			for _,d := range chooseSet {
-				log.Debug("after sort ", "choost set miner", d)
-			}
-
 
 			if i < number {
 				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
