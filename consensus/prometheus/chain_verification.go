@@ -264,10 +264,23 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
 
 			var index = uint64(number - 200 + bigsignlsthwrndmod.Uint64())
-			seedswitchheader := chain.GetHeaderByNumber(index)
-			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+			for i:=0 ; i < 3; i++ {
+				seedswitchheader := chain.GetHeaderByNumber(index)
+				if seedswitchheader == nil {
+					if i == 2 {
+						return errors.New("GetHeader Failed")
+					}
+					// sometimes get last header from chain will get nothing.
+					log.Debug("verifySeal chain.GetHeaderByNumber failed","index",index)
+					time.Sleep(time.Millisecond*5)
+					continue
+				}
 
-			realrandom = tmpExtra.GetRealRND()
+				tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+				realrandom = tmpExtra.GetRealRND()
+				break
+			}
+
 		} else {
 			signRnd := parentExtra.GetSignedLastRND()
 			realrandom = signRnd[0:32]
