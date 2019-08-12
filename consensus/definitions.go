@@ -40,8 +40,8 @@ const BootnodeInfoContractABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"co
 const BootnodeInfoContractAddr = "0x2251a2533556e7c6243a73f015eb96aa155c5791" //mainnet nodeinfo contract addr
 const BootnodeInfoContractMethodName = "getAllHpbNodes"
 
-const NewContractAddr = "0xf013d37a06fc9c5b960fa29bf78f75248a6918ea"
-const NewContractABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"}],\"name\":\"getInvokeContract\",\"outputs\":[{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodId\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"},{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodid\",\"type\":\"bytes4\"}],\"name\":\"setInvokeContract\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const NewContractAddr = "0xfc6d0656c4255da68e8b63d5530b16ba465b8d71"
+const NewContractABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"}],\"name\":\"getInvokeContract\",\"outputs\":[{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodId\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 const NewContractMethod = "getInvokeContract"
 const NewfetchAllHolderAddrs = "fetchAllHolderAddrs"
