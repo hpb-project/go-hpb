@@ -1210,6 +1210,10 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 	if err != nil {
 		log.Error("GetCoinAddressFromNewContract fail", "err", err)
 		return err, nil, nil
+	}else {
+		if resultaddr == nil || len(resultaddr) == 0 {
+			return errors.New("return resultaddr is nil or length is 0"), nil,nil
+		}
 	}
 	log.Debug("Innercall", "resultaddr", common.ToHex(resultaddr))
 
@@ -1226,6 +1230,10 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err, nil, nil
+	}else {
+		if result == nil || len(result) == 0 {
+			return errors.New("return resultaddr is nil or length is 0"), nil,nil
+		}
 	}
 	log.Debug("resultvote", "resultvote", common.ToHex(result))
 
@@ -1304,6 +1312,10 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err, nil
+	}else {
+		if resultvote == nil || len(resultvote) == 0 {
+			return errors.New("return resultaddr is nil or length is 0"), nil
+		}
 	}
 	log.Debug("resultvote", "resultvote", common.ToHex(resultvote))
 	var result struct {
