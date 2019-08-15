@@ -53,9 +53,8 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
 	return t.Dialer.Dial("tcp", addr.String())
 }
-
+//Todo : lqh add code comment.
 type dialstate struct {
-	//maxDynDials int
 	ntab        discoverTable
 	netrestrict *netutil.Netlist
 
@@ -72,10 +71,7 @@ type discoverTable interface {
 	Close()
 	FindNodes() []*discover.Node
 	Bondall(nodes []*discover.Node) int
-
-	//AddNode(node *discover.Node)
 	RemoveNode(nid discover.NodeID)
-	//HasNode(nid discover.NodeID) bool
 }
 
 // the dial history remembers recent dials.

@@ -104,19 +104,18 @@ func (api *PublicHpbAPI) Mining() bool {
 }
 
 func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) string {
-	log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", data, "lendata", len(data))
+	log.Debug("Replay_Block", "blockhash", data, "lendata", len(data))
 
 	blockchain := api.e.BlockChain()
 	var block *types.Block
 	var txhash common.Hash
 	if strings.Index(data, "0x") == 0 && len(data) == defaultHashlen {
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", common.HexToHash(data))
-
+		log.Debug("Replay_Block", "blockhash", common.HexToHash(data))
 		block = blockchain.GetBlockByHash(common.HexToHash(data))
 
 	} else if len(data) > 0 {
 		blockNumber, _ := strconv.ParseUint(data, 0, 64)
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blocknumber", blockNumber)
+		log.Debug("Replay_Block", "blocknumber", blockNumber)
 		block = blockchain.GetBlockByNumber(blockNumber)
 	}
 	if strings.Index(hash, "0x") == 0 && len(hash) == defaultHashlen {
@@ -163,14 +162,12 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 				allAddress[addr] = statedbpre.GetBalance(addr)
 			}
 			accountdiff := AccountDiff{addr: addr, prebalance: allAddress[addr], balance: statedb.GetBalance(addr)}
-			//log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
 			state_diff.accountdiff = append(state_diff.accountdiff, accountdiff)
 			allAddress[addr] = accountdiff.balance
 			log.Debug("diff_state", "txhash", state_diff.txhash, "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
 		}
 		allState_Diff = append(allState_Diff, state_diff)
 		if txhash == tx.Hash() {
-			log.Debug("txhash===========tx.Hash")
 			jsons, errs := json.Marshal(state_diff)
 			log.Debug("json----", "jsons", string(jsons), "errs", errs)
 			return string(jsons)
@@ -183,16 +180,16 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 	return string(jsons)
 }
 func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
-	log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", data, "lendata", len(data))
+	log.Debug("Replay_Block", "blockhash", data, "lendata", len(data))
 
 	blockchain := api.e.BlockChain()
 	var block *types.Block
 	if strings.Index(data, "0x") == 0 && len(data) == defaultHashlen {
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blockhash", common.HexToHash(data))
+		log.Debug("Replay_Block", "blockhash", common.HexToHash(data))
 		block = blockchain.GetBlockByHash(common.HexToHash(data))
 	} else {
 		blockNumber, _ := strconv.ParseUint(data, 0, 64)
-		log.Debug("Replay_Block    Replay_Block  Replay_Block", "blocknumber", blockNumber)
+		log.Debug("Replay_Block", "blocknumber", blockNumber)
 		block = blockchain.GetBlockByNumber(blockNumber)
 	}
 
@@ -219,7 +216,7 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
 			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-			log.Error("evmdiff", "evmstatediff", evmstatediff)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff)
 			state_diff.evmdiff = evmstatediff
 		} else {
 			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
@@ -232,7 +229,6 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 				allAddress[addr] = statedbpre.GetBalance(addr)
 			}
 			accountdiff := AccountDiff{addr: addr, prebalance: allAddress[addr], balance: statedb.GetBalance(addr)}
-			//log.Error("diff_state pre", "addr", addr, "balance", statedbpre.GetBalance(addr))
 			state_diff.accountdiff = append(state_diff.accountdiff, accountdiff)
 			allAddress[addr] = accountdiff.balance
 			log.Debug("diff_state", "txhash", state_diff.txhash, "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
@@ -240,14 +236,6 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 		allState_Diff = append(allState_Diff, state_diff)
 
 	}
-	/*
-		for _, state_diff := range allState_Diff {
-			log.Error("allState_Diff", "txhash", state_diff.txhash)
-			for _, accountdiff := range state_diff.accountdiff {
-				log.Error("accountdiff", "addr", accountdiff.addr, "prebalance", accountdiff.prebalance, "balance", accountdiff.balance, "diff", new(big.Int).Sub(accountdiff.balance, accountdiff.prebalance))
-			}
-		}
-	*/
 	jsons, errs := json.Marshal(allState_Diff)
 	log.Debug("json----", "jsons", string(jsons), "errs", errs)
 	return string(jsons)

@@ -71,14 +71,12 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		// call is not the same as used current, invalidate
 		// the cache.2
 		if sigCache.signer.Equal(signer) {
-			//log.Debug("Sender get Cache address ok", "tx.hash", tx.Hash())
 			return sigCache.from, nil
 		}
 	}
 	txhash := tx.Hash()
 	address, err := Sendercache.Get(txhash)
 	if err == nil {
-		//log.Debug("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: address})
 		return address, nil
 	}
@@ -89,7 +87,6 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	Sendercache.GetOrSet(txhash, addr)
 	tx.from.Store(sigCache{signer: signer, from: addr})
 
-	//log.Trace("Sender send ok", "tx.hash", txhash)
 	return addr, nil
 }
 func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
@@ -97,14 +94,12 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
 		if sigCache.signer.Equal(signer) {
-			//log.Debug("ASynSender Cache get OK", "sigCache.from", sigCache.from, "tx.Hash()", tx.Hash())
 			return sigCache.from, nil
 		}
 	}
 
 	asynAddress, err := Sendercache.Get(tx.Hash())
 	if err == nil {
-		//log.Trace("ASynSender SMapGet OK", "common.Address", asynAddress, "tx.hash", tx.Hash())
 		tx.from.Store(sigCache{signer: signer, from: asynAddress})
 		return asynAddress, nil
 	}
@@ -164,12 +159,7 @@ func compableV(v *big.Int) bool {
 }
 
 func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
-	if !tx.Protected() {
-		//return HomesteadSigner{}.Sender(tx)
-		//TODO transaction can be unprotected ?
-	}
-	//log.Error("Sender", "tx.data.v", tx.data.V, "tx.Chainid", tx.ChainId(), "s.hash(tx)", hex.EncodeToString(s.Hash(tx).Bytes()))
-	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
+if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
 	if compableV(tx.data.V) {
@@ -186,11 +176,6 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
-	if !tx.Protected() {
-		//return HomesteadSigner{}.Sender(tx)
-		log.Warn("ASynSender tx.Protected()")
-		//TODO transaction can be unprotected ?
-	}
 	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
@@ -276,7 +261,6 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int) (common.Address, error
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
-	log.Trace("boe validatesign success")
 	return addr, nil
 }
 
@@ -298,7 +282,6 @@ func ASynrecoverPlain(txhash common.Hash, sighash common.Hash, R, S, Vb *big.Int
 		log.Trace("boe validatesign error")
 		return common.Address{}, err
 	}
-	log.Trace("ASynrecoverPlain Send to BOE OK", "sighash", sighash)
 	return common.Address{}, ErrInvalidAsynsinger
 }
 
@@ -330,6 +313,4 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	copy(comhash[0:], rs.TxHash[0:])
 
 	Sendercache.GetOrSet(comhash, addr)
-	//log.Trace("boecallback boe rec singer data success", "rs.txhash", hex.EncodeToString(rs.TxHash), "addr", addr)
-
 }

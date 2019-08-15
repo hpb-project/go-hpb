@@ -195,17 +195,12 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
-	if receipt == nil {
-	}
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
-	if receipt == nil {
-	}
+
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-	if receipt == nil {
-	}
 
 	return receipt, gas, err
 }
@@ -235,8 +230,6 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 
 	// Update the state with pending changes
 	var root []byte
-
-	//statedb.Finalise(true)
 
 	usedGas.Add(usedGas, gas)
 
@@ -278,23 +271,15 @@ func ApplyTransactionNonContractNonFinallize(config *config.ChainConfig, bc *Blo
 	// Update the state with pending changes
 	var root []byte
 
-	//statedb.Finalise(true)
-
 	usedGas.Add(usedGas, gas)
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
-	if receipt == nil {
-	}
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
-	if receipt == nil {
-	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-	if receipt == nil {
-	}
 
 	return receipt, gas, err
 }

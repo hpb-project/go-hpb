@@ -531,16 +531,16 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	idx := sort.Search(len(self.validRevisions), func(i int) bool {
 		return self.validRevisions[i].id >= revid
 	})
+	// if display below logs when panic, and revid < panic(revid), thats means a revert have been done, so current revert will failed.
 	if idx == len(self.validRevisions) || self.validRevisions[idx].id != revid {
-		log.Error("------------RevertToSnapshot-------------", "idx", idx, "len(self.validRevisions)", len(self.validRevisions))
+		log.Error("RevertToSnapshot", "idx", idx, "len(self.validRevisions)", len(self.validRevisions))
 		if idx == len(self.validRevisions) && len(self.validRevisions) != 0 {
 			log.Error("self.validRevisions[idx-1].id", "value is ", self.validRevisions[0].id, "revid", revid)
-			log.Error("----------------this log express before the revert, other revert has been happened and this revert has been overwriten---------")
+			log.Error("this log express before the revert, other revert has been happened and this revert has been overwriten")
 		}
 
 		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
 	}
-	//测试revert失败问题，如果在panic前出现了下面的log信息，并且revid比panic的revid小，则表示之前已经进行了revert，所以本次revert肯定不会成功
 	snapshot := self.validRevisions[idx].journalIndex
 
 	// Replay the journal to undo changes.

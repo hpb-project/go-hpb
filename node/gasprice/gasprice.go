@@ -30,12 +30,6 @@ import (
 
 var maxPrice = big.NewInt(500 * config.Shannon)
 
-/*type Config struct {
-	Blocks     int
-	Percentile int
-	Default    *big.Int `toml:",omitempty"`
-}*/
-
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {

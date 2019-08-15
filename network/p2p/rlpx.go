@@ -167,7 +167,6 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	}
 	var hs protoHandshake
 	if err := msg.Decode(&hs); err != nil {
-		log.Debug("###### protocol handshake decode","error",err)
 		return nil, err
 	}
 	if (hs.ID == discover.NodeID{}) {
@@ -183,11 +182,9 @@ func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (disco
 		ourRand   []byte
 		thereRand []byte
 	)
-	// todo use real random by hardware
 	ourRand    = make([]byte,RandNonceSize)
 	thereRand  = make([]byte,RandNonceSize)
 	rand.Read(ourRand)
-	//log.Error("###### do enc handshake ","ourRand",ourRand)
 
 	if dial == nil {
 		sec, thereRand, err = receiverEncHandshake(t.fd, prv, nil,ourRand)
@@ -316,9 +313,8 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 		return s, t, err
 	}
 	s, err = h.secrets(authPacket, authRespPacket)
-	//copy(t[:], authRespMsg.Rand)
 	t = append(t, authRespMsg.Rand...)
-	log.Debug("Initiator Enc Handshake","outRand",authMsg.Rand,"thereRand",authRespMsg.Rand,"err",err)
+	log.Debug("Initiator Enc Handshake","ourRand",authMsg.Rand,"theirRand",authRespMsg.Rand,"err",err)
 	return s, t, err
 }
 
@@ -377,7 +373,6 @@ func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byt
 		return s, t, err
 	}
 	t = append(t, authMsg.Rand...)
-	//log.Error("###### receive handshake message","msg",authMsg)
 	h := new(encHandshake)
 	if err := h.handleAuthMsg(authMsg, prv); err != nil {
 		return s, t, err
@@ -402,7 +397,7 @@ func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byt
 		return s, t, err
 	}
 	s , err = h.secrets(authPacket, authRespPacket)
-	log.Debug("Receiver Enc Handshake","outRand",authRespMsg.Rand,"thereRand",authMsg.Rand,"err",err)
+	log.Debug("Receiver Enc Handshake","ourRand",authRespMsg.Rand,"theirRand",authMsg.Rand,"err",err)
 	return s, t, err
 }
 
@@ -628,11 +623,12 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// write header
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size
+	// Todo : lqh check code and overflow.
 	if fsize > MaxMsgSize {
 		log.Error("Write message size overflows uint24.")
-		//return errors.New("message size overflows uint24")
+		return errors.New("message size overflows uint24")
 	}
-	putInt32(fsize, headbuf) // TODO: check overflow
+	putInt32(fsize, headbuf) // check overflow
 	copy(headbuf[4:], zeroHeader)
 	rw.enc.XORKeyStream(headbuf[:16], headbuf[:16]) // first half is now encrypted
 
@@ -752,7 +748,6 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 
 	werr := make(chan error, 1)
 	go func() {
-		//log.Error("@@@@@@send hardware table message","our",our)
 		err := send(t.rw, hardwareMsg, our)
 		if err != nil{
 			log.Error("send hardware table message","err",err)
@@ -764,7 +759,6 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
-	//log.Error("@@@@@@Read hardware table message","their",their)
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("do hardware table write error: %v", err)
 	}

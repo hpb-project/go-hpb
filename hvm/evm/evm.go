@@ -84,6 +84,7 @@ type Context struct {
 // sure that any errors generated are to be considered faulty code.
 //
 // The EVM should never be reused and is not thread safe.
+//Todo: lzq Add code comment.
 type State_Diff struct {
 	from     common.Address
 	to       common.Address
@@ -245,7 +246,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 }
 
 func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte) (ret []byte, err error) {
-	//log.Error("test inner call", "addr", common.Bytes2Hex(addr[:]), "input", common.Bytes2Hex(input))
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, nil
 	}
@@ -270,17 +270,11 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped environment for this execution context
 	// only.
-	//contract := NewContract(caller, to, value, gas)
 	contract := NewContract(caller, to, big.NewInt(0), 49999986000000000)
-	//contract := NewContract(caller, to, big.NewInt(0), 89954)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	//ret, err = run(evm, snapshot, contract, input)
 	ret, err = run(evm, snapshot, contract, input)
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
-		if err != errExecutionReverted {
-			//contract.UseGas(contract.Gas)
-		}
 	}
 
 	return ret, err

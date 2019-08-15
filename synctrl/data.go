@@ -112,7 +112,7 @@ func sendNewBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
 }
 
 func sendNewHashBlock(peer *p2p.Peer, block *types.Block, td *big.Int) error {
-	log.Warn("######>>>>>> Send new hash block msg.", "peerid", peer.ID())
+	log.Warn("Send new hash block msg.", "peerid", peer.ID())
 	txsHash := make([]common.Hash, 0, block.Transactions().Len())
 	for _, tx := range block.Transactions() {
 		txsHash = append(txsHash, tx.Hash())

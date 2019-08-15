@@ -60,7 +60,6 @@ import (
 
 // Node is a container on which services can be registered.
 type Node struct {
-	//eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	accman      *accounts.Manager
 	newBlockMux *sub.TypeMux
 
@@ -70,7 +69,6 @@ type Node struct {
 	Hpbsyncctr     *synctrl.SynCtrl
 	Hpbtxpool      *txpool.TxPool
 	Hpbbc          *bc.BlockChain
-	//Hpbworker       *Worker
 	Hpbboe *boe.BoeHandle
 	//HpbDb
 	HpbDb hpbdb.Database
@@ -78,20 +76,13 @@ type Node struct {
 	networkId     uint64
 	netRPCService *hpbapi.PublicNetAPI
 
-	// The genesis block, which is inserted if the database is empty.
-	// If nil, the Hpb main net block is used.
-	//Genesis *bc.Genesis `toml:",omitempty"`
-
 	Hpbengine consensus.Engine
-	//accountManager  *accounts.Manager
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *bc.ChainIndexer               // Bloom indexer operating during block imports
 
 	// Channel for shutting down the service
 	shutdownChan  chan bool    // Channel for shutting down the hpb
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
-
-	//ApiBackend      *HpbApiBackend
 
 	miner     *worker.Miner
 	gasPrice  *big.Int
@@ -114,15 +105,6 @@ type Node struct {
 	Boeflag uint8
 }
 
-/*
-// CreateConsensusEngine creates the required type of consensus engine instance for an Hpb service
-func CreateConsensusEngine(conf  *config.HpbConfig,  chainConfig *config.ChainConfig, db hpbdb.Database) consensus.Engine {
-	if &chainConfig.Prometheus == nil {
-		chainConfig.Prometheus = config.MainnetChainConfig.Prometheus
-	}
-	return prometheus.New(chainConfig.Prometheus, db)
-}
-*/
 // New creates a hpb node, create all object and start
 func New(conf *config.HpbConfig) (*Node, error) {
 
@@ -155,13 +137,12 @@ func New(conf *config.HpbConfig) (*Node, error) {
 		Hpbsyncctr:     nil, //syncctr,
 		Hpbtxpool:      nil, //hpbtxpool,
 		Hpbbc:          nil, //block,
-		//boe
 
 		HpbDb:     nil, //db,
 		networkId: conf.Node.NetworkId,
 
-		newBlockMux: nil, //eventmux,
-		accman:      nil, //am,
+		newBlockMux: nil,
+		accman:      nil,
 		Hpbengine:   nil,
 
 		gasPrice:      conf.Node.GasPrice,
@@ -202,7 +183,6 @@ func New(conf *config.HpbConfig) (*Node, error) {
 
 	} else {
 		hpbnode.hpberbase = common.HexToAddress(coinbasestring)
-		//copy(hpbnode.hpberbase[0:], []byte(coinbasestring))
 		log.Info("set coinbase of node", ": ", hpbnode.hpberbase.Hex())
 	}
 
@@ -277,7 +257,7 @@ type ConsensuscfgF struct {
 func parseConsensusConfigFile(conf *config.HpbConfig) {
 
 	path := conf.Node.DataDir + "/" + conf.Node.FNameConsensusCfg
-	_, err := os.Stat(path) //os.Stat获取文件信息
+	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsExist(err) {
 			log.Info("parse consensus config file success", "err", err)
@@ -288,21 +268,18 @@ func parseConsensusConfigFile(conf *config.HpbConfig) {
 	}
 
 	cfgfile := ConsensuscfgF{}
-	//ReadFile函数会读取文件的全部内容，并将结果以[]byte类型返回
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Error("ioutil.ReadFile fail", "err", err)
 		return
 	}
 
-	//读取的数据为json格式，需要进行解码
 	err = json.Unmarshal(data, &cfgfile)
 	if err != nil {
 		log.Error("json.Unmarshal fail", "err", err)
 		return
 	}
 
-	//v,_ := hexutil.DecodeUint64(cfgfile.HpNodesNum)
 	consensus.HpbNodenumber = cfgfile.HpNodesNum
 	consensus.NumberPrehp = cfgfile.HpVotingRndScope
 	consensus.IgnoreRetErr = cfgfile.FinalizeRetErrIg
@@ -331,8 +308,6 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 	for _, v := range config.MainnetBootnodes {
 		log.Info("config.MainnetBootnodes", "value", v)
 	}
-	log.Info("--------------StageNumberII----------------", "value", consensus.StageNumberII)
-	log.Info("--------------StageNumberIII---------------", "value", consensus.StageNumberIII)
 
 	hpbnode.startBloomHandlers()
 
@@ -502,16 +477,6 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 	return n.inprocHandler, nil
 }
 
-// Server retrieves the currently running P2P network layer. This method is meant
-// only to inspect fields of the currently running server, life cycle management
-// should be left to this Node entity.
-/*func (n *Node) Server() *p2p.Server {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
-
-	return n.server
-}*/
-
 // DataDir retrieves the current datadir used by the protocol stack.
 // Deprecated: No files should be stored in this directory, use InstanceDir instead.
 func (n *Node) DataDir() string {
@@ -611,9 +576,6 @@ func (self *Node) SetHpberbase(hpberbase common.Address) {
 	self.lock.Lock()
 	self.hpberbase = hpberbase
 	self.lock.Unlock()
-
-	//to be continue
-	//self.worker.SetHpberbase(hpberbase)
 }
 
 func (s *Node) StartMining(local bool) error {
@@ -640,16 +602,6 @@ func (s *Node) StartMining(local bool) error {
 	go s.miner.Start(eb)
 	return nil
 }
-
-// Protocols implements node.Service, returning all the currently configured
-// network protocols to start.
-/*func (s *Node) Protocols() []p2p.Protocol {
-	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
-	}
-	return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
-}
-*/
 
 // get all rpc api from modules
 func (n *Node) GetAPI() error {

@@ -84,7 +84,6 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
-	//app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
 	if gitCommit != "" {
@@ -562,34 +561,6 @@ func setBootstrapNodes(ctx *cli.Context, cfg *config.NetworkConfig) {
 	}
 }
 
-// setBootstrapNodesV5 creates a list of bootstrap nodes from the command line
-// flags, reverting to pre-configured ones if none have been specified.
-/*
-func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.DiscoveryV5Bootnodes
-	switch {
-	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV5Flag.Name):
-		if ctx.GlobalIsSet(BootnodesV5Flag.Name) {
-			urls = strings.Split(ctx.GlobalString(BootnodesV5Flag.Name), ",")
-		} else {
-			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
-		}
-	case cfg.BootstrapNodesV5 != nil:
-		return // already set, don't apply defaults.
-	}
-
-	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
-	for _, url := range urls {
-		node, err := discv5.ParseNode(url)
-		if err != nil {
-			log.Error("Bootstrap URL invalid", "hnode", url, "err", err)
-			continue
-		}
-		cfg.BootstrapNodesV5 = append(cfg.BootstrapNodesV5, node)
-	}
-}
-*/
-
 // setListenAddress creates a TCP listening address string from set command
 // line flags.
 func setListenAddress(ctx *cli.Context, cfg *config.NetworkConfig) {
@@ -598,15 +569,6 @@ func setListenAddress(ctx *cli.Context, cfg *config.NetworkConfig) {
 	}
 }
 
-// setDiscoveryV5Address creates a UDP listening address string from set command
-// line flags for the V5 discovery protocol.
-/*
-func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
-	}
-}
-*/
 // setNAT creates a port mapper from command line flags.
 func setNAT(ctx *cli.Context, cfg *config.NetworkConfig) {
 	if ctx.GlobalIsSet(NATFlag.Name) {
@@ -796,9 +758,7 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		// --dev mode can't use p2p networking.
 		cfg.Network.MaxPeers = 0
 		cfg.Network.ListenAddr = ":0"
-		//cfg.DiscoveryV5Addr = ":0"
 		cfg.Network.NoDiscovery = true
-		//cfg.DiscoveryV5 = false
 	}
 
 	if nodetype := ctx.GlobalString(NodeTypeFlag.Name); nodetype != "" {
@@ -915,7 +875,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Node.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
-		// TODO(fjl): force-enable this in --dev mode
 		cfg.Node.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
 	}
 	if ctx.GlobalBool(TestModeFlag.Name) {
@@ -949,15 +908,12 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.Node.NetworkId = 3
 		}
-		//cfg.Node.Genesis = bc.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		//cfg.Node.Genesis = bc.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.Node.GasPrice = new(big.Int)
 		}
 	}
 
-	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		cfg.Node.MaxTrieCacheGen = uint16(gen)
 	}
@@ -1050,7 +1006,6 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
 	params.TargetGasLimit = new(big.Int).SetUint64(ctx.GlobalUint64(TargetGasLimitFlag.Name))
 }
 

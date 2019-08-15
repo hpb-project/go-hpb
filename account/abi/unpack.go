@@ -211,7 +211,6 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case BytesTy:
 		return output[begin : begin+end], nil
 	case FixedBytesTy:
-		//log.Error("FixedBytesTy", "string value", common.Bytes2Hex(returnOutput))
 		return readFixedBytes(t, returnOutput)
 	case FunctionTy:
 		return readFunctionType(t, returnOutput)

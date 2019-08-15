@@ -61,29 +61,26 @@ type Txchevent struct {
 type TxPool struct {
 	wg     sync.WaitGroup
 	stopCh chan struct{}
-	//TODO remove
 	chain blockChain
-	//TODO uddate the new event system
 	chainHeadSub sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	txFeed       sub.Feed
 	scope        sub.SubscriptionScope
 
 	txPreTrigger *event.Trigger
-	//Txchevent *event.SyncEvent
 	signer   types.Signer
 	config   config.TxPoolConfiguration
 	gasPrice *big.Int
 
 	// use sync.map instead of map.
-	beats    sync.Map //map[common.Address]time.Time  	 // Last heartbeat from each known account
-	all      sync.Map //map[common.Hash]*types.Transaction // All transactions to allow lookups
-	tmpqueue sync.Map //map[common.Hash]*types.Transaction // delete transactions to tmpqueue
-	tmpbeats sync.Map //map[common.Hash]time.Time          // Last heartbeat from each known tmpqueue account
+	beats    sync.Map //map[common.Address]time.Time  	   Last heartbeat from each known account
+	all      sync.Map //map[common.Hash]*types.Transaction All transactions to allow lookups
+	tmpqueue sync.Map //map[common.Hash]*types.Transaction delete transactions to tmpqueue
+	tmpbeats sync.Map //map[common.Hash]time.Time          Last heartbeat from each known tmpqueue account
 
-	userlock sync.Map //map[common.Address]*sync.RWMutex   // RWMutex for one addr, used for pending and queue
-	pending  sync.Map //map[common.Address]*txList   //All currently processable transactions
-	queue    sync.Map //map[common.Address]*txList   // Queued but non-processable transactions
+	userlock sync.Map //map[common.Address]*sync.RWMutex   RWMutex for one addr, used for pending and queue
+	pending  sync.Map //map[common.Address]*txList         All currently processable transactions
+	queue    sync.Map //map[common.Address]*txList  	   Queued but non-processable transactions
 
 	smu sync.RWMutex // mutex for below.
 
@@ -105,44 +102,23 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 	//2.Create the transaction pool with its initial settings
 	pool := &TxPool{
 		config: config,
-		//pending:     make(map[common.Address]*txList),
-		//queue:       make(map[common.Address]*txList),
-		//beats:       make(map[common.Address]time.Time),
-		//all:         make(map[common.Hash]*types.Transaction),
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
 		chainHeadCh: make(chan bc.ChainHeadEvent, chanHeadBuffer),
 		stopCh:      make(chan struct{}),
-		//tmpbeats:    make(map[common.Hash]time.Time),
-		//tmpqueue:    make(map[common.Hash]*types.Transaction),
 	}
 	INSTANCE.Store(pool)
 	return pool
 }
 func (pool *TxPool) Start() {
 	pool.reset(nil, pool.chain.CurrentBlock().Header())
-
-	//3.Subscribe ChainHeadEvent //TODO update the new event system
-	/*chainHeadReceiver := event.RegisterReceiver("tx_pool_chain_head_subscriber",
-	func(payload interface{}) {
-		switch msg := payload.(type) {
-		case event.ChainHeadEvent:
-			log.Trace("TxPool get ChainHeadEvent %s", msg.Message.String())
-			pool.chainHeadCh <- msg
-			//default:
-			//	log.Warn("TxPool get Unknown msg")
-		}
-	})*/
-	//TODO update the new evnt system
-	//event.Subscribe(chainHeadReceiver, event.ChainHeadTopic)
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
-	//pool.Txchevent = event.NewEvent()
 
-	//4.Register Publish TxPre publisher
+	// Register Publish TxPre publisher
 	pool.txPreTrigger = event.RegisterTrigger("tx_pool_tx_pre_publisher")
 
-	//5.start main process loop
+	// start main process loop
 	pool.wg.Add(1)
 	go pool.loop()
 }
@@ -171,13 +147,8 @@ func (pool *TxPool) loop() {
 	defer pool.wg.Done()
 
 	// Start the stats reporting and transaction eviction tickers
-	//var prevPending, prevQueued int
-
 	evict := time.NewTicker(evictionInterval)
 	defer evict.Stop()
-
-	//report := time.NewTicker(statsReportInterval)
-	//defer report.Stop()
 
 	evictTmpQueue := time.NewTicker(tmpQEvictionInterval)
 	defer evictTmpQueue.Stop()
@@ -197,31 +168,9 @@ func (pool *TxPool) loop() {
 
 				pool.smu.Unlock()
 			}
-			// Handle stats reporting ticks
-		//case <-report.C:
-		//	//pool.mu.RLock()
-		//	pending, queued := pool.Stats()
-		//	//pool.mu.RUnlock()
-		//
-		//	if pending != prevPending || queued != prevQueued {
-		//		log.Debug("Transaction pool status report", "pending", pending, "queued", queued)
-		//		prevPending, prevQueued = pending, queued
-		//	}
 		// Handle inactive account transaction eviction
 		case <-evict.C:
-			/* unused code.
-			pool.mu.Lock()
-			for addr := range pool.queue {
-				// Any old enough should be removed
-				if false { //time.Since(pool.beats[addr]) > pool.config.Lifetime {
-					for _, tx := range pool.queue[addr].Flatten() {
-						pool.removeTx(tx.Hash())
-					}
-				}
-			}
-			pool.mu.Unlock()
-			*/
-			//stop signal
+
 		case <-evictTmpQueue.C: // time removed tmpTx
 			// Any old enough should be removed
 			pool.tmpbeats.Range(func(k, v interface{}) bool {
@@ -250,7 +199,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
-	log.Debug("txpool reset start", "time",time.Now().Unix())
 	if oldHead != nil && oldHead.Hash() != newHead.ParentHash {
 		// If the reorg is too deep, avoid doing it (will happen during fast sync)
 		oldNum := oldHead.Number.Uint64()
@@ -322,7 +270,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// any transactions that have been included in the block or
 	// have been invalidated because of another transaction
 	pool.demoteUnexecutables()
-	log.Debug("txpool reset after demoteUnexecutables", "time",time.Now().Unix())
 	// Update all accounts to the latest known pending nonce
 	pool.pending.Range(func(k, v interface{}) bool {
 		addr, _ := k.(common.Address)
@@ -336,11 +283,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		}
 		return true
 	})
-	log.Debug("txpool reset after setNonce", "time",time.Now().Unix())
+
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
-	log.Debug("txpool reset after promoteExcutables", "time",time.Now().Unix())
 }
 
 func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
@@ -463,16 +409,8 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	if len(txs) == 0 {
 		return nil
 	}
-	st1 := time.Now().UnixNano() / 1000
-	log.Debug("AddTxs wait TxpoolLock")
 	pool.smu.RLock()
 	defer pool.smu.RUnlock()
-	st2 := time.Now().UnixNano() / 1000
-	log.Debug("AddTxs got TxpoolLock")
-	defer func() {
-		st3 := time.Now().UnixNano() / 1000
-		log.Debug("AddTxs", "len(txs)", len(txs), "wait lock cost time(us)", st2-st1, "addTx cost time(us)", st3-st2, "total cost time(us)", st3-st1)
-	}()
 
 	for _, tx := range txs {
 		// If the transaction fails basic validation, discard it
@@ -488,34 +426,27 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 // AddTx attempts to queue a transactions if valid.
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
-	s1 := time.Now().UnixNano()/1000/1000
 	if uint64(pendingCnt) >= pool.config.GlobalSlots {
 			log.Warn("TxPool pending is full", "pending size", pendingCnt,
 				"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
 			return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
 	}
-	s2 := time.Now().UnixNano()/1000/1000
 
 	hash := tx.Hash()
 	if _, ok := pool.all.Load(hash); ok {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return fmt.Errorf("known transaction: %x", hash)
 	}
-	s3 := time.Now().UnixNano()/1000/1000
+
 	pool.smu.RLock()
-	s4 := time.Now().UnixNano()/1000/1000
 	defer pool.smu.RUnlock()
 	// If the transaction fails basic validation, discard it
 	if err := pool.softvalidateTx(tx); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		return err
 	}
-	s5 := time.Now().UnixNano()/1000/1000
 
 	recerr := pool.addTxLocked(tx)
-	s6 := time.Now().UnixNano()/1000/1000
-	defer log.Debug("AddTx time cost","1",s2-s1,"2",s3-s2,"3",s4-s3,"4",s5-s4,"5",s6-s5,"total",s6-s1)
-
 	if recerr != nil {
 		return recerr
 	}
@@ -543,7 +474,6 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
-
 		addrs := make([]common.Address, 0, len(dirty))
 		for addr := range dirty {
 			addrs = append(addrs, addr)
@@ -576,27 +506,10 @@ func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
 		if err != nil {
 			return nil
 		}
-		st := time.Now().UnixNano()
-		defer func() {
-			se := time.Now().UnixNano()
-			log.Error("addTxLocked", "promoteExecutables cost time (us)", (st-se)/1000)
-		}()
 		pool.promoteExecutables([]common.Address{from})
 	}
 	return nil
 }
-
-// Warning: you need call this api as less as possible.
-//func LenSynMap(m sync.Map) uint64 {
-//	var length uint64
-//	log.Debug("Enter LenSynMap")
-//	m.Range(func(k, v interface{}) bool {
-//		length++
-//		return true
-//	})
-//	log.Debug("Exit LenSynMap")
-//	return length
-//}
 
 // add validates a transaction and inserts it into the non-executable queue for
 // later pending promotion and execution. If the transaction is a replacement for
@@ -645,11 +558,6 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 			pool.tmpqueue.Store(tx.Hash(), tx)
 
 			log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
-
-			// We've directly injected a replacement transaction, notify subsystems
-			//TODO why inject event here
-			//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
-
 			return old != nil, nil
 		}
 	}
@@ -886,9 +794,6 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats.Store(addr, time.Now())
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
-	//TODO update the new event system
-	//event.FireEvent(&event.Event{Trigger: pool.txPreTrigger, Payload: event.TxPreEvent{tx}, Topic: event.TxPreTopic})
-	//TODO old event  system
 	go pool.txFeed.Send(bc.TxPreEvent{tx})
 	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
 }
@@ -932,7 +837,7 @@ func (pool *TxPool) keepFitSend() {
 					list := lv.(*txList)
 					threshold := list.Len()
 					// Iteratively reduce all offenders until below limit or threshold reached
-					for pending > pool.config.GlobalSlots { //&& pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+					for pending > pool.config.GlobalSlots {
 						if lv2, ok := pool.pending.Load(offenders[len(offenders)-2]); ok {
 							list2, ok := lv2.(*txList)
 							if ok && (list2.Len() <= threshold) {
@@ -953,11 +858,6 @@ func (pool *TxPool) keepFitSend() {
 									hash := tx.Hash()
 									pool.all.Delete(hash)
 									atomic.AddInt64(&allCnt, -1)
-
-									// Update the account nonce to the dropped transaction
-									//if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
-									//	pool.pendingState.SetNonce(offenders[i], nonce)
-									//}
 									log.Trace("Removed fairness-exceeding pending keepFitsend transaction ", "tx.Nonce()", tx.Nonce(), "hash", hash)
 								}
 							}
@@ -970,7 +870,7 @@ func (pool *TxPool) keepFitSend() {
 		}
 		// If still above threshold, reduce to limit or min allowance
 		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
-			for pending > pool.config.GlobalSlots { //&& uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
+			for pending > pool.config.GlobalSlots {
 				if lv, ok := pool.pending.Load(offenders[len(offenders)-1]); ok {
 					list := lv.(*txList)
 					if uint64(list.Len()) <= pool.config.AccountSlots {
@@ -990,11 +890,6 @@ func (pool *TxPool) keepFitSend() {
 							hash := tx.Hash()
 							pool.all.Delete(hash)
 							atomic.AddInt64(&allCnt, -1)
-
-							// Update the account nonce to the dropped transaction
-							//if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
-							//	pool.pendingState.SetNonce(addr, nonce)
-							//}
 							log.Trace("Removed fairness-exceeding keepFitsned pending transaction", "tx.Nonce()", tx.Nonce(), "hash", hash)
 						}
 					}
@@ -1061,8 +956,6 @@ func (pool *TxPool) keepFitSend() {
 }
 func (pool *TxPool) keepFit() {
 	// If the pending limit is overflown, start equalizing allowances
-	log.Debug("tpsdebug txpool come in keepFit")
-	defer log.Debug("tpsdebug txpool exit    keepFit")
 	pending := uint64(0)
 	pool.pending.Range(func(k, v interface{}) bool {
 		list, _ := v.(*txList)
@@ -1097,7 +990,7 @@ func (pool *TxPool) keepFit() {
 				threshold := list.Len()
 
 				// Iteratively reduce all offenders until below limit or threshold reached
-				for pending > pool.config.GlobalSlots { //&& pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+				for pending > pool.config.GlobalSlots {
 					if lv2, ok := pool.pending.Load(offenders[len(offenders)-2]); ok {
 						list2, ok := lv2.(*txList)
 						if ok && list2.Len() <= threshold {
@@ -1135,7 +1028,7 @@ func (pool *TxPool) keepFit() {
 		}
 		// If still above threshold, reduce to limit or min allowance
 		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
-			for pending > pool.config.GlobalSlots { //&& uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
+			for pending > pool.config.GlobalSlots {
 				if v, ok := pool.pending.Load(offenders[len(offenders)-1]); ok {
 					list, ok := v.(*txList)
 					if ok && (uint64(list.Len()) <= pool.config.AccountSlots) {
@@ -1365,7 +1258,6 @@ func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 			return nil
 		}
 		tmptx := v.(*types.Transaction)
-		//log.Info("-----GetTxByHash","tmpqueue_hash",hash,"tmptx=",tmptx)
 		return tmptx
 	}
 	tx := v.(*types.Transaction)
@@ -1394,9 +1286,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 
 // State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
-	log.Debug("State wait TxpoolLock")
 	pool.smu.RLock()
-	log.Debug("State got TxpoolLock")
 	defer pool.smu.RUnlock()
 
 	return pool.pendingState
@@ -1439,9 +1329,7 @@ func (pool *TxPool) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscriptio
 // SetGasPrice updates the minimum price required by the transaction pool for a
 // new transaction
 func (pool *TxPool) SetGasPrice(price *big.Int) {
-	log.Debug("SetGasPrice wait TxpoolLock")
 	pool.smu.Lock()
-	log.Debug("SetGasPrice got TxpoolLock")
 	defer pool.smu.Unlock()
 
 	pool.gasPrice = price
@@ -1450,9 +1338,7 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 
 // For test code.
 func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
-	log.Debug("lockedReset wait TxpoolLock")
 	pool.smu.Lock()
-	log.Debug("lockedReset got TxpoolLock")
 	defer pool.smu.Unlock()
 
 	pool.reset(oldHead, newHead)

@@ -95,12 +95,8 @@ type worker struct {
 
 	mu sync.Mutex
 
-	// update loop
 	mux  *sub.TypeMux
 	pool *txpool.TxPool
-	//txCh  chan bc.TxPreEvent
-	//txSub sub.Subscription
-	//txSub        sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
 	chainSideCh  chan bc.ChainSideEvent
@@ -135,10 +131,9 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		config: config,
 		engine: engine,
 		mux:    mux,
-		/*txCh:           make(chan bc.TxPreEvent, txChanSize),*/
 		chainHeadCh:    make(chan bc.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan bc.ChainSideEvent, chainSideChanSize),
-		chainDb:        nil, //hpbdb.ChainDbInstance(),
+		chainDb:        nil,
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          bc.InstanceBlockChain(),
 		proc:           bc.InstanceBlockChain().Validator(),
@@ -147,24 +142,11 @@ func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase com
 		producers:      make(map[Producer]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(bc.InstanceBlockChain(), miningLogAtDepth),
 	}
-	// Subscribe TxPreEvent for tx pool
-	//TODO new event system
-	/*txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
-	func(payload interface{}) {
-		switch msg := payload.(type) {
-		case event.TxPreEvent:
-			log.Error("--------receive txpreevent-------", "msg", msg.Message.Nonce())
-			this.routingTx(msg.Message.Hash(), msg.Message)
-			//t.Logf("TxPool get TxPreEvent %s", msg.Message.String())
-		}
-	})*/
 
 	worker.pool = txpool.GetTxPool()
-	//worker.txCh = make(chan bc.TxPreEvent, txChanSize)
-	//worker.txSub = worker.pool.SubscribeTxPreEvent(worker.txCh)
 	worker.chainHeadSub = bc.InstanceBlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = bc.InstanceBlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-	//对以上事件的监听
+	// goto listen the event
 	go worker.eventListener()
 	go worker.handlerSelfMinedBlock()
 
@@ -259,31 +241,6 @@ func (self *worker) eventListener() {
 	defer self.chainHeadSub.Unsubscribe()
 	defer self.chainSideSub.Unsubscribe()
 
-	//TODO new event system
-	/*txPreReceiver := event.RegisterReceiver("miner_tx_pre_receiver",
-	func(payload interface{}) {
-		switch msg := payload.(type) {
-		case event.TxPreEvent:
-			if msg.Message.Nonce() % 10000  == 0{
-				log.Error("***********worker receive txpreevent*************","nonce",msg.Message.Nonce())
-			}
-
-			//worker.txCh <- msg.Message
-			if atomic.LoadInt32(&self.mining) == 0 {
-				self.currentMu.Lock()
-				acc, _ := types.Sender(self.current.signer, msg.Message)
-				txs := map[common.Address]types.Transactions{acc: {msg.Message}}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-
-				self.current.commitTransactions(self.mux, txset, self.coinbase)
-				self.currentMu.Unlock()
-			}
-
-
-
-		}
-	})*/
-
 	for {
 		// A real event arrived, process interesting content
 		select {
@@ -297,28 +254,6 @@ func (self *worker) eventListener() {
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
 
-		// Handle TxPreEvent
-		//
-		//case ev := <-self.txCh:
-		//	// Apply transaction to the pending state if we're not mining
-		//	if atomic.LoadInt32(&self.mining) == 0 && self.current != nil {
-		//		//log.Debug("worker.eventListener get txpreevent","len(txCh)", len(self.txCh))
-		//		self.currentMu.Lock()
-		//		//log.Debug("worker.eventListener get the currentMu lock")
-		//		acc, _ := types.Sender(self.current.signer, ev.Tx)
-		//		txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
-		//		txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-		//
-		//		self.current.commitTransactions(self.mux, txset, self.coinbase)
-		//		self.currentMu.Unlock()
-		//		//log.Debug("worker.eventListener release the currentMu lock")
-		//	}else {
-		//		//log.Debug("worker.eventListener get txpreevent","len(txCh)", len(self.txCh))
-		//	}
-
-		// System stopped
-		//case <-self.txSub.Err():
-		//	return
 		case <-self.chainHeadSub.Err():
 			return
 		case <-self.chainSideSub.Err():
@@ -369,7 +304,7 @@ func (self *worker) handlerSelfMinedBlock() {
 			if stat == bc.CanonStatTy {
 				events = append(events, bc.ChainHeadEvent{Block: block})
 			}
-			//log.Error("********post chainheadevent")
+
 			self.chain.PostChainEvents(events, logs)
 
 			// Insert the block into the set of pending ones to wait for confirmations
@@ -428,16 +363,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) calMaxTxs(parent *types.Block) int {
-	dealTime := int(uint64(time.Now().Unix()) - parent.Time().Uint64())
-	reTime := int(self.config.Prometheus.Period) - dealTime
-	if reTime <= 0 {
-		reTime = 1
-	}
-	ret := 15000 * reTime
-	if ret > blockMaxTxs {
-		ret = blockMaxTxs
-	}
-	return ret
+	return blockMaxTxs
 }
 
 func (self *worker) startNewMinerRound() {
@@ -494,9 +420,6 @@ func (self *worker) startNewMinerRound() {
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
-	//if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
-	//	misc.ApplyDAOHardFork(work.state)
-	//}
 	pending, err := txpool.GetTxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
@@ -557,7 +480,6 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, maxTxs int) {
-	//log.Error("----------------committransactions--------------")
 	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
 
 	var coalescedLogs []*types.Log
@@ -583,15 +505,6 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
 
-		// Check whether the tx is replay protected. If we're not in the EIP155 hf
-		// phase, start ignoring the sender until we do.
-		//TODO why tx is protected
-		/*if tx.Protected() {//&& !env.config.IsEIP155(env.header.Number) {
-			//log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
-			log.Error("----------------tx is protected------------")
-			txs.Pop()
-			continue
-		}*/
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
@@ -625,7 +538,6 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 			txs.Shift()
 		}
 	}
-	log.Debug("worker committransactions", "package txs", len(env.txs))
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined

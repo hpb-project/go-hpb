@@ -642,7 +642,6 @@ func (bc *BlockChain) Stop() {
 		return
 	}
 	// Unsubscribe all subscriptions registered from blockchain
-	//bc.scope.Close()
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
@@ -829,7 +828,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	defer bc.wg.Done()
 
 	// Calculate the total difficulty of the block
-	// 计算出当前父亲的难度值
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
@@ -838,7 +836,6 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	//获取本地的
 	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
 	externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
@@ -861,18 +858,14 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	var breorg bool
 	breorg = false
 	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
-		//if h := bc.GetHeaderByNumber(block.NumberU64()); h != nil {
-		//	if externTd.Cmp(bc.GetTd(h.Hash(), block.NumberU64())) > 0 {
 		breorg = true
 		log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
-		//	}
-		//}
 	}
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 &&
-		/*mrand.Float64() < 0.5*/ block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
+		block.Header().Coinbase.Big().Cmp(bc.currentBlock.Header().Coinbase.Big()) > 0) || breorg {
 
 		if false || breorg {
 			var newBlock = block

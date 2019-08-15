@@ -74,14 +74,6 @@ func (db *MemDatabase) Keys() [][]byte {
 	return keys
 }
 
-/*
-func (db *MemDatabase) GetKeys() []*common.Key {
-	data, _ := db.Get([]byte("KeyRing"))
-
-	return []*common.Key{common.NewKeyFromBytes(data)}
-}
-*/
-
 func (db *MemDatabase) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()

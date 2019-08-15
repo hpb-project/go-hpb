@@ -53,13 +53,6 @@ type TxExdata struct {
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return NewBoeSigner(deriveChainId(V))
-	//TODO transaction can be unprotected ?
-	//if V.Sign() != 0 && isProtectedV(V) {
-	//	return NewBoeSigner(deriveChainId(V))
-	//} else {
-	//	//return HomesteadSigner{}
-	//
-	//}
 }
 
 type Transaction struct {
@@ -78,7 +71,6 @@ type txdata struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
 	ExData       TxExdata        `json:"exdata"   rlp:"-"`
-	//ExData      []byte          `json:"exdata"`
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
@@ -175,8 +167,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
-//
-// TODO convert to uint64
 func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	igas := new(big.Int)
 	if contractCreation {
@@ -210,7 +200,6 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
 		ExData       TxExdata        `json:"exdata" rlp:"-"`
-		//ExData  hexutil.Bytes    `json:"exdata"`
 		V    *hexutil.Big `json:"v" gencodec:"required"`
 		R    *hexutil.Big `json:"r" gencodec:"required"`
 		S    *hexutil.Big `json:"s" gencodec:"required"`
@@ -240,7 +229,6 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
 		ExData       TxExdata        `json:"exdata" rlp:"-"`
-		//ExData      hexutil.Bytes  `json:"exdata"`
 		V    *hexutil.Big `json:"v" gencodec:"required"`
 		R    *hexutil.Big `json:"r" gencodec:"required"`
 		S    *hexutil.Big `json:"s" gencodec:"required"`
@@ -273,9 +261,6 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'input' for txdata")
 	}
 	t.Payload = dec.Payload
-	//if dec.ExData == nil {
-	//	return errors.New("missing required field 'exdata' for txdata")
-	//}
 	t.ExData = dec.ExData
 	if dec.V == nil {
 		return errors.New("missing required field 'v' for txdata")
@@ -330,11 +315,6 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
-//TODO for test use
-/*
-func (tx *Transaction) GetFromSigCache() atomic.Value { return tx.from}
-func (tx *Transaction) SetFromSigCache(from SigCache) { tx.from.Store(from) }
-*/
 func (tx *Transaction) SetFrom(from common.Address) { tx.from.Store(from) }
 func (tx *Transaction) SetForward(forward bool)     { tx.data.Forward = forward }
 func (tx *Transaction) IsForward() bool             { return tx.data.Forward }
@@ -409,7 +389,6 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	//msg.from, err = Sender(s, tx)
 	msg.from, err = ASynSender(s, tx)
 	if err != nil {
-		//log.Trace("validateTx ASynSender ErrInvalid", "ErrInvalidSender",ErrInvalidSender,"tx.hash",tx.Hash())
 		msg.from, err = Sender(s, tx)
 	}
 	return msg, err

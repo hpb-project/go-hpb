@@ -51,11 +51,10 @@ func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine,c
 	miner := &Miner{
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, coinbase, /*eth,*/ mux),
+		worker:   newWorker(config, engine, coinbase, mux),
 		canStart: 1,
 	}
 	miner.Register(NewCpuAgent(bc.InstanceBlockChain(), engine))
-	//go miner.update()
 	return miner
 }
 
@@ -92,7 +91,6 @@ out:
 }
 
 func (self *Miner) Start(coinbase common.Address) {
-	// 
 	go self.update()
 	
 	atomic.StoreInt32(&self.shouldStart, 1)

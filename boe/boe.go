@@ -122,8 +122,6 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
     SResult *r = rsNew();
     if(sig)
     {
-        //printf("%s: sig ", "recover_pubkey_callback");
-        //hex_dump(sig, SIG_LEN);
         memcpy(r->sig, sig, SIG_LEN);
     }
     if(param)
@@ -133,9 +131,6 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
 
     if(pub)
     {
-        //printf("%s: pub ", "recover_pubkey_callback");
-        //hex_dump(pub, PUB_LEN);
-
         r->flag = 0; // ok
         memcpy(r->pub+1, pub, PUB_LEN);
         r->pub[0] = 4;
@@ -162,6 +157,7 @@ import (
 	"unsafe"
 )
 
+// Todo : luxq add code comment.
 type TVersion struct {
 	H int
 	M int
@@ -217,7 +213,6 @@ func cArrayToGoArray(ca unsafe.Pointer, goArray []byte, size int) {
 		j := *(*byte)(unsafe.Pointer(p))
 		goArray[i] = j
 		p += unsafe.Sizeof(j)
-		//fmt.Printf("cg[%d]=%02x, ca[%d]=%02x\n", i, goArray[i], i, j)
 	}
 }
 
@@ -243,7 +238,6 @@ func PostRecoverPubkey(boe *BoeHandle) {
 			cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
 			cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
 			if r.flag == 0 {
-				//log.Error("boe async callback recover pubkey success.")
 				pubkey65 := make([]byte, 65)
 				cArrayToGoArray(unsafe.Pointer(r.pub), pubkey65, len(pubkey65))
 				copy(rs.Hash, fullsig[64:96])
@@ -254,7 +248,6 @@ func PostRecoverPubkey(boe *BoeHandle) {
 				copy(rs.Pub, pubkey65)
 				boe.postResult(&rs, err)
 			} else {
-				//log.Debug("boe async callback recover pubkey failed, and goto soft recover.")
 				copy(rs.Hash, fullsig[64:96])
 				copy(rs.Sig[0:32], fullsig[0:32])
 				copy(rs.Sig[32:64], fullsig[32:64])
@@ -340,7 +333,7 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 }
 
 func (boe *BoeHandle) performance(){
-    duration := time.Second * 1
+    duration := time.Second * 10
     timer := time.NewTimer(duration)
     defer timer.Stop()
 
@@ -507,10 +500,8 @@ func (boe *BoeHandle) FWUpdateAbort() error {
 func (boe *BoeHandle) HWCheck() bool {
 	var ret = C.boe_hw_check()
 	if ret == C.BOE_OK {
-		//log.Info("boe board is ok.")
 		return true
 	} else {
-		//log.Info("boe board not find.")
 		return false
 	}
 }
@@ -597,24 +588,7 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 }
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
-
-    //var (
-    //    result = make([]byte, 65)
-    //    m_sig  = make([]byte, 97)
-    //    c_sig = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-    //)
 	sync_call = sync_call + 1
-    //copy(m_sig[32-len(r):32], r)
-    //copy(m_sig[64-len(s):64], s)
-    //copy(m_sig[96-len(hash):96], hash)
-    //m_sig[96] = v
-
-    //c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-    //if c_ret == C.BOE_OK {
-    //    result[0] = 4
-    //    return result,nil
-    //}
-
     return softRecoverPubkey(hash, r, s, v)
 }
 

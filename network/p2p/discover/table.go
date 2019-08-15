@@ -125,7 +125,6 @@ func (tab *Table) FindNodes()(buf []*Node) {
 		}
 	}
 
-	//log.Debug("Read all nodes from boot", "count", count)
 	log.Trace("Read all nodes from boot", "cont", count, "buf", buf)
 	return buf
 }
@@ -216,7 +215,6 @@ func (tab *Table) refresh() <-chan struct{} {
 // refreshLoop schedules doRefresh runs and coordinates shutdown.
 func (tab *Table) refreshLoop() {
 	var (
-		//timer   = time.NewTicker(autoRefreshInterval)
 		timer   = time.NewTicker(autoRefreshMin)
 		waiting []chan struct{} // accumulates waiting callers while doRefresh runs
 		done    chan struct{}   // where doRefresh reports completion
@@ -227,7 +225,6 @@ loop:
 		select {
 		case <-timer.C:
 			if done == nil {
-				//log.Warn("Refresh table time now.")
 				done = make(chan struct{})
 				log.Debug("Do refresh table.")
 				go tab.doRefresh(done)
@@ -306,7 +303,7 @@ func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	for range nodes {
 		if n := <-rc; n != nil {
 			result = append(result, n)
-			//log.Debug("Bond node", "id", n.ID, "addr", n.addr())
+			log.Trace("Bond node", "id", n.ID, "addr", n.addr())
 		}
 	}
 	return result
@@ -441,9 +438,8 @@ func (tab *Table) add(new *Node) {
 	}
 
 	added := b.replace(new, oldest)
-	log.Debug("Find one node to dial.","added",added,"node",new.String())
+	log.Trace("Find one node to dial.","added",added,"node",new.String())
 	if added && tab.nodeAddedHook != nil {
-		//log.Info("Add To Bucket Node","Node",new.String())
 		tab.nodeAddedHook(new)
 	}
 
