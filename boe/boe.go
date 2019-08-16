@@ -26,7 +26,8 @@ package boe
 #include <stdio.h>
 
 #define RESULT_QUEUE_LEN (10000)
-#define HASH_LEN (32)#define SIG_LEN (97)
+#define HASH_LEN (32)
+#define SIG_LEN (97)
 #define PUB_LEN (64)
 
 typedef struct SResult{

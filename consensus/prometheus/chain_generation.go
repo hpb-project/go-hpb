@@ -889,7 +889,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	}
 
 	arrayaddrbandwith := make([]common.Address, 0, 151)
-	for k, _ := range mapaddrbandwithres {
+	for k, v := range mapaddrbandwithres {
 		log.Trace(">>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
 		arrayaddrbandwith = append(arrayaddrbandwith, k)
 	}
