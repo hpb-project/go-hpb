@@ -78,7 +78,6 @@ type Config struct {
 }
 
 // Server manages all peer connections.
-// Todo : lqh add code comment.
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
@@ -86,15 +85,15 @@ type Server struct {
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
 	newTransport func(net.Conn) transport
-	newPeerHook  func(*PeerBase)
+	newPeerHook  func(*PeerBase)    //hook for new peers
 
 	lock    sync.Mutex // protects running
-	running bool
+	running bool   //true: server is running
 
-	ntab         discoverTable
+	ntab         discoverTable //interface of table
 
 	listener     net.Listener
-	ourHandshake *protoHandshake
+	ourHandshake *protoHandshake   //our information for handshake
 	lastLookup   time.Time
 
 	// These are for Peers, PeerCount (and nothing else).
@@ -102,11 +101,11 @@ type Server struct {
 	peerOpDone chan struct{}
 
 	quit          chan struct{}
-	addstatic     chan *discover.Node
-	removestatic  chan *discover.Node
+	addstatic     chan *discover.Node   //channel for add static node
+	removestatic  chan *discover.Node   //channel for remove static node
 	posthandshake chan *conn
-	addpeer       chan *conn
-	delpeer       chan peerDrop
+	addpeer       chan *conn  // channel for add peer
+	delpeer       chan peerDrop  // channel for del peer
 	loopWG        sync.WaitGroup // loop, listenLoop
 
 	peerEvent    *event.SyncEvent
@@ -115,13 +114,13 @@ type Server struct {
 
 	dialer        NodeDialer
 
-	delHist       *dialHistory
+	delHist       *dialHistory  //history list of del nodes
 
 	//only for test
 	synPid       [] SynnodePid
 
 	hdlock       sync.RWMutex
-	hdtab        [] HwPair
+	hdtab        [] HwPair // hardware table of "ADDR CID HID"
 
 	setupLock    sync.Mutex
 
@@ -710,7 +709,6 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our = *srv.ourHandshake
 	c.our.RandNonce = ourRand
 
-	// Todo : lqh check have boe or not.
 	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err!=nil{
 		clog.Debug("Do hardware sign  error.","err",err)
 	}
@@ -884,10 +882,6 @@ func (srv *Server) runPeer(p *PeerBase) {
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	log.Debug("Server stop to run peer","id",p.ID(),"err",err)
-	// Todo : lqh check code.
-	if err.Error() == DiscAlreadyConnected.Error(){
-		p.log.Debug("DO not stop already connected peer")
-	}
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 

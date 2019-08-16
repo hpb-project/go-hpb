@@ -348,9 +348,11 @@ func (hp *HpbProto) proBondall(p *Peer) {
 	defer timer.Stop()
 	toBondNode := make([]*discover.Node, 0, 100)
 	var lock sync.RWMutex
-	// Todo : lqh need a quit signal.
 	for {
 		select {
+		case <-p.closed:
+			log.Info("proBondall stop by peer disconnected.")
+			return
 		case <-timer.C:
 			if len(toBondNode) > 0 {
 				log.Debug("start proBondall", "lenbond", len(toBondNode))

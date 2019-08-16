@@ -53,14 +53,14 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
 	return t.Dialer.Dial("tcp", addr.String())
 }
-//Todo : lqh add code comment.
-type dialstate struct {
-	ntab        discoverTable
-	netrestrict *netutil.Netlist
 
-	dialing map[discover.NodeID]connFlag
-	static  map[discover.NodeID]*dialTask
-	hist    *dialHistory
+type dialstate struct {
+	ntab        discoverTable   //interface of the table.
+	netrestrict *netutil.Netlist  //black ip list
+
+	dialing map[discover.NodeID]connFlag   //nodes list for dialing
+	static  map[discover.NodeID]*dialTask  //static nodes list. not used now.
+	hist    *dialHistory       // dial history node
 
 	start     time.Time        // time when the dialer was first used
 	bootnodes []*discover.Node // default dials when there are no peers

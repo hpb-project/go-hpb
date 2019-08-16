@@ -50,20 +50,19 @@ const (
 	maxKnownBlocks = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
 )
 
-//Todo : lqh add code comment.
 type PeerManager struct {
-	peers  map[string]*Peer
-	boots  map[string]*Peer
+	peers  map[string]*Peer  //current peers list
+	boots  map[string]*Peer  //current boost list
 	lock   sync.RWMutex
 	closed bool
 
-	server *Server
-	hpbpro *HpbProto
+	server *Server    // pointer to server of p2p
+	hpbpro *HpbProto  // pointer to hpb protocol
 
 	ilock   sync.Mutex
-	iport   int
-	isrvcmd *exec.Cmd
-	isrvout *os.File
+	iport   int       //iperf test port
+	isrvcmd *exec.Cmd  // for bandwidth test
+	isrvout *os.File   // for bandwidth test
 }
 
 var INSTANCE = atomic.Value{}

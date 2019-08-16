@@ -36,11 +36,11 @@ import (
 	//"github.com/hpb-project/go-hpb/boe"
 )
 
-//Todo : lqh add code comment.
+
 const (
-	baseProtocolMaxMsgSize = 80 * 1024
-	pingInterval    = 5 * time.Second
-	nodereqInterval = 15 * time.Second
+	baseProtocolMaxMsgSize = 80 * 1024   // the max msg size only for protocol handshake
+	pingInterval    = 5 * time.Second    // ping msg loop for peer
+	nodereqInterval = 15 * time.Second   //interval for request nodes
 )
 
 // PeerEventType is the type of peer events emitted by a p2p.Server
@@ -132,6 +132,7 @@ type Peer struct {
 	lock sync.RWMutex
 
 	chbond      chan *discover.Node
+
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 
