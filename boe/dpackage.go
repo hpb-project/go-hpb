@@ -95,6 +95,7 @@ func vMajor(ver int) uint8 {
 
 }
 
+// download release bin from github.com
 func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
     baseurl := "https://raw.githubusercontent.com/hpb-project/boe_release_firmware/master/"
     // create temp dir and delete it after finished
@@ -133,6 +134,7 @@ func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
                 }
             }
         }
+        // check version
         if finfo.Mv != mver || finfo.Fv != fver || finfo.Dv != dver {
             fmt.Printf("find upgrade img %s\n", finfo.File)
             binpath := filepath.Join(dir, "upgrade.bin")

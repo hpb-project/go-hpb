@@ -26,8 +26,7 @@ package boe
 #include <stdio.h>
 
 #define RESULT_QUEUE_LEN (10000)
-#define HASH_LEN (32)
-#define SIG_LEN (97)
+#define HASH_LEN (32)#define SIG_LEN (97)
 #define PUB_LEN (64)
 
 typedef struct SResult{
@@ -156,21 +155,20 @@ import (
 	"time"
 	"unsafe"
 )
-
-// Todo : luxq add code comment.
+// boe version struct
 type TVersion struct {
-	H int
-	M int
-	F int
-	D int
+	H int			// hardware version
+	M int			// matched with software version
+	F int			// function version
+	D int			// debug version
 }
 
 // result for recover pubkey
 type RecoverPubkey struct {
-	TxHash []byte
+	TxHash []byte				// recover tx's hash
 	Hash   []byte
-	Sig    []byte
-	Pub    []byte
+	Sig    []byte				// signature
+	Pub    []byte				// recovered pubkey
 }
 
 type BoeRecoverPubKeyFunc func(RecoverPubkey, error)
@@ -188,19 +186,19 @@ type postParam struct {
 type BoeHandle struct {
 	boeInit   bool
 	bcontinue bool
-	rpFunc    BoeRecoverPubKeyFunc
-	maxThNum  int
-	thPool    []*TaskTh
+	rpFunc    BoeRecoverPubKeyFunc		// callback function for external module
+	maxThNum  int						// thread number for soft ecc recover.
+	thPool    []*TaskTh					// task pool
 	postCh    chan postParam
 	idx       int
 }
 
 var (
     boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:2}
-    soft_cnt                 uint32
-    hard_cnt                 uint32
-    async_call               uint32
-    sync_call                uint32
+    soft_cnt                 uint32							// metrics tx number recover pubkey with software
+    hard_cnt                 uint32							// metrics tx number recover pubkey with hardware
+    async_call               uint32							// metrics tx number recover pubkey with async api
+    sync_call                uint32							// metrics tx number recover pubkey with sync  api
 )
 
 func BoeGetInstance() *BoeHandle {
@@ -220,7 +218,7 @@ func (t TVersion) VersionString() string {
 	var v = fmt.Sprintf("%d.%d.%d.%d", t.H, t.M, t.F, t.D)
 	return v
 }
-
+// PostRecoverPubkey get result from hardware ecc-recover, and post the result to external module.
 func PostRecoverPubkey(boe *BoeHandle) {
 	var r *C.SResult
 	for {
@@ -228,6 +226,7 @@ func PostRecoverPubkey(boe *BoeHandle) {
 			break
 		}
 		var err error
+		// get hardware ecc recover result
 		r = C.getResult()
 		if r == nil {
 			time.Sleep(2 * time.Microsecond)
@@ -235,9 +234,11 @@ func PostRecoverPubkey(boe *BoeHandle) {
 			var fullsig = make([]byte, 97)
 			rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
 
+			// change format from C.array to go array
 			cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
 			cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
 			if r.flag == 0 {
+				// hardware recover succeed
 				pubkey65 := make([]byte, 65)
 				cArrayToGoArray(unsafe.Pointer(r.pub), pubkey65, len(pubkey65))
 				copy(rs.Hash, fullsig[64:96])
@@ -246,8 +247,10 @@ func PostRecoverPubkey(boe *BoeHandle) {
 				rs.Sig[64] = fullsig[96]
 				hard_cnt++
 				copy(rs.Pub, pubkey65)
+				// post to external module
 				boe.postResult(&rs, err)
 			} else {
+				// hardware recover failed, and then post to use soft ecc-recover.
 				copy(rs.Hash, fullsig[64:96])
 				copy(rs.Sig[0:32], fullsig[0:32])
 				copy(rs.Sig[32:64], fullsig[32:64])
@@ -258,6 +261,7 @@ func PostRecoverPubkey(boe *BoeHandle) {
 	}
 }
 
+// receive msg and call rpFunc to external module
 func postCallback(boe *BoeHandle) {
 	duration := time.Millisecond * 2
 	timer := time.NewTimer(duration)
@@ -306,6 +310,7 @@ func (boe *BoeHandle) postToSoft(rs *RecoverPubkey) bool {
 	return false
 }
 
+// receive task and execute soft ecc-recover
 func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 	duration := time.Millisecond * 2
 	timer := time.NewTimer(duration)
@@ -331,7 +336,7 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 		}
 	}
 }
-
+// performance print the metrics per 10second
 func (boe *BoeHandle) performance(){
     duration := time.Second * 10
     timer := time.NewTimer(duration)
@@ -362,6 +367,7 @@ func (boe *BoeHandle) Init() error {
 	}
 
 	boe.bcontinue = true
+	// use 1/4 cpu
 	if runtime.NumCPU()/4 > boe.maxThNum {
 		boe.maxThNum = runtime.NumCPU() / 4
 	}
@@ -412,7 +418,7 @@ func (boe *BoeHandle) GetBindAccount() (string, error) {
 	var acc = make([]byte, 42)
 	ret := C.boe_get_bind_account((*C.uchar)(unsafe.Pointer(&acc[0])))
 	if ret == C.BOE_OK {
-		var str string = string(acc[:])
+		var str = string(acc[:])
 		return str, nil
 	}
 	log.Debug("boe", "GetBindAccount ecode", uint32(ret.ecode))
@@ -421,11 +427,12 @@ func (boe *BoeHandle) GetBindAccount() (string, error) {
 
 }
 
+// get boe firmware version
 func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	var H, M, F, D C.uchar
 	ret := C.boe_get_version(&H, &M, &F, &D)
 	if ret == C.BOE_OK {
-		var v TVersion = TVersion{H: int(H), M: int(M), F: int(F), D: int(D)}
+		var v = TVersion{H: int(H), M: int(M), F: int(F), D: int(D)}
 		return v, nil
 	}
 	log.Debug("boe", "GetVersion ecode", uint32(ret.ecode))
@@ -435,12 +442,14 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	return v, ErrInitFailed
 }
 
+// get boe real random.
 func (boe *BoeHandle) GetRandom() []byte {
 	var ran = make([]byte, 32)
 	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
 	return ran
 }
 
+// get boe id
 func (boe *BoeHandle) GetBoeId() (string, error) {
 	var sn string
 	ret := C.boe_get_boesn((*C.uchar)(unsafe.Pointer(&sn)))
@@ -453,6 +462,7 @@ func (boe *BoeHandle) GetBoeId() (string, error) {
 	return sn, nil
 }
 
+// update boe firmware use bin downloaded from github
 func (boe *BoeHandle) FWUpdate() error {
 	// download version record file.
 	// get board version info.
@@ -506,6 +516,7 @@ func (boe *BoeHandle) HWCheck() bool {
 	}
 }
 
+// sign the data with specific private every boe board.
 func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
 	var signature = make([]byte, 64)
 	if len(random) != 32 {
@@ -518,6 +529,7 @@ func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
 	return nil, ErrHWSignFailed
 }
 
+// verify if signature is signed with current boe board.
 func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid []byte, signature []byte) bool {
 	if len(random) != 32 || len(hid) != 32 || len(cid) != 64 || len(signature) != 64 {
 		return false
