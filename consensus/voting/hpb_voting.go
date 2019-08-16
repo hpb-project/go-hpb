@@ -27,7 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
-//Todo : lrj change to english.
+
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	if number == 0 {
@@ -36,12 +36,11 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 		}
 	}
 
-	//前十轮不会进行投票，前10轮采用区块0时候的数据
-	//先获取缓存，如果缓存中没有则获取数据库，为了提升速度
+	// no voting in the first ten blocks
 	if number < consensus.HpbNodeCheckpointInterval {
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
-		// 从缓存中获取
+		
 		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config, hash); err == nil {
 			log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
@@ -53,8 +52,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 		}
 	}
 
-	// 开始考虑10轮之后的情况，往前回溯3轮，以保证一致性。
-	// 开始计算最后一次的确认区块
+	// after 10 blocks, retrieve the newest three rounds
 	latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
 
 	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
@@ -76,7 +74,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 		}
 	} else {
 		if snapa, err := snapshots.CalculateHpbSnap(uint64(1), signatures, config, number, latestCheckPointNumber, latestCheckPointHash, chain); err == nil {
-			//新轮次计算完高性能节点立即更新节点类型
+
 			if err := StoreDataToCacheAndDb(recents, db, snapa, latestCheckPointHash); err != nil {
 				return nil, err
 			}
@@ -87,7 +85,6 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	}
 }
 
-//生成初始化的区块
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 	genesis := chain.GetHeaderByNumber(0)
@@ -96,7 +93,7 @@ func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 		copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
 	}
 	snap := snapshots.NewHistorysnap(config, signatures, 0, 0, genesis.Hash(), signers)
-	// 存入缓存和数据库中
+	
 	if err := StoreDataToCacheAndDb(recents, db, snap, genesis.Hash()); err != nil {
 		return nil, err
 	}
@@ -104,14 +101,12 @@ func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	return snap, nil
 }
 
-// 从数据库和缓存中获取数据
 func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, hash common.Hash) (*snapshots.HpbNodeSnap, error) {
 
 	if s, ok := recents.Get(hash); ok {
 		snapcache := s.(*snapshots.HpbNodeSnap)
 		return snapcache, nil
 	} else {
-		// 从数据库中获取
 		if snapdb, err := snapshots.LoadHistorysnap(config, signatures, db, hash); err == nil {
 			return snapdb, nil
 		} else {

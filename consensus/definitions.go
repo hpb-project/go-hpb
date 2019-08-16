@@ -90,45 +90,35 @@ var (
 	// extra-data
 	ErrMissingVanity = errors.New("extra-data 32 byte vanity prefix missing")
 
-	// 缺少签名
 	ErrMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
 
-	// 如果非检查点数据块在其外部数据字段中包含签名者数据，则返回errExtraSigners。
 	ErrExtraSigners = errors.New("non-checkpoint block contains extra signer list")
 
-	// 没有经过授权的Signers
+	// invalid signer list on checkpoint block
 	ErrInvalidCheckpointSigners = errors.New("invalid signer list on checkpoint block")
 
-	// 错误的签名
 	ErrInvalidMixDigest = errors.New("non-zero mix digest")
 
-	// 非法的叔叔hash
 	ErrInvalidUncleHash = errors.New("non empty uncle hash")
 
-	// 错误的难度值，目前的难度值仅1和2
+	// invalid difficulty, only 1 or 2 allowed
 	ErrInvalidDifficulty = errors.New("invalid difficulty")
 
-	// 错误的时间戳，保持一定的间隔
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
 
-	// 不可靠的投票
 	ErrInvalidVotingChain = errors.New("invalid voting chain")
 
-	// 未授权错误
 	ErrUnauthorized = errors.New("unauthorized")
 
-	// 禁止使用0交易的区块
 	ErrWaitTransactions = errors.New("waiting for transactions")
 
-	// 未知的区块
 	ErrUnknownBlock = errors.New("unknown block")
 
-	// 检查点异常
 	ErrInvalidCheckpointBeneficiary = errors.New("beneficiary in checkpoint block non-zero")
 
-	// 投票只有两种结果
 	ErrInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
-	// 非法的投票检查点
+	
+	// vote nonce in checkpoint block non-zero
 	ErrInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
 	// reject block but do not drop peer
 	ErrInvalidblockbutnodrop = errors.New("reject block but do not drop peer")
@@ -155,21 +145,20 @@ var (
 	ExtraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
 )
 
-// 获取当前的签名者
+// get current signer
 func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 
-	// 从缓存中获取
 	hash := header.Hash()
 	if address, known := sigcache.Get(hash); known {
 		return address.(common.Address), nil
 	}
-	// 从头文件中获取extra-data
+	
 	if len(header.Extra) < ExtraSeal {
 		return common.Address{}, ErrMissingSignature
 	}
 	signature := header.Extra[len(header.Extra)-ExtraSeal:]
 
-	// 还原公钥
+	// recover the public key
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
@@ -181,7 +170,6 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	return signer, nil
 }
 
-// 对区块头部进行签名，最小65Byte
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 

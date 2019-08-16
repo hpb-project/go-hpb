@@ -34,22 +34,21 @@ import (
 	//"errors"
 )
 
-//Todo : lrj change to english.
+
 type CadNodeSnap struct {
-	Number       uint64                     `json:"number"`       // 生成快照的时间点
-	Hash         common.Hash                `json:"hash"`         // 生成快照的Block hash
-	CanAddresses []common.Address           `json:"cadaddresses"` // 当前的授权用户
-	VotePercents map[common.Address]float64 `json:"VotePercents"` //候选节点获得的投票的百分比
+	Number       uint64                     `json:"number"`      
+	Hash         common.Hash                `json:"hash"`         
+	CanAddresses []common.Address           `json:"cadaddresses"` 
+	VotePercents map[common.Address]float64 `json:"VotePercents"` 
 }
 
-//定义结构体
+
 type CadWinner struct {
-	NetworkId string         `json:"networkid"` // 获胜者的网络ID
-	Address   common.Address `json:"address"`   // 获胜者的地址
-	VoteIndex uint64         `json:"voteIndex"` // 获胜者的指标总和
+	NetworkId string         `json:"networkid"` // winner id
+	Address   common.Address `json:"address"`   // winner address
+	VoteIndex uint64         `json:"voteIndex"` // winner index
 }
 
-// 创建对象
 func NewCadNodeSnap(number uint64, hash common.Hash, addresses []common.Address) *CadNodeSnap {
 	cadNodeSnap := &CadNodeSnap{
 		Number:       number,
@@ -59,7 +58,6 @@ func NewCadNodeSnap(number uint64, hash common.Hash, addresses []common.Address)
 	return cadNodeSnap
 }
 
-// 创建对象
 func NewCadNodeSnapvote(number uint64, hash common.Hash, addresses []common.Address, VotePercents map[common.Address]float64) *CadNodeSnap {
 	cadNodeSnap := &CadNodeSnap{
 		Number:       number,
@@ -76,7 +74,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 
 	addressesmap := make(map[common.Address]string)
 
-	// 检查所有的头部，检查连续性
+	// check all the headers
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 /* || headers[i+1].Hash() != headers[i].ParentHash */ {
 			return nil, consensus.ErrInvalidVotingChain
@@ -98,7 +96,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 			continue
 		}
 		votes = votes + 1
-		//获取区块中的每个候选节点收到的投票数量，包括了高性能节点
+		
 		if old, ok := Cadvotepercents[header.CandAddress]; ok {
 			Cadvotepercents[header.CandAddress] = old + 1
 		} else {
@@ -115,7 +113,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 	return cadNodeSnapvote, nil
 }
 
-//加载快照，直接去数据库中读取
+// load the node snapshot
 func LoadCadNodeSnap(db hpbdb.Database, hash common.Hash) (*CadNodeSnap, error) {
 	blob, err := db.Get(append([]byte("codnodesnap-"), hash[:]...))
 	if err != nil {

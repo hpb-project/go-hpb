@@ -33,14 +33,14 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
 )
-//Todo : lrj change to english.
 
-// 验证头部，对外调用接口
+
+// Verify one header
 func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool, mode config.SyncMode) error {
 	return c.verifyHeader(chain, header, nil, mode)
 }
 
-// 批量验证
+// Verify the headers
 func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool, mode config.SyncMode) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
@@ -74,7 +74,7 @@ func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *
 	SetNetNodeType(snap)
 }
 
-// 批量验证，为了避免，支持批量传入
+
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
@@ -187,7 +187,7 @@ func (c *Prometheus) VerifySeal(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
-// 验证封装的正确性，判断是否满足共识算法的需求
+// verify the signature and other logics
 func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	// Verifying the genesis block is not supported
 

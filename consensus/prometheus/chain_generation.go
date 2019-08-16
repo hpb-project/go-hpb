@@ -48,40 +48,40 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 )
-// Todo : lrj change to english.
+// constant parameter definition
 const (
-	checkpointInterval    = 1024                   // 投票间隔
-	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
-	inmemorySignatures    = 4096                   // 内存中的签名个数
-	wiggleTime            = 1000 * time.Millisecond // 延时单位
-	comCheckpointInterval = 2                      // 社区投票间隔
-	cadCheckpointInterval = 2                      // 社区投票间隔
+	checkpointInterval    = 1024                   // voting interval
+	inmemoryHistorysnaps  = 128                    
+	inmemorySignatures    = 4096                   
+	wiggleTime            = 1000 * time.Millisecond 
+	comCheckpointInterval = 2                      
+	cadCheckpointInterval = 2                      
 )
 
 // Prometheus protocol constants.
 var (
-	epochLength   = uint64(30000)            // 充值投票的时的间隔，默认 30000个
-	blockPeriod   = uint64(15)               // 两个区块之间的默认时间 15 秒
+	epochLength   = uint64(30000)            
+	blockPeriod   = uint64(15)               // default block interval is 15 seconds
 	uncleHash     = types.CalcUncleHash(nil) //
-	diffInTurn    = big.NewInt(2)            // 当轮到的时候难度值设置 2
-	diffNoTurn    = big.NewInt(1)            // 当非轮到的时候难度设置 1
+	diffInTurn    = big.NewInt(2)            // the node is in turn, and its diffcult number is 2
+	diffNoTurn    = big.NewInt(1)            // the node is not in turn, and its diffcult number is 1
 	reentryMux    sync.Mutex
 	insPrometheus *Prometheus
 )
 
-// Prometheus 的主体结构
+
 type Prometheus struct {
-	config *config.PrometheusConfig // Consensus 共识配置
-	db     hpbdb.Database           // 数据库
+	config *config.PrometheusConfig // Consensus config
+	db     hpbdb.Database           // Database
 
-	recents    *lru.ARCCache // 最近的签名
-	signatures *lru.ARCCache // 签名后的缓存
+	recents    *lru.ARCCache // the recent signature
+	signatures *lru.ARCCache // the last signature
 
-	proposals map[common.Address]bool // 当前的proposals
+	proposals map[common.Address]bool // current proposals (hpb nodes)
 
-	signer    common.Address // 签名的 Key
-	randomStr string         // 产生的随机数
-	signFn    SignerFn       // 回调函数
+	signer    common.Address  
+	randomStr string         
+	signFn    SignerFn       // Callback function
 	lock      sync.RWMutex   // Protects the signerHash fields
 	hboe      *boe.BoeHandle //boe handle for using boe
 }
@@ -130,7 +130,7 @@ func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error)
 
 }
 
-// 实现引擎的Prepare函数
+// Prepare function for Block
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
 
 	header.Nonce = types.BlockNonce{}
@@ -174,8 +174,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return err
 	}
 	SetNetNodeType(snap)
-	//确定当前轮次的难度值，如果当前轮次
-	//根据快照中的情况
+
 	if 0 == len(snap.Signers) {
 		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
 	}
@@ -235,14 +234,14 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	c.lock.RUnlock()
 
-	// 检查头部的组成情况
+	// check the header
 	if len(header.Extra) < consensus.ExtraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
 	}
 
 	header.Extra = header.Extra[:consensus.ExtraVanity]
 
-	//在投票周期的时候，放入全部的Address
+	// get all the hpb node address
 	if number%consensus.HpbNodeCheckpointInterval == 0 {
 		for _, signer := range snap.GetHpbNodes() {
 			header.Extra = append(header.Extra, signer[:]...)
@@ -252,7 +251,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
-	//获取父亲的节点
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
@@ -260,7 +258,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
 
-	//设置时间点，如果函数太小则，设置为当前的时间
 	if header.Time.Int64() < time.Now().Unix() {
 		header.Time = big.NewInt(time.Now().Unix())
 	}
@@ -268,7 +265,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	return nil
 }
 
-//生成区块
+// generate blocks by giving the signature
 func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
@@ -303,13 +300,13 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, consensus.ErrUnauthorized
 	}
 
-	// 轮到我们的签名
+	
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	if delay < 0 {
 		delay = 0
 		header.Time = big.NewInt(time.Now().Unix())
 	}
-	// 比较难度值，确定是否为适合的时间
+	// set delay time for out-turn hpb nodes
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
 		//It's not our turn explicitly to sign, delay it a bit
 		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
@@ -329,22 +326,20 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	case <-time.After(delay):
 	}
 
-	// 地址赋值
 	header.Coinbase = signer
 
-	// 签名交易，signFn为回掉函数
+	// signing to get the signature
 	sighash, err := signFn(accounts.Account{Address: signer}, consensus.SigHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	//将签名后的结果返给到Extra中
+	// put the signature result to the Extra field
 	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
 
 	return block.WithSeal(header), nil
 }
 
-// 设置网络节点类型
 func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 	addresses := snapa.GetHpbNodes()
 
@@ -399,14 +394,13 @@ func (c *Prometheus) Authorize(signer common.Address, signFn SignerFn) {
 	c.signFn = signFn
 }
 
-// 从当前的签名中，返回追溯到签名者
+// retrieve the signer from the signature
 func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 	return consensus.Ecrecover(header, c.signatures)
 }
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-
-	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
+	err := c.CalculateRewards(chain, state, header, uncles)
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
 		if config.GetHpbConfigInstance().Node.TestMode != 1 && consensus.IgnoreRetErr != true {
@@ -415,11 +409,9 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	}
 	header.Root = state.IntermediateRoot(true)
 	header.UncleHash = types.CalcUncleHash(nil)
-	// 返回最终的区块
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
-// 计算奖励
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) error {
 	if header.Number.Uint64()%consensus.HpbNodeCheckpointInterval != 0 && header.Number.Uint64() > consensus.StageNumberIV {
 		log.Debug("CalculateRewards number is not 200 mulitple, do not reward", "number", header.Number)
@@ -468,8 +460,8 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	//new two vars using below codes
 	var bigA23 = new(big.Float)                       //2/3 one block reward
 	var bigA13 = new(big.Float)                       //1/3 one block reward
-	bigA23.Set(A)                                     //为了cad奖励的时候使用
-	bigA13.Set(A)                                     //为了cad奖励的时候使用
+	bigA23.Set(A)                                     
+	bigA13.Set(A)                                     
 	if consensus.StageNumberVI < header.Number.Uint64() {
 		bigA13.Quo(bigA13,big.NewFloat(200.0))
 	}
@@ -562,7 +554,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	return nil
 }
 
-// 返回的API
+// API for the terminal
 func (c *Prometheus) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "prometheus",
@@ -692,7 +684,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		}
 	}
 
-	//获取所有cad的总票数
+	// get all the voting result
 	votecounts := new(big.Int)
 	for _, votes := range voteres {
 		votecounts.Add(votecounts, &votes)
