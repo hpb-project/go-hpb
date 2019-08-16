@@ -32,12 +32,10 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 )
 
-
-// 基于用户的输入产生genesis
+// generate genesis file with user input.
 func (p *prometh) makeGenesis() {
 	
 	genesis := &bc.Genesis{
-		//VoteIndex:  uint64(0),
 		Timestamp:  uint64(time.Now().Unix()),
 		GasLimit:   config.GenesisGasLimit.Uint64(),
 		Difficulty: big.NewInt(1048576),
@@ -48,8 +46,6 @@ func (p *prometh) makeGenesis() {
 	// Figure out which consensus engine to choose
 	fmt.Println()
 	fmt.Println("Welcome to HPB consensus engine file maker")
-
-	//choice := p.read()
 
 	genesis.Difficulty = big.NewInt(1)
 	genesis.Config.Prometheus = &config.PrometheusConfig{
@@ -73,7 +69,6 @@ func (p *prometh) makeGenesis() {
 	for {
 		if address := p.readAddress(); address != nil {
 			signers = append(signers, *address)
-			//genesis.CandAddress = *address
 			continue
 		}
 		if len(signers) > 0 {
@@ -90,7 +85,6 @@ func (p *prometh) makeGenesis() {
 		}
 	}
 
-	//genesis.ExtraData = make([]byte, 32+len(signers)*common.AddressLength+65)
 	genesis.ExtraData = make([]byte, 32+len(signers)*common.AddressLength+65)
 	for i, signer := range signers {
 		copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])

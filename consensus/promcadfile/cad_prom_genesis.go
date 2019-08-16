@@ -74,8 +74,6 @@ func (p *prometh) manageGenesis() {
 		fmt.Println()
 		fmt.Printf("Which file to save the genesis into? (default = %s.json)\n", p.network)
 
-		//out, _ := json.Marshal(p.conf.genesis)
-		
 		out, _ := json.MarshalIndent(p.conf.genesis, "", "  ")
 
 		fmt.Printf("%s", out)

@@ -34,7 +34,7 @@ import (
 	//"errors"
 )
 
-//定义结构体
+//Todo : lrj change to english.
 type CadNodeSnap struct {
 	Number       uint64                     `json:"number"`       // 生成快照的时间点
 	Hash         common.Hash                `json:"hash"`         // 生成快照的Block hash
@@ -85,7 +85,6 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 
 	for _, header := range headers {
 		addressesmap[header.ComdAddress] = "ok"
-		//log.Info("new headers", "headers", header.Number)
 	}
 	bigaddrtemp, _ := new(big.Int).SetString("0000000000000000000000000000000000000000", 16)
 	addresstemp := common.BigToAddress(bigaddrtemp)

@@ -27,15 +27,13 @@ import (
 	"math/big"
 	//"github.com/hpb-project/ghpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
-	"strconv"
 	//"errors"
 	"errors"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"math"
-	"math/rand"
 )
-
+//Todo : lrj change to english.
 type Tally struct {
 	CandAddress common.Address `json:"candAddress"` // 通过投票的个数
 	VoteNumbers *big.Int       `json:"voteNumbers"` // 通过投票的个数
@@ -46,7 +44,6 @@ type Tally struct {
 type HpbNodeSnap struct {
 	config   *config.PrometheusConfig
 	sigcache *lru.ARCCache
-	//Number  uint64                      `json:"number"`  // 生成快照的时间点
 	CheckPointNum  uint64                      `json:"checkPointNum"`  // 最近的检查点
 	CheckPointHash common.Hash                 `json:"checkPointHash"` // 生成快照的Block hash
 	Signers        map[common.Address]struct{} `json:"signers"`        // 当前的授权用户
@@ -59,7 +56,6 @@ func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, num
 	snap := &HpbNodeSnap{
 		config:   config,
 		sigcache: sigcache,
-		//Number:   number,
 		CheckPointNum:  checkPointNum,
 		CheckPointHash: checkPointHash,
 		Signers:        make(map[common.Address]struct{}),
@@ -104,35 +100,6 @@ func (s *HpbNodeSnap) ValidVote(address common.Address) bool {
 	return !signer
 }
 
-/*
-// 投票池中添加
-func (s *HpbNodeSnap) cast(candAddress common.Address, voteIndexs *big.Int) bool {
-	//if !s.ValidVote(address) {
-	//	return false
-	//}
-
-	//fmt.Println("length Test: ", len(s.Tally))
-
-	if old, ok := s.Tally[candAddress]; ok {
-		s.Tally[candAddress] = Tally{
-	        VoteNumbers: old.VoteNumbers.Add(old.VoteNumbers, big.NewInt(1)),
-	        VoteIndexs:  old.VoteIndexs.Add(old.VoteIndexs, voteIndexs),
-	        VotePercent: old.VotePercent.Div(old.VoteIndexs, old.VoteNumbers),
-	        CandAddress: candAddress,
-		}
-	} else {
-		s.Tally[candAddress] = Tally{
-			VoteNumbers: big.NewInt(1),
-			VoteIndexs: voteIndexs,
-			VotePercent: voteIndexs,
-			CandAddress: candAddress,
-		}
-		//log.Info("new candAddress", "VoteNumbers", 1, "VoteIndexs", voteIndexs, "VotePercent", voteIndexs)
-	}
-	return true
-}
-*/
-
 func (s *HpbNodeSnap) CalculateBackupMiner(number uint64, signer common.Address, headers []types.Header) bool {
 
 	signersgenblks := make([]common.Address, 0, len(headers))
@@ -169,25 +136,12 @@ func (s *HpbNodeSnap) CalculateBackupMiner(number uint64, signer common.Address,
 
 func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) bool {
 
-	// 实际开发中，从硬件中获取
-	//rand := rand.Uint64()
-
 	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
 	log.Debug("worker calculate miner","miner",signers[number%uint64(len(signers))].String())
 	return (number % uint64(len(signers))) == uint64(offset)
-}
-
-
-// 判断当前的次序
-func (s *HpbNodeSnap) GetHardwareRandom(number uint64) string {
-	// 实际开发中，从硬件中获取
-	//TODO：硬件随机数调用,暂时不使用
-	rand := rand.Uint64()
-	str := strconv.FormatUint(rand, 10)
-	return str
 }
 
 // 判断当前的次序
@@ -261,7 +215,6 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 			}
 			loopcount += 1
 			goto GETCOUNT
-			//log.Error("get hpb snap but missing header", "number", i)
 		}
 	}
 
@@ -279,10 +232,9 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	}
 
 	for _, v := range headers {
-		log.Debug("-------------CalculateHpbSnap--------------", "number", v.Number, "candaddress", common.Bytes2Hex(v.CandAddress[:]), "voteindex", v.VoteIndex)
+		log.Trace("CalculateHpbSnap", "number", v.Number, "candaddress", common.Bytes2Hex(v.CandAddress[:]), "voteindex", v.VoteIndex)
 	}
 
-	//signers := make([]common.Address, 0, consensus.HpbNodenumber)
 	snap := NewHistorysnap(config, signatures, number, latestCheckPointNum, latestCheckPointHash, nil)
 	snap.Tally = make(map[common.Address]Tally)
 
@@ -359,7 +311,6 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 
 		index = index + 1
 		if index < uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) { // 往前回溯
-			//log.Error("-------- go back for last snap------------", "index", index)
 			header := chain.GetHeaderByNumber(uint64(latestCheckPointNum - consensus.HpbNodeCheckpointInterval))
 			latestCheckPointHash := header.Hash()
 			snaptemp, err := CalculateHpbSnap(index, signatures, config, number-consensus.HpbNodeCheckpointInterval, latestCheckPointNum-consensus.HpbNodeCheckpointInterval, latestCheckPointHash, chain)

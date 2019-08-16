@@ -48,7 +48,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 )
-
+// Todo : lrj change to english.
 const (
 	checkpointInterval    = 1024                   // 投票间隔
 	inmemoryHistorysnaps  = 128                    // 内存中的快照个数
@@ -86,16 +86,14 @@ type Prometheus struct {
 	hboe      *boe.BoeHandle //boe handle for using boe
 }
 
-// 新创建,在backend中调用
 func New(config *config.PrometheusConfig, db hpbdb.Database) *Prometheus {
 
 	conf := *config
 
-	//设置默认参数
 	if conf.Epoch == 0 {
 		conf.Epoch = epochLength
 	}
-	// 分配内存
+
 	recents, _ := lru.NewARC(inmemoryHistorysnaps)
 	signatures, _ := lru.NewARC(inmemorySignatures)
 
@@ -121,7 +119,6 @@ func InstancePrometheus() *Prometheus {
 	return insPrometheus
 }
 
-// 回掉函数
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
@@ -136,14 +133,9 @@ func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error)
 // 实现引擎的Prepare函数
 func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
 
-	//获取Coinbase
-	//header.Coinbase = common.Address{}
-	//获取Nonce
 	header.Nonce = types.BlockNonce{}
-	//获得块号
 	number := header.Number.Uint64()
 
-	//TODO:在区块头中设置boehwrand,通过获取父节点header的HardwareRandom通过调用boe的GetNextHash获取当前区块的rand
 	parentnum := number - 1
 	parentheader := chain.GetHeaderByNumber(parentnum)
 	if parentheader == nil {
@@ -154,11 +146,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "synnode" {
-		//panic("boe broke, please contact with hpb")
 		log.Debug("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
-		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 	} else {
 		if c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
@@ -216,7 +206,6 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	c.lock.RLock()
 
 	if cadWinner, nonce, err := c.GetSelectPrehp(state, chain, header, number, false); nil == err {
-		//log.Info("len(cadWinner)-------------", "len(cadWinner)", len(cadWinner))
 
 		if cadWinner == nil || len(cadWinner) != 2 {
 			//if no peers, add itself Coinbase to CandAddress and ComdAddress, or when candidate nodes is less len(hpbsnap.signers), the zero address will become the hpb node
@@ -224,9 +213,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			header.ComdAddress = header.Coinbase
 			header.VoteIndex = new(big.Int).SetUint64(0)
 		} else {
-			header.CandAddress = cadWinner[0].Address // 设置地址
+			header.CandAddress = cadWinner[0].Address
 			header.VoteIndex = new(big.Int).SetUint64(cadWinner[0].VoteIndex)
-			header.ComdAddress = cadWinner[1].Address // 设置地址
+			header.ComdAddress = cadWinner[1].Address
 		}
 		log.Trace(">>>>>>>>>>>>>header.CandAddress<<<<<<<<<<<<<<<<<", "addr", header.CandAddress, "number", number) //for test
 
@@ -322,15 +311,13 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	}
 	// 比较难度值，确定是否为适合的时间
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
-		//	// It's not our turn explicitly to sign, delay it a bit
+		//It's not our turn explicitly to sign, delay it a bit
 		currentminer := new(big.Int).SetBytes(header.HardwareRandom).Uint64() % uint64(len(snap.Signers)) //miner position
-		//log.Error("-----genblocksig---------test for waiting 8 minutes--------------", "primemineraddr", primemineraddr, "primeoffset", currentminer, "number", number)
 		myoffset := snap.GetOffset(header.Number.Uint64(), signer)
 		distance := int(math.Abs(float64(int64(myoffset) - int64(currentminer))))
 		if distance > len(snap.Signers)/2 {
 			distance = len(snap.Signers) - distance
 		}
-		//delay = time.Duration(int(c.config.Period + c.config.Period/2) + distance * int(wiggleTime))
 		delay = time.Second * time.Duration(c.config.Period * 2) + time.Duration(distance)*wiggleTime
 	}
 
@@ -386,7 +373,6 @@ func SetNetNodeType(snapa *snapshots.HpbNodeSnap) error {
 			if flag := FindHpbNode(peer.Address(), addresses); flag {
 				peer.SetRemoteType(discover.HpNode)
 			}
-			//peer.SetRemoteType(discover.SynNode)
 		default:
 			break
 		}
@@ -420,7 +406,6 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	//log.Info("Finalize-------------+++++ signer's address", "signer", header.Coinbase.Hex())
 	err := c.CalculateRewards(chain, state, header, uncles) //系统奖励
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
@@ -663,7 +648,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		return err
 	}
 	if resultvote == nil || len(resultvote) < 64+32+32+32+32 { //64 bytes + number1 + number2 + addrcounts + votes, at least have these bytes
-		//log.Error("realaddr InnerCall success but result length is too short", "length", len(resultvote))
+		log.Debug("realaddr InnerCall success but result length is too short", "length", len(resultvote))
 		return errors.New("realaddr InnerCall success but result length is too short")
 	}
 	resultvote = resultvote[64:]
@@ -677,14 +662,14 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	if len(resultvote) < int(64+32+32+addrbigcount.Uint64()*32+votebigcount.Uint64()*32) {
 		return errors.New("2 return data length is not enough")
 	}
-	//log.Error("addr and vote peer count", "addrbigcount", addrbigcount.String(), "votebigcount", votebigcount.String())
+	log.Debug("addr and vote peer count", "addrbigcount", addrbigcount.String(), "votebigcount", votebigcount.String())
 	if addrbigcount.Cmp(votebigcount) != 0 {
 		return errors.New("vote contract return addrs and votes number donnot match")
 	}
 	if addrbigcount.Uint64() == 0 {
 		return nil
 	}
-	//log.Error("addr and vote peer count", "count", addrbigcount)
+	log.Debug("addr and vote peer count", "count", addrbigcount)
 
 	voteres := make(map[common.Address]big.Int)
 	for i := 0; i < int(addrbigcount.Int64()); i++ {
@@ -739,21 +724,6 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 
 func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, *big.Int, map[common.Address]big.Int) {
 
-	//for test---------------------------------put the test account, replace false by true
-	if false {
-		res := make(map[common.Address]big.Int)
-		res[common.HexToAddress("0x02fc7e00f3b8720cd76467e33ad5c46f78776d8f")] = *big.NewInt(20000)
-		res[common.HexToAddress("0xdf0ad2b130f3fdb6188a46a887b530be410455f5")] = *big.NewInt(30000)
-		res[common.HexToAddress("0x33b2b418390538da5107d555aee5af3b7e010395")] = *big.NewInt(40000)
-		res[common.HexToAddress("0xd89b6d8f696ae42675a6688500ed39af34d65787")] = *big.NewInt(50000)
-		res[common.HexToAddress("0x4ea6d599d934cbfcb306a83ca120818d29fa4d97")] = *big.NewInt(60000)
-		res[common.HexToAddress("0x02caa91a1735dddc8f432bedf92d9593aceb9442")] = *big.NewInt(70000)
-		res[common.HexToAddress("0xe4d52d302bf25e5e8d3a9e9371ef30b92095a64b")] = *big.NewInt(80000)
-		res[common.HexToAddress("0xe271ce45212339510fd209444436e245f56f7e33")] = *big.NewInt(90000)
-		res[common.HexToAddress("0xf63ee121d4af7c6cbc810d99a77792aeeec7c253")] = *big.NewInt(100000)
-		return nil, nil, res
-	}
-
 	fechaddr := common.HexToAddress(consensus.Fechcontractaddr)
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
@@ -795,7 +765,6 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	}
 
 	//use read contract addr and funstr get vote result
-	//方案一
 	var realaddr common.Address
 	if (consensus.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < consensus.StageNumberVII){
 		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
@@ -910,7 +879,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 				}
 			}
 		}
-		//log.Debug("qwer>>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
+		log.Trace(">>>>>>>>>header     bandwith<<<<<<<<<<<<<<", "string CandAddress addr", common.Bytes2Hex(tempaddr1[:]), "bandwith", tempBandwith1, "string ComdAddress addr", common.Bytes2Hex(tempaddr2[:]), "bandwith", tempBandwith2)
 	}
 
 	for i := 0; i < len(addrlist); i++ {
@@ -921,7 +890,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 
 	arrayaddrbandwith := make([]common.Address, 0, 151)
 	for k, _ := range mapaddrbandwithres {
-		//log.Debug("qwer>>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
+		log.Trace(">>>>>>>>>bandwith<<<<<<<<<<<<<<", "string addr", common.Bytes2Hex(k[:]), "bandwithaverage", v.AverageValue)
 		arrayaddrbandwith = append(arrayaddrbandwith, k)
 	}
 
@@ -978,7 +947,6 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 }
 
 type BandWithStatics struct {
-	//Addr common.Address
 	AverageValue uint64
 	Num          uint64
 }
@@ -996,10 +964,12 @@ func (c *Prometheus) GetAllBalances(addrlist []common.Address, state *state.Stat
 	}
 	for _, v := range arrayaddrwith {
 		mapBalance[v] = *state.GetBalance(v)
-		log.Trace("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(v))
+		log.Trace("GetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(v))
 	}
 	return mapBalance, nil
 }
+
+// Todo : lzq add code comment.
 func (c *Prometheus) GetAllBalancesByCoin(addrlist []common.Address, coinlist []common.Address, state *state.StateDB) (map[common.Address]big.Int, error) {
 
 	if addrlist == nil || len(addrlist) == 0 || state == nil || len(addrlist) != len(coinlist) {
@@ -1012,16 +982,13 @@ func (c *Prometheus) GetAllBalancesByCoin(addrlist []common.Address, coinlist []
 		arrayaddrwith = append(arrayaddrwith, v)
 	}
 	for i, v := range arrayaddrwith {
-		mapBalance[v] = *state.GetBalance(coinlist[i]) //持币账户分离
-		log.Trace("qwerGetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(coinlist[i]))
+		mapBalance[v] = *state.GetBalance(coinlist[i])
+		log.Trace("GetBalanceRes ranking", "string addr", common.Bytes2Hex(v[:]), "state get", state.GetBalance(coinlist[i]))
 	}
 	return mapBalance, nil
 }
 func (c *Prometheus) GetRankingRes(voteres map[common.Address]big.Int, addrlist []common.Address) (map[common.Address]int, error) {
 
-	//if number < consensus.NumberBackBandwith {
-	//	return nil, nil
-	//}
 	if addrlist == nil || len(addrlist) == 0 {
 		return nil, consensus.ErrBadParam
 	}
@@ -1037,8 +1004,7 @@ func (c *Prometheus) GetRankingRes(voteres map[common.Address]big.Int, addrlist 
 		} else {
 			mapVotes[v] = big.NewInt(0)
 		}
-		//log.Debug("qwerGetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
-
+		log.Trace("GetAllVoteRes ranking", "string addr", common.Bytes2Hex(v[:]), "votes", mapVotes[v])
 	}
 
 	arrayaddrlen := len(arrayaddrwith)
@@ -1137,7 +1103,6 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		return errors.New("contract return 4 parts length do not match"), nil
 	}
 
-	//log.Error("print contract return res", "value", common.Bytes2Hex(resultaddr))
 	res := make([]p2p.HwPair, 0, 151)
 	for i := 0; i < n; i++ {
 		if bytes.Compare(out.Coinbases[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
@@ -1161,7 +1126,6 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		}
 		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
-	log.Trace(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
 
 	return nil, res
 }
@@ -1254,21 +1218,6 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 
 func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, map[common.Address]big.Int) {
 
-	//for test---------------------------------put the test account, replace false by true
-	if false {
-		res := make(map[common.Address]big.Int)
-		res[common.HexToAddress("0x02fc7e00f3b8720cd76467e33ad5c46f78776d8f")] = *big.NewInt(20000)
-		res[common.HexToAddress("0xdf0ad2b130f3fdb6188a46a887b530be410455f5")] = *big.NewInt(30000)
-		res[common.HexToAddress("0x33b2b418390538da5107d555aee5af3b7e010395")] = *big.NewInt(40000)
-		res[common.HexToAddress("0xd89b6d8f696ae42675a6688500ed39af34d65787")] = *big.NewInt(50000)
-		res[common.HexToAddress("0x4ea6d599d934cbfcb306a83ca120818d29fa4d97")] = *big.NewInt(60000)
-		res[common.HexToAddress("0x02caa91a1735dddc8f432bedf92d9593aceb9442")] = *big.NewInt(70000)
-		res[common.HexToAddress("0xe4d52d302bf25e5e8d3a9e9371ef30b92095a64b")] = *big.NewInt(80000)
-		res[common.HexToAddress("0xe271ce45212339510fd209444436e245f56f7e33")] = *big.NewInt(90000)
-		res[common.HexToAddress("0xf63ee121d4af7c6cbc810d99a77792aeeec7c253")] = *big.NewInt(100000)
-		return nil, res
-	}
-	log.Debug("GetVoteResFromNewContract NNNNNNNNN")
 	fechaddr := common.HexToAddress(consensus.NewContractAddr)
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
@@ -1305,8 +1254,6 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 	}
 	realcontract.contractAddr = common.BytesToAddress(resultaddr[12:32])
 	realcontract.methodId = []byte(resultaddr[32:36])
-	log.Debug("contractAddr", "contractaddr", realcontract.contractAddr)
-	log.Debug("contractAddr", "methodId", common.ToHex(realcontract.methodId))
 
 	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
 	if err != nil {
@@ -1317,7 +1264,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 			return errors.New("return resultaddr is nil or length is 0"), nil
 		}
 	}
-	log.Debug("resultvote", "resultvote", common.ToHex(resultvote))
+	log.Trace("resultvote", "resultvote", common.ToHex(resultvote))
 	var result struct {
 		CandidateAddrs []common.Address
 		Nums           []*big.Int
@@ -1325,7 +1272,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 	fechABI, _ = abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
 	err = fechABI.Unpack(&result, consensus.NewfetchAllVoteResult, resultvote)
 	if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
-		log.Error("getVVVVVVVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
+		log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
 		return nil, nil
 	}
 	voteres := make(map[common.Address]big.Int)
@@ -1369,7 +1316,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 			return errors.New("return bootnode info result is nil or length is 0"), nil
 		}
 	}
-	log.Debug("InnerCALLLLLLLLLL", "resultaddr", common.ToHex(resultaddr))
+	log.Debug("InnerCALL", "resultaddr", common.ToHex(resultaddr))
 	var realcontract struct {
 		contractAddr common.Address
 		methodId     []byte
@@ -1377,8 +1324,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 
 	realcontract.contractAddr = common.BytesToAddress(resultaddr[12:32])
 	realcontract.methodId = []byte(resultaddr[32:36])
-	log.Debug("contractAddr", "contractaddr", realcontract.contractAddr)
-	log.Debug("contractAddr", "methodId", common.ToHex(realcontract.methodId))
+
 	if err != nil || realcontract.contractAddr == consensus.Zeroaddr {
 		log.Error("GetNodeinfoFromNewContract getcontractaddr", "err", err)
 		return err, nil
@@ -1393,7 +1339,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 			return errors.New("return bootnode info result is nil or length is 0"), nil
 		}
 	}
-	log.Debug("HPBInnerCALLLLLLLLLL", "resultaddr", common.ToHex(resultaddr))
+	log.Trace("HPBInnerCALL", "resultaddr", common.ToHex(resultaddr))
 
 	var out struct {
 		Coinbases []common.Address
@@ -1410,7 +1356,6 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 		return errors.New("contract return 4 parts length do not match"), nil
 	}
 
-	//log.Error("print contract return res", "value", common.Bytes2Hex(resultaddr))
 	res := make([]p2p.HwPair, 0, 151)
 	for i := 0; i < n; i++ {
 		if bytes.Compare(out.Coinbases[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
@@ -1434,7 +1379,6 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 		}
 		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
 	}
-	log.Debug(">>>>>>>>>>>>3333333333333333<<<<<<<<<<<<<<<<", "value", res)
 
 	return nil, res
 }

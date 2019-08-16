@@ -57,7 +57,7 @@ const InvokeIndexThree = 3
 const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
-
+// Todo : lrj change to english.
 var (
 	HpbNodenumber = 31    //hpb nodes number
 	NumberPrehp   = 20    //nodes num from 151 nodes select
@@ -188,7 +188,6 @@ func SigHash(header *types.Header) (hash common.Hash) {
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
-		//header.CoinbaseHash,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,

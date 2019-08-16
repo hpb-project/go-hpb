@@ -79,12 +79,10 @@ func (api *API) GetHpbNodeSnapAtHash(hash common.Hash) (*snapshots.HpbNodeSnap, 
 	if header == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
-	//return api.prometheus.getHpbNodeSnaps(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	return voting.GetHpbNodeSnap(api.prometheus.db, api.prometheus.recents, api.prometheus.signatures, api.prometheus.config, api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
 func (api *API) GetLatestBlockHeader(number *rpc.BlockNumber) (header *types.Header) {
-	//var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else {
@@ -107,14 +105,11 @@ func (api *API) Proposals() map[common.Address]bool {
 func (api *API) Propose(address common.Address, confRand string, auth bool) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-	//address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
-	//fmt.Printf("address%s",address.String())
 	api.prometheus.proposals[address] = auth
 }
 
 func (api *API) Discard(address common.Address, confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
-	//address :=  common.BytesToAddressHash(common.Fnv_hash_to_byte([]byte(address.Str() + confRand)))
 	delete(api.prometheus.proposals, address)
 }
