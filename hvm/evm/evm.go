@@ -84,14 +84,14 @@ type Context struct {
 // sure that any errors generated are to be considered faulty code.
 //
 // The EVM should never be reused and is not thread safe.
-//Todo: lzq Add code comment.
+
 type State_Diff struct {
-	from     common.Address
-	to       common.Address
-	tvalue   uint64
-	gaslimit uint64
-	depth    int
-	id       int
+	from     common.Address //transfer from address
+	to       common.Address //transfer to address
+	tvalue   uint64         //transfer value
+	gaslimit uint64         //transfer gaslimit
+	depth    int            //evm depth
+	id       int            //evm transfer counts
 }
 
 func (statediff State_Diff) MarshalJSON() ([]byte, error) {
