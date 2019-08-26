@@ -82,24 +82,24 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//the tx without contract
 		if bNewVersion {
 			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
-				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransaction(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			}
 		} else {
 			if len(tx.Data()) > 0 {
-				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransaction(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
@@ -109,7 +109,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
-	ApplyTransactionFinalize(statedb)
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
@@ -190,8 +189,8 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	var root []byte
 
 	statedb.Finalise(true)
-
 	usedGas.Add(usedGas, gas)
+
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
