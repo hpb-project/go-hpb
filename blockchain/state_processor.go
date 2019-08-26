@@ -109,7 +109,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
-	ApplyTransactionFinalize(statedb)
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
@@ -231,6 +230,7 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 	// Update the state with pending changes
 	var root []byte
 
+	statedb.Finalise(true)
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
@@ -270,7 +270,7 @@ func ApplyTransactionNonContractNonFinallize(config *config.ChainConfig, bc *Blo
 
 	// Update the state with pending changes
 	var root []byte
-
+	statedb.Finalise(true)
 	usedGas.Add(usedGas, gas)
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
