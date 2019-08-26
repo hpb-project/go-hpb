@@ -37,14 +37,6 @@ type LesServer interface {
 	Protocols() []p2p.Protocol
 }
 
-/*func (s *Node) AddLesServer(ls LesServer) {
-	s.lesServer = ls*/
-
-
-
-
-
-
 // APIs returns the collection of RPC services the hpb package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Node) APIs() []rpc.API {
@@ -62,7 +54,7 @@ func (s *Node) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
-		},{ //TODO lsl
+		},{
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
@@ -111,10 +103,8 @@ func (s *Node) Miner() *worker.Miner { return s.miner }
 func (s *Node) APIAccountManager() *accounts.Manager  { return s.accman }
 func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
 func (s *Node) TxPool() *txpool.TxPool             { return s.Hpbtxpool }
-//func (s *Node) EventMux() *event.T       		   { return s.eventMux }
 func (s *Node) Engine() consensus.Engine           { return s.Hpbengine }
 func (s *Node) ChainDb() hpbdb.Database            { return s.HpbDb }
 func (s *Node) IsListening() bool                  { return true } // Always listening
 func (s *Node) EthVersion() int                    { return int(s.Hpbpeermanager.Protocol()[0].Version)}
 func (s *Node) NetVersion() uint64                 { return s.networkId }
-//func (s *Node) Downloader() *downloader.Downloader { return s.Hpbsyncctr.downloader }

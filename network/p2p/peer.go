@@ -36,16 +36,11 @@ import (
 	//"github.com/hpb-project/go-hpb/boe"
 )
 
-const (
-	baseProtocolMaxMsgSize = 80 * 1024
-	snappyProtocolVersion = 5
 
-	//TODO: for test ,this value is 5 second
-	pingInterval    = 5 * time.Second
-	//TODO: for test ,this value is 15 second
-	nodereqInterval = 15 * time.Second
-	//TODO: for test ,this value is 3 second
-	testBWDuration  = 3  //second
+const (
+	baseProtocolMaxMsgSize = 80 * 1024   // the max msg size only for protocol handshake
+	pingInterval    = 5 * time.Second    // ping msg loop for peer
+	nodereqInterval = 15 * time.Second   //interval for request nodes
 )
 
 // PeerEventType is the type of peer events emitted by a p2p.Server
@@ -108,14 +103,12 @@ type PeerBase struct {
 	disc     chan DiscReason
 
 	// events receives message send / receive events if set
-	//events *event.Feed
 	events   *event.SyncEvent
 
 	////////////////////////////////////////////////////
 	ntab       discoverTable
 	localType  discover.NodeType
 
-	//typelock   sync.Mutex
 	remoteType discover.NodeType
 
 	beatStart  time.Time
@@ -139,6 +132,7 @@ type Peer struct {
 	lock sync.RWMutex
 
 	chbond      chan *discover.Node
+
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 
@@ -146,7 +140,6 @@ type Peer struct {
 }
 
 func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
-	//protomap := matchProtocols(protocols, conn.caps, conn)
 	protorw := &protoRW{Protocol: proto,in: make(chan Msg), w: conn}
 	p := &PeerBase{
 		rw:       conn,
@@ -186,7 +179,6 @@ func (p *PeerBase) Name() string {
 }
 // Caps returns the capabilities (supported subprotocols) of the remote peer.
 func (p *PeerBase) Caps() []Cap {
-	// TODO: maybe return copy
 	return p.rw.their.Caps
 }
 
@@ -352,7 +344,6 @@ func (p *PeerBase) updateNodesLoop() {
 				p.protoErr <- err
 				return
 			}
-			//p.log.Info("######Update nodes form BootNode start.")
 			nodeTime.Reset(8 * nodereqInterval)
 		case <-p.closed:
 			p.log.Debug("PeerBase update nodes loop CLOSED")
@@ -368,13 +359,13 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
-			log.Debug("Peer base read loop error","error",err)
+			log.Trace("Peer base read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
-			log.Debug("Peer base handle msg error","error",err)
+			log.Trace("Peer base handle msg error","error",err)
 			errc <- err
 			return
 		}
@@ -382,7 +373,6 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 }
 
 func (p *PeerBase) handle(msg Msg) error {
-	//log.Trace("Peer handle massage","Msg",msg.String())
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
@@ -400,7 +390,7 @@ func (p *PeerBase) handle(msg Msg) error {
 		return reason[0]
 	case msg.Code < baseMsgMax:
 		// ignore other base protocol messages
-		//log.Error("Peer handle massage do not matched","Msg",msg.String())
+		log.Debug("Peer handle massage do not matched","Msg",msg.String())
 		return msg.Discard()
 	default:
 		proto := p.running
@@ -540,7 +530,7 @@ func (p *Peer) TxsRate() float64 {
 
 	return p.txsRate
 }
-// TODO: set txs rate value
+
 func (p *Peer) SetTxsRate(txs float64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()

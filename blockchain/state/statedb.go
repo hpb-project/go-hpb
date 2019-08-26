@@ -181,6 +181,8 @@ func (self *StateDB) Empty(addr common.Address) bool {
 
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.Balance()
@@ -189,6 +191,8 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 }
 
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.Nonce()
@@ -198,6 +202,8 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 }
 
 func (self *StateDB) GetCode(addr common.Address) []byte {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.Code(self.db)
@@ -206,6 +212,8 @@ func (self *StateDB) GetCode(addr common.Address) []byte {
 }
 
 func (self *StateDB) GetCodeSize(addr common.Address) int {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return 0
@@ -221,6 +229,8 @@ func (self *StateDB) GetCodeSize(addr common.Address) int {
 }
 
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return common.Hash{}
@@ -229,6 +239,8 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(a)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, b)
@@ -239,6 +251,8 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.
 func (self *StateDB) StorageTrie(a common.Address) Trie {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(a)
 	if stateObject == nil {
 		return nil
@@ -248,6 +262,8 @@ func (self *StateDB) StorageTrie(a common.Address) Trie {
 }
 
 func (self *StateDB) HasSuicided(addr common.Address) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.suicided
@@ -319,6 +335,8 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
 func (self *StateDB) Suicide(addr common.Address) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
 		return false
@@ -354,6 +372,13 @@ func (self *StateDB) deleteStateObject(stateObject *stateObject) {
 	addr := stateObject.Address()
 	self.setError(self.trie.TryDelete(addr[:]))
 }
+func (self *StateDB) GetStateObjects() []common.Address {
+	stateAddress := []common.Address{}
+	for addr, _ := range self.stateObjects {
+		stateAddress = append(stateAddress, addr)
+	}
+	return stateAddress
+}
 
 // Retrieve a state object given my the address. Returns nil if not found.
 func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
@@ -388,6 +413,8 @@ func (self *StateDB) setStateObject(object *stateObject) {
 
 // Retrieve a state object or create a new state object if nil
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
 		stateObject, _ = self.createObject(addr)
@@ -427,6 +454,8 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	new, prev := self.createObject(addr)
 	if prev != nil {
 		new.setBalance(prev.data.Balance)
@@ -434,6 +463,8 @@ func (self *StateDB) CreateAccount(addr common.Address) {
 }
 
 func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 	so := db.getStateObject(addr)
 	if so == nil {
 		return
@@ -500,16 +531,16 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	idx := sort.Search(len(self.validRevisions), func(i int) bool {
 		return self.validRevisions[i].id >= revid
 	})
+	// if display below logs when panic, and revid < panic(revid), thats means a revert have been done, so current revert will failed.
 	if idx == len(self.validRevisions) || self.validRevisions[idx].id != revid {
-		log.Error("------------RevertToSnapshot-------------", "idx", idx, "len(self.validRevisions)", len(self.validRevisions))
+		log.Error("RevertToSnapshot", "idx", idx, "len(self.validRevisions)", len(self.validRevisions))
 		if idx == len(self.validRevisions) && len(self.validRevisions) != 0 {
 			log.Error("self.validRevisions[idx-1].id", "value is ", self.validRevisions[0].id, "revid", revid)
-			log.Error("----------------this log express before the revert, other revert has been happened and this revert has been overwriten---------")
+			log.Error("this log express before the revert, other revert has been happened and this revert has been overwriten")
 		}
 
 		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
 	}
-	//测试revert失败问题，如果在panic前出现了下面的log信息，并且revid比panic的revid小，则表示之前已经进行了revert，所以本次revert肯定不会成功
 	snapshot := self.validRevisions[idx].journalIndex
 
 	// Replay the journal to undo changes.
@@ -532,6 +563,8 @@ func (self *StateDB) GetRefund() *big.Int {
 // Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
@@ -568,6 +601,8 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 // under any circumstances.
 func (s *StateDB) DeleteSuicides() {
 	// Reset refund so that any used-gas calculations can use this method.
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.clearJournalAndRefund()
 
 	for addr := range s.stateObjectsDirty {
@@ -590,6 +625,8 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // CommitTo writes the state to the given database.
 func (s *StateDB) CommitTo(dbw trie.DatabaseWriter, deleteEmptyObjects bool) (root common.Hash, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	defer s.clearJournalAndRefund()
 
 	// Commit objects to the trie.

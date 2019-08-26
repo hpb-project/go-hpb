@@ -1,5 +1,5 @@
 // Copyright 2018 The go-hpb Authors
-// This file is part of the go-hpb.
+// Modified based on go-ethereum, which Copyright (C) 2014 The go-ethereum Authors.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"errors"
+
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
@@ -29,16 +30,30 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
-const HpbNodeCheckpointInterval = 200 // 高性能投票间隔
-const HpbNodeBacktrackingNumber = 100 // 往前回溯的个数
+const HpbNodeCheckpointInterval = 200
+const HpbNodeBacktrackingNumber = 100
 const Nodenumfirst = 151
 const StepLength = 4
 const FechHpbBallotAddrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"roundNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"contractAddr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"deleteAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"setContractAddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"setFunStr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAdmin\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"funStr\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getContractAddr\",\"outputs\":[{\"name\":\"_contractAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getRoundNum\",\"outputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"adminMap\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"setRoundNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getFunStr\",\"outputs\":[{\"name\":\"_funStr\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_contractAddr\",\"type\":\"address\"}],\"name\":\"SetContractAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_funStr\",\"type\":\"string\"}],\"name\":\"SetFunStr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_roundNum\",\"type\":\"uint256\"}],\"name\":\"SetRoundNum\",\"type\":\"event\"}]"
-const Fechcontractaddr = "0xb3d6a64342cb2dbf9e9917155c14e3e1b0e67288"
+const Fechcontractaddr = "0x43f75fc8c4fc623b8ddf0039ee76e9d4ca9ca7b3"
 
 const BootnodeInfoContractABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"}],\"name\":\"deleteHpbNodeBatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"coinbase\",\"type\":\"address\"},{\"name\":\"cid1\",\"type\":\"bytes32\"},{\"name\":\"cid2\",\"type\":\"bytes32\"},{\"name\":\"hid\",\"type\":\"bytes32\"}],\"name\":\"updateHpbNode\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentStageNum\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"nodeStages\",\"outputs\":[{\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"name\":\"addHpbNodeBatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_stageNum\",\"type\":\"uint256\"}],\"name\":\"getAllHpbNodesByStageNum\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"name\":\"updateHpbNodeBatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"stageNum\",\"type\":\"uint256\"}],\"name\":\"copyAllHpbNodesByStageNum\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"addStage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"coinbase\",\"type\":\"address\"}],\"name\":\"deleteHpbNode\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getAllHpbNodes\",\"outputs\":[{\"name\":\"Coinbases\",\"type\":\"address[]\"},{\"name\":\"Cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"Cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"Hids\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"coinbase\",\"type\":\"address\"},{\"name\":\"cid1\",\"type\":\"bytes32\"},{\"name\":\"cid2\",\"type\":\"bytes32\"},{\"name\":\"hid\",\"type\":\"bytes32\"}],\"name\":\"addHpbNode\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"}],\"name\":\"TransferOwnership\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"stageNum\",\"type\":\"uint256\"}],\"name\":\"ChangeStage\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"stageNum\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"coinbase\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"cid1\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"cid2\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"hid\",\"type\":\"bytes32\"}],\"name\":\"AddHpbNode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"stageNum\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"coinbase\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"cid1\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"cid2\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"hid\",\"type\":\"bytes32\"}],\"name\":\"UpdateHpbNode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"coinbase\",\"type\":\"address\"}],\"name\":\"DeleteHpbNode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"stageNum\",\"type\":\"uint256\"}],\"name\":\"CopyAllHpbNodesByStageNum\",\"type\":\"event\"}]"
-const BootnodeInfoContractAddr = "0xad4ed802c2b6f974f37852c510d241ed44c682c7" //mainnet nodeinfo contract addr
+const BootnodeInfoContractAddr = "0x2251a2533556e7c6243a73f015eb96aa155c5791" //mainnet nodeinfo contract addr
 const BootnodeInfoContractMethodName = "getAllHpbNodes"
+
+const NewContractAddr = "0xfc6d0656c4255da68e8b63d5530b16ba465b8d71"
+const NewContractABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"}],\"name\":\"getInvokeContract\",\"outputs\":[{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodId\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+const NewContractMethod = "getInvokeContract"
+const NewfetchAllHolderAddrs = "fetchAllHolderAddrs"
+const NewfetchAllVoteResult = "fetchAllVoteResult"
+const NewgetAllHpbNodes = "getAllHpbNodes"
+
+const NewContractInterfaceABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllVoteResult\",\"outputs\":[{\"name\":\"candidateAddrs\",\"type\":\"address[]\"},{\"name\":\"nums\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllHolderAddrs\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"_holderAddrs\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getAllHpbNodes\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+const InvokeIndexOne = 1
+const InvokeIndexTwo = 2
+const InvokeIndexThree = 3
 
 const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
@@ -57,11 +72,10 @@ var (
 	StageNumberVII uint64 = 2896000 //待定 6月23日15时
 	StageNumberRND uint64 = StageNumberV	// BOE Real Random
 
-	CadNodeCheckpointInterval uint64 = 200 // 社区投票间隔
+	NewContractVersion        uint64 = 99999999999
+	CadNodeCheckpointInterval uint64 = 200
 )
 
-//const Nodenumsecond = 301
-//const Nodenumthird = 1000
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor
 	// that is unknown.
@@ -75,48 +89,38 @@ var (
 	// plus one.
 	ErrInvalidNumber = errors.New("invalid block number")
 
-	// extra-data 信息不完整
+	// extra-data
 	ErrMissingVanity = errors.New("extra-data 32 byte vanity prefix missing")
 
-	// 缺少签名
 	ErrMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
 
-	// 如果非检查点数据块在其外部数据字段中包含签名者数据，则返回errExtraSigners。
 	ErrExtraSigners = errors.New("non-checkpoint block contains extra signer list")
 
-	// 没有经过授权的Signers
+	// invalid signer list on checkpoint block
 	ErrInvalidCheckpointSigners = errors.New("invalid signer list on checkpoint block")
 
-	// 错误的签名
 	ErrInvalidMixDigest = errors.New("non-zero mix digest")
 
-	// 非法的叔叔hash
 	ErrInvalidUncleHash = errors.New("non empty uncle hash")
 
-	// 错误的难度值，目前的难度值仅1和2
+	// invalid difficulty, only 1 or 2 allowed
 	ErrInvalidDifficulty = errors.New("invalid difficulty")
 
-	// 错误的时间戳，保持一定的间隔
 	ErrInvalidTimestamp = errors.New("invalid timestamp")
 
-	// 不可靠的投票
 	ErrInvalidVotingChain = errors.New("invalid voting chain")
 
-	// 未授权错误
 	ErrUnauthorized = errors.New("unauthorized")
 
-	// 禁止使用0交易的区块
 	ErrWaitTransactions = errors.New("waiting for transactions")
 
-	// 未知的区块
 	ErrUnknownBlock = errors.New("unknown block")
 
-	// 检查点异常
 	ErrInvalidCheckpointBeneficiary = errors.New("beneficiary in checkpoint block non-zero")
 
-	// 投票只有两种结果
 	ErrInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
-	// 非法的投票检查点
+
+	// vote nonce in checkpoint block non-zero
 	ErrInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
 	// reject block but do not drop peer
 	ErrInvalidblockbutnodrop = errors.New("reject block but do not drop peer")
@@ -143,22 +147,21 @@ var (
 	ExtraSeal   = 65 // Fixed number of extra-data suffix bytes reserved for signerHash seal
 )
 
-// 获取当前的签名者
+// get current signer
 func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 
-	// 从缓存中获取
 	hash := header.Hash()
 	if address, known := sigcache.Get(hash); known {
 		return address.(common.Address), nil
 	}
-	// 从头文件中获取extra-data
+
 	extraDetail, err := types.BytesToExtraDetail(header.Extra)
 	if err != nil {
 		return common.Address{}, err
 	}
 	signature := extraDetail.GetSeal()
 
-	// 还原公钥
+	// recover the public key
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
@@ -170,7 +173,6 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	return signer, nil
 }
 
-// 对区块头部进行签名，最小65Byte
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 	extraDetail, _ := types.BytesToExtraDetail(header.Extra)
@@ -178,7 +180,6 @@ func SigHash(header *types.Header) (hash common.Hash) {
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
-		//header.CoinbaseHash,
 		header.Root,
 		header.TxHash,
 		header.ReceiptHash,
@@ -206,14 +207,12 @@ func Gen32BRandom() [32]byte {
 
 	var Res [32]byte
 	for i := 0; i < 32; i++ {
-		Res[i] = byte(rand.Intn(256)) //返回[0,256)的随机整数
+		Res[i] = byte(rand.Intn(256))
 	}
 	return Res
 }
 
 func VerifyHWRlRndSign(HWRlRnd []byte, Sign []byte) (common.Address, error) {
-	//log.Info("VerifyHWRlRndSign", "hash", hex.EncodeToString(hash), "rnd", hex.EncodeToString(HWRlRnd))
-	// 还原公钥
 	pubkey, err := crypto.Ecrecover(HWRlRnd, Sign)
 	if err != nil {
 		return common.Address{}, err

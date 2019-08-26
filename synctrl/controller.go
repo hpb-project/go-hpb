@@ -152,6 +152,7 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
 	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
 
+	go TxsPoolLoop()
 	return synctrl, nil
 }
 
@@ -178,7 +179,7 @@ func (this *SynCtrl) Start() {
 func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 	ps := &PeerSyn{peer}
 	this.syncTransactions(peer)
-	log.Debug("register net peer","pid",peer.GetID())
+	log.Debug("register net peer", "pid", peer.GetID())
 
 	err := this.syner.RegisterPeer(peer.GetID(), peer.GetVersion(), ps)
 	if err != nil {
@@ -186,13 +187,13 @@ func (this *SynCtrl) RegisterNetPeer(peer *p2p.Peer) error {
 	}
 
 	// start new peer syn
-	time.Sleep(time.Millisecond*10)
+	time.Sleep(time.Millisecond * 10)
 	this.newPeerCh <- peer
 	return nil
 }
 
 func (this *SynCtrl) UnregisterNetPeer(peer *p2p.Peer) error {
-	log.Debug("unregister net peer","pid",peer.GetID())
+	log.Debug("unregister net peer", "pid", peer.GetID())
 	return this.syner.UnregisterPeer(peer.GetID())
 }
 
@@ -202,7 +203,7 @@ func (this *SynCtrl) minedRoutingLoop() {
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
-			routBlock(ev.Block, true)  // First propagate block to peers
+			go routBlock(ev.Block, true)  // First propagate block to peers
 			routBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
@@ -322,7 +323,7 @@ func (this *SynCtrl) removePeer(id string) {
 
 	// Hard disconnect at the networking layer
 	if peer != nil {
-		log.Error("###### SYN DO REMOVER PEER ######", "peer", id)
+		log.Error("SYN DO REMOVER PEER", "peer", id)
 		peer.Disconnect(p2p.DiscPeerBySyn)
 	}
 }

@@ -195,7 +195,6 @@ func ExportChain(blockchain *bc.BlockChain, fn string) error {
 
 func ExportAppendChain(blockchain *bc.BlockChain, fn string, first uint64, last uint64) error {
 	log.Info("Exporting blockchain", "file", fn)
-	// TODO verify mode perms
 	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err

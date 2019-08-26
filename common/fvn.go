@@ -19,10 +19,8 @@ func Fnv_hash_to_byte(data ...[]byte) []byte {
 	}
 
 	return d.Sum(nil)
-	// return hex.EncodeToString(d.Sum(nil))
 }
 
-// 判断obj是否在target中，target支持的类型arrary,slice,map
 func Contains(obj interface{}, target interface{}) (bool, error) {
 	targetValue := reflect.ValueOf(target)
 	switch reflect.TypeOf(target).Kind() {

@@ -652,7 +652,7 @@ func (this *Puller) insert(peer string, block *types.Block) {
 		case nil:
 			// All ok, quickly propagate to our peers
 			propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
-			go this.broadcastBlock(block, true)
+			go this.broadcastBlock(block, false)
 
 		case consensus.ErrFutureBlock:
 		case consensus.ErrInvalidblockbutnodrop:

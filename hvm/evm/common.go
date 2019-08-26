@@ -72,8 +72,8 @@ func toWordSize(size uint64) uint64 {
 }
 
 func allZero(b []byte) bool {
-	for _, byte := range b {
-		if byte != 0 {
+	for _, val := range b {
+		if val != 0 {
 			return false
 		}
 	}

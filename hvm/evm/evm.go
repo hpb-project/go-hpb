@@ -17,12 +17,14 @@
 package evm
 
 import (
+	"encoding/json"
 	"math/big"
 	"sync/atomic"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 )
@@ -84,6 +86,27 @@ type Context struct {
 // sure that any errors generated are to be considered faulty code.
 //
 // The EVM should never be reused and is not thread safe.
+
+type State_Diff struct {
+	from     common.Address //transfer from address
+	to       common.Address //transfer to address
+	tvalue   uint64         //transfer value
+	gaslimit uint64         //transfer gaslimit
+	depth    int            //evm depth
+	id       int            //evm transfer counts
+}
+
+func (statediff State_Diff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"from":     statediff.from,
+		"to":       statediff.to,
+		"value":    statediff.tvalue,
+		"gaslimit": statediff.gaslimit,
+		"depth":    statediff.depth,
+		"id":       statediff.id,
+	})
+}
+
 type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
@@ -102,7 +125,9 @@ type EVM struct {
 	interpreter *Interpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
-	abort int32
+	abort     int32
+	StateDiff []*State_Diff
+	depthid   [config.CallCreateDepth]int
 }
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -205,12 +230,24 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
+	} else {
+		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value)
+
+		statediff := &State_Diff{
+			from:     caller.Address(),
+			to:       to.Address(),
+			tvalue:   value.Uint64(),
+			gaslimit: gas,
+			depth:    evm.depth,
+			id:       evm.depthid[evm.depth],
+		}
+		evm.depthid[evm.depth]++
+		evm.StateDiff = append(evm.StateDiff, statediff)
 	}
 	return ret, contract.Gas, err
 }
 
 func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte) (ret []byte, err error) {
-	//log.Error("test inner call", "addr", common.Bytes2Hex(addr[:]), "input", common.Bytes2Hex(input))
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, nil
 	}
@@ -235,17 +272,11 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped environment for this execution context
 	// only.
-	//contract := NewContract(caller, to, value, gas)
 	contract := NewContract(caller, to, big.NewInt(0), 49999986000000000)
-	//contract := NewContract(caller, to, big.NewInt(0), 89954)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
-	//ret, err = run(evm, snapshot, contract, input)
 	ret, err = run(evm, snapshot, contract, input)
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
-		if err != errExecutionReverted {
-			//contract.UseGas(contract.Gas)
-		}
 	}
 
 	return ret, err
@@ -505,3 +536,6 @@ func (evm *EVM) ChainConfig() *config.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+func (evm *EVM) GetStateDiff() []*State_Diff {
+	return evm.StateDiff
+}

@@ -51,18 +51,18 @@ const (
 )
 
 type PeerManager struct {
-	peers  map[string]*Peer
-	boots  map[string]*Peer
+	peers  map[string]*Peer  //current peers list
+	boots  map[string]*Peer  //current boost list
 	lock   sync.RWMutex
 	closed bool
 
-	server *Server
-	hpbpro *HpbProto
+	server *Server    // pointer to server of p2p
+	hpbpro *HpbProto  // pointer to hpb protocol
 
 	ilock   sync.Mutex
-	iport   int
-	isrvcmd *exec.Cmd
-	isrvout *os.File
+	iport   int       //iperf test port
+	isrvcmd *exec.Cmd  // for bandwidth test
+	isrvout *os.File   // for bandwidth test
 }
 
 var INSTANCE = atomic.Value{}
@@ -237,11 +237,6 @@ func (prm *PeerManager) PeersAll() []*Peer {
 
 	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
-
-		//if p.remoteType == discover.SynNode {
-		//	continue
-		//}
-
 		list = append(list, p)
 	}
 	return list
@@ -253,12 +248,6 @@ func (prm *PeerManager) GetLocalType() discover.NodeType {
 
 func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	log.Info("Change node local type", "from", prm.server.localType.ToString(), "to", nt.ToString())
-
-	//if prm.server.localType == discover.SynNode {
-	//	log.Info("SynNode need not allow to change", "to", nt.ToString())
-	//	return true
-	//}
-
 
 	if prm.server.localType != nt {
 		prm.lock.Lock()
@@ -274,14 +263,6 @@ func (prm *PeerManager) SetLocalType(nt discover.NodeType) bool {
 	return false
 }
 
-/*
-func (prm *PeerManager) SetHpRemoteFlag(flag bool) {
-	//log.Info("Change hp remote flag","from",prm.server.hpflag,"to",flag)
-	if prm.server.hpflag != flag {
-		prm.server.hpflag = flag
-	}
-}
-*/
 // Len returns if the current number of peers in the set.
 func (prm *PeerManager) Len() int {
 	prm.lock.RLock()
@@ -361,12 +342,6 @@ func (prm *PeerManager) Protocol() []Protocol {
 	return prm.hpbpro.protos
 }
 
-//func (prm *PeerManager) hasPeer(id string) bool {
-//	prm.lock.RLock()
-//	defer prm.lock.RUnlock()
-//
-//	return prm.boots[id] != nil || prm.peers[id] !=nil
-//}
 ////////////////////////////////////////////////////////////////////
 
 type PeerInfo struct {
@@ -553,14 +528,13 @@ func (prm *PeerManager) parseBindInfo(filename string) error {
 			log.Error(fmt.Sprintf("Can't parse node file %s(index=%d)", filename,i))
 			panic("Hardware Info Parse Error.")
 		}
-		//todo check cid hid adr
+
 		hdtab = append(hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
 	}
 
 
-	log.Info("Boot node parse binding hardware table.", "hdtab", hdtab)
+	log.Debug("Boot node parse binding hardware table.", "hdtab", hdtab)
 	prm.server.updateHdtab(hdtab,true)
-	//prm.server.hdtab = hdtab
 
 	return nil
 }
@@ -638,7 +612,6 @@ func (prm *PeerManager) startClientBW() {
 
 	for {
 		//1 start to test
-		//log.Info("waiting start test")
 		select {
 		case <-timeout.C:
 			timeout.Reset(time.Second * time.Duration(inteval+rand.Intn(inteval)))
@@ -654,7 +627,6 @@ func (prm *PeerManager) startClientBW() {
 		palist := make([]*Peer, 0, len(prm.peers))
 		for _, p := range prm.peers {
 			//bandwidth
-			//p.log.Error("############ select peer to bw test","bandwidth",p.bandwidth)
 			if p.remoteType == discover.BootNode || p.remoteType == discover.SynNode {
 				continue
 			}

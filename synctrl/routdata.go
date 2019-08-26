@@ -69,7 +69,6 @@ func routBlock(block *types.Block, propagate bool) {
 					sendNewBlock(peer, block, td)
 					break
 				case discover.SynNode:
-					//ONLY FOR TEST
 					sendNewBlock(peer, block, td)
 					break
 				default:
@@ -121,56 +120,6 @@ func routBlock(block *types.Block, propagate bool) {
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
-/*
-// routingTx will propagate a transaction to peers by type which are not known to
-// already have the given transaction.
-func routTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	for _, peer := range peers {
-		switch peer.LocalType() {
-		case discover.PreNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.HpNode:
-			switch peer.RemoteType() {
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		case discover.SynNode:
-			switch peer.RemoteType() {
-			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			case discover.HpNode:
-				sendTransactions(peer, types.Transactions{tx})
-				break
-			default:
-				break
-			}
-			break
-		default:
-			break
-		}
-	}
-
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
-}
-*/
-
 
 // routingTx will propagate a transaction to peers by type which are not known to
 // already have the given transaction.

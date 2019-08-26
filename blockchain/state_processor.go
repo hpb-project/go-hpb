@@ -17,6 +17,7 @@
 package bc
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -66,45 +67,40 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
+	bNewVersion := block.Number().Uint64() > consensus.NewContractVersion
 	synsigner := types.MakeSigner(p.config)
-	txs := block.Transactions()
-	for _, tx := range txs {
-		types.ASynSender(synsigner, tx)
-	}
-	bNewVersion := block.Number().Uint64() > consensus.StageNumberIII
+	go func(txs types.Transactions) {
+		for _, tx := range txs {
+			types.ASynSender(synsigner, tx)
+		}
+	}(block.Transactions())
+
 	// Iterate over and process the individual transactions
+	author, _ := p.engine.Author(block.Header())
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		//msg, err := tx.AsMessage(types.MakeSigner(p.config))
-		//if err != nil {
-		//	return nil, nil, nil, err
-		//}
 		//the tx without contract
 		if bNewVersion {
 			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
-				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
 					return nil, nil, nil, errs
 				}
 			}
 		} else {
 			if len(tx.Data()) > 0 {
-				receipt, _, errs = ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, nil, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
-					types.Deletesynsinger(synsigner, tx)
 					return nil, nil, nil, errs
 				}
 			}
@@ -113,12 +109,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
-	go func(txs []*types.Transaction) {
-		//types.ASynSender(synsigner, nil)
-		for _, tx := range txs {
-			types.Deletesynsinger(synsigner, tx)
-		}
-	}(block.Transactions())
+	ApplyTransactionFinalize(statedb)
+
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, errfinalize := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts); nil != errfinalize {
 		return nil, nil, nil, errfinalize
@@ -131,11 +123,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (string, *types.Receipt, *big.Int, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	cfg := evm.Config{}
 	// Create a new context to be used in the EVM environment
@@ -145,9 +137,11 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	statediff, errs := json.Marshal(vmenv.GetStateDiff())
+	log.Debug("evm json----", "jsons", string(statediff), "errs", errs)
 	if err != nil {
 		log.Error("ApplyMessage err", "err", err)
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 
 	// Update the state with pending changes
@@ -171,7 +165,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, err
+	return string(statediff), receipt, gas, err
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
@@ -196,21 +190,101 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 	var root []byte
 
 	statedb.Finalise(true)
+
+	usedGas.Add(usedGas, gas)
+	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
+	// based on the eip phase, we're passing wether the root touch-delete accounts.
+	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = new(big.Int).Set(gas)
+
+	// Set the receipt logs and create a bloom for filtering
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	return receipt, gas, err
+}
+
+// ApplyTransaction attempts to apply a transaction to the given state database
+// and uses the input parameters for its environment. It returns the receipt
+// for the transaction, gas used and an error if the transaction failed,
+// indicating the block was invalid.
+func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (string, *types.Receipt, *big.Int, error) {
+	msg, err := tx.AsMessage(types.MakeSigner(config))
+	if err != nil {
+		log.Error("Asmessage err", "err", err)
+		return "", nil, nil, err
+	}
+	cfg := evm.Config{}
+	// Create a new context to be used in the EVM environment
+	context := hvm.NewEVMContext(msg, header, bc, author)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := evm.NewEVM(context, statedb, config, cfg)
+	// Apply the transaction to the current state (included in the env)
+	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	statediff, errs := json.Marshal(vmenv.GetStateDiff())
+	log.Debug("evm json----", "jsons", string(statediff), "errs", errs)
+	if err != nil {
+		log.Error("ApplyMessage err", "err", err)
+		return "", nil, nil, err
+	}
+
+	// Update the state with pending changes
+	var root []byte
+
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, usedGas)
-	if receipt == nil {
-	}
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
-	if receipt == nil {
+	// if the transaction created a contract, store the creation address in the receipt.
+	if msg.To() == nil {
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
 	}
+
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-	if receipt == nil {
+
+	return string(statediff), receipt, gas, err
+}
+
+// ApplyTransaction attempts to apply a transaction to the given state database
+// and uses the input parameters for its environment. It returns the receipt
+// for the transaction, gas used and an error if the transaction failed,
+// indicating the block was invalid.
+func ApplyTransactionNonContractNonFinallize(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+	msg, err := tx.AsMessage(types.MakeSigner(config))
+	if err != nil {
+		log.Error("Asmessage err", "err", err)
+		return nil, nil, err
 	}
+
+	// Apply the transaction to the current state (included in the env)
+	_, gas, failed, err := ApplyMessageNonContract(msg, bc, author, gp, statedb, header)
+	if err != nil {
+		log.Error("ApplyMessageNonContract err", "err", err)
+		return nil, nil, err
+	}
+
+	// Update the state with pending changes
+	var root []byte
+
+	usedGas.Add(usedGas, gas)
+	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
+	// based on the eip phase, we're passing wether the root touch-delete accounts.
+	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = new(big.Int).Set(gas)
+	// Set the receipt logs and create a bloom for filtering
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
 	return receipt, gas, err
+}
+func ApplyTransactionFinalize(statedb *state.StateDB) {
+	statedb.Finalise(true)
 }

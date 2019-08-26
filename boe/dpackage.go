@@ -28,7 +28,6 @@ func loadJSON(filename string, v interface{}) {
         return
     }
 
-    //读取的数据为json格式，需要进行解码
     err = json.Unmarshal(data, v)
     if err != nil {
         return
@@ -48,9 +47,6 @@ func destorytemp(path string, prefix string) {
         name := fi.Name()
 
         if strings.Contains(name, prefix) {
-
-            fmt.Println("temp file name:", path)
-
             err := os.RemoveAll(path)
             if err != nil {
                 fmt.Println("delet dir error:", err)
@@ -64,7 +60,6 @@ func destorytemp(path string, prefix string) {
 func createtmpdir(path string, prefix string) (string, error){
     f, e := ioutil.TempDir(path, prefix)
     if e != nil {
-        //fmt.Println("create tempDir error")
         return "", e
     }
     return f, nil
@@ -100,6 +95,7 @@ func vMajor(ver int) uint8 {
 
 }
 
+// download release bin from github.com
 func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
     baseurl := "https://raw.githubusercontent.com/hpb-project/boe_release_firmware/master/"
     // create temp dir and delete it after finished
@@ -125,7 +121,6 @@ func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
             nmver := release.Mv
             nfver := release.Fv
             ndver := release.Dv
-            //fmt.Printf("nhver=0x%02x,finfo.Hv=0x%02x\n", nhver, finfo.Hv)
             if vMajor(nhver) == vMajor(finfo.Hv) {
                 nvcnt := nmver * 1000000 + nfver * 1000 + ndver 
                 ovcnt := finfo.Mv * 1000000 + finfo.Fv * 1000 + finfo.Dv
@@ -139,6 +134,7 @@ func downloadrelease(hver int, mver int, fver int, dver int)  ([]byte,error) {
                 }
             }
         }
+        // check version
         if finfo.Mv != mver || finfo.Fv != fver || finfo.Dv != dver {
             fmt.Printf("find upgrade img %s\n", finfo.File)
             binpath := filepath.Join(dir, "upgrade.bin")

@@ -31,43 +31,17 @@ var (
 
 // MainnetChainConfig is the chain parameters to run a node on the main network.
 var MainnetChainConfig = &ChainConfig{
-	ChainId: big.NewInt(1),
+	ChainId: big.NewInt(269),
 	Prometheus: &PrometheusConfig{
 		Period: 3,
 		Epoch:  30000,
 	},
 }
 
-//同步控制逻辑参数
-const (
-	forceSyncCycle = 10 * time.Second //区块同步周期时间
-	txChanSize     = 20000            //接收交易事件缓冲，等待广播
-	// This is the target size for the packs of transactions sent by txsyncLoop.
-	// A pack can get larger than this if a single transactions exceeds this size.
-	txsyncPackSize = 100 * 1024 // 一般情况下状态包的大小，为了减小发送次数
-)
-
-//同步peer的记忆配置
-const (
-	//记忆peer的最大交易数量
-	maxKnownTxs    = 1000000 // Maximum transactions hashes to keep in the known list (prevent DOS) //记忆peer的最大区块数量
-	maxKnownBlocks = 100000  // Maximum block hashes to keep in the known list (prevent DOS)
-)
-
-//同步对peer的配置
-const (
-	//同步的peer最大允许缺少hash项
-	maxLackingHashes = 4096 // Maximum number of entries allowed on the list or lacking items
-	//计算吞吐量的一个参数
-	measurementImpact = 0.1 // The impact a single measurement has on a peer's final throughput value.
-)
-
-//同步任务队列最大缓冲区块数
 var blockCacheLimit = 8192 // Maximum number of blocks to cache before throttling the download
 
-//拉取的一些参数配置
+// puller parameter
 const (
-	//拉取区块超时时间
 	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
 	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
 	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
@@ -77,7 +51,7 @@ const (
 	blockLimit    = 64                     // Maximum number of unique blocks a peer may have delivered
 )
 
-//同步器配置参数
+// syncer parameter
 var (
 	MaxHashFetch    = 512 // Amount of hashes to be fetched per retrieval request
 	MaxBlockFetch   = 128 // Amount of blocks to be fetched per retrieval request
@@ -110,9 +84,9 @@ var (
 	fsCriticalTrials       = uint32(32) // Number of times to retry in the cricical section before bailing
 )
 
-//可兼容的ChainID : 除了当前ChainId 还能兼容的另外的ChainId
+// Compatible ChainID, different with current chainId
 var (
-	CompatibleChainId = big.NewInt(269)
+	CompatibleChainId = big.NewInt(1)
 )
 
 type ChainConfig struct {

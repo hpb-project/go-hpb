@@ -35,12 +35,13 @@ import (
 	"time"
 )
 
-// 验证头部，对外调用接口
+
+// Verify one header
 func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool, mode config.SyncMode) error {
 	return c.verifyHeader(chain, header, nil, mode)
 }
 
-// 批量验证
+// Verify the headers
 func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool, mode config.SyncMode) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
@@ -60,11 +61,6 @@ func (c *Prometheus) VerifyHeaders(chain consensus.ChainReader, headers []*types
 }
 
 func (c *Prometheus) SetNetTopology(chain consensus.ChainReader, headers []*types.Header) {
-	//for i, header := range headers {
-	//	if (i%consensus.HpbNodeCheckpointInterval == 0) && (i != 1) {
-	//		c.SetNetTypeByOneHeader(chain, header, headers[:i])
-	//	}
-	//}
 	c.SetNetTypeByOneHeader(chain, headers[len(headers)-1], nil)
 }
 
@@ -79,7 +75,7 @@ func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *
 	SetNetNodeType(snap)
 }
 
-// 批量验证，为了避免，支持批量传入
+
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
@@ -87,23 +83,13 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
-	//if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 	if header.Time.Cmp(new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(c.config.Period))) > 0 {
 		log.Error("errInvalidChain occur in (c *Prometheus) verifyHeader()", "header.Time", header.Time, "big.NewInt(time.Now().Unix())", big.NewInt(time.Now().Unix()))
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
 	checkpoint := (number % consensus.HpbNodeCheckpointInterval) == 0
-	//if checkpoint && header.Coinbase != (common.Address{}) {
-	//	return consensus.ErrInvalidCheckpointBeneficiary
-	//}
-	// Nonces must be 0x00..0 or 0xff..f, zeroes enforced on checkpoints
-	//if !bytes.Equal(header.Nonce[:], consensus.NonceAuthVote) && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
-	//	return consensus.ErrInvalidVote
-	//}
-	//if checkpoint && !bytes.Equal(header.Nonce[:], consensus.NonceDropVote) {
-	//	return consensus.ErrInvalidCheckpointVote
-	//}
+
 	// Check that the extra-data contains both the vanity and signature
 	extra, err := types.BytesToExtraDetail(header.Extra)
 	if err != nil {
@@ -119,10 +105,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	if !checkpoint && len(extra.GetNodes()) != 0 {
 		return consensus.ErrExtraSigners
 	}
-	//if checkpoint && signersBytes%common.AddressLength != 0 {
-	//	log.Info("at checkpoint", "checkpoint",checkpoint)
-	//	return consensus.ErrInvalidCheckpointSigners
-	//}
+
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != (common.Hash{}) {
 		return consensus.ErrInvalidMixDigest
@@ -175,26 +158,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	if parent.Time.Uint64()+c.config.Period > header.Time.Uint64() {
 		return consensus.ErrInvalidTimestamp
 	}
-	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	/*
-		snap, err := voting.GetHpbNodeSnap(c.db, c.recents,c.signatures,c.config,chain, number, header.ParentHash, parents)
-		if err != nil {
-			return err
-		}
-		// If the block is a checkpoint block, verify the signerHash list
-		if number%consensus.HpbNodeCheckpointInterval == 0 {
-			//获取出当前快照的内容, snap.Signers 实际为hash
-			log.Info("the block is at epoch checkpoint", "block number",number)
-			signers := make([]byte, len(snap.Signers)*common.AddressLength)
-			for i, signerHash := range snap.GetHpbNodes() {
-				copy(signers[i*common.AddressLength:], signerHash[:])
-			}
-			extraSuffix := len(header.Extra) - consensus.ExtraSeal
-			if !bytes.Equal(header.Extra[consensus.ExtraVanity:extraSuffix], signers) {
-				return consensus.ErrInvalidCheckpointSigners
-			}
-		}
-	*/
+
 	if number > consensus.StageNumberIII && mode == config.FullSync {
 
 		lastheader := chain.GetHeader(header.ParentHash, number-1)
@@ -224,11 +188,10 @@ func (c *Prometheus) VerifyUncles(chain consensus.ChainReader, block *types.Bloc
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 //in the header satisfies the consensus protocol requirements.
 func (c *Prometheus) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	//return c.verifySeal(chain, header, nil)
 	return nil
 }
 
-// 验证封装的正确性，判断是否满足共识算法的需求
+// verify the signature and other logics
 func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	// Verifying the genesis block is not supported
 
@@ -312,15 +275,13 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		}
 	}
 
-	// false &&
-	if /*mode == config.FullSync && */ config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
+	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
 		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
 
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
 			if !c.hboe.HWCheck() {
 				return consensus.Errboehwcheck
 			}
-			//parentheader := chain.GetHeader(header.ParentHash, number-1)
 			if parentheader == nil {
 				log.Error("verifySeal GetHeaderByNumber", "fail", "header is nil")
 				return consensus.ErrInvalidblockbutnodrop
@@ -411,10 +372,16 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	if state == nil {
 		return nil, nil, errors.New("chain stateAt return nil")
 	}
-	err, bootnodeinfp := c.GetNodeinfoFromContract(chain, header, state)
+	var err error
+	var bootnodeinfp []p2p.HwPair
+	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		err, bootnodeinfp = c.GetNodeinfoFromNewContract(chain, header, state)
+	} else {
+		err, bootnodeinfp = c.GetNodeinfoFromContract(chain, header, state)
+	}
 	if nil != err || len(bootnodeinfp) == 0 || bootnodeinfp == nil {
 		log.Debug("GetNodeinfoFromContract err", "value", err)
-		//return err
 	GETBOOTNODEINFO:
 		bootnodeinfp = p2p.PeerMgrInst().GetHwInfo()
 		if bootnodeinfp == nil || len(bootnodeinfp) == 0 {
@@ -435,7 +402,6 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 			return nil, nil, err
 		}
 	}
-	//log.Error("------------test-------------","bootnodeinfp", bootnodeinfp)
 	addrlist := make([]common.Address, 0, len(bootnodeinfp))
 	for _, v := range bootnodeinfp {
 		addrlist = append(addrlist, common.HexToAddress(strings.Replace(v.Adr, " ", "", -1)))
@@ -461,9 +427,13 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	}
 
 	//get all votes
-	err, _, voteres := c.GetVoteRes(chain, header, state)
+	var voteres map[common.Address]big.Int
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		err, voteres = c.GetVoteResFromNewContract(chain, header, state)
+	} else {
+		err, _, voteres = c.GetVoteRes(chain, header, state)
+	}
 	if nil != err {
-		//return false, err
 		log.Debug("GetVoteRes return err, please deploy contract!")
 		voteres = make(map[common.Address]big.Int)
 		for _, v := range addrlist {
@@ -475,7 +445,18 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get bandwith ranking res
 	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
 	//get all balances
-	allbalances, err := c.GetAllBalances(addrlist, state)
+	var allbalances map[common.Address]big.Int
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		errs, hpblist, coinaddresslist := c.GetCoinAddressFromNewContract(chain, header, state)
+		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
+			log.Error("CoinAddress ERR", "errs", errs)
+		}
+		log.Debug("GetCoinAddressFromContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
+		allbalances, err = c.GetAllBalancesByCoin(hpblist, coinaddresslist, state)
+	} else {
+		allbalances, err = c.GetAllBalances(addrlist, state)
+	}
+
 	if err != nil {
 		return nil, nil, err
 	}

@@ -59,66 +59,7 @@ func (w *prometh) networkStats(tips bool) {
 		}
 		// Client connected one way or another, run health-checks
 		services := make(map[string]string)
-		/*
-		logger.Debug("Checking for nginx availability")
-		if infos, err := checkNginx(client, w.network); err != nil {
-			if err != ErrServiceUnknown {
-				services["nginx"] = err.Error()
-			}
-		} else {
-			services["nginx"] = infos.String()
-		}
-		logger.Debug("Checking for ethstats availability")
-		if infos, err := checkEthstats(client, w.network); err != nil {
-			if err != ErrServiceUnknown {
-				services["ethstats"] = err.Error()
-			}
-		} else {
-			services["ethstats"] = infos.String()
-			protips.ethstats = infos.config
-		}
-		logger.Debug("Checking for bootnode availability")
-		if infos, err := checkNode(client, w.network, true); err != nil {
-			if err != ErrServiceUnknown {
-				services["bootnode"] = err.Error()
-			}
-		} else {
-			services["bootnode"] = infos.String()
 
-			protips.genesis = string(infos.genesis)
-			protips.bootFull = append(protips.bootFull, infos.enodeFull)
-			if infos.enodeLight != "" {
-				protips.bootLight = append(protips.bootLight, infos.enodeLight)
-			}
-		}
-		logger.Debug("Checking for sealnode availability")
-		if infos, err := checkNode(client, w.network, false); err != nil {
-			if err != ErrServiceUnknown {
-				services["sealnode"] = err.Error()
-			}
-		} else {
-			services["sealnode"] = infos.String()
-			protips.genesis = string(infos.genesis)
-		}
-		logger.Debug("Checking for faucet availability")
-		if infos, err := checkFaucet(client, w.network); err != nil {
-			if err != ErrServiceUnknown {
-				services["faucet"] = err.Error()
-			}
-		} else {
-			services["faucet"] = infos.String()
-		}
-
-
-		logger.Debug("Checking for dashboard availability")
-		if infos, err := checkDashboard(client, w.network); err != nil {
-			if err != ErrServiceUnknown {
-				services["dashboard"] = err.Error()
-			}
-		} else {
-			services["dashboard"] = infos.String()
-		}
-		*/
 		// All status checks complete, report and check next server
 		delete(w.services, server)
 		for service := range services {

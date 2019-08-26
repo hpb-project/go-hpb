@@ -75,22 +75,14 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 var DefaultConfig = Nodeconfig{
 	SyncMode: FastSync,
 	DataDir:  DefaultDataDir(),
-	//DefaultBlockChainConfig:              downloader.FastSync,
 	NetworkId:     1,
 	LightPeers:    20,
 	DatabaseCache: 128,
 	GasPrice:      big.NewInt(18 * Shannon),
 	IPCPath:       "ghpb.ipc",
-	/* HPB don't need dymatic gasprice
-	GPO: gasprice.Config{
-		Blocks:     10,
-		Percentile: 50,
-	},
-	*/
 	MaxTrieCacheGen: uint16(120),
 }
 
-//TODO: shanlin
 type GpoConfig struct {
 	Blocks     int
 	Percentile int
@@ -141,7 +133,6 @@ type Nodeconfig struct {
 	GasPrice     *big.Int
 
 	// Gas Price Oracle options,HPB don't need dynamic gas price
-	//TODO: shanlin
 	GPO GpoConfig
 
 	// Enables tracking of SHA3 preimages in the VM
@@ -174,8 +165,6 @@ type Nodeconfig struct {
 	// relative), then that specific path is enforced. An empty path disables IPC.
 	IPCPath string `toml:",omitempty"`
 
-	//RpcAPIs       []rpc.API   // List of APIs currently provided by the node
-
 	DefaultAddress common.Address
 
 	//1:testmode and don't nedd boe  0:standard mode and need boe
@@ -194,24 +183,6 @@ func (c *Nodeconfig) NodeDB() string {
 		return "" // ephemeral
 	}
 	return c.ResolvePath(DatadirNodeDatabase)
-}
-
-// NodeName returns the devp2p node identifier.
-func (c *Nodeconfig) NodeName() string {
-	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Geth", keep that.
-	if name == "geth" || name == "geth-testnet" {
-		name = "Geth"
-	}
-	if c.UserIdent != "" {
-		name += "/" + c.UserIdent
-	}
-	if c.Version != "" {
-		name += "/v" + c.Version
-	}
-	name += "/" + runtime.GOOS + "-" + runtime.GOARCH
-	name += "/" + runtime.Version()
-	return name
 }
 
 func (c *Nodeconfig) name() string {
@@ -295,7 +266,6 @@ func (c *Nodeconfig) NodeKey() error {
 	return nil
 }
 
-// TODO: shanlin to del this function
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
@@ -448,7 +418,6 @@ func (c *Nodeconfig) ResolvePath(path string) string {
 			oldpath = filepath.Join(c.DataDir, path)
 		}
 		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
 			return oldpath
 		}
 	}

@@ -198,12 +198,12 @@ func newUDP(priv *ecdsa.PrivateKey,c conn, natm nat.Interface, nodeDBPath string
 		if !realaddr.IP.IsLoopback() {
 			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "hpb discovery")
 		}
-		// TODO: react to external IP changes over time.
+
 		if ext, err := natm.ExternalIP(); err == nil {
 			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
 		}
 	}
-	// TODO: separate TCP port
+
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
 	tab, err := newTable(udp, PubkeyID(&priv.PublicKey), realaddr, nodeDBPath)
 	if err != nil {
@@ -219,7 +219,6 @@ func newUDP(priv *ecdsa.PrivateKey,c conn, natm nat.Interface, nodeDBPath string
 func (t *udp) close() {
 	close(t.closing)
 	t.conn.Close()
-	// TODO: wait for the loops to end.
 }
 
 // pending adds a reply callback to the pending reply queue.
@@ -349,10 +348,6 @@ const (
 var (
 	headSpace = make([]byte, headSize)
 )
-
-func init() {
-
-}
 
 func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 	packet, err := encodePacket(t.priv, ptype, req)
@@ -538,7 +533,6 @@ func (req *NodeRes) name() string { return "NODERES" }
 
 
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
-	// TODO: maybe check for ReplyTo field in callback to measure RTT
 	errc := t.pending(toid, pongPacket, func(interface{}) bool { return true })
 	t.send(toaddr, pingPacket, &ping{
 		Version:    Version,
@@ -576,7 +570,7 @@ func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 	log.Trace("Send get nodes message","ToID",toid,"Addr",toaddr.String())
 
 	err := <-errRes
-	log.Debug("Get nodes list form boot node","NodesCount",len(nodes))
+	log.Trace("Get nodes list form boot node","NodesCount",len(nodes))
 
 	return nodes, err
 }

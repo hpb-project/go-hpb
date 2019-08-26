@@ -61,7 +61,6 @@ type HpbProto struct {
 	statMining  StatMining
 }
 
-// HPB 支持的协议消息
 const ProtoName        = "hpb"
 var ProtocolVersions   = []uint{ProtoVersion100}
 const ProtoVersion100  uint   =  100
@@ -132,28 +131,6 @@ func (hp *HpbProto) handle(p *Peer) error {
 		}
 	}()
 
-	///////////////////////////////////////////
-	///////////////////////////////////////////
-
-
-	//our := &exchangeData{
-	//	Version: 0xFFAA,
-	//}
-	//p.log.Debug("Do hpb exchange data.","ours",our)
-	//there,err := p.Exchange(our)
-	//if  err != nil {
-	//	p.log.Debug("Hpb exchange data failed in peer.", "err", err)
-	//	return err
-	//}
-	//p.log.Info("Do hpb exchange data OK.","there",there)
-
-
-
-	//TODO bonding hardware info
-	//p.log.Info("Do do bond hardware OK.")
-
-	///////////////////////////////////////////
-	///////////////////////////////////////////
 	if hp.chanStatus == nil {
 		p.log.Error("this no chan status callback")
 		return errProtNoStatusCB
@@ -174,9 +151,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.log.Debug("Hpb peer registration failed", "err", err)
 		return err
 	}
-	//defer hp.protocolRemovePeer(p.id)
 
-	//&& p.remoteType!=discover.BootNode &&
 	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
 		hp.onAddPeer(p)
 		p.msgLooping = true
@@ -335,8 +310,6 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 
 	self := p.ntab.Self().ID
 	toBondNode := make([]*discover.Node, 0, len(request.Nodes))
-	//log.Error("############","self",self,"Nodes",request.Nodes)
-	//log.Error("############","Peers",PeerMgrInst().PeersAll())
 	nodes := p.ntab.FindNodes()
 	log.Debug("Received nodes from remote", "requestlen", len(request.Nodes), "len buckets", len(nodes))
 	log.Trace("nodeInfo", "received:", request.Nodes, "buckets", nodes)
@@ -347,7 +320,6 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 		}
 		bInbuckets := false
 		pid := fmt.Sprintf("%x", n.ID[0:8])
-		//p.log.Error("############","pid",pid,"peer", PeerMgrInst().Peer(pid))
 		if btest {
 			for _, node := range nodes {
 				nodeid := fmt.Sprintf("%x", node.ID[0:8])
@@ -366,28 +338,24 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 		}
 	}
 
-	//if len(toBondNode) > 0 {
-	//	log.Trace("Discovery new nodes to bonding.", "Nodes", toBondNode)
-	//	go p.ntab.Bondall(toBondNode)
-
-	//}
-
 	return nil
 }
 ////////////////////////////////////////////////////////
 
 func (hp *HpbProto) proBondall(p *Peer) {
-	log.Info("proBondall start")
+	log.Debug("proBondall start")
 	timer := time.NewTimer(15 * time.Second)
 	defer timer.Stop()
 	toBondNode := make([]*discover.Node, 0, 100)
 	var lock sync.RWMutex
-	//这里还缺少一个退出机制
 	for {
 		select {
+		case <-p.closed:
+			log.Info("proBondall stop by peer disconnected.")
+			return
 		case <-timer.C:
 			if len(toBondNode) > 0 {
-				log.Info("start proBondall", "lenbond", len(toBondNode))
+				log.Debug("start proBondall", "lenbond", len(toBondNode))
 				lock.RLock()
 				p.ntab.Bondall(toBondNode)
 				lock.RUnlock()
@@ -400,10 +368,8 @@ func (hp *HpbProto) proBondall(p *Peer) {
 		case bondnode := <-p.chbond:
 			btobond := true
 			bondnodeid := fmt.Sprintf("%x", bondnode.ID[:])
-			//log.Info("node:", "bondinfo", bondnodeid)
 			for _, node := range toBondNode {
 				tobondid := fmt.Sprintf("%x", node.ID[:])
-				//log.Info("node:", "nodeinfo", tobondid)
 				if tobondid == bondnodeid {
 					btobond = false
 					break

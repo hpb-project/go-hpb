@@ -193,11 +193,6 @@ func drop(slice []Wallet, wallets ...Wallet) []Wallet {
 
 func GetManager() *Manager {
 	if INSTANCE.Load() == nil {
-		//am,_,err := makeAccountManager(false,"",node.DefaultDataDir())
-		//if err != nil {
-		//	return nil
-		//}
-		//INSTANCE.Store(am)
 		return nil
 	}
 	return INSTANCE.Load().(*Manager)

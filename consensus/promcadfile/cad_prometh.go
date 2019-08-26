@@ -37,7 +37,7 @@ type config struct {
 	genesis []CadWinner // Genesis block to cache for node deploys
 }
 
-// 将数据写入到文件中
+// save configs to file
 func (c config) flush() {
 	os.MkdirAll(filepath.Dir(c.path), 0755)
 
@@ -47,11 +47,10 @@ func (c config) flush() {
 	}
 }
 
-// prometh 结构体
 type prometh struct {
 	network string        // Network name to manage
 	conf    config        // Configurations from previous runs
-	in      *bufio.Reader // 处理流文件
+	in      *bufio.Reader //
 }
 
 // read reads a single line from stdin, trimming if from spaces.

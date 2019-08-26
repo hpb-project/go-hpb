@@ -73,8 +73,6 @@ type StateTransition struct {
 
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
-//
-// TODO convert to uint64
 func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 	igas := new(big.Int)
 	if contractCreation {
@@ -101,7 +99,6 @@ func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
-	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
 		evm:        evm,
 		gp:         gp,
@@ -110,14 +107,11 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 		initialGas: new(big.Int),
 		value:      msg.Value(),
 		data:       msg.Data(),
-		//native:     nativeCall,
 		state: evm.StateDB,
 	}
 }
 func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
-	//nativeCall := len(msg.Data()) == 0
 	return &StateTransition{
-		//evm:        evm,
 		gp:         gp,
 		msg:        msg,
 		gasPrice:   msg.GasPrice(),
@@ -125,7 +119,6 @@ func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.State
 		value:      msg.Value(),
 		data:       msg.Data(),
 		header:     header,
-		//native:     nativeCall,
 		state:  statedb,
 		author: author,
 	}
@@ -237,7 +230,6 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	from := st.msg.From()
 	to := st.to().Address()
 
-	//intrinsicGas := new(big.Int).SetUint64(config.TxGas)
 	intrinsicGas := IntrinsicGas(st.data, false)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
@@ -283,7 +275,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
-	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation)
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, hvm.ErrOutOfGas

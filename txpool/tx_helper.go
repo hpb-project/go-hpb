@@ -18,7 +18,6 @@ type SendTxArgs struct {
 	Value    *hexutil.Big    `json:"value"`
 	Data     hexutil.Bytes   `json:"data"`
 	ExData     types.TxExdata   `json:"exdata" rlp:"-"`
-	//ExData     hexutil.Bytes   `json:"exdata"`
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 }
 

@@ -297,8 +297,6 @@ func (ah *AddressHash) SetHashBytes(b []byte) {
 	if len(b) > len(ah) {
 		b = b[len(b)-AddressHashLength:]
 	}
-	//fmt.Println("AddressLength %d",AddressHashLength)
-	//fmt.Println("len(b) %d",len(b))
 	copy(ah[AddressHashLength-len(b):], b)
 }
 

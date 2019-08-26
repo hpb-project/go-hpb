@@ -166,11 +166,6 @@ type NetworkConfig struct {
 	// live nodes in the network.
 	NodeDatabase string `toml:",omitempty"`
 
-	// Protocols should contain the protocols supported
-	// by the server. Matching protocols are launched for
-	// each peer.
-	//Protocols []p2p.Protocol `toml:"-"`
-
 	// If ListenAddr is set to a non-nil address, the server
 	// will listen for incoming connections.
 	//
@@ -183,10 +178,6 @@ type NetworkConfig struct {
 	// is used to make the listening port available to the
 	// Internet.
 	NAT nat.Interface `toml:",omitempty"`
-
-	// If Dialer is set to a non-nil value, the given Dialer
-	// is used to dial outbound peer connections.
-	//Dialer p2p.NodeDialer `toml:"-"`
 
 	// If NoDial is true, the server will not dial any peers.
 	NoDial bool `toml:",omitempty"`

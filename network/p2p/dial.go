@@ -55,13 +55,12 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 }
 
 type dialstate struct {
-	//maxDynDials int
-	ntab        discoverTable
-	netrestrict *netutil.Netlist
+	ntab        discoverTable   //interface of the table.
+	netrestrict *netutil.Netlist  //black ip list
 
-	dialing map[discover.NodeID]connFlag
-	static  map[discover.NodeID]*dialTask
-	hist    *dialHistory
+	dialing map[discover.NodeID]connFlag   //nodes list for dialing
+	static  map[discover.NodeID]*dialTask  //static nodes list. not used now.
+	hist    *dialHistory       // dial history node
 
 	start     time.Time        // time when the dialer was first used
 	bootnodes []*discover.Node // default dials when there are no peers
@@ -72,10 +71,7 @@ type discoverTable interface {
 	Close()
 	FindNodes() []*discover.Node
 	Bondall(nodes []*discover.Node) int
-
-	//AddNode(node *discover.Node)
 	RemoveNode(nid discover.NodeID)
-	//HasNode(nid discover.NodeID) bool
 }
 
 // the dial history remembers recent dials.

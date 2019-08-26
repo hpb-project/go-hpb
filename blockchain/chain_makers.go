@@ -87,7 +87,7 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	var err error
 
 	if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(b.statedb.GetCode(*tx.To())) > 0) {
-		receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
+		_, receipt, _, err = ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed)
 		if err != nil {
 
 		}
@@ -177,7 +177,6 @@ func GenerateChain(cfg *config.ChainConfig, parent *types.Block, db hpbdb.Databa
 		if gen != nil {
 			gen(i, b)
 		}
-		//ethash.AccumulateRewards(config, statedb, h, b.uncles)
 		root, err := statedb.CommitTo(db, true)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
@@ -218,34 +217,6 @@ func makeHeader(config *config.ChainConfig, parent *types.Block, state *state.St
 		Time:       time,
 	}
 }
-
-// newCanonical creates a chain database, and injects a deterministic canonical
-// chain. Depending on the full flag, if creates either a full block chain or a
-// header only chain.
-/*
-func newCanonical(n int, full bool) (hpbdb.Database, *BlockChain, error) {
-	// Initialize a fresh chain with only a genesis block
-	gspec := new(Genesis)
-	db, _ := hpbdb.NewMemDatabase()
-	genesis := gspec.MustCommit(db)
-
-	blockchain, _ := NewBlockChain(db, config.MainnetChainConfig, prometheus.New(nil,nil))
-	// Create and inject the requested chain
-	if n == 0 {
-		return db, blockchain, nil
-	}
-	if full {
-		// Full block-chain requested
-		blocks := makeBlockChain(genesis, n, db, canonicalSeed)
-		_, err := blockchain.InsertChain(blocks)
-		return db, blockchain, err
-	}
-	// Header-only chain requested
-	headers := makeHeaderChain(genesis.Header(), n, db, canonicalSeed)
-	_, err := blockchain.InsertHeaderChain(headers, 1)
-	return db, blockchain, err
-}
-*/
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
 func makeHeaderChain(parent *types.Header, n int, db hpbdb.Database, seed int) []*types.Header {

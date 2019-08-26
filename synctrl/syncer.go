@@ -394,16 +394,6 @@ func (this *Syncer) qosTuner() {
 // requestTTL returns the current timeout allowance for a single sync request
 // to finish under.
 func (this *Syncer) requestTTL() time.Duration {
-	/*
-		var (
-			rtt  = time.Duration(atomic.LoadUint64(&this.rttEstimate))
-			conf = float64(atomic.LoadUint64(&this.rttConfidence)) / 1000000.0
-		)
-		ttl := time.Duration(ttlScaling) * time.Duration(float64(rtt)/conf)
-		if ttl > ttlLimit {
-			ttl = ttlLimit
-		}
-	*/
 	return ttlLimit
 }
 

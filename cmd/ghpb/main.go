@@ -28,7 +28,6 @@ import (
 	"github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
 	"github.com/hpb-project/go-hpb/cmd/utils"
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/metrics"
@@ -46,8 +45,6 @@ var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	GitCommit = gitCommit
 	gitCommit = ""
-	// Hpb address of the Geth release oracle.
-	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
 	app = utils.NewApp(gitCommit, "the go-hpb command line interface")
 	// flags that configure the node
@@ -137,7 +134,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = ghpb
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2018 The go-hpb Authors "
+	app.Copyright = "Copyright 2018 The go-hpb Authors "
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -247,8 +244,6 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 		conf.Node.DefaultAddress = account.Address
 	}
 
-	//set rpc aii
-	//utils.SetNodeAPI(&conf.Node, stack)
 	// Start up the node itself
 	utils.StartNode(stack)
 	// Register wallet event handlers to open and auto-derive wallets

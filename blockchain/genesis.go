@@ -200,19 +200,6 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig
 }
 
 func (g *Genesis) configOrDefault(ghash common.Hash) *config.ChainConfig {
-	
-	/*
-	switch {
-	case g != nil:
-		return g.Config
-	case ghash == config.MainnetGenesisHash:
-		return config.MainnetChainConfig
-	case ghash == config.TestnetGenesisHash:
-		return config.MainnetChainConfig
-	default:
-		return config.MainnetChainConfig
-	}*/
-	
 	return config.MainnetChainConfig
 }
 
@@ -240,9 +227,6 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Difficulty: g.Difficulty,
 		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
-		//CoinbaseHash:   g.CoinbaseHash,
-		//VoteIndex:  new(big.Int).SetUint64(g.VoteIndex),
-		//CandAddress: g.CandAddress,
 		Root:       root,
 		HardwareRandom: g.HardwareRandom,
 	}

@@ -24,7 +24,6 @@ import (
 // hpb protocol version control
 const (
 	ProtocolV111    uint = 100 // match up protocol versions and messages versions
-	SubProtocolV111 uint = 100 // Light Hpb Sub-protocol versions
 )
 
 /*
