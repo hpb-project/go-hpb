@@ -377,6 +377,18 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'getStatediffbyblock',
+			call: 'hpb_getStatediffbyblock',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getStatediffbyblockandTx',
+			call: 'hpb_getStatediffbyblockandTx',
+			params: 2,
+			inputFormatter: [null,null]
+		}),
+		new web3._extend.Method({
 			name: 'sign',
 			call: 'hpb_sign',
 			params: 2,
