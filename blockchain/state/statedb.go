@@ -623,6 +623,10 @@ func (s *StateDB) clearJournalAndRefund() {
 	s.refund = new(big.Int)
 }
 
+func (s *StateDB) ClearRefund() {
+	s.refund = new(big.Int)
+}
+
 // CommitTo writes the state to the given database.
 func (s *StateDB) CommitTo(dbw trie.DatabaseWriter, deleteEmptyObjects bool) (root common.Hash, err error) {
 	s.lock.Lock()
