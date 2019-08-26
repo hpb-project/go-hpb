@@ -149,6 +149,8 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
 */
 import "C"
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -443,13 +445,6 @@ func (boe *BoeHandle) GetVersion() (TVersion, error) {
 	return v, ErrInitFailed
 }
 
-// get boe real random.
-func (boe *BoeHandle) GetRandom() []byte {
-	var ran = make([]byte, 32)
-	C.boe_get_random((*C.uchar)(unsafe.Pointer(&ran[0])))
-	return ran
-}
-
 // get boe id
 func (boe *BoeHandle) GetBoeId() (string, error) {
 	var sn string
@@ -657,7 +652,7 @@ func (boe *BoeHandle) GetRandom() ([]byte, error) {
 	if ret == C.BOE_OK {
 		return result, nil
 	} else {
-		log.Debug("Boe GetNextHash_v2", "ecode:", uint32(ret.ecode))
+		log.Debug("Boe GetRandom", "ecode:", uint32(ret.ecode))
 		return nil, errors.New("Get random failed ")
 	}
 }
