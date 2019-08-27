@@ -95,8 +95,8 @@ type worker struct {
 
 	mu sync.Mutex
 
-	mux  *sub.TypeMux
-	pool *txpool.TxPool
+	mux          *sub.TypeMux
+	pool         *txpool.TxPool
 	chainHeadCh  chan bc.ChainHeadEvent
 	chainHeadSub sub.Subscription
 	chainSideCh  chan bc.ChainSideEvent
@@ -128,9 +128,9 @@ type worker struct {
 
 func newWorker(config *config.ChainConfig, engine consensus.Engine, coinbase common.Address /*eth Backend,*/, mux *sub.TypeMux) *worker {
 	worker := &worker{
-		config: config,
-		engine: engine,
-		mux:    mux,
+		config:         config,
+		engine:         engine,
+		mux:            mux,
 		chainHeadCh:    make(chan bc.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan bc.ChainSideEvent, chainSideChanSize),
 		chainDb:        nil,
@@ -573,20 +573,36 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
-		_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
-		if err != nil {
-			env.state.RevertToSnapshot(snap)
-			return err, nil
+	bNewVersion := env.Block.Number().Uint64() > consensus.NewContractVersion
+	if bNewVersion {
+		if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
+			_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
 		}
-	} else {
-		receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
-		if err != nil {
-			env.state.RevertToSnapshot(snap)
-			return err, nil
+	}else {
+		if  len(tx.Data()) > 0 {
+			_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
+			if err != nil {
+				env.state.RevertToSnapshot(snap)
+				return err, nil
+			}
 		}
 	}
-
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
