@@ -82,24 +82,24 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		//the tx without contract
 		if bNewVersion {
 			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
-				_, receipt, _, errs = ApplyTransaction(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			}
 		} else {
 			if len(tx.Data()) > 0 {
-				_, receipt, _, errs = ApplyTransaction(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				_, receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContract(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				if errs != nil {
 					return nil, nil, nil, errs
 				}
