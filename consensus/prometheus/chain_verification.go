@@ -161,6 +161,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		state, _ := chain.StateAt(lastheader.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
+				log.Error("BAD COIN BASE","miner",header.Coinbase.String())
 				return consensus.ErrInvalidCadaddr
 			}
 		} else {
