@@ -560,12 +560,11 @@ func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByP
 }
 
 func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Address, gp *bc.GasPool) (error, []*types.Log) {
-
 	var receipt *types.Receipt
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	bNewVersion := env.Block.Number().Uint64() > consensus.NewContractVersion
+	bNewVersion := env.header.Number.Uint64() > consensus.NewContractVersion
 	if bNewVersion {
 		if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
 			_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
@@ -580,8 +579,8 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 				return err, nil
 			}
 		}
-	}else {
-		if  len(tx.Data()) > 0 {
+	} else {
+		if len(tx.Data()) > 0 {
 			_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)
 			if err != nil {
 				env.state.RevertToSnapshot(snap)
