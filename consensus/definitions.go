@@ -41,7 +41,7 @@ const BootnodeInfoContractABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"co
 const BootnodeInfoContractAddr = "0xad4ed802c2b6f974f37852c510d241ed44c682c7" //mainnet nodeinfo contract addr
 const BootnodeInfoContractMethodName = "getAllHpbNodes"
 
-const NewContractAddr = "0xfc6d0656c4255da68e8b63d5530b16ba465b8d71"
+const NewContractAddr = "0x8cbd9e0774a7d5a8dc29f9bd9e4ebf4cbaf25eb9"
 const NewContractABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"invokeIndex\",\"type\":\"uint256\"}],\"name\":\"getInvokeContract\",\"outputs\":[{\"name\":\"contractAddr\",\"type\":\"address\"},{\"name\":\"methodId\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 const NewContractMethod = "getInvokeContract"
@@ -69,10 +69,10 @@ var (
 	StageNumberIV  uint64 = 972200
 	StageNumberV   uint64 = 2020000 // BOEHash_v2
 	StageNumberVI  uint64 = 2561790
-	StageNumberVII uint64 = 2896000 //待定 6月23日15时
+	StageNumberVII uint64 = 2320600 //待定 6月23日15时
 	StageNumberRND uint64 = StageNumberV	// BOE Real Random
 
-	NewContractVersion        uint64 = 99999999999
+	NewContractVersion        uint64 = 2321000
 	CadNodeCheckpointInterval uint64 = 200
 )
 
