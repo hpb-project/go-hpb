@@ -72,7 +72,7 @@ var (
 	StageNumberVII uint64 = 2320600 //待定 6月23日15时
 	StageNumberRND uint64 = StageNumberV	// BOE Real Random
 
-	NewContractVersion        uint64 = 2331000
+	NewContractVersion        uint64 = 2331200
 	CadNodeCheckpointInterval uint64 = 200
 )
 
