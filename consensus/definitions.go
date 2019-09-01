@@ -70,7 +70,7 @@ var (
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
 
-	NewContractVersion        uint64 = 99999999999
+	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
 )
 
