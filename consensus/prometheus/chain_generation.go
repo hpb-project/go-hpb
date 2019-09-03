@@ -707,13 +707,13 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	bigA13.Quo(bigA13, big.NewFloat(2))
 	bigA13.Mul(bigA13, ether2weisfloat)
 	bigA13.Mul(bigA13, big.NewFloat(float64(rewardsnum))) //mul interval number
-	log.Info("Reward vote", "totalvote", votecountsfloat, "total reawrd", bigA13)
+	log.Trace("Reward vote", "totalvote", votecountsfloat, "total reawrd", bigA13)
 	for addr, votes := range voteres {
 		tempaddrvotefloat := new(big.Float)
 		tempreward := new(big.Int)
 		tempaddrvotefloat.SetInt(&votes)
 		tempaddrvotefloat.Quo(tempaddrvotefloat, votecountsfloat)
-		log.Info("Reward percent", "votes", votes, "percent", tempaddrvotefloat)
+		log.Trace("Reward percent", "votes", votes, "percent", tempaddrvotefloat)
 		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
 		tempaddrvotefloat.Int(tempreward)
 		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
