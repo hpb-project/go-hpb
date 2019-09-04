@@ -170,12 +170,16 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 	defer self.currentMu.Unlock()
 
 	if atomic.LoadInt32(&self.mining) == 0 {
-		return types.NewBlock(
-			self.current.header,
-			self.current.txs,
-			nil,
-			self.current.receipts,
-		), self.current.state.Copy()
+		if self.current == nil {
+			return nil, nil
+		} else {
+			return types.NewBlock(
+				self.current.header,
+				self.current.txs,
+				nil,
+				self.current.receipts,
+			), self.current.state.Copy()
+		}
 	}
 	return self.current.Block, self.current.state.Copy()
 }
