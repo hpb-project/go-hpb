@@ -85,6 +85,9 @@ func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.hpb.miner.Pending()
+		if block == nil {
+			return state, nil, nil
+		}
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state

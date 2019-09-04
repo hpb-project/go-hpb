@@ -566,7 +566,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 
-	if state == nil || err != nil {
+	if state == nil || header == nil || err != nil {
 		return nil, common.Big0, false, err
 	}
 	// Set sender address or use a default if none specified
