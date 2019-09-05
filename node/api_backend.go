@@ -17,6 +17,7 @@
 package node
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -86,7 +87,7 @@ func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.hpb.miner.Pending()
 		if block == nil {
-			return state, nil, nil
+			return state, nil, errors.New("no pending")
 		}
 		return state, block.Header(), nil
 	}
