@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"strings"
 	"time"
@@ -933,6 +934,11 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx cont
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number
 func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
+
+	if blockNr == rpc.PendingBlockNumber && p2p.PeerMgrInst().GetLocalType() == discover.SynNode {
+		blockNr = rpc.LatestBlockNumber
+	}
+
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
