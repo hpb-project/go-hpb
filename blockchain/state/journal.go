@@ -59,6 +59,11 @@ type (
 		account            *common.Address
 		prevcode, prevhash []byte
 	}
+	valueChange struct {
+		account            *common.Address
+		key 			   common.Hash
+		prevalue           []byte
+	}
 
 	// Changes to other state values.
 	refundChange struct {
@@ -115,6 +120,10 @@ func (ch nonceChange) undo(s *StateDB) {
 
 func (ch codeChange) undo(s *StateDB) {
 	s.getStateObject(*ch.account).setCode(common.BytesToHash(ch.prevhash), ch.prevcode)
+}
+
+func (ch valueChange) undo(s *StateDB) {
+	s.getStateObject(*ch.account).setValue(ch.key, ch.prevalue)
 }
 
 func (ch storageChange) undo(s *StateDB) {

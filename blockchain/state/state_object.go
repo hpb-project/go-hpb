@@ -38,6 +38,7 @@ func (self Code) String() string {
 
 type Storage map[common.Hash]common.Hash
 
+
 func (self Storage) String() (str string) {
 	for key, value := range self {
 		str += fmt.Sprintf("%X : %X\n", key, value)
@@ -50,6 +51,27 @@ func (self Storage) Copy() Storage {
 	cpy := make(Storage)
 	for key, value := range self {
 		cpy[key] = value
+	}
+
+	return cpy
+}
+
+type DataStorage map[common.Hash] []byte
+
+func (self DataStorage) String() (str string) {
+	for key, value := range self {
+		str += fmt.Sprintf("%X : %X\n", key, value)
+	}
+
+	return
+}
+
+func (self DataStorage) Copy() DataStorage {
+	cpy := make(DataStorage)
+	for key, value := range self {
+		nval := make([]byte, 0)
+		copy(nval, value)
+		cpy[key] = nval
 	}
 
 	return cpy
@@ -80,6 +102,9 @@ type stateObject struct {
 
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+
+	cachedValueStorage DataStorage  // Storage entry cache to avoid duplicate reads
+	dirtyValueStorage  DataStorage  // Storage entries that need to be flushed to disk
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -121,6 +146,8 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 		onDirty:       onDirty,
+		cachedValueStorage: make(DataStorage),
+		dirtyValueStorage:  make(DataStorage),
 	}
 }
 
@@ -169,6 +196,36 @@ func (c *stateObject) getTrie(db Database) Trie {
 	return c.trie
 }
 
+// GetValue returns a value in account storage, not limit data length.
+func (self *stateObject) GetValue(db Database, key common.Hash) ([]byte, bool) {
+	value, exists := self.cachedValueStorage[key]
+	if exists {
+		return value, true
+	}
+
+	value = make([]byte, 0)
+	// Load from DB in case it is missing.
+	enc, err := self.getTrie(db).TryGet(key[:])
+	if err != nil {
+		self.setError(err)
+		return value, false
+	}
+
+	if len(enc) > 0 {
+		_, content, _, err := rlp.Split(enc)
+		if err != nil {
+			self.setError(err)
+			return value, false
+		}
+
+		copy(value, content)
+		self.cachedValueStorage[key] = value
+		return value, true
+	}
+
+	return value, false
+}
+
 // GetState returns a value in account storage.
 func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 	value, exists := self.cachedStorage[key]
@@ -214,6 +271,30 @@ func (self *stateObject) setState(key, value common.Hash) {
 	}
 }
 
+
+func (self *stateObject) SetValue(db Database, key common.Hash, value []byte) error {
+	prevalue, _ := self.GetValue(db, key)
+
+	self.db.journal = append(self.db.journal, valueChange{
+		account:  &self.address,
+		key:      key,
+		prevalue: prevalue,
+	})
+	self.setValue(key,value)
+	return nil
+}
+
+
+func (self *stateObject) setValue(key common.Hash, value []byte) {
+	self.cachedValueStorage[key] = value
+	self.dirtyValueStorage[key] = value
+
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db Database) Trie {
 	tr := self.getTrie(db)
@@ -225,6 +306,17 @@ func (self *stateObject) updateTrie(db Database) Trie {
 		}
 		// Encoding []byte cannot fail, ok to ignore the error.
 		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
+		self.setError(tr.TryUpdate(key[:], v))
+	}
+
+	for key, value := range self.dirtyValueStorage {
+		delete(self.dirtyValueStorage, key)
+		if len(value) == 0 {
+			self.setError(tr.TryDelete(key[:]))
+			continue
+		}
+		// Encoding []byte cannot fail, ok to ignore the error.
+		v, _ := rlp.EncodeToBytes(value)
 		self.setError(tr.TryUpdate(key[:], v))
 	}
 	return tr
@@ -301,6 +393,8 @@ func (self *stateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
+	stateObject.dirtyValueStorage = self.dirtyValueStorage.Copy()
+	stateObject.cachedValueStorage = self.dirtyValueStorage.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
