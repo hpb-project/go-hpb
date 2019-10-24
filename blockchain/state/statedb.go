@@ -248,6 +248,17 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	return common.Hash{}
 }
 
+func (self *StateDB) GetValue(a common.Address, b common.Hash) []byte {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	stateObject := self.getStateObject(a)
+	if stateObject != nil {
+		v, _ := stateObject.GetValue(self.db, b)
+		return v
+	}
+	return make([]byte,0)
+}
+
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.
 func (self *StateDB) StorageTrie(a common.Address) Trie {
@@ -326,6 +337,13 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
+	}
+}
+
+func (self *StateDB) SetValue(addr common.Address, key common.Hash, value []byte) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetValue(self.db, key, value)
 	}
 }
 
