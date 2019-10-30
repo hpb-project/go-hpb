@@ -1,7 +1,8 @@
 syntax = "proto3";
 package types;
+// protoc --gogoout=. types.proto
 
-message Sample {
+message Example {
     oneof value {
         ParamAdd add = 2;
         ParamMul mul = 3;

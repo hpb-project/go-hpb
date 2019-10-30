@@ -3,11 +3,9 @@
 
 package types
 
-import (
-	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
-	math "math"
-)
+import proto "github.com/gogo/protobuf/proto"
+import fmt "fmt"
+import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -20,106 +18,106 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type Sample struct {
+type Example struct {
 	// Types that are valid to be assigned to Value:
-	//	*Sample_Add
-	//	*Sample_Mul
-	Value                isSample_Value `protobuf_oneof:"value"`
-	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
-	XXX_unrecognized     []byte         `json:"-"`
-	XXX_sizecache        int32          `json:"-"`
+	//	*Example_Add
+	//	*Example_Mul
+	Value                isExample_Value `protobuf_oneof:"value"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
-func (m *Sample) Reset()         { *m = Sample{} }
-func (m *Sample) String() string { return proto.CompactTextString(m) }
-func (*Sample) ProtoMessage()    {}
-func (*Sample) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d938547f84707355, []int{0}
+func (m *Example) Reset()         { *m = Example{} }
+func (m *Example) String() string { return proto.CompactTextString(m) }
+func (*Example) ProtoMessage()    {}
+func (*Example) Descriptor() ([]byte, []int) {
+	return fileDescriptor_types_d681b234138ff403, []int{0}
 }
-func (m *Sample) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Sample.Unmarshal(m, b)
+func (m *Example) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Example.Unmarshal(m, b)
 }
-func (m *Sample) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Sample.Marshal(b, m, deterministic)
+func (m *Example) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Example.Marshal(b, m, deterministic)
 }
-func (m *Sample) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Sample.Merge(m, src)
+func (dst *Example) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Example.Merge(dst, src)
 }
-func (m *Sample) XXX_Size() int {
-	return xxx_messageInfo_Sample.Size(m)
+func (m *Example) XXX_Size() int {
+	return xxx_messageInfo_Example.Size(m)
 }
-func (m *Sample) XXX_DiscardUnknown() {
-	xxx_messageInfo_Sample.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Sample proto.InternalMessageInfo
-
-type isSample_Value interface {
-	isSample_Value()
+func (m *Example) XXX_DiscardUnknown() {
+	xxx_messageInfo_Example.DiscardUnknown(m)
 }
 
-type Sample_Add struct {
-	Add *ParamAdd `protobuf:"bytes,2,opt,name=add,proto3,oneof"`
-}
-type Sample_Mul struct {
-	Mul *ParamMul `protobuf:"bytes,3,opt,name=mul,proto3,oneof"`
+var xxx_messageInfo_Example proto.InternalMessageInfo
+
+type isExample_Value interface {
+	isExample_Value()
 }
 
-func (*Sample_Add) isSample_Value() {}
-func (*Sample_Mul) isSample_Value() {}
+type Example_Add struct {
+	Add *ParamAdd `protobuf:"bytes,2,opt,name=add,oneof"`
+}
+type Example_Mul struct {
+	Mul *ParamMul `protobuf:"bytes,3,opt,name=mul,oneof"`
+}
 
-func (m *Sample) GetValue() isSample_Value {
+func (*Example_Add) isExample_Value() {}
+func (*Example_Mul) isExample_Value() {}
+
+func (m *Example) GetValue() isExample_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *Sample) GetAdd() *ParamAdd {
-	if x, ok := m.GetValue().(*Sample_Add); ok {
+func (m *Example) GetAdd() *ParamAdd {
+	if x, ok := m.GetValue().(*Example_Add); ok {
 		return x.Add
 	}
 	return nil
 }
 
-func (m *Sample) GetMul() *ParamMul {
-	if x, ok := m.GetValue().(*Sample_Mul); ok {
+func (m *Example) GetMul() *ParamMul {
+	if x, ok := m.GetValue().(*Example_Mul); ok {
 		return x.Mul
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*Sample) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Sample_OneofMarshaler, _Sample_OneofUnmarshaler, _Sample_OneofSizer, []interface{}{
-		(*Sample_Add)(nil),
-		(*Sample_Mul)(nil),
+func (*Example) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _Example_OneofMarshaler, _Example_OneofUnmarshaler, _Example_OneofSizer, []interface{}{
+		(*Example_Add)(nil),
+		(*Example_Mul)(nil),
 	}
 }
 
-func _Sample_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Sample)
+func _Example_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*Example)
 	// value
 	switch x := m.Value.(type) {
-	case *Sample_Add:
+	case *Example_Add:
 		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Add); err != nil {
 			return err
 		}
-	case *Sample_Mul:
+	case *Example_Mul:
 		_ = b.EncodeVarint(3<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Mul); err != nil {
 			return err
 		}
 	case nil:
 	default:
-		return fmt.Errorf("Sample.Value has unexpected type %T", x)
+		return fmt.Errorf("Example.Value has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _Sample_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Sample)
+func _Example_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*Example)
 	switch tag {
 	case 2: // value.add
 		if wire != proto.WireBytes {
@@ -127,7 +125,7 @@ func _Sample_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		}
 		msg := new(ParamAdd)
 		err := b.DecodeMessage(msg)
-		m.Value = &Sample_Add{msg}
+		m.Value = &Example_Add{msg}
 		return true, err
 	case 3: // value.mul
 		if wire != proto.WireBytes {
@@ -135,23 +133,23 @@ func _Sample_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		}
 		msg := new(ParamMul)
 		err := b.DecodeMessage(msg)
-		m.Value = &Sample_Mul{msg}
+		m.Value = &Example_Mul{msg}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _Sample_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Sample)
+func _Example_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*Example)
 	// value
 	switch x := m.Value.(type) {
-	case *Sample_Add:
+	case *Example_Add:
 		s := proto.Size(x.Add)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Sample_Mul:
+	case *Example_Mul:
 		s := proto.Size(x.Mul)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
@@ -175,7 +173,7 @@ func (m *ParamAdd) Reset()         { *m = ParamAdd{} }
 func (m *ParamAdd) String() string { return proto.CompactTextString(m) }
 func (*ParamAdd) ProtoMessage()    {}
 func (*ParamAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d938547f84707355, []int{1}
+	return fileDescriptor_types_d681b234138ff403, []int{1}
 }
 func (m *ParamAdd) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ParamAdd.Unmarshal(m, b)
@@ -183,8 +181,8 @@ func (m *ParamAdd) XXX_Unmarshal(b []byte) error {
 func (m *ParamAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ParamAdd.Marshal(b, m, deterministic)
 }
-func (m *ParamAdd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ParamAdd.Merge(m, src)
+func (dst *ParamAdd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ParamAdd.Merge(dst, src)
 }
 func (m *ParamAdd) XXX_Size() int {
 	return xxx_messageInfo_ParamAdd.Size(m)
@@ -221,7 +219,7 @@ func (m *ParamMul) Reset()         { *m = ParamMul{} }
 func (m *ParamMul) String() string { return proto.CompactTextString(m) }
 func (*ParamMul) ProtoMessage()    {}
 func (*ParamMul) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d938547f84707355, []int{2}
+	return fileDescriptor_types_d681b234138ff403, []int{2}
 }
 func (m *ParamMul) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ParamMul.Unmarshal(m, b)
@@ -229,8 +227,8 @@ func (m *ParamMul) XXX_Unmarshal(b []byte) error {
 func (m *ParamMul) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ParamMul.Marshal(b, m, deterministic)
 }
-func (m *ParamMul) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ParamMul.Merge(m, src)
+func (dst *ParamMul) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ParamMul.Merge(dst, src)
 }
 func (m *ParamMul) XXX_Size() int {
 	return xxx_messageInfo_ParamMul.Size(m)
@@ -256,23 +254,23 @@ func (m *ParamMul) GetB() int64 {
 }
 
 func init() {
-	proto.RegisterType((*Sample)(nil), "types.Sample")
+	proto.RegisterType((*Example)(nil), "types.Example")
 	proto.RegisterType((*ParamAdd)(nil), "types.ParamAdd")
 	proto.RegisterType((*ParamMul)(nil), "types.ParamMul")
 }
 
-func init() { proto.RegisterFile("types.proto", fileDescriptor_d938547f84707355) }
+func init() { proto.RegisterFile("types.proto", fileDescriptor_types_d681b234138ff403) }
 
-var fileDescriptor_d938547f84707355 = []byte{
-	// 149 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_types_d681b234138ff403 = []byte{
+	// 150 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2e, 0xa9, 0x2c, 0x48,
-	0x2d, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0xa2, 0xb9, 0xd8, 0x82,
-	0x13, 0x73, 0x0b, 0x72, 0x52, 0x85, 0x94, 0xb9, 0x98, 0x13, 0x53, 0x52, 0x24, 0x98, 0x14, 0x18,
-	0x35, 0xb8, 0x8d, 0xf8, 0xf5, 0x20, 0x6a, 0x03, 0x12, 0x8b, 0x12, 0x73, 0x1d, 0x53, 0x52, 0x3c,
-	0x18, 0x82, 0x40, 0xb2, 0x20, 0x45, 0xb9, 0xa5, 0x39, 0x12, 0xcc, 0x98, 0x8a, 0x7c, 0x4b, 0x73,
-	0x40, 0x8a, 0x72, 0x4b, 0x73, 0x9c, 0xd8, 0xb9, 0x58, 0xcb, 0x12, 0x73, 0x4a, 0x53, 0x95, 0xd4,
-	0xb8, 0x38, 0x60, 0x06, 0x08, 0xf1, 0x70, 0x31, 0x26, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0x30, 0x07,
-	0x31, 0x26, 0x82, 0x78, 0x49, 0x60, 0xab, 0x98, 0x83, 0x18, 0x93, 0xe0, 0xea, 0x7c, 0x4b, 0x73,
-	0xf0, 0xa9, 0x4b, 0x62, 0x03, 0x3b, 0xdd, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xa1, 0x8c, 0xcd,
-	0x0a, 0xc9, 0x00, 0x00, 0x00,
+	0x2d, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0x62, 0xb8, 0xd8, 0x5d,
+	0x2b, 0x12, 0x73, 0x0b, 0x72, 0x52, 0x85, 0x94, 0xb9, 0x98, 0x13, 0x53, 0x52, 0x24, 0x98, 0x14,
+	0x18, 0x35, 0xb8, 0x8d, 0xf8, 0xf5, 0x20, 0x8a, 0x03, 0x12, 0x8b, 0x12, 0x73, 0x1d, 0x53, 0x52,
+	0x3c, 0x18, 0x82, 0x40, 0xb2, 0x20, 0x45, 0xb9, 0xa5, 0x39, 0x12, 0xcc, 0x98, 0x8a, 0x7c, 0x4b,
+	0x73, 0x40, 0x8a, 0x72, 0x4b, 0x73, 0x9c, 0xd8, 0xb9, 0x58, 0xcb, 0x12, 0x73, 0x4a, 0x53, 0x95,
+	0xd4, 0xb8, 0x38, 0x60, 0x06, 0x08, 0xf1, 0x70, 0x31, 0x26, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0x30,
+	0x07, 0x31, 0x26, 0x82, 0x78, 0x49, 0x60, 0xab, 0x98, 0x83, 0x18, 0x93, 0xe0, 0xea, 0x7c, 0x4b,
+	0x73, 0xf0, 0xa9, 0x4b, 0x62, 0x03, 0xbb, 0xdd, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0x88, 0x55,
+	0xf8, 0x9f, 0xca, 0x00, 0x00, 0x00,
 }
