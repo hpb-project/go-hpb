@@ -1,0 +1,19 @@
+syntax = "proto3";
+package types;
+
+message Sample {
+    oneof value {
+        ParamAdd add = 2;
+        ParamMul mul = 3;
+    }
+}
+
+message ParamAdd {
+    int64 a = 1;
+    int64 b = 2;
+}
+
+message ParamMul {
+    int64 a = 1;
+    int64 b = 2;
+}
