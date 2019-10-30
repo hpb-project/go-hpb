@@ -50,6 +50,49 @@ type TxExdata struct {
 	Reserve   [28]byte `json:"reserve" rlp:"-"`   //orther  0x00
 }
 
+type TxPayload struct {
+	TxPath      string          `json:"txpath"`   //type sting
+	Data        []byte          `json:"data"`     //json data
+}
+
+type LockedTx struct {
+	LockType    byte        `json:"LockType"`
+	Amount      uint        `json:"Amount"`
+}
+
+type RegisterBOE struct {
+	Coinbase        common.Address      `json:"Coinbase"`
+	HID             common.Hash         `json:"HID"`
+	CID             common.Hash         `json:"CID"`
+	HoldAddr        common.Address      `json:"HoldAddr"`
+}
+
+type ModifyBOEInfo struct {
+	Coinbase        common.Address      `json:"Coinbase"`
+	HID             common.Hash         `json:"HID"`
+	HoldAddr        common.Address      `json:"HoldAddr"`
+}
+
+type RegisterNode struct {
+	Comment         string              `json:"Comment"`
+	Title           string              `json:"Title"`
+}
+
+type StakingParam struct {
+	MinDeposit        uint                `json:"MinDeposit"`
+	Commission        uint                `json:"Commission"`
+}
+
+type VoteNode struct {
+	VoteType        byte                `json:"VoteType"`
+	Coinbase        common.Address      `json:"Coinbase"`
+	Amount          uint                `json:"Amount"`
+}
+
+type VoteNodes struct {
+	Votes        []VoteNode            `json:"Votes"`
+}
+
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return NewBoeSigner(deriveChainId(V))
