@@ -1,6 +1,6 @@
 syntax = "proto3";
 package types;
-// protoc --gogoout=. types.proto
+// protoc --gogo_out=. types.proto
 
 message Example {
     oneof value {
