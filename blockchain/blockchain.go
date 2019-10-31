@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,6 +34,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/mclock"
 	"github.com/hpb-project/go-hpb/common/metrics"
@@ -79,6 +83,7 @@ type BlockChain struct {
 
 	hc            *HeaderChain
 	chainDb       hpbdb.Database
+	stateDb       hpbdb.Database
 	rmLogsFeed    sub.Feed
 	chainFeed     sub.Feed
 	chainSideFeed sub.Feed
@@ -1382,7 +1387,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int, mo
 // without the real blocks. Hence, writing headers directly should only be done
 // in two scenarios: pure-header mode of operation (light clients), or properly
 // separated header/block phases (non-archive clients).
-func (bc *BlockChain) writeHeader(header *types.Header) error {
+func (bc *BlockChain) WriteHeader(header *types.Header) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -1479,4 +1484,354 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) sub.Subs
 // SubscribeLogsEvent registers a subscription of []*types.Log.
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) sub.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
+}
+
+func (bc *BlockChain) SetCurrentBlock(block *types.Block) {
+	bc.insert(block)
+}
+
+func (bc *BlockChain) InsertChainToWriteState(chain types.Blocks) (int, error) {
+	for i := 1; i < len(chain); i++ {
+		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
+			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
+				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
+
+			return 0, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, chain[i-1].NumberU64(),
+				chain[i-1].Hash().Bytes()[:4], i, chain[i].NumberU64(), chain[i].Hash().Bytes()[:4], chain[i].ParentHash().Bytes()[:4])
+		}
+	}
+	// Pre-checks passed, start the full block imports
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	bc.chainmu.Lock()
+	defer bc.chainmu.Unlock()
+
+	// A queued approach to delivering events. This is generally
+	// faster than direct delivery and requires much less mutex
+	// acquiring.
+	var (
+		stats = insertStats{startTime: mclock.Now()}
+	)
+	// Start the parallel header verifier
+	headers := make([]*types.Header, len(chain))
+	seals := make([]bool, len(chain))
+
+	for i, block := range chain {
+		headers[i] = block.Header()
+		seals[i] = true
+	}
+
+	for i, block := range chain {
+		// Create a new statedb using the parent block and report an
+		// error if it fails.
+		var parent *types.Block
+		if i == 0 {
+			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
+		} else {
+			parent = chain[i-1]
+		}
+		state, err := state.New(parent.Root(), bc.stateCache)
+		if err != nil {
+			return i, err
+		}
+		// Process block using the parent state as reference point.
+		receipts, _, usedGas, err := bc.processor.Process(block, state)
+		if err != nil {
+			bc.reportBlock(block, receipts, err)
+			return i, err
+		}
+
+		log.Info("----> Write Block and State From Outside", "number", block.Number(), "hash", block.Hash(), "difficulty", block.Difficulty())
+		_, err = bc.WriteBlockAndStateDoNotSetCurrentBlock(block, receipts, state)
+		if err != nil {
+			return i, err
+		}
+		stats.processed++
+		stats.usedGas += usedGas.Uint64()
+		stats.report(chain, i)
+	}
+
+	return 0, nil
+}
+
+func (bc *BlockChain) WriteBlockAndStateDoNotSetCurrentBlock(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	// Calculate the total difficulty of the block
+	// 计算出当前父亲的难度值
+	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
+	if ptd == nil {
+		return NonStatTy, consensus.ErrUnknownAncestor
+	}
+	// Make sure no inconsistent state is leaked during insertion
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	//获取本地的
+	//localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
+	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+
+	// Irrelevant of the canonical status, write the block itself to the database
+	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+		return NonStatTy, err
+	}
+	// Write other block data using a batch.
+	batch := bc.chainDb.NewBatch()
+	if err := WriteBlock(batch, block); err != nil {
+		return NonStatTy, err
+	}
+	if _, err := state.CommitTo(batch, true); err != nil {
+		return NonStatTy, err
+	}
+	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
+		return NonStatTy, err
+	}
+
+	// Write the positional metadata for transaction and receipt lookups
+	if err := WriteTxLookupEntries(batch, block); err != nil {
+		return NonStatTy, err
+	}
+	// Write hash preimages
+	if err := WritePreimages(bc.chainDb, block.NumberU64(), state.Preimages()); err != nil {
+		return NonStatTy, err
+	}
+
+	if err := batch.Write(); err != nil {
+		return NonStatTy, err
+	}
+
+	if err := WriteCanonicalHash(bc.chainDb, block.Hash(), block.NumberU64()); err != nil {
+		log.Crit("Failed to insert block number", "err", err)
+	}
+
+	bc.futureBlocks.Remove(block.Hash())
+	return status, nil
+}
+
+func createbackdatabase(num uint64) (*hpbdb.LDBDatabase, string, error) {
+	log.Error("createbakdatabase")
+	dbpath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	name := string("bakupdatabase") + strconv.FormatUint(num, 10)
+	dbpath = filepath.Join(dbpath, name)
+
+	log.Error("database", "dbpath", dbpath)
+
+	//os.RemoveAll(dbpath)
+	db, err := hpbdb.NewLDBDatabase(dbpath, 0, 0)
+	return db, dbpath, err
+}
+
+func getoldbackdatabase(num uint64) (*hpbdb.LDBDatabase, string, error) {
+	log.Error("createbakdatabase")
+	dbpath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	oldname := string("bakupdatabase") + strconv.FormatUint(num-uint64(10000), 10)
+	oldpath := filepath.Join(dbpath, oldname)
+	os.RemoveAll(oldpath)
+
+	name := string("bakupdatabase") + strconv.FormatUint(num, 10)
+	dbpath = filepath.Join(dbpath, name)
+
+	db, err := hpbdb.NewLDBDatabase(dbpath, 0, 0)
+	log.Error("database", "dbpath", dbpath, "err", err)
+
+	return db, dbpath, err
+}
+
+const mindistance = 5000
+
+func getstatedb(blockchain *BlockChain, num uint64) (*hpbdb.LDBDatabase, common.Hash, error) {
+	log.Error("getstatedb")
+	block := blockchain.GetBlockByNumber(num)
+	if block == nil {
+		return nil, common.Hash{}, errors.New("Get Statedb Block Error")
+	}
+	root := block.Root()
+	log.Warn("getstatedb", "root", root)
+	return db.GetHpbDbInstance(), root, nil
+}
+
+func backupstatedata(backupdb *hpbdb.LDBDatabase, hpbdb *hpbdb.LDBDatabase, root common.Hash, num uint64) error {
+	log.Error("bakupstatedata")
+	statetrie := state.NewStateSync(root, backupdb)
+	log.Warn("bakupstatedata", "lenrequests", statetrie.Pending())
+	olddb, _, olderr := getoldbackdatabase(num - uint64(10000))
+	if olderr != nil || olddb == nil {
+		olddb = backupdb
+	}
+	for statetrie.Pending() > 0 {
+		requests := statetrie.Missing(16) //max len(requests) = 16
+		log.Warn("bakupstatedata", "lenrequests", statetrie.Pending())
+
+		for _, item := range requests {
+
+			entry, err := olddb.Get(item.Bytes())
+
+			if err != nil {
+				log.Error("backupfrom db")
+				entry, err = hpbdb.Get(item.Bytes())
+				if err != nil {
+					log.Error("backupstatedata", "get item err try again in 300s", err, "item", common.Bytes2Hex(item.Bytes()))
+					time.Sleep(300 * time.Second)
+					entry, err = hpbdb.Get(item.Bytes())
+					if err != nil {
+						log.Error("backupstatedata", "get item err", err)
+						return err
+					}
+				}
+			}
+
+			log.Warn("backupstatedata", "root", item)
+			res := trie.SyncResult{Data: entry}
+			kecc := sha3.NewKeccak256()
+			kecc.Reset()
+			kecc.Write(entry)
+			kecc.Sum(res.Hash[:0])
+			_, _, err = statetrie.Process([]trie.SyncResult{res})
+			if err != nil {
+				log.Error("backupstatedata", "ProcessResponse error", err)
+				return err
+			}
+			//hpbdb.Delete(item.Bytes())
+		}
+		b := backupdb.NewBatch()
+		statetrie.Commit(b)
+		if err := b.Write(); err != nil {
+			log.Error("BackupDB write", "error", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func delstatedata(blockchain *BlockChain, backupdb *hpbdb.LDBDatabase, hpbdb *hpbdb.LDBDatabase, num uint64) error {
+	log.Error("delstatedata")
+	errnum := 0
+	var errs error
+	for i := num - 1; i > 0; i-- {
+		block := blockchain.GetBlockByNumber(i)
+		if block == nil {
+			log.Error("delstatedata Canot find block", "num", i)
+			break
+		}
+		root := block.Root()
+		_, errs = blockchain.StateAt(root)
+		if errs != nil {
+			errnum = errnum + 1
+			if errnum > 1000 {
+				break
+			}
+			log.Error("delstatedata Canot get State", "num", i)
+			continue
+		}
+		statetrie := state.NewStateSync(root, backupdb)
+
+		log.Warn("delstatedata", "num", i, "pending", statetrie.Pending())
+		for statetrie.Pending() > 0 && errs == nil {
+			requests := statetrie.Missing(16) //max len(requests) = 16
+			for _, item := range requests {
+				_, err := backupdb.Get(item.Bytes())
+				if err == nil {
+					continue
+				}
+				entry, err := hpbdb.Get(item.Bytes())
+				if err != nil {
+					errs = err
+					continue
+				}
+				log.Debug("delstatedata", "root", item, "entry", common.Bytes2Hex(entry))
+				res := trie.SyncResult{Data: entry}
+				kecc := sha3.NewKeccak256()
+				kecc.Reset()
+				kecc.Write(entry)
+				kecc.Sum(res.Hash[:0])
+				_, _, err = statetrie.Process([]trie.SyncResult{res})
+				if err != nil {
+					log.Error("delstatedata", "ProcessResponse error", err)
+					errs = err
+				}
+				hpbdb.Delete(item.Bytes())
+			}
+		}
+	}
+	return errs
+}
+
+func recoverstatedata(backupdb *hpbdb.LDBDatabase, hpbdb *hpbdb.LDBDatabase, root common.Hash, num uint64) error {
+	log.Error("recoverstatedata")
+	statetrie := state.NewStateSync(root, hpbdb)
+	log.Warn("recoverstatedata", "lenrequests", statetrie.Pending())
+
+	for statetrie.Pending() > 0 {
+		requests := statetrie.Missing(16) //max len(requests) = 16
+		for _, item := range requests {
+			entry, err := backupdb.Get(item.Bytes())
+			if err != nil {
+				log.Error("recoverstatedata", "get item err", err)
+				return err
+			}
+			log.Debug("recoverstatedata", "root", item)
+			res := trie.SyncResult{Data: entry}
+			kecc := sha3.NewKeccak256()
+			kecc.Reset()
+			kecc.Write(entry)
+			kecc.Sum(res.Hash[:0])
+			_, _, err = statetrie.Process([]trie.SyncResult{res})
+			if err != nil {
+				log.Error("recoverstatedata", "ProcessResponse error", err)
+				return err
+			}
+		}
+		b := hpbdb.NewBatch()
+		statetrie.Commit(b)
+		if err := b.Write(); err != nil {
+			log.Error("BackupDB write", "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func delbackupstatedb(dbpath string) {
+	log.Error("delbakupstatedb")
+	//os.RemoveAll(dbpath)
+}
+func (bc *BlockChain) DelStateDatabyNum(num uint64, idend chan bool) bool {
+	go func() {
+		blocknum := num
+		log.Error("DelStateDatabyNum", "blocknum", blocknum, "current", bc.CurrentBlock().Number().Uint64()-uint64(mindistance))
+
+		if blocknum < uint64(10000) || blocknum > bc.CurrentBlock().Number().Uint64()-uint64(mindistance) {
+			idend <- true
+			return
+		}
+		//getstatedb
+		hpbdb, root, err := getstatedb(bc, blocknum)
+		if err != nil {
+			log.Error("Get statedb ", "Error", err)
+			idend <- true
+			return
+		}
+		backupdb, dbpath, err := createbackdatabase(blocknum)
+		if err != nil {
+			log.Error("Create Bakupdatabase ", "Error", err)
+			idend <- true
+			return
+		}
+		err = backupstatedata(backupdb, hpbdb, root, blocknum)
+		if err != nil {
+			recoverstatedata(backupdb, hpbdb, root, blocknum)
+			idend <- true
+			return
+		}
+		err = delstatedata(bc, backupdb, hpbdb, blocknum)
+		//recoverstatedata(backupdb,hpbdb,root,blocknum)
+		delbackupstatedb(dbpath)
+		idend <- true
+
+	}()
+
+	return true
 }

@@ -145,6 +145,14 @@ func (db *LDBDatabase) Delete(key []byte) error {
 	return db.db.Delete(key, nil)
 }
 
+func (db *LDBDatabase) GetFdNum() int64 {
+	return db.db.GetSeq()
+}
+
+func (db *LDBDatabase) DeleteFiles(fdnum int64) error {
+	return db.db.DeleteFiles(fdnum)
+}
+
 func (db *LDBDatabase) NewIterator() iterator.Iterator {
 	return db.db.NewIterator(nil, nil)
 }

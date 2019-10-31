@@ -25,6 +25,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/table"
 	"github.com/syndtr/goleveldb/leveldb/util"
+
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // DB is a LevelDB database.
@@ -64,6 +66,7 @@ type DB struct {
 
 	// Compaction.
 	compCommitLk     sync.Mutex
+	compReduceLk     sync.Mutex
 	tcompCmdC        chan cCmd
 	tcompPauseC      chan chan<- struct{}
 	mcompCmdC        chan cCmd
@@ -882,6 +885,44 @@ func (db *DB) NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Itera
 	// Iterator holds 'version' lock, 'version' is immutable so snapshot
 	// can be released after iterator created.
 	return db.newIterator(nil, nil, se.seq, slice, ro)
+}
+
+func (db *DB) GetSeq() int64 {
+	return db.s.nextFileNum()
+}
+
+func (db *DB) DeleteFiles(delfilenum int64) error {
+	db.compReduceLk.Lock()
+	defer db.compReduceLk.Unlock()
+	db.compCommitLk.Lock()
+	defer db.compCommitLk.Unlock()
+	v := db.s.version()
+	defer v.release()
+	nv := newVersion(db.s)
+	nv.levels = make([]tFiles, len(v.levels))
+	for level, tt := range v.levels {
+		nt := make(tFiles, 0)
+		for _, t := range tt {
+			if delfilenum > t.fd.Num && v.s.addFileRef(t.fd, -1) == 0 {
+				log.Error("DeleteFiles", "fd.num", t.fd.Num)
+				v.s.tops.remove(t)
+			} else {
+				nt = append(nt, t)
+			}
+		}
+		nv.levels[level] = nt
+	}
+	nv.computeCompaction()
+
+	for _, tt := range nv.levels {
+		for _, t := range tt {
+			if delfilenum > t.fd.Num {
+				log.Error("Existtttttt", "fd.num", t.fd.Num)
+			}
+		}
+	}
+	db.s.setVersion(nv)
+	return nil
 }
 
 // GetSnapshot returns a latest snapshot of the underlying DB. A snapshot

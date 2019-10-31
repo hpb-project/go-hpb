@@ -629,6 +629,8 @@ func (db *DB) tableRangeCompaction(level int, umin, umax []byte) error {
 }
 
 func (db *DB) tableAutoCompaction() {
+	db.compReduceLk.Lock()
+	defer db.compReduceLk.Unlock()
 	if c := db.s.pickCompaction(); c != nil {
 		db.tableCompaction(c, false)
 	}
@@ -836,6 +838,7 @@ func (db *DB) tCompaction() {
 			}
 			x = nil
 		}
+
 		db.tableAutoCompaction()
 	}
 }

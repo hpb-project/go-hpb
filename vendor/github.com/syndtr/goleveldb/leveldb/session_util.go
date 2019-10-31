@@ -46,7 +46,8 @@ func (s *session) addFileRef(fd storage.FileDesc, ref int) int {
 	} else if ref == 0 {
 		delete(s.fileRef, fd.Num)
 	} else {
-		panic(fmt.Sprintf("negative ref: %v", fd))
+		delete(s.fileRef, fd.Num)
+		//panic(fmt.Sprintf("negative ref: %v", fd))
 	}
 	return ref
 }

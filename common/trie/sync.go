@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -106,6 +107,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	key := root.Bytes()
 	blob, _ := s.database.Get(key)
 	if local, err := decodeNode(key, blob, 0); local != nil && err == nil {
+		log.Error("AddSubTrie has", "hash", root)
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -139,6 +141,7 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 		return
 	}
 	if ok, _ := s.database.Has(hash.Bytes()); ok {
+		log.Error("AddRawEntry Has", "hash", hash)
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -331,4 +334,152 @@ func (s *TrieSync) commit(req *request) (err error) {
 		}
 	}
 	return nil
+}
+
+func (s *TrieSync) reducechildren(req *request, object node) ([]*request, error) {
+	// Gather all the children of the node, irrelevant whether known or not
+	type child struct {
+		node  node
+		depth int
+	}
+	children := []child{}
+
+	switch node := (object).(type) {
+	case *shortNode:
+		children = []child{{
+			node:  node.Val,
+			depth: req.depth + len(node.Key),
+		}}
+	case *fullNode:
+		for i := 0; i < 17; i++ {
+			if node.Children[i] != nil {
+				children = append(children, child{
+					node:  node.Children[i],
+					depth: req.depth + 1,
+				})
+			}
+		}
+	default:
+		panic(fmt.Sprintf("unknown node: %+v", node))
+	}
+	// Iterate over the children, and request all unknown ones
+	requests := make([]*request, 0, len(children))
+	for _, child := range children {
+		// Notify any external watcher of a new key/value node
+		if req.callback != nil {
+			if node, ok := (child.node).(valueNode); ok {
+				if err := req.callback(node, req.hash); err != nil {
+					return nil, err
+				}
+			}
+		}
+		// If the child references another node, resolve or schedule
+		if node, ok := (child.node).(hashNode); ok {
+			// Try to resolve the node from the local database
+			hash := common.BytesToHash(node)
+			// Locally unknown node, schedule for retrieval
+			requests = append(requests, &request{
+				hash:     hash,
+				parents:  []*request{req},
+				depth:    child.depth,
+				callback: req.callback,
+			})
+		}
+	}
+	return requests, nil
+}
+
+func (s *TrieSync) ReduceProcess(results []SyncResult) (bool, int, error) {
+	committed := false
+
+	for i, item := range results {
+		// If the item was not requested, bail out
+		request := s.requests[item.Hash]
+		if request == nil {
+			return committed, i, ErrNotRequested
+		}
+		if request.data != nil {
+			return committed, i, ErrAlreadyProcessed
+		}
+		// If the item is a raw entry request, commit directly
+		if request.raw {
+			request.data = item.Data
+			s.commit(request)
+			committed = true
+			continue
+		}
+		// Decode the node data content and update the request
+		node, err := decodeNode(item.Hash[:], item.Data, 0)
+		if err != nil {
+			return committed, i, err
+		}
+		request.data = item.Data
+
+		// Create and schedule a request for all the children nodes
+		requests, err := s.reducechildren(request, node)
+		if err != nil {
+			return committed, i, err
+		}
+		if len(requests) == 0 && request.deps == 0 {
+			s.commit(request)
+			committed = true
+			continue
+		}
+		request.deps += len(requests)
+		for _, child := range requests {
+			s.schedule(child)
+		}
+	}
+	return committed, 0, nil
+}
+
+func (s *TrieSync) AddSubTrieToreduce(root common.Hash, depth int, parent common.Hash, callback TrieSyncLeafCallback) {
+	// Short circuit if the trie is empty or already known
+	if root == emptyRoot {
+		return
+	}
+
+	// Assemble the new sub-trie sync request
+	req := &request{
+		hash:     root,
+		depth:    depth,
+		callback: callback,
+	}
+	// If this sub-trie has a designated parent, link them together
+	if parent != (common.Hash{}) {
+		ancestor := s.requests[parent]
+		if ancestor == nil {
+			panic(fmt.Sprintf("sub-trie ancestor not found: %x", parent))
+		}
+		ancestor.deps++
+		req.parents = append(req.parents, ancestor)
+	}
+	s.schedule(req)
+}
+
+// AddRawEntry schedules the direct retrieval of a state entry that should not be
+// interpreted as a trie node, but rather accepted and stored into the database
+// as is. This method's goal is to support misc state metadata retrievals (e.g.
+// contract code).
+func (s *TrieSync) AddRawEntryToreduce(hash common.Hash, depth int, parent common.Hash) {
+	// Short circuit if the entry is empty or already known
+	if hash == emptyState {
+		return
+	}
+	// Assemble the new sub-trie sync request
+	req := &request{
+		hash:  hash,
+		raw:   true,
+		depth: depth,
+	}
+	// If this sub-trie has a designated parent, link them together
+	if parent != (common.Hash{}) {
+		ancestor := s.requests[parent]
+		if ancestor == nil {
+			panic(fmt.Sprintf("raw-entry ancestor not found: %x", parent))
+		}
+		ancestor.deps++
+		req.parents = append(req.parents, ancestor)
+	}
+	s.schedule(req)
 }

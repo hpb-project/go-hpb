@@ -61,22 +61,23 @@ web3._extend({
 		}),
 	]
 });
-` 
+`
+
 /*
 new web3._extend.Method({
 			name: 'getHpbNodeSnapAtHash',
 			call: 'prometheus_getHpbNodeSnapAtHash',
 			params: 1
 		}),
-		
+
 		,
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
 			getter: 'prometheus_proposals'
 		}),
-	] 
-	
+	]
+
 	new web3._extend.Method({
 			name: 'propose',
 			call: 'prometheus_propose',
@@ -387,6 +388,28 @@ web3._extend({
 			call: 'hpb_getStatediffbyblockandTx',
 			params: 2,
 			inputFormatter: [null,null]
+		}),
+		new web3._extend.Method({
+			name: 'writeBlockState',
+			call: 'hpb_writeBlockState',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'reducedb',
+			call: 'hpb_reducedb',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'deletestatedb',
+			call: 'hpb_deletestatedb',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'delStateDatabyNum',
+			call: 'hpb_delStateDatabyNum',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'sign',
