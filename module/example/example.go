@@ -40,12 +40,6 @@ func (*ExampleModule) ModuleBlockEnd(block *types.Block, statedb *state.StateDB)
 	return nil
 }
 
-func (*ExampleModule) CreateTransaction(tx *types.Transaction, param []byte) error {
-
-
-	return nil
-}
-
 func (*ExampleModule) ValidateTransaction(tx *types.Transaction, db *state.StateDB) error {
 	example := &mtypes.Example{}
 	param := tx.Data()

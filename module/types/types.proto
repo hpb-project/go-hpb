@@ -18,3 +18,10 @@ message ParamMul {
     int64 a = 1;
     int64 b = 2;
 }
+
+
+message Query {
+    string path = 1;
+    bytes data = 2;
+    int64 height = 3;
+}
