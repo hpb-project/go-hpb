@@ -79,6 +79,23 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	author, _ := p.engine.Author(block.Header())
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
+
+		// module txhandler
+		if block.Header().Number.Uint64() >= consensus.ModuleExtraVersion {
+			if tx.ExData().Txtype == types.TxModule {
+				modules := GetModules()
+				for _, m := range modules {
+					if handler := m.GetTxHandler(tx); handler != nil {
+						if err := handler(block.Header(), tx, statedb); err != nil {
+							return nil,nil,nil, err
+						}
+						break
+					}
+				}
+			}
+		}
+
+
 		//the tx without contract
 		if bNewVersion {
 			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {

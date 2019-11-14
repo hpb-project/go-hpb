@@ -72,6 +72,7 @@ var (
 
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
+	ModuleExtraVersion		  uint64 = 999999999
 )
 
 var (

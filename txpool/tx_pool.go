@@ -24,6 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -337,13 +338,16 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 		return ErrIntrinsicGas
 	}
 
-	if tx.ExData().Txtype == types.TxModule {
-		modules := bc.GetModules()
-		for _, m := range modules {
-			if validator := m.GetTxValidator(tx); validator != nil {
-				merr := validator(tx, pool.currentState)
-				if merr != nil {
-					return merr
+	if bc.InstanceBlockChain().CurrentHeader().Number.Uint64() >= consensus.ModuleExtraVersion {
+		if tx.ExData().Txtype == types.TxModule {
+			modules := bc.GetModules()
+			for _, m := range modules {
+				if validator := m.GetTxValidator(tx); validator != nil {
+					merr := validator(tx, pool.currentState)
+					if merr != nil {
+						return merr
+					}
+					break
 				}
 			}
 		}
