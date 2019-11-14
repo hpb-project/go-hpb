@@ -40,6 +40,11 @@ var (
 	errNoSigner   = errors.New("missing signing methods")
 )
 
+const (
+	TxNormal	= 0
+	TxModule 	= 1
+)
+
 //Definition of transaction'exdata'
 //Transaction Version Number and Transfer Transaction Occupy 16 Bytes of 'exdata' Field
 type TxExdata struct {

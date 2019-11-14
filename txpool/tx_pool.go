@@ -336,6 +336,18 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
 		return ErrIntrinsicGas
 	}
+
+	if tx.ExData().Txtype == types.TxModule {
+		modules := bc.GetModules()
+		for _, m := range modules {
+			if validator := m.GetTxValidator(tx); validator != nil {
+				merr := validator(tx, pool.currentState)
+				if merr != nil {
+					return merr
+				}
+			}
+		}
+	}
 	return nil
 }
 
