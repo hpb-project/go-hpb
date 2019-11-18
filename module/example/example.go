@@ -70,7 +70,12 @@ func (this ExampleModule)GetTxValidator(tx *types.Transaction) bc.TxValidator {
 	}
 }
 
-func (this ExampleModule)GetQuerier() bc.Querier{
-	return nil
+func (this ExampleModule)GetQuerier(cmd string) bc.Querier{
+	switch cmd{
+	case QueryMethods:
+		return handleQueryMethods
+	default:
+		return nil
+	}
 }
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"strings"
@@ -428,6 +429,12 @@ type PublicBlockChainAPI struct {
 	b Backend
 }
 
+type ModuleQueryArgs struct {
+	modulename string `json:"name"`
+	command    string `json:"command"`
+	data       []byte `json:"data"`
+}
+
 // NewPublicBlockChainAPI creates a new Hpb blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
@@ -437,6 +444,31 @@ func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
 	return header.Number
+}
+
+// ModuleQuery returns the content that request.
+func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, args ModuleQueryArgs, blockNr rpc.BlockNumber) ([]byte, error) {
+	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil || header == nil {
+		return nil, errors.New("Get state or header failed.")
+	}
+	if header.Number.Uint64() < consensus.ModuleExtraVersion {
+		return nil, errors.New("The founction not support on this block.")
+	}
+
+	module := bc.GetModule(args.modulename)
+	if module == nil {
+		return nil, errors.New("Not found module.")
+	}
+
+	if querier := module.GetQuerier(args.command); querier != nil {
+		return querier(header, state, args.data)
+	}
+
+	return nil, nil
 }
 
 // GetBalance returns the amount of wei for the given address in the state of the

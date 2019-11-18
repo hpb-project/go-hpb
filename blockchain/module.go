@@ -1,7 +1,6 @@
 package bc
 
 import (
-	"github.com/gogo/protobuf/proto"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 )
@@ -17,12 +16,12 @@ type ModuleInterface interface {
 	//ProcessQuery() error
 	GetTxHandler(tx *types.Transaction) TxHandler
 	GetTxValidator(tx *types.Transaction) TxValidator
-	GetQuerier() Querier
+	GetQuerier(cmd string) Querier
 }
 
 type TxHandler   = func (header *types.Header, tx *types.Transaction, db *state.StateDB) (err error)
 type TxValidator = func (tx *types.Transaction, db *state.StateDB) (err error)
-type Querier     = func (query proto.Message) (res []byte, err error)
+type Querier     = func (header *types.Header, db *state.StateDB, data []byte) (res []byte, err error)
 
 
 var	modules = map[string]ModuleInterface{}
@@ -40,5 +39,12 @@ func GetModules() []ModuleInterface {
 		mlist = append(mlist, m)
 	}
 	return mlist
+}
+
+func GetModule(name string) ModuleInterface {
+	if m, exist := modules[name]; exist {
+		return m
+	}
+	return nil
 }
 
