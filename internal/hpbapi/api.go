@@ -18,6 +18,7 @@ package hpbapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/consensus"
@@ -430,9 +431,9 @@ type PublicBlockChainAPI struct {
 }
 
 type ModuleQueryArgs struct {
-	modulename string `json:"name"`
-	command    string `json:"command"`
-	data       []byte `json:"data"`
+	Modulename string `json:"name"`
+	Command    string `json:"command"`
+	Data       []byte `json:"data"`
 }
 
 // NewPublicBlockChainAPI creates a new Hpb blockchain API.
@@ -447,7 +448,12 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 }
 
 // ModuleQuery returns the content that request.
-func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, args ModuleQueryArgs, blockNr rpc.BlockNumber) ([]byte, error) {
+func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, param string, blockNr rpc.BlockNumber) ([]byte, error) {
+	var args = ModuleQueryArgs{}
+	if err := json.Unmarshal([]byte(param), &args); err != nil {
+		return nil, errors.New("Invalid param")
+	}
+
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if err != nil {
 		return nil, err
@@ -459,13 +465,13 @@ func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, args ModuleQueryA
 		return nil, errors.New("The founction not support on this block.")
 	}
 
-	module := bc.GetModule(args.modulename)
+	module := bc.GetModule(args.Modulename)
 	if module == nil {
 		return nil, errors.New("Not found module.")
 	}
 
-	if querier := module.GetQuerier(args.command); querier != nil {
-		return querier(header, state, args.data)
+	if querier := module.GetQuerier(args.Command); querier != nil {
+		return querier(header, state, args.Data)
 	}
 
 	return nil, nil
