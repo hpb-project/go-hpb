@@ -380,7 +380,7 @@ web3._extend({
 			name: 'moduleQuery',
 			call: 'hpb_moduleQuery',
 			params: 2,
-			inputFormatter: [null,formatters.inputDefaultBlockNumberFormatter]
+			inputFormatter: [null,web3._extend.formatters.inputDefaultBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getStatediffbyblock',
