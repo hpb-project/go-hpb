@@ -377,6 +377,12 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'moduleQuery',
+			call: 'hpb_moduleQuery',
+			params: 2,
+			inputFormatter: [null,formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getStatediffbyblock',
 			call: 'hpb_getStatediffbyblock',
 			params: 1,
