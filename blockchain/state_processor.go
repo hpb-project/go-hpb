@@ -82,7 +82,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 
 		// module txhandler
 		if block.Header().Number.Uint64() >= consensus.ModuleExtraVersion {
-			if tx.ExData().Txtype == types.TxModule {
 				modules := GetModules()
 				for _, m := range modules {
 					if handler := m.GetTxHandler(tx); handler != nil {
@@ -92,7 +91,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 						break
 					}
 				}
-			}
 		}
 
 

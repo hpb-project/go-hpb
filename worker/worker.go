@@ -572,16 +572,14 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 
 	// module txhandler
 	if env.header.Number.Uint64() >= consensus.ModuleExtraVersion {
-		if tx.ExData().Txtype == types.TxModule {
-			modules := bc.GetModules()
-			for _, m := range modules {
-				if handler := m.GetTxHandler(tx); handler != nil {
-					if err := handler(env.header, tx, env.state); err != nil {
-						env.state.RevertToSnapshot(snap)
-						return err,nil
-					}
-					break
+		modules := bc.GetModules()
+		for _, m := range modules {
+			if handler := m.GetTxHandler(tx); handler != nil {
+				if err := handler(env.header, tx, env.state); err != nil {
+					env.state.RevertToSnapshot(snap)
+					return err,nil
 				}
+				break
 			}
 		}
 	}
