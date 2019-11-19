@@ -34,7 +34,7 @@ func RegisterModules(name string, m ModuleInterface) {
 }
 
 func GetModules() []ModuleInterface {
-	mlist := make([]ModuleInterface, 10)
+	mlist := make([]ModuleInterface, 0)
 	for _, m := range modules {
 		mlist = append(mlist, m)
 	}

@@ -339,18 +339,18 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 	}
 
 	if bc.InstanceBlockChain().CurrentHeader().Number.Uint64() >= consensus.ModuleExtraVersion {
-		if tx.ExData().Txtype == types.TxModule {
-			modules := bc.GetModules()
-			for _, m := range modules {
-				if validator := m.GetTxValidator(tx); validator != nil {
-					merr := validator(tx, pool.currentState)
-					if merr != nil {
-						return merr
-					}
-					break
-				}
-			}
-		}
+        modules := bc.GetModules()
+        fmt.Println("Tx softvalidateTx len(modules)=", len(modules))
+        for _, m := range modules {
+            if validator := m.GetTxValidator(tx); validator != nil {
+                fmt.Println("found validator")
+                merr := validator(tx, pool.currentState)
+                if merr != nil {
+                    return merr
+                }
+                break
+            }
+        }
 	}
 	return nil
 }

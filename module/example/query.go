@@ -9,6 +9,6 @@ const (
 	QueryMethods    = "methods"
 )
 
-func handleQueryMethods(header *types.Header, db *state.StateDB, data []byte)(res []byte, error) {
+func handleQueryMethods(header *types.Header, db *state.StateDB, data []byte)(res []byte, err error) {
 	return []byte(QueryMethods), nil
 }

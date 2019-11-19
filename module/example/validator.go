@@ -3,7 +3,7 @@ package example
 import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 func validateMul(tx *types.Transaction, db *state.StateDB ) error {

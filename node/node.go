@@ -56,6 +56,7 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/worker"
+    _ "github.com/hpb-project/go-hpb/module/example"
 )
 
 // Node is a container on which services can be registered.
