@@ -28,7 +28,7 @@ func handleAdd(header *types.Header, tx *types.Transaction, db *state.StateDB) (
 	if err != nil {
 		return err
 	}
-	log.Info("Execute module example", "tx type ", "Mul", "result", add.A + add.B)
+	log.Info("Execute module example", "tx type ", "Add", "result", add.A + add.B)
 
 	return nil
 }

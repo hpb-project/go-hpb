@@ -21,7 +21,7 @@ type ModuleInterface interface {
 
 type TxHandler   = func (header *types.Header, tx *types.Transaction, db *state.StateDB) (err error)
 type TxValidator = func (tx *types.Transaction, db *state.StateDB) (err error)
-type Querier     = func (header *types.Header, db *state.StateDB, data []byte) (res []byte, err error)
+type Querier     = func (header *types.Header, db *state.StateDB, data []byte) (res string, err error)
 
 
 var	modules = map[string]ModuleInterface{}

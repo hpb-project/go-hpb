@@ -446,36 +446,36 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
 	return header.Number
 }
-
 // ModuleQuery returns the content that request.
-func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, param string, blockNr rpc.BlockNumber) ([]byte, error) {
+func (s *PublicBlockChainAPI) ModuleQuery(ctx context.Context, param string, blockNr rpc.BlockNumber) (string, error) {
 	var args = ModuleQueryArgs{}
 	if err := json.Unmarshal([]byte(param), &args); err != nil {
-		return nil, errors.New("Invalid param")
+		return "", errors.New("Invalid param")
 	}
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if state == nil || header == nil {
-		return nil, errors.New("Get state or header failed.")
+		return "", errors.New("Get state or header failed.")
 	}
 	if header.Number.Uint64() < consensus.ModuleExtraVersion {
-		return nil, errors.New("The founction not support on this block.")
+		return "", errors.New("The founction not support on this block.")
 	}
 
 	module := bc.GetModule(args.Modulename)
 	if module == nil {
-		return nil, errors.New("Not found module.")
+		return "", errors.New("Not found module.")
 	}
 
 	if querier := module.GetQuerier(args.Command); querier != nil {
 		return querier(header, state, args.Data)
 	}
 
-	return nil, nil
+	return "", errors.New("Not found handle module.")
 }
+
 
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta

@@ -74,6 +74,10 @@ func (this ExampleModule)GetQuerier(cmd string) bc.Querier{
 	switch cmd{
 	case QueryMethods:
 		return handleQueryMethods
+	case QueryMethodAdd:
+		return handleQueryAdd
+	case QueryMethodMul:
+		return handleQueryMul
 	default:
 		return nil
 	}
