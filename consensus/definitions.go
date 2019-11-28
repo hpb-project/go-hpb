@@ -53,7 +53,8 @@ var (
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 2560000
 	StageNumberV   uint64 = 9999900 // 用于启用新的hash算法和去除重复出块.
-	StageNumberVI   uint64 = 200 // 用于启用随机数功能
+
+	StageNumberRealRandom   uint64 = 200 // used to enable real random.
 
 	ContinuousGenBlkLimit uint64 = 2
 
