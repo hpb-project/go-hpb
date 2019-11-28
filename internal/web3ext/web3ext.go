@@ -377,6 +377,12 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'getRandom',
+			call: 'hpb_getRandom',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getStatediffbyblock',
 			call: 'hpb_getStatediffbyblock',
 			params: 1,

@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"errors"
+	"math/rand"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -57,7 +58,7 @@ const InvokeIndexThree = 3
 const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
-// Todo : lrj change to english.
+
 var (
 	HpbNodenumber = 31    //hpb nodes number
 	NumberPrehp   = 20    //nodes num from 151 nodes select
@@ -66,9 +67,14 @@ var (
 	StageNumberII  uint64 = 260000
 	StageNumberIII uint64 = 1200000
 	StageNumberIV  uint64 = 2560000
-	StageNumberV   uint64 = 999999000000 // no use
+	StageNumberV   uint64 = 999999000000 // unused forever
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
+
+	StageNumberRealRandom   uint64 = 5000000 // used to enable real random.
+	StateNumberNewHash  = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
+
+	ContinuousGenBlkLimit uint64 = 2
 
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
@@ -117,7 +123,7 @@ var (
 	ErrInvalidCheckpointBeneficiary = errors.New("beneficiary in checkpoint block non-zero")
 
 	ErrInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
-	
+
 	// vote nonce in checkpoint block non-zero
 	ErrInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
 	// reject block but do not drop peer
@@ -152,11 +158,12 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	if address, known := sigcache.Get(hash); known {
 		return address.(common.Address), nil
 	}
-	
-	if len(header.Extra) < ExtraSeal {
-		return common.Address{}, ErrMissingSignature
+
+	extraDetail, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return common.Address{}, err
 	}
-	signature := header.Extra[len(header.Extra)-ExtraSeal:]
+	signature := extraDetail.GetSeal()
 
 	// recover the public key
 	pubkey, err := crypto.Ecrecover(SigHash(header).Bytes(), signature)
@@ -172,6 +179,7 @@ func Ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
+	extraDetail, _ := types.BytesToExtraDetail(header.Extra)
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
@@ -185,7 +193,7 @@ func SigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-65],
+		extraDetail.ExceptSealToBytes(),
 		header.MixDigest,
 		header.Nonce,
 	})
@@ -197,4 +205,25 @@ func SetTestParam() {
 	StageNumberII = 1
 	StageNumberIII = 0
 	StageNumberIV = 1
+}
+
+func Gen32BRandom() [32]byte {
+
+	var Res [32]byte
+	for i := 0; i < 32; i++ {
+		Res[i] = byte(rand.Intn(256)) //get [0,256) random
+	}
+	return Res
+}
+
+func VerifyHWRlRndSign(HWRlRnd []byte, Sign []byte) (common.Address, error) {
+	//log.Info("VerifyHWRlRndSign", "hash", hex.EncodeToString(hash), "rnd", hex.EncodeToString(HWRlRnd))
+	pubkey, err := crypto.Ecrecover(HWRlRnd, Sign)
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
 }

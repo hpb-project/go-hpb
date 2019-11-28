@@ -45,6 +45,8 @@ BoeErr* boe_upgrade_abort(void);
  */
 BoeErr* boe_hw_check(void);
 BoeErr* boe_hw_connect(void);
+BoeErr* boe_reg_random_read(unsigned char *string);
+
 /*
  * let board reboot.
  */
@@ -113,6 +115,10 @@ BoeErr* boe_get_s_random(unsigned char *hash, unsigned char *nexthash);
 BoeErr* boe_get_n_random(unsigned char *hash, unsigned char *nexthash);
 /*
  * recover pubkey. if boe board is working, use hardware to do it. else will use soft alghorim.
+ */
+BoeErr* boe_check_random(unsigned char *hash, unsigned char *nexthash);
+/*
+ *check random. if boe board is working, use hardware to do it. else will use soft alghorim.
  */
 BoeErr* boe_valid_sign(unsigned char *sig, unsigned char *pub);
 BoeErr* boe_valid_sign_recover_pub_async(unsigned char *sig, unsigned char *param, int paramlen);

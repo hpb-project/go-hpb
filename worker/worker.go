@@ -400,9 +400,17 @@ func (self *worker) startNewMinerRound() {
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   bc.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
-		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
+	var extra *types.ExtraDetail
+	if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+		extra, _ = types.NewExtraDetail(types.ExtraVersion)
+	} else {
+		extra, _ = types.NewExtraDetail(0)
+	}
+	extra.SetVanity(self.extra)
+	header.Extra = common.CopyBytes(extra.ToBytes())
+
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase

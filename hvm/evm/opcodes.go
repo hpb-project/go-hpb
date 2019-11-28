@@ -63,6 +63,9 @@ const (
 	XOR
 	NOT
 	BYTE
+	SHL
+	SHR
+	SAR
 
 	SHA3 = 0x20
 )
@@ -84,6 +87,7 @@ const (
 	EXTCODECOPY
 	RETURNDATASIZE
 	RETURNDATACOPY
+	EXTCODEHASH
 )
 
 const (
@@ -94,6 +98,7 @@ const (
 	NUMBER
 	DIFFICULTY
 	GASLIMIT
+	RANDOM
 )
 
 const (
@@ -202,6 +207,7 @@ const (
 	CALLCODE
 	RETURN
 	DELEGATECALL
+	CREATE2
 	STATICCALL = 0xfa
 
 	REVERT       = 0xfd
@@ -234,6 +240,9 @@ var opCodeToString = map[OpCode]string{
 	OR:     "OR",
 	XOR:    "XOR",
 	BYTE:   "BYTE",
+	SHL:    "SHL",
+	SHR:    "SHR",
+	SAR:    "SAR",
 	ADDMOD: "ADDMOD",
 	MULMOD: "MULMOD",
 
@@ -256,7 +265,7 @@ var opCodeToString = map[OpCode]string{
 	EXTCODECOPY:    "EXTCODECOPY",
 	RETURNDATASIZE: "RETURNDATASIZE",
 	RETURNDATACOPY: "RETURNDATACOPY",
-
+	EXTCODEHASH:    "EXTCODEHASH",
 	// 0x40 range - block operations
 	BLOCKHASH:  "BLOCKHASH",
 	COINBASE:   "COINBASE",
@@ -264,6 +273,7 @@ var opCodeToString = map[OpCode]string{
 	NUMBER:     "NUMBER",
 	DIFFICULTY: "DIFFICULTY",
 	GASLIMIT:   "GASLIMIT",
+	RANDOM:     "RANDOM",
 
 	// 0x50 range - 'storage' and execution
 	POP: "POP",
@@ -360,6 +370,7 @@ var opCodeToString = map[OpCode]string{
 	RETURN:       "RETURN",
 	CALLCODE:     "CALLCODE",
 	DELEGATECALL: "DELEGATECALL",
+	CREATE2:      "CREATE2",
 	STATICCALL:   "STATICCALL",
 	REVERT:       "REVERT",
 	SELFDESTRUCT: "SELFDESTRUCT",
@@ -400,6 +411,9 @@ var stringToOp = map[string]OpCode{
 	"OR":             OR,
 	"XOR":            XOR,
 	"BYTE":           BYTE,
+	"SHL":            SHL,
+	"SHR":            SHR,
+	"SAR":            SAR,
 	"ADDMOD":         ADDMOD,
 	"MULMOD":         MULMOD,
 	"SHA3":           SHA3,
@@ -420,12 +434,14 @@ var stringToOp = map[string]OpCode{
 	"EXTCODECOPY":    EXTCODECOPY,
 	"RETURNDATASIZE": RETURNDATASIZE,
 	"RETURNDATACOPY": RETURNDATACOPY,
+	"EXTCODEHASH":    EXTCODEHASH,
 	"BLOCKHASH":      BLOCKHASH,
 	"COINBASE":       COINBASE,
 	"TIMESTAMP":      TIMESTAMP,
 	"NUMBER":         NUMBER,
 	"DIFFICULTY":     DIFFICULTY,
 	"GASLIMIT":       GASLIMIT,
+	"RANDOM":         RANDOM,
 	"POP":            POP,
 	"MLOAD":          MLOAD,
 	"MSTORE":         MSTORE,
@@ -508,6 +524,7 @@ var stringToOp = map[string]OpCode{
 	"LOG3":           LOG3,
 	"LOG4":           LOG4,
 	"CREATE":         CREATE,
+	"CREATE2":        CREATE2,
 	"CALL":           CALL,
 	"RETURN":         RETURN,
 	"CALLCODE":       CALLCODE,

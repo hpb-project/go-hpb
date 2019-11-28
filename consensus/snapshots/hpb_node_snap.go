@@ -35,20 +35,20 @@ import (
 )
 
 type Tally struct {
-	CandAddress common.Address `json:"candAddress"` 
-	VoteNumbers *big.Int       `json:"voteNumbers"` 
-	VoteIndexs  *big.Int       `json:"voteIndexs"`  
+	CandAddress common.Address `json:"candAddress"`
+	VoteNumbers *big.Int       `json:"voteNumbers"`
+	VoteIndexs  *big.Int       `json:"voteIndexs"`
 	VotePercent *big.Int       `json:"votePercent"`
 }
 
 type HpbNodeSnap struct {
 	config   *config.PrometheusConfig
 	sigcache *lru.ARCCache
-	CheckPointNum  uint64                      `json:"checkPointNum"`  
-	CheckPointHash common.Hash                 `json:"checkPointHash"` 
-	Signers        map[common.Address]struct{} `json:"signers"`        
-	Recents        map[uint64]common.Address   `json:"recents"`        
-	Tally          map[common.Address]Tally    `json:"tally"`         
+	CheckPointNum  uint64                      `json:"checkPointNum"`
+	CheckPointHash common.Hash                 `json:"checkPointHash"`
+	Signers        map[common.Address]struct{} `json:"signers"`
+	Recents        map[uint64]common.Address   `json:"recents"`
+	Tally          map[common.Address]Tally    `json:"tally"`
 }
 
 func NewHistorysnap(config *config.PrometheusConfig, sigcache *lru.ARCCache, number uint64, checkPointNum uint64, checkPointHash common.Hash, signersHash []common.Address) *HpbNodeSnap {
@@ -132,14 +132,25 @@ func (s *HpbNodeSnap) CalculateBackupMiner(number uint64, signer common.Address,
 	return false
 }
 
-func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) bool {
+func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.Address) (common.Address,bool) {
 
 	signers, offset := s.GetHpbNodes(), 0
 	for offset < len(signers) && signers[offset] != signer {
 		offset++
 	}
-	log.Debug("worker calculate miner","miner",signers[number%uint64(len(signers))].String())
-	return (number % uint64(len(signers))) == uint64(offset)
+	index := number % uint64(len(signers))
+	return signers[index], index == uint64(offset)
+}
+
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chooseSigners []common.Address) (common.Address,bool) {
+
+	offset := 0
+
+	for offset < len(chooseSigners) && chooseSigners[offset] != signer {
+		offset++
+	}
+	index := number % uint64(len(chooseSigners))
+	return chooseSigners[index], index == uint64(offset)
 }
 
 func (s *HpbNodeSnap) GetOffset(number uint64, signer common.Address) uint64 {
