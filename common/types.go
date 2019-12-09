@@ -344,4 +344,4 @@ func (self Addresses) Len() int { return len(self) }
 func (self Addresses) Swap(i, j int) {
 	self[i], self[j] = self[j], self[i]
 }
-func (self Addresses) Less(i, j int) bool { return bytes.Compare(self[i][:], self[j][:]) == 0 }
+func (self Addresses) Less(i, j int) bool { return bytes.Compare(self[i][:], self[j][:]) < 0 }

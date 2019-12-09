@@ -51,10 +51,58 @@ type operation struct {
 }
 
 var (
-	frontierInstructionSet  = NewFrontierInstructionSet()
-	homesteadInstructionSet = NewHomesteadInstructionSet()
-	byzantiumInstructionSet = NewByzantiumInstructionSet()
+	frontierInstructionSet       = NewFrontierInstructionSet()
+	homesteadInstructionSet      = NewHomesteadInstructionSet()
+	byzantiumInstructionSet      = NewByzantiumInstructionSet()
+	constantinopleInstructionSet = NewConstantinopleInstructionSet()
 )
+
+// NewConstantinopleInstructionSet returns the frontier, homestead
+// byzantium and contantinople instructions.
+func NewConstantinopleInstructionSet() [256]operation {
+	// instructions that can be executed during the byzantium phase.
+	instructionSet := NewByzantiumInstructionSet()
+	instructionSet[SHL] = operation{
+		execute:       opSHL,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(2, 1),
+		valid:         true,
+	}
+	instructionSet[RANDOM] = operation{
+		execute:       opRandom,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(0, 1),
+		valid:         true,
+	}
+	instructionSet[SHR] = operation{
+		execute:       opSHR,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(2, 1),
+		valid:         true,
+	}
+	instructionSet[SAR] = operation{
+		execute:       opSAR,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(2, 1),
+		valid:         true,
+	}
+	instructionSet[EXTCODEHASH] = operation{
+		execute:       opExtCodeHash,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(1, 1),
+		valid:         true,
+	}
+	/*instructionSet[CREATE2] = operation{
+		execute:       opCreate2,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(4, 1),
+		memorySize:    memoryCreate2,
+		valid:         true,
+		writes:        true,
+		returns:       true,
+	}*/
+	return instructionSet
+}
 
 // NewByzantiumInstructionSet returns the frontier, homestead and
 // byzantium instructions.

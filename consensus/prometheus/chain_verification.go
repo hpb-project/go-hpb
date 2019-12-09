@@ -18,10 +18,6 @@ package prometheus
 import (
 	"bytes"
 	"errors"
-	"math/big"
-	"strings"
-	"time"
-
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -32,6 +28,11 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"math"
+	"math/big"
+	"sort"
+	"strings"
+	"time"
 )
 
 
@@ -90,15 +91,13 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	checkpoint := (number % consensus.HpbNodeCheckpointInterval) == 0
 
 	// Check that the extra-data contains both the vanity and signature
-	if len(header.Extra) < consensus.ExtraVanity {
-		return consensus.ErrMissingVanity
+	extra, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return err
 	}
-	if len(header.Extra) < consensus.ExtraVanity+consensus.ExtraSeal {
-		return consensus.ErrMissingSignature
-	}
+
 	// Ensure that the extra-data contains a signerHash list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - consensus.ExtraVanity - consensus.ExtraSeal
-	if !checkpoint && signersBytes != 0 {
+	if !checkpoint && len(extra.GetNodes()) != 0 {
 		return consensus.ErrExtraSigners
 	}
 
@@ -203,10 +202,44 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		parentheader = chain.GetHeader(header.ParentHash, number-1)
 	}
 
+	extra, _ := types.BytesToExtraDetail(header.Extra)
+	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
+	if err != nil {
+		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err)
+		return err
+	}
 	// Resolve the authorization key and check against signers
 	signer, err := consensus.Ecrecover(header, c.signatures)
 	if err != nil {
+		log.Debug("verifySeal", "recover signer failed", err)
 		return err
+	}
+
+	if number > consensus.StageNumberRealRandom {
+		var realrandom []byte
+		if number%200 == 0 {
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
+			bigsignlsthwrndmod := big.NewInt(0)
+			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+
+			var index = uint64(number - 200 + bigsignlsthwrndmod.Uint64())
+			seedswitchheader := chain.GetHeaderByNumber(index)
+			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+
+			realrandom = tmpExtra.GetRealRND()
+		} else {
+			signRnd := parentExtra.GetSignedLastRND()
+			realrandom = signRnd[0:32]
+		}
+
+		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())
+		if err != nil {
+			log.Debug("verifyHwRnd", "recover signer failed", err)
+			return err
+		}
+		if signer != rndsigner {
+			return errors.New("HW Real Random signer is not miner")
+		}
 	}
 
 	var snap *snapshots.HpbNodeSnap
@@ -239,20 +272,68 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				log.Error("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
-			newrand, err := c.GetNextRand(parentheader.HardwareRandom, number)
-			if err != nil {
-				log.Error("verifySeal GetNextHash", "fail", err)
-				return consensus.ErrInvalidblockbutnodrop
-			}
-			if bytes.Compare(newrand, header.HardwareRandom) != 0 {
-				log.Error("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
-				return consensus.Errrandcheck
+			if number >= consensus.StateNumberNewHash {
+				if err = c.hboe.HashVerify(parentheader.HardwareRandom, header.HardwareRandom); err != nil {
+					log.Error("verify fail HashVerify", "error", err)
+					return consensus.Errrandcheck
+				}
+			} else {
+				newrand, err := c.GetNextRand(parentheader.HardwareRandom, number)
+				if err != nil {
+					log.Error("verifySeal GetNextHash", "fail", err)
+					return consensus.ErrInvalidblockbutnodrop
+				}
+				if bytes.Compare(newrand, header.HardwareRandom) != 0 {
+					log.Error("verify fail consensus.Errrandcheck", "boe gen random", common.Bytes2Hex(newrand))
+					return consensus.Errrandcheck
+				}
 			}
 		}
 
 		if mode == config.FullSync {
+			var inturn bool
+			if number < consensus.StateNumberNewHash {
+				_,inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+			} else {
+				//statistics the miners` addresses donnot care repeat address
+				latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
+				log.Debug("chainGeneration ", "lastCheckoutPoint", latestCheckPointNumber, "current Number", number)
+				var lastMiner common.Address
+
+				var i = latestCheckPointNumber
+				var retry = 5
+				for i <= number {
+					var chooseSet = common.Addresses{}
+					//var chooseSet = make([]common.Address, 0, len(snap.Signers))
+					for k,_ := range snap.Signers {
+						if k != lastMiner {
+							chooseSet = append(chooseSet,k)
+						}
+					}
+					sort.Sort(chooseSet)
+					if i < number {
+						if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
+							random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
+							lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+						} else {
+							if retry > 0 {
+								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)
+								retry--
+								time.Sleep(time.Microsecond*100)
+								continue
+							} else {
+								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry",retry)
+								return errors.New("chainGetHeaderByNumber failed")
+							}
+						}
+					} else {
+						_,inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSet)
+					}
+					retry = 5
+					i++
+				}
+			}
 			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
-			inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			if inturn {
 				if header.Difficulty.Cmp(diffInTurn) != 0 {
 					return consensus.ErrInvalidDifficulty

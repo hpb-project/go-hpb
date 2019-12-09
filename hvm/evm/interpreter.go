@@ -69,7 +69,7 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		cfg.JumpTable = byzantiumInstructionSet
+		cfg.JumpTable = constantinopleInstructionSet
 	}
 
 	return &Interpreter{

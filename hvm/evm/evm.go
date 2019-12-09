@@ -73,6 +73,7 @@ type Context struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	Random []byte
 }
 
 // EVM is the Hpb Virtual Machine base object and provides
@@ -429,6 +430,70 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
 
 	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
+	if evm.vmConfig.NoRecursion && evm.depth > 0 {
+		return nil, contractAddr, gas, nil
+	}
+	ret, err = run(evm, snapshot, contract, nil)
+
+	// check whether the max code size has been exceeded
+	maxCodeSizeExceeded := len(ret) > config.MaxCodeSize
+	// if the contract creation ran successfully and no errors were returned
+	// calculate the gas required to store the code. If the code could not
+	// be stored due to not enough gas set an error and let it be handled
+	// by the error checking condition below.
+	if err == nil && !maxCodeSizeExceeded {
+		createDataGas := uint64(len(ret)) * config.CreateDataGas
+		if contract.UseGas(createDataGas) {
+			evm.StateDB.SetCode(contractAddr, ret)
+		} else {
+			err = ErrCodeStoreOutOfGas
+		}
+	}
+
+	// When an error was returned by the EVM or when setting the creation code
+	// above we revert to the snapshot and consume any gas remaining. Additionally
+	// when we're in homestead this also counts for code storage gas errors.
+	if maxCodeSizeExceeded || err != nil {
+		evm.StateDB.RevertToSnapshot(snapshot)
+		if err != errExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	}
+	// Assign err if contract code size exceeds the max while the err is still empty.
+	if maxCodeSizeExceeded && err == nil {
+		err = errMaxCodeSizeExceeded
+	}
+	return ret, contractAddr, contract.Gas, err
+}
+func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, value *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+
+	if evm.depth > int(config.CallCreateDepth) {
+		return nil, common.Address{}, gas, ErrDepth
+	}
+	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
+		return nil, common.Address{}, gas, ErrInsufficientBalance
+	}
+	// Ensure there's no existing contract already at the designated address
+	nonce := evm.StateDB.GetNonce(caller.Address())
+	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	codeHash := crypto.Keccak256Hash(code)
+	contractAddr = common.BytesToAddress(crypto.Keccak256([]byte{0xff}, caller.Address().Bytes(), common.BigToHash(salt).Bytes(), codeHash.Bytes())[12:])
+	contractHash := evm.StateDB.GetCodeHash(contractAddr)
+	if evm.StateDB.GetNonce(contractAddr) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		return nil, common.Address{}, 0, ErrContractAddressCollision
+	}
+	// Create a new account on the state
+	snapshot := evm.StateDB.Snapshot()
+	evm.StateDB.CreateAccount(contractAddr)
+	evm.StateDB.SetNonce(contractAddr, 1)
+	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
+
+	// initialise a new contract and set the code that is to be used by the
+	// E The contract is a scoped evmironment for this execution context
+	// only.
+	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
+
+	contract.SetCallCode(&contractAddr, codeHash, code)
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil
 	}

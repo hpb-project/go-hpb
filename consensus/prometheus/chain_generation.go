@@ -17,7 +17,9 @@ package prometheus
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -37,16 +39,13 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/db"
-
-	//"strconv"
 	"errors"
-	"math"
-	"strings"
-
 	"github.com/hpb-project/go-hpb/account/abi"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/hvm/evm"
+	"math"
+	"strings"
 )
 
 // constant parameter definition
@@ -122,7 +121,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
-	if number < consensus.StageNumberV {
+	if number < consensus.StateNumberNewHash {
 		return c.hboe.GetNextHash(lastrand)
 	} else {
 		return c.hboe.GetNextHash_v2(lastrand)
@@ -144,29 +143,96 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if len(parentheader.HardwareRandom) == 0 {
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}
+	extra, _ := types.BytesToExtraDetail(header.Extra)
+	defer func() {
+		header.Extra = extra.ToBytes()
+	}()
+
+	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
+	if err != nil {
+		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err)
+	}
 
 	if config.GetHpbConfigInstance().Node.TestMode == 1 || config.GetHpbConfigInstance().Network.RoleType == "synnode" {
 		log.Debug("TestMode, using the gensis.json hardwarerandom")
 		header.HardwareRandom = make([]byte, len(parentheader.HardwareRandom))
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
+		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
+		//set header hareware real random
+		if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+			HWRealRand := consensus.Gen32BRandom()
+			extra.SetRealRND(HWRealRand[:])
+		}
+
 	} else {
 		if c.hboe.HWCheck() {
 			if parentheader.HardwareRandom == nil || len(parentheader.HardwareRandom) != 32 {
 				log.Debug("parentheader.HardwareRandom is nil or length is not 32")
 			}
-			if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
-				return err
-			} else {
-				if len(boehwrand) != 0 {
-					header.HardwareRandom = make([]byte, len(boehwrand))
-					copy(header.HardwareRandom, boehwrand)
+
+			for {
+				if boehwrand, err := c.GetNextRand(parentheader.HardwareRandom, number); err != nil {
+					if err == boe.ErrHashTimeLimited {
+						time.Sleep(time.Millisecond * 500)
+						continue
+					} else {
+						return err
+					}
 				} else {
-					return errors.New("c.hboe.GetNextHash success but output random length is 0")
+					if len(boehwrand) != 0 {
+						header.HardwareRandom = make([]byte, len(boehwrand))
+						copy(header.HardwareRandom, boehwrand)
+					} else {
+						return errors.New("c.hboe.GetNextHash success but output random length is 0")
+					}
 				}
+				break
+			}
+
+			//set header real random getting from boe
+			if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+				HWRealRand, err := c.hboe.GetRandom()
+				if err != nil {
+					log.Error("PrepareBlockHeader boe gen real random fail", "error", err)
+					return err
+				}
+				//log.Info("PrepareBlockHeader boe gen real random value", "real random", common.Bytes2Hex(HWRealRand[:]))
+				extra.SetRealRND(HWRealRand[:])
 			}
 		} else {
 			return errors.New("boe check fail")
 		}
+	}
+
+	//block 0 has no HWRealRnd, so from block 1 beginning set SignLastHWRealRnd
+	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && number > consensus.StageNumberRealRandom {
+		//set last number header hardware real random signature
+		signer, signFn := c.signer, c.signFn
+
+		var hashHWRealRnd []byte
+		//from 400 execute seed switch because block 0 has no SignLastHWRealRnd
+		if number%200 == 0 {
+			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
+			bigsignlsthwrndmod := big.NewInt(0)
+			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
+
+			var index = uint64(number - 200 + bigsignlsthwrndmod.Uint64())
+			seedswitchheader := chain.GetHeaderByNumber(index)
+			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+			hashHWRealRnd = tmpExtra.GetRealRND()
+		} else {
+			signRnd := parentExtra.GetSignedLastRND()
+			hashHWRealRnd = signRnd[0:32]
+
+		}
+
+		SignLastHWRealRnd, err := signFn(accounts.Account{Address: signer}, hashHWRealRnd)
+		if err != nil {
+			log.Error("signFn failed.")
+			return err
+		}
+		//log.Info("last number header hardware real random signature", "value", common.Bytes2Hex(SignLastHWRealRnd[:]))
+		extra.SetSignedLastRND(SignLastHWRealRnd[:])
 	}
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
@@ -179,8 +245,57 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
 	}
 	header.Difficulty = diffNoTurn
-	if snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()) {
-		header.Difficulty = diffInTurn
+	if number < consensus.StateNumberNewHash {
+		if _,inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()); inturn {
+			header.Difficulty = diffInTurn
+		}
+	} else {
+		//statistics the miners` addresses donnot care repeat address
+		latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
+		log.Debug("chainGeneration ", "lastCheckoutPoint", latestCheckPointNumber, "current Number", number)
+		var lastMiner common.Address
+
+		var i = latestCheckPointNumber
+		var retry = 5
+
+		for i <= number {
+			var chooseSet = common.Addresses{}
+			for k,_ := range snap.Signers {
+				if k != lastMiner {
+					chooseSet = append(chooseSet,k)
+				} else {
+					//log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
+				}
+			}
+			sort.Sort(chooseSet)
+
+
+			if i < number {
+				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
+					random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
+					lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+					//log.Debug("PrepareHeader", "number",i, "random",hex.EncodeToString(oldHeader.HardwareRandom),"random",random,"lastMiner",lastMiner)
+				} else {
+					if retry > 0 {
+						//log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)
+						retry--
+						time.Sleep(time.Microsecond*100)
+						continue
+					} else {
+						//log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry",retry)
+						return errors.New("chainGetHeaderByNumber failed")
+					}
+				}
+			} else {
+				m,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet)
+				log.Debug("PrepareHeader","current miner",m,"inturn",inturn, "random", hex.EncodeToString(header.HardwareRandom))
+				if inturn {
+					header.Difficulty = diffInTurn
+				}
+			}
+			retry = 5
+			i++
+		}
 	}
 
 	if header.Difficulty == diffNoTurn {
@@ -234,21 +349,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	c.lock.RUnlock()
 
-	// check the header
-	if len(header.Extra) < consensus.ExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, consensus.ExtraVanity-len(header.Extra))...)
-	}
-
-	header.Extra = header.Extra[:consensus.ExtraVanity]
-
-	// get all the hpb node address
 	if number%consensus.HpbNodeCheckpointInterval == 0 {
-		for _, signer := range snap.GetHpbNodes() {
-			header.Extra = append(header.Extra, signer[:]...)
-		}
+		extra.SetNodes(snap.GetHpbNodes())
 	}
 
-	header.Extra = append(header.Extra, make([]byte, consensus.ExtraSeal)...)
 	header.MixDigest = common.Hash{}
 
 	parent := chain.GetHeader(header.ParentHash, number-1)
@@ -333,8 +437,13 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 		return nil, err
 	}
 
-	// put the signature result to the Extra field
-	copy(header.Extra[len(header.Extra)-consensus.ExtraSeal:], sighash)
+	//将签名后的结果返给到Extra中
+	extra, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+		return nil, err
+	}
+	extra.SetSeal(sighash)
+	header.Extra = common.CopyBytes(extra.ToBytes())
 
 	return block.WithSeal(header), nil
 }

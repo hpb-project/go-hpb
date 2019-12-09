@@ -88,6 +88,22 @@ func NewPublicHpbAPI(e *Node) *PublicHpbAPI {
 	return &PublicHpbAPI{e}
 }
 
+func (api *PublicHpbAPI) GetRandom(blocknum *rpc.BlockNumber) string {
+	blockchain := api.e.BlockChain()
+	var header *types.Header
+	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
+		header = blockchain.CurrentHeader()
+	} else {
+		log.Debug("getRandom", "num", blocknum.Int64())
+		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
+	}
+	if header != nil {
+		extra := header.ExtraRandom()
+		return common.ToHex(extra)
+	}
+	return ""
+}
+
 // Hpberbase is the address that mining rewards will be send to
 func (api *PublicHpbAPI) Hpberbase() (common.Address, error) {
 	return api.e.Hpberbase()

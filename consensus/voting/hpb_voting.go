@@ -40,7 +40,7 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 	if number < consensus.HpbNodeCheckpointInterval {
 		genesis := chain.GetHeaderByNumber(0)
 		hash := genesis.Hash()
-		
+
 		if snapcd, err := GetDataFromCacheAndDb(db, recents, signatures, config, hash); err == nil {
 			log.Debug("HPB_VOTING： Loaded voting Hpb Node Snap form cache and db", "number", number, "hash", hash)
 			return snapcd, err
@@ -88,12 +88,14 @@ func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.AR
 func GenGenesisSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader) (*snapshots.HpbNodeSnap, error) {
 
 	genesis := chain.GetHeaderByNumber(0)
-	signers := make([]common.Address, (len(genesis.Extra)-consensus.ExtraVanity-consensus.ExtraSeal)/common.AddressLength)
-	for i := 0; i < len(signers); i++ {
-		copy(signers[i][:], genesis.Extra[consensus.ExtraVanity+i*common.AddressLength:consensus.ExtraVanity+(i+1)*common.AddressLength])
+	extra, err := types.BytesToExtraDetail(genesis.Extra)
+	if err != nil {
+		log.Error("GenGenesisSnap", "bytesToExtraDetail failed, error", err)
+		return nil, err
 	}
+	signers := extra.GetNodes()
 	snap := snapshots.NewHistorysnap(config, signatures, 0, 0, genesis.Hash(), signers)
-	
+
 	if err := StoreDataToCacheAndDb(recents, db, snap, genesis.Hash()); err != nil {
 		return nil, err
 	}
