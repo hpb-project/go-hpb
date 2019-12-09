@@ -152,6 +152,7 @@ import (
 	"fmt"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
+	"io/ioutil"
 	"runtime"
 	"time"
 	"unsafe"
@@ -486,6 +487,31 @@ func (boe *BoeHandle) FWUpdate() error {
 	}
 	var ilen = len(image)
 	fmt.Printf("image len = %d\n", ilen)
+
+	C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
+	var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(ilen))
+	if ret == C.BOE_OK {
+		fmt.Println("upgrade successed.")
+		return nil
+	}
+	fmt.Printf("[boe]UpgradeAbort ecode:%d\r\n", uint32(ret.ecode))
+	C.boe_err_free(ret)
+	return ErrUpdateFailed
+}
+
+
+// update boe firmware with exist file
+func (boe *BoeHandle) FWUpdateWithFile(fpath string) error {
+	// get board version info.
+	// call C api to update.
+	image, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		fmt.Println("read firmware failed.")
+		return err
+	}
+	var ilen = len(image)
+	//fmt.Printf("image len = %d\n", ilen)
+	fmt.Printf("open file succeed\n")
 
 	C.boe_reg_update_callback((C.BoeUpgradeCallback)(unsafe.Pointer(C.upgrade_call_back_cgo)))
 	var ret = C.boe_upgrade((*C.uchar)(unsafe.Pointer(&image[0])), (C.int)(ilen))

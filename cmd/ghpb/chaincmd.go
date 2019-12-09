@@ -18,10 +18,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/synctrl"
+
 	"os"
 	"runtime"
 	"strconv"
@@ -183,18 +185,39 @@ Detect BOE.`,
 )
 
 func boeupdate(ctx *cli.Context) error {
+	args := ctx.Args()
+	fpath := ""
+	if len(args) > 1 {
+		return errors.New("too many arguments")
+	}
+	if len(args) == 1 {
+		fpath = args[0]
+	}
 	boehandle := boe.BoeGetInstance()
 	error := boehandle.Init()
 	if error != nil {
 		log.Error("boe init failed", " ", error)
-		return error
+		//return error
 	}
+
 	log.Trace("start boe fw update")
-	error = boehandle.FWUpdate()
-	if error != nil {
-		log.Error("boe fw update failed", " ", error)
-		return error
+	if fpath != "" {
+		log.Info("boe update ", "with file ",fpath)
+		error = boehandle.FWUpdateWithFile(fpath)
+		if error != nil {
+			log.Error("boe fw update failed", " ", error)
+			return error
+		}
+	} else {
+		log.Info("boe update ", "from github.com")
+		error = boehandle.FWUpdate()
+		if error != nil {
+			log.Error("boe fw update failed", " ", error)
+			return error
+		}
 	}
+
+
 	log.Trace("boe fw update complete")
 	error = boehandle.Release()
 	if error != nil {
