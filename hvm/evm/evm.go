@@ -89,7 +89,7 @@ type Context struct {
 type State_Diff struct {
 	from     common.Address //transfer from address
 	to       common.Address //transfer to address
-	tvalue   uint64         //transfer value
+	tvalue   string         //transfer value
 	gaslimit uint64         //transfer gaslimit
 	depth    int            //evm depth
 	id       int            //evm transfer counts
@@ -230,12 +230,12 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value)
+		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value.String())
 
 		statediff := &State_Diff{
 			from:     caller.Address(),
 			to:       to.Address(),
-			tvalue:   value.Uint64(),
+			tvalue:   value.String(),
 			gaslimit: gas,
 			depth:    evm.depth,
 			id:       evm.depthid[evm.depth],
