@@ -574,7 +574,7 @@ func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 	return nil, nil
 }
 func opRandom(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	log.Error("opRandom", "random", common.ToHex(evm.Random), "len", len(evm.Random))
+	log.Debug("opRandom", "random", common.ToHex(evm.Random), "len", len(evm.Random))
 	stack.push(new(big.Int).SetBytes(evm.Random))
 	return nil, nil
 }
@@ -585,7 +585,6 @@ func opPop(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 
 func opMload(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	offset := stack.pop()
-	log.Error("opMload", "offset", offset)
 	val := new(big.Int).SetBytes(memory.Get(offset.Int64(), 32))
 	stack.push(val)
 

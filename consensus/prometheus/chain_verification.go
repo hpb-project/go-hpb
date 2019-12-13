@@ -202,10 +202,15 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		parentheader = chain.GetHeader(header.ParentHash, number-1)
 	}
 
-	extra, _ := types.BytesToExtraDetail(header.Extra)
+	extra, err := types.BytesToExtraDetail(header.Extra)
+	if err != nil {
+        log.Error("PrepareBlockHeader", "Header bytesToExtraDetail error", err, "Block number", number)
+        return err
+    }
+
 	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
 	if err != nil {
-		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err)
+		log.Error("PrepareBlockHeader", "Parentheader bytesToExtraDetail error", err, "Parent Number", number-1)
 		return err
 	}
 	// Resolve the authorization key and check against signers

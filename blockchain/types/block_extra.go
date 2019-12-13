@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 const (
@@ -48,7 +49,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 		copy(detail.Vanity[:], data[:ExtraVanityLength])
 		offset += ExtraVanityLength
 
-		detail.NodesNum = uint8(len(data)-ExtraVanityLength-ExtraSealLength) / common.AddressLength
+		detail.NodesNum = uint8((len(data)-ExtraVanityLength-ExtraSealLength) / common.AddressLength)
 		if detail.NodesNum > 0 {
 			for t := 0; t < int(detail.NodesNum); t++ {
 				var addr common.Address
@@ -90,6 +91,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 
 	}
 	if len(data) != offset {
+		log.Error("BytesToExtraDetail","len(data)",len(data),"offset",offset)
 		return nil, errors.New("Invalid ExtraData, Unmatched length. ")
 	}
 	return detail, nil
@@ -166,7 +168,7 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 	if this.Version == 0 {
 		datalen := ExtraVanityLength
 		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum * common.AddressLength)
+			datalen += int(this.NodesNum) * common.AddressLength
 		}
 		data := make([]byte, datalen)
 		offset := 0
