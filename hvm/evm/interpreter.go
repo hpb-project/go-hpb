@@ -18,6 +18,7 @@ package evm
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/consensus"
 	"sync/atomic"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -69,7 +70,12 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		cfg.JumpTable = constantinopleInstructionSet
+		if evm.BlockNumber.Uint64() > consensus.StageNumberRealRandom {
+			cfg.JumpTable = constantinopleInstructionSet
+		} else {
+			cfg.JumpTable = byzantiumInstructionSet
+		}
+
 	}
 
 	return &Interpreter{
