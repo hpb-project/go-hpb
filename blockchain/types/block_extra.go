@@ -110,9 +110,9 @@ Seal: 0x%x
 
 func (this *ExtraDetail) ToBytes() []byte {
 	if this.Version == 0 {
-		datalen := ExtraVanityLength + ExtraSealLength
+		var datalen = ExtraVanityLength + ExtraSealLength
 		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum * common.AddressLength)
+			datalen += int(this.NodesNum) * common.AddressLength
 		}
 		data := make([]byte, datalen)
 		offset := 0
@@ -129,7 +129,7 @@ func (this *ExtraDetail) ToBytes() []byte {
 	} else {
 		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraSealLength
 		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum * common.AddressLength)
+			datalen += int(this.NodesNum) * common.AddressLength
 		}
 		data := make([]byte, datalen)
 		offset := 0
@@ -184,7 +184,7 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 	} else {
 		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength
 		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum * common.AddressLength)
+			datalen += int(this.NodesNum) * common.AddressLength
 		}
 		data := make([]byte, datalen)
 		offset := 0
