@@ -2,6 +2,14 @@ syntax = "proto3";
 package types;
 // protoc --gogo_out=. types.proto
 
+//message HMSG {
+//    oneof value {
+//        Example example = 1;
+//        LockAccountModuleMsg lock = 2;
+//    }
+//}
+
+// Example module messages
 message Example {
     oneof value {
         ParamAdd add = 2;
@@ -19,7 +27,33 @@ message ParamMul {
     int64 b = 2;
 }
 
+// start LockAccount module messages
+message LockAccountModuleMsg {
+    oneof value {
+        NewLockProjectMsg project = 1;
+        NewLockTokenMsg   record  = 2;
+    }
+}
 
+message NewLockProjectMsg {
+    bytes  account     = 1; // account that created the project
+    uint32 lockPeriods = 2; // total periods to unlock
+    uint32 cycleTime   = 3; // cycle per period, unit(hour)
+    uint32 benefitRate = 4; // benefit for address
+    uint64 minValue    = 5; // min HPB token number per address to lock
+    uint64 maxValue    = 6; // max HPB token number per address to lock
+    uint64 totalNumber = 7; // max HPB token number for all address
+    uint64 deadine     = 8; // deadline timestamp.
+}
+
+message NewLockTokenMsg {
+    bytes  project 	   = 1; // project hash, empty is not join any project
+    uint32 lockPeriods = 2;	// total periods to lock.
+    uint32 cycleTime   = 3; // cycle time per period, unit (hour)
+    uint64 number      = 4; // total HPB token number start lock
+}
+
+// Query format
 message Query {
     string path = 1;
     bytes data = 2;
