@@ -411,9 +411,15 @@ func (self *worker) startNewMinerRound() {
 	extra.SetVanity(self.extra)
 	header.Extra = common.CopyBytes(extra.ToBytes())
 
+	if p2p.PeerMgrInst().GetLocalType() == discover.SynNode || p2p.PeerMgrInst().GetLocalType() == discover.PreNode {
+		return
+	}
+
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
+	} else {
+		return
 	}
 	pstate, _ := self.chain.StateAt(parent.Root())
 	log.Debug("worker startNewMinerRound before PrepareBlockHeader", "number", header.Number.Uint64(), "time", time.Now().Unix())
@@ -427,9 +433,7 @@ func (self *worker) startNewMinerRound() {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
-	if p2p.PeerMgrInst().GetLocalType() == discover.SynNode || p2p.PeerMgrInst().GetLocalType() == discover.PreNode {
-		return
-	}
+
 	// Create the current work task and check any fork transitions needed
 	work := self.current
 	pending, err := txpool.GetTxPool().Pending()

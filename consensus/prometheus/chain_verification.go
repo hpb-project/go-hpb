@@ -221,14 +221,20 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 
 	if number > consensus.StageNumberRealRandom {
-		var realrandom []byte
+		var realrandom = make([]byte,0)
 		if number%200 == 0 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
 			bigsignlsthwrndmod := big.NewInt(0)
 			bigsignlsthwrndmod.Mod(bigsignlsthwrnd, new(big.Int).SetInt64(int64(200)))
 
 			var index = uint64(number - 200 + bigsignlsthwrndmod.Uint64())
+			curHeader := chain.CurrentHeader().Number.Uint64()
+			if curHeader < index {
+				log.Debug("verifySeal","future header",number,"index",index,"currentHeader",curHeader)
+				return errors.New("further header verify randomSeed")
+			}
 			seedswitchheader := chain.GetHeaderByNumber(index)
+
 			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
 
 			realrandom = tmpExtra.GetRealRND()
