@@ -20,6 +20,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+// Example module messages
 type Example struct {
 	// Types that are valid to be assigned to Value:
 	//	*Example_Add
@@ -255,6 +256,307 @@ func (m *ParamMul) GetB() int64 {
 	return 0
 }
 
+// start LockAccount module messages
+type LockAccountModuleMsg struct {
+	// Types that are valid to be assigned to Value:
+	//	*LockAccountModuleMsg_Project
+	//	*LockAccountModuleMsg_Record
+	Value                isLockAccountModuleMsg_Value `protobuf_oneof:"value"`
+	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
+	XXX_unrecognized     []byte                       `json:"-"`
+	XXX_sizecache        int32                        `json:"-"`
+}
+
+func (m *LockAccountModuleMsg) Reset()         { *m = LockAccountModuleMsg{} }
+func (m *LockAccountModuleMsg) String() string { return proto.CompactTextString(m) }
+func (*LockAccountModuleMsg) ProtoMessage()    {}
+func (*LockAccountModuleMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d938547f84707355, []int{3}
+}
+func (m *LockAccountModuleMsg) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LockAccountModuleMsg.Unmarshal(m, b)
+}
+func (m *LockAccountModuleMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LockAccountModuleMsg.Marshal(b, m, deterministic)
+}
+func (m *LockAccountModuleMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LockAccountModuleMsg.Merge(m, src)
+}
+func (m *LockAccountModuleMsg) XXX_Size() int {
+	return xxx_messageInfo_LockAccountModuleMsg.Size(m)
+}
+func (m *LockAccountModuleMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_LockAccountModuleMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LockAccountModuleMsg proto.InternalMessageInfo
+
+type isLockAccountModuleMsg_Value interface {
+	isLockAccountModuleMsg_Value()
+}
+
+type LockAccountModuleMsg_Project struct {
+	Project *NewLockProjectMsg `protobuf:"bytes,1,opt,name=project,proto3,oneof"`
+}
+type LockAccountModuleMsg_Record struct {
+	Record *NewLockTokenMsg `protobuf:"bytes,2,opt,name=record,proto3,oneof"`
+}
+
+func (*LockAccountModuleMsg_Project) isLockAccountModuleMsg_Value() {}
+func (*LockAccountModuleMsg_Record) isLockAccountModuleMsg_Value()  {}
+
+func (m *LockAccountModuleMsg) GetValue() isLockAccountModuleMsg_Value {
+	if m != nil {
+		return m.Value
+	}
+	return nil
+}
+
+func (m *LockAccountModuleMsg) GetProject() *NewLockProjectMsg {
+	if x, ok := m.GetValue().(*LockAccountModuleMsg_Project); ok {
+		return x.Project
+	}
+	return nil
+}
+
+func (m *LockAccountModuleMsg) GetRecord() *NewLockTokenMsg {
+	if x, ok := m.GetValue().(*LockAccountModuleMsg_Record); ok {
+		return x.Record
+	}
+	return nil
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*LockAccountModuleMsg) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _LockAccountModuleMsg_OneofMarshaler, _LockAccountModuleMsg_OneofUnmarshaler, _LockAccountModuleMsg_OneofSizer, []interface{}{
+		(*LockAccountModuleMsg_Project)(nil),
+		(*LockAccountModuleMsg_Record)(nil),
+	}
+}
+
+func _LockAccountModuleMsg_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*LockAccountModuleMsg)
+	// value
+	switch x := m.Value.(type) {
+	case *LockAccountModuleMsg_Project:
+		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Project); err != nil {
+			return err
+		}
+	case *LockAccountModuleMsg_Record:
+		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Record); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return fmt.Errorf("LockAccountModuleMsg.Value has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _LockAccountModuleMsg_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*LockAccountModuleMsg)
+	switch tag {
+	case 1: // value.project
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(NewLockProjectMsg)
+		err := b.DecodeMessage(msg)
+		m.Value = &LockAccountModuleMsg_Project{msg}
+		return true, err
+	case 2: // value.record
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(NewLockTokenMsg)
+		err := b.DecodeMessage(msg)
+		m.Value = &LockAccountModuleMsg_Record{msg}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _LockAccountModuleMsg_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*LockAccountModuleMsg)
+	// value
+	switch x := m.Value.(type) {
+	case *LockAccountModuleMsg_Project:
+		s := proto.Size(x.Project)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *LockAccountModuleMsg_Record:
+		s := proto.Size(x.Record)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
+}
+
+type NewLockProjectMsg struct {
+	Account              []byte   `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	LockPeriods          uint32   `protobuf:"varint,2,opt,name=lockPeriods,proto3" json:"lockPeriods,omitempty"`
+	CycleTime            uint32   `protobuf:"varint,3,opt,name=cycleTime,proto3" json:"cycleTime,omitempty"`
+	BenefitRate          uint32   `protobuf:"varint,4,opt,name=benefitRate,proto3" json:"benefitRate,omitempty"`
+	MinValue             uint64   `protobuf:"varint,5,opt,name=minValue,proto3" json:"minValue,omitempty"`
+	MaxValue             uint64   `protobuf:"varint,6,opt,name=maxValue,proto3" json:"maxValue,omitempty"`
+	TotalNumber          uint64   `protobuf:"varint,7,opt,name=totalNumber,proto3" json:"totalNumber,omitempty"`
+	Deadine              uint64   `protobuf:"varint,8,opt,name=deadine,proto3" json:"deadine,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewLockProjectMsg) Reset()         { *m = NewLockProjectMsg{} }
+func (m *NewLockProjectMsg) String() string { return proto.CompactTextString(m) }
+func (*NewLockProjectMsg) ProtoMessage()    {}
+func (*NewLockProjectMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d938547f84707355, []int{4}
+}
+func (m *NewLockProjectMsg) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewLockProjectMsg.Unmarshal(m, b)
+}
+func (m *NewLockProjectMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewLockProjectMsg.Marshal(b, m, deterministic)
+}
+func (m *NewLockProjectMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewLockProjectMsg.Merge(m, src)
+}
+func (m *NewLockProjectMsg) XXX_Size() int {
+	return xxx_messageInfo_NewLockProjectMsg.Size(m)
+}
+func (m *NewLockProjectMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewLockProjectMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewLockProjectMsg proto.InternalMessageInfo
+
+func (m *NewLockProjectMsg) GetAccount() []byte {
+	if m != nil {
+		return m.Account
+	}
+	return nil
+}
+
+func (m *NewLockProjectMsg) GetLockPeriods() uint32 {
+	if m != nil {
+		return m.LockPeriods
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetCycleTime() uint32 {
+	if m != nil {
+		return m.CycleTime
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetBenefitRate() uint32 {
+	if m != nil {
+		return m.BenefitRate
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetMinValue() uint64 {
+	if m != nil {
+		return m.MinValue
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetMaxValue() uint64 {
+	if m != nil {
+		return m.MaxValue
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetTotalNumber() uint64 {
+	if m != nil {
+		return m.TotalNumber
+	}
+	return 0
+}
+
+func (m *NewLockProjectMsg) GetDeadine() uint64 {
+	if m != nil {
+		return m.Deadine
+	}
+	return 0
+}
+
+type NewLockTokenMsg struct {
+	Project              []byte   `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	LockPeriods          uint32   `protobuf:"varint,2,opt,name=lockPeriods,proto3" json:"lockPeriods,omitempty"`
+	CycleTime            uint32   `protobuf:"varint,3,opt,name=cycleTime,proto3" json:"cycleTime,omitempty"`
+	Number               uint64   `protobuf:"varint,4,opt,name=number,proto3" json:"number,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewLockTokenMsg) Reset()         { *m = NewLockTokenMsg{} }
+func (m *NewLockTokenMsg) String() string { return proto.CompactTextString(m) }
+func (*NewLockTokenMsg) ProtoMessage()    {}
+func (*NewLockTokenMsg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d938547f84707355, []int{5}
+}
+func (m *NewLockTokenMsg) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewLockTokenMsg.Unmarshal(m, b)
+}
+func (m *NewLockTokenMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewLockTokenMsg.Marshal(b, m, deterministic)
+}
+func (m *NewLockTokenMsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewLockTokenMsg.Merge(m, src)
+}
+func (m *NewLockTokenMsg) XXX_Size() int {
+	return xxx_messageInfo_NewLockTokenMsg.Size(m)
+}
+func (m *NewLockTokenMsg) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewLockTokenMsg.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewLockTokenMsg proto.InternalMessageInfo
+
+func (m *NewLockTokenMsg) GetProject() []byte {
+	if m != nil {
+		return m.Project
+	}
+	return nil
+}
+
+func (m *NewLockTokenMsg) GetLockPeriods() uint32 {
+	if m != nil {
+		return m.LockPeriods
+	}
+	return 0
+}
+
+func (m *NewLockTokenMsg) GetCycleTime() uint32 {
+	if m != nil {
+		return m.CycleTime
+	}
+	return 0
+}
+
+func (m *NewLockTokenMsg) GetNumber() uint64 {
+	if m != nil {
+		return m.Number
+	}
+	return 0
+}
+
+// Query format
 type Query struct {
 	Path                 string   `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	Data                 []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
@@ -268,7 +570,7 @@ func (m *Query) Reset()         { *m = Query{} }
 func (m *Query) String() string { return proto.CompactTextString(m) }
 func (*Query) ProtoMessage()    {}
 func (*Query) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d938547f84707355, []int{3}
+	return fileDescriptor_d938547f84707355, []int{6}
 }
 func (m *Query) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Query.Unmarshal(m, b)
@@ -313,24 +615,41 @@ func init() {
 	proto.RegisterType((*Example)(nil), "types.Example")
 	proto.RegisterType((*ParamAdd)(nil), "types.ParamAdd")
 	proto.RegisterType((*ParamMul)(nil), "types.ParamMul")
+	proto.RegisterType((*LockAccountModuleMsg)(nil), "types.LockAccountModuleMsg")
+	proto.RegisterType((*NewLockProjectMsg)(nil), "types.NewLockProjectMsg")
+	proto.RegisterType((*NewLockTokenMsg)(nil), "types.NewLockTokenMsg")
 	proto.RegisterType((*Query)(nil), "types.Query")
 }
 
 func init() { proto.RegisterFile("types.proto", fileDescriptor_d938547f84707355) }
 
 var fileDescriptor_d938547f84707355 = []byte{
-	// 200 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2e, 0xa9, 0x2c, 0x48,
-	0x2d, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0x62, 0xb8, 0xd8, 0x5d,
-	0x2b, 0x12, 0x73, 0x0b, 0x72, 0x52, 0x85, 0x94, 0xb9, 0x98, 0x13, 0x53, 0x52, 0x24, 0x98, 0x14,
-	0x18, 0x35, 0xb8, 0x8d, 0xf8, 0xf5, 0x20, 0x8a, 0x03, 0x12, 0x8b, 0x12, 0x73, 0x1d, 0x53, 0x52,
-	0x3c, 0x18, 0x82, 0x40, 0xb2, 0x20, 0x45, 0xb9, 0xa5, 0x39, 0x12, 0xcc, 0x98, 0x8a, 0x7c, 0x4b,
-	0x73, 0x40, 0x8a, 0x72, 0x4b, 0x73, 0x9c, 0xd8, 0xb9, 0x58, 0xcb, 0x12, 0x73, 0x4a, 0x53, 0x95,
-	0xd4, 0xb8, 0x38, 0x60, 0x06, 0x08, 0xf1, 0x70, 0x31, 0x26, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0x30,
-	0x07, 0x31, 0x26, 0x82, 0x78, 0x49, 0x60, 0xab, 0x98, 0x83, 0x18, 0x93, 0xe0, 0xea, 0x7c, 0x4b,
-	0x73, 0xf0, 0xaa, 0x73, 0xe7, 0x62, 0x0d, 0x2c, 0x4d, 0x2d, 0xaa, 0x14, 0x12, 0xe2, 0x62, 0x29,
-	0x48, 0x2c, 0xc9, 0x00, 0xab, 0xe3, 0x0c, 0x02, 0xb3, 0x41, 0x62, 0x29, 0x89, 0x25, 0x89, 0x60,
-	0xd5, 0x3c, 0x41, 0x60, 0xb6, 0x90, 0x18, 0x17, 0x5b, 0x46, 0x6a, 0x66, 0x7a, 0x46, 0x09, 0xd8,
-	0xc5, 0xcc, 0x41, 0x50, 0x5e, 0x12, 0x1b, 0x38, 0x10, 0x8c, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff,
-	0x1b, 0xb6, 0x0f, 0x5d, 0x13, 0x01, 0x00, 0x00,
+	// 418 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x53, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0xed, 0xd6, 0x49, 0x9c, 0x4e, 0x52, 0x55, 0xac, 0x50, 0xb5, 0x42, 0x1c, 0xa2, 0x20, 0xa1,
+	0x9c, 0x2a, 0x54, 0xf8, 0x81, 0x22, 0x21, 0x7a, 0xc0, 0x55, 0x59, 0x55, 0x9c, 0xb8, 0xac, 0xbd,
+	0x43, 0x62, 0xba, 0xf6, 0x5a, 0x9b, 0x5d, 0x68, 0xce, 0x3d, 0xf0, 0xdb, 0x68, 0xc7, 0x76, 0x63,
+	0x88, 0xc4, 0x85, 0xdb, 0xbe, 0x79, 0xef, 0xcd, 0xbc, 0x19, 0xcb, 0x30, 0xf3, 0xbb, 0x06, 0xb7,
+	0x17, 0x8d, 0xb3, 0xde, 0xf2, 0x31, 0x81, 0xe5, 0x57, 0x48, 0x3f, 0x3c, 0xa8, 0xaa, 0x31, 0xc8,
+	0x5f, 0x41, 0xa2, 0xb4, 0x16, 0xc7, 0x0b, 0xb6, 0x9a, 0x5d, 0x9e, 0x5d, 0xb4, 0xe2, 0x5b, 0xe5,
+	0x54, 0x75, 0xa5, 0xf5, 0xf5, 0x91, 0x8c, 0x6c, 0x14, 0x55, 0xc1, 0x88, 0xe4, 0x50, 0x94, 0x05,
+	0x13, 0x45, 0x55, 0x30, 0xef, 0x53, 0x18, 0xff, 0x50, 0x26, 0xe0, 0xf2, 0x35, 0x4c, 0xfb, 0x06,
+	0x7c, 0x0e, 0x4c, 0x09, 0xb6, 0x60, 0xab, 0x44, 0x32, 0x15, 0x51, 0x4e, 0xa3, 0x12, 0xc9, 0xf2,
+	0x27, 0x5d, 0x16, 0xcc, 0x3f, 0x75, 0xbf, 0x18, 0x3c, 0xff, 0x64, 0x8b, 0xfb, 0xab, 0xa2, 0xb0,
+	0xa1, 0xf6, 0x99, 0xd5, 0xc1, 0x60, 0xb6, 0x5d, 0xf3, 0x77, 0x90, 0x36, 0xce, 0x7e, 0xc7, 0xc2,
+	0x93, 0x75, 0x76, 0x29, 0xba, 0x68, 0x37, 0xf8, 0x33, 0x1a, 0x6e, 0x5b, 0x32, 0xdb, 0xae, 0xaf,
+	0x8f, 0x64, 0x2f, 0xe5, 0x6f, 0x60, 0xe2, 0xb0, 0xb0, 0xae, 0x5f, 0xfa, 0xfc, 0x4f, 0xd3, 0x9d,
+	0xbd, 0xc7, 0xba, 0xb5, 0x74, 0xba, 0xfd, 0x66, 0x8f, 0xc7, 0xf0, 0xec, 0xa0, 0x37, 0x17, 0x90,
+	0xaa, 0x36, 0x1a, 0xc5, 0x98, 0xcb, 0x1e, 0xf2, 0x05, 0xcc, 0x4c, 0xd4, 0xa2, 0x2b, 0xad, 0xde,
+	0xd2, 0xbc, 0x53, 0x39, 0x2c, 0xf1, 0x97, 0x70, 0x52, 0xec, 0x0a, 0x83, 0x77, 0x65, 0x85, 0x74,
+	0xdf, 0x53, 0xb9, 0x2f, 0x44, 0x7f, 0x8e, 0x35, 0x7e, 0x2b, 0xbd, 0x54, 0x1e, 0xc5, 0xa8, 0xf5,
+	0x0f, 0x4a, 0xfc, 0x05, 0x4c, 0xab, 0xb2, 0xfe, 0x12, 0xd3, 0x89, 0xf1, 0x82, 0xad, 0x46, 0xf2,
+	0x09, 0x13, 0xa7, 0x1e, 0x5a, 0x6e, 0xd2, 0x71, 0x1d, 0x8e, 0x9d, 0xbd, 0xf5, 0xca, 0xdc, 0x84,
+	0x2a, 0x47, 0x27, 0x52, 0xa2, 0x87, 0xa5, 0xb8, 0x95, 0x46, 0xa5, 0xcb, 0x1a, 0xc5, 0x94, 0xd8,
+	0x1e, 0x2e, 0x1f, 0x19, 0x9c, 0xfd, 0x75, 0xac, 0xa8, 0x1e, 0x7e, 0x8a, 0xf9, 0xfe, 0xdc, 0xff,
+	0x7b, 0x83, 0x73, 0x98, 0xd4, 0x6d, 0xc8, 0x11, 0xc5, 0xe8, 0xd0, 0xf2, 0x23, 0x8c, 0x3f, 0x07,
+	0x74, 0x3b, 0xce, 0x61, 0xd4, 0x28, 0xbf, 0xa1, 0xb9, 0x27, 0x92, 0xde, 0xb1, 0xa6, 0x95, 0x57,
+	0x34, 0x6d, 0x2e, 0xe9, 0x1d, 0x1b, 0x6d, 0xb0, 0x5c, 0x6f, 0x3c, 0xcd, 0x48, 0x64, 0x87, 0xf2,
+	0x09, 0xfd, 0x1a, 0x6f, 0x7f, 0x07, 0x00, 0x00, 0xff, 0xff, 0xc4, 0x8e, 0x26, 0x08, 0x29, 0x03,
+	0x00, 0x00,
 }
