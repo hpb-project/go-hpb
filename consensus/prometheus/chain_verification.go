@@ -222,6 +222,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 	if number > consensus.StageNumberRealRandom {
 		var realrandom = make([]byte,0)
+		var checkRandom = true
 		if number%200 == 0 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
 			bigsignlsthwrndmod := big.NewInt(0)
@@ -231,25 +232,26 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			curHeader := chain.CurrentHeader().Number.Uint64()
 			if curHeader < index {
 				log.Debug("verifySeal","future header",number,"index",index,"currentHeader",curHeader)
-				return errors.New("further header verify randomSeed")
+				checkRandom = false
+			} else {
+				seedswitchheader := chain.GetHeaderByNumber(index)
+				tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
+				realrandom = tmpExtra.GetRealRND()
 			}
-			seedswitchheader := chain.GetHeaderByNumber(index)
-
-			tmpExtra, _ := types.BytesToExtraDetail(seedswitchheader.Extra)
-
-			realrandom = tmpExtra.GetRealRND()
 		} else {
 			signRnd := parentExtra.GetSignedLastRND()
 			realrandom = signRnd[0:32]
 		}
 
-		rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())
-		if err != nil {
-			log.Debug("verifyHwRnd", "recover signer failed", err)
-			return err
-		}
-		if signer != rndsigner {
-			return errors.New("HW Real Random signer is not miner")
+		if checkRandom {
+			rndsigner, err := consensus.VerifyHWRlRndSign(realrandom, extra.GetSignedLastRND())
+			if err != nil {
+				log.Debug("verifyHwRnd", "recover signer failed", err)
+				return err
+			}
+			if signer != rndsigner {
+				return errors.New("HW Real Random signer is not miner")
+			}
 		}
 	}
 
