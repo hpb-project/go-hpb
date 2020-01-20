@@ -208,6 +208,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && number > consensus.StageNumberRealRandom {
 		//set last number header hardware real random signature
 		signer, signFn := c.signer, c.signFn
+		if signFn == nil {
+			return errors.New("miner not set")
+		}
 
 		var hashHWRealRnd []byte
 		//from 400 execute seed switch because block 0 has no SignLastHWRealRnd
