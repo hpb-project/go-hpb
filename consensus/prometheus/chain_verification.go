@@ -154,8 +154,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrInvalidTimestamp
 	}
 
-	// delay verification 50 blocks.
-	if number > (consensus.StageNumberIII + 50) && mode == config.FullSync {
+	if number > consensus.StageNumberIII && mode == config.FullSync {
 
 		lastheader := chain.GetHeader(header.ParentHash, number-1)
 		state, _ := chain.StateAt(lastheader.Root)
