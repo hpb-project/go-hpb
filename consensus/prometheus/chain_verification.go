@@ -220,7 +220,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	if number > consensus.StageNumberRealRandom {
+	if number > consensus.StageNumberRealRandom && mode == config.FullSync {
 		var realrandom = make([]byte,0)
 		var checkRandom = true
 		if number%200 == 0 {
