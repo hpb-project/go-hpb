@@ -7,7 +7,7 @@ import (
 	mtypes "github.com/hpb-project/go-hpb/module/types"
 )
 
-func handleNewProject(header *types.Header, tx *types.Transaction, db *state.StateDB ) (err error) {
+func (this *LockAccountModule) handleNewProject(header *types.Header, tx *types.Transaction, db *state.StateDB ) (err error) {
 	data := tx.Data()
 	npro := &mtypes.NewLockProjectMsg{}
 	err = proto.Unmarshal(data, npro)
@@ -19,7 +19,7 @@ func handleNewProject(header *types.Header, tx *types.Transaction, db *state.Sta
 }
 
 
-func handleNewLockToken(header *types.Header, tx *types.Transaction, db *state.StateDB) (err error) {
+func (this *LockAccountModule)handleNewLockToken(header *types.Header, tx *types.Transaction, db *state.StateDB) (err error) {
 	data := tx.Data()
 	nlock := &mtypes.NewLockTokenMsg{}
 	err = proto.Unmarshal(data, nlock)

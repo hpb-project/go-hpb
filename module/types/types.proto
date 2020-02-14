@@ -32,6 +32,7 @@ message LockAccountModuleMsg {
     oneof value {
         NewLockProjectMsg project = 1;
         NewLockTokenMsg   record  = 2;
+        UnlockTokenMsg    unlock  = 3;
     }
 }
 
@@ -51,6 +52,10 @@ message NewLockTokenMsg {
     uint32 lockPeriods = 2;	// total periods to lock.
     uint32 cycleTime   = 3; // cycle time per period, unit (hour)
     uint64 number      = 4; // total HPB token number start lock
+}
+
+message UnlockTokenMsg {
+
 }
 
 // Query format

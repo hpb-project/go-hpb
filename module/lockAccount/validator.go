@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func validateMul(tx *types.Transaction, db *state.StateDB ) error {
+func (this *LockAccountModule)validateProject(tx *types.Transaction, db *state.StateDB ) error {
 	amount := tx.Value().Uint64()
 	if amount > 0 {
 		return errors.New("Amount must be zero(0)")
@@ -15,7 +15,7 @@ func validateMul(tx *types.Transaction, db *state.StateDB ) error {
 }
 
 
-func validateAdd(tx *types.Transaction, db *state.StateDB) error {
+func (this *LockAccountModule)validateRecord(tx *types.Transaction, db *state.StateDB) error {
 	amount := tx.Value().Uint64()
 	if amount > 0 {
 		return errors.New("Amount must be zero(0)")

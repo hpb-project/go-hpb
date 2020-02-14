@@ -10,29 +10,29 @@ import (
 
 const (
 	QueryMethods    	= "methods"
-	QueryMethodAdd		= "add"
-	QueryMethodMul		= "mul"
+	QueryMethodProjects = "projects"
+	QueryMethodRecords	= "records"
 )
 
-func handleQueryMethods(header *types.Header, db *state.StateDB, data []byte)( string, error) {
+func (this *LockAccountModule)handleQueryMethods(header *types.Header, db *state.StateDB, data []byte)( string, error) {
 
 	var methods []string
-	methods = append(methods, QueryMethods, QueryMethodAdd, QueryMethodMul)
+	methods = append(methods, QueryMethods, QueryMethodProjects, QueryMethodRecords)
 	ret,err := json.Marshal(methods)
 	return string(ret), err
 }
 
-type QueryAdd struct{
+type QueryProjects struct{
 	a	int `json:"a"`
 	b	int `json:"b"`
 }
 
-func handleQueryAdd(header *types.Header, db *state.StateDB, data []byte)(string, error) {
-	param := QueryAdd{}
+func (this *LockAccountModule)handleQueryProjects(header *types.Header, db *state.StateDB, data []byte)(string, error) {
+	param := QueryProjects{}
 	if err := json.Unmarshal(data, &param); err != nil {
 		return "", errors.New("Unmarshal param failed")
 	}
-	log.Info("Module example","handleQuery","Add", "a",param.a, "b", param.b,"result",param.a+param.b)
+	log.Info("Module example","handleQuery","Projects", "a",param.a, "b", param.b,"result",param.a+param.b)
 	result := param.a + param.b
 
 	ret,err := json.Marshal(result)
@@ -40,17 +40,17 @@ func handleQueryAdd(header *types.Header, db *state.StateDB, data []byte)(string
 
 }
 
-type QueryMul struct{
+type QueryRecords struct{
 	a	int `json:"a"`
 	b	int `json:"b"`
 }
 
-func handleQueryMul(header *types.Header, db *state.StateDB, data []byte)(string, error) {
-	param := QueryAdd{}
+func (this *LockAccountModule)handleQueryRecords(header *types.Header, db *state.StateDB, data []byte)(string, error) {
+	param := QueryRecords{}
 	if err := json.Unmarshal(data, &param); err != nil {
 		return "", errors.New("Unmarshal param failed")
 	}
-	log.Info("Module example","handleQuery","Mul", "a",param.a, "b", param.b,"result",param.a*param.b)
+	log.Info("Module example","handleQuery","Records", "a",param.a, "b", param.b,"result",param.a*param.b)
 	result := param.a * param.b
 
 	ret,err := json.Marshal(result)
