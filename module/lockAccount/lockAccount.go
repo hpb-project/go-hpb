@@ -14,6 +14,18 @@ import (
 
 const (
 	LockAccountTableAddr = "0x0000000000000000000000000000000000000011"
+
+	// AllProjects:		key: 'AllProejcts'			val: []project
+
+	// ProjectUsers: 	key: 'pus' + projectHash 	val: []LockInfo
+	// LockedUser:  	key: 'LockedUsers'			val: []addr
+	// LockedUserInfo: 	key: 'usi' + addr			val: []LockInfo
+	AllProjectsKey = "ExistProjects"	// val : []projectHash
+	//ZoneRecordsKey = "ZoneRecords"
+	ProjectInfoKeyPrefix = "PInfo"			// key : PI + projecthash
+	UserLockInfoKeyPrefix = "lu"		// key : lu + addr value : all lockinfo.
+
+	LockRecordsKey = "LockRecords"
 )
 
 type LockAccountModule struct {

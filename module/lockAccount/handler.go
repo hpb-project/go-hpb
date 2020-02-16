@@ -8,18 +8,26 @@ import (
 )
 
 func (this *LockAccountModule) handleNewProject(header *types.Header, tx *types.Transaction, db *state.StateDB ) (err error) {
+	if err = this.validateProject(tx,db); err != nil {
+		return err
+	}
 	data := tx.Data()
-	npro := &mtypes.NewLockProjectMsg{}
-	err = proto.Unmarshal(data, npro)
+	project := &mtypes.NewLockProjectMsg{}
+	err = proto.Unmarshal(data, project)
 	if err != nil {
 		return err
 	}
+
+
 
 	return nil
 }
 
 
 func (this *LockAccountModule)handleNewLockToken(header *types.Header, tx *types.Transaction, db *state.StateDB) (err error) {
+	if err = this.validateRecord(tx, db); err != nil {
+		return err
+	}
 	data := tx.Data()
 	nlock := &mtypes.NewLockTokenMsg{}
 	err = proto.Unmarshal(data, nlock)
