@@ -11,7 +11,7 @@ import (
  */
 // CommonParam storage in stateDB, key: 'Config', val: commonParam
 type CommonParam struct {
-	MinUnlockFrozenTime uint32 // min unlock token frozen time (unit Day).
+	MinUnlockFrozenTime uint64 // min unlock token frozen time (unit Day).
 }
 // AllUsers storage in stateDB, key: 'AllUsers', val: []addr
 // 1. Add, new user create lock tx.
