@@ -22,6 +22,14 @@ func weiToHpb(wei *big.Int) uint64 {
 	return hpb.Uint64()
 }
 
+func hpbToWei(hpb uint64) *big.Int {
+	unit := big.NewInt(10E18)
+	bighpb := big.NewInt(int64(hpb))
+	wei := big.NewInt(0)
+	wei.Mul(bighpb, unit)
+	return wei
+}
+
 func (this *LockAccountModule)validateProject(tx *types.Transaction, db *state.StateDB ) error {
 	amount := tx.Value().Uint64()
 	if amount > 0 {

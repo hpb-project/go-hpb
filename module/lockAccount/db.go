@@ -2,8 +2,12 @@ package lockAccount
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	mtypes "github.com/hpb-project/go-hpb/module/types"
+	"gopkg.in/fatih/set.v0"
 )
 
 /*
@@ -84,7 +88,6 @@ func (this *LockAccountModule)AllUsersSet(users []common.Address, db *state.Stat
 		return err
 	} else {
 		db.SetValue(this.LockDataAddr, common.StringToHash(AllUsersKey), decode)
-		return nil
 	}
 	return nil
 }
@@ -107,7 +110,6 @@ func (this *LockAccountModule)UserSateSet(db *state.StateDB, addr common.Address
 	} else {
 		var key = UserStateKeyPrefix + addr.String()
 		db.SetValue(this.LockDataAddr, common.StringToHash(key), decode)
-		return nil
 	}
 	return nil
 }
@@ -135,7 +137,87 @@ func (this *LockAccountModule)AllFrozenStatesSet(db *state.StateDB, fs []FrozenS
 		return err
 	} else {
 		db.SetValue(this.LockDataAddr, common.StringToHash(AllFrozensKey), decode)
-		return nil
 	}
+	return nil
+}
+
+
+func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.LockMsg, db *state.StateDB) error {
+	fromState := db.GetOrNewStateObject(from)
+	balance := fromState.Balance()
+	lockwei := hpbToWei(lock.Number)
+	if balance.Cmp(lockwei) < 0 {
+		return errors.New("balance not enough")
+	}
+
+	// get user state.
+	if userState, err := this.UserStateGet(db, from); err != nil {
+		return errors.New("get data failed")
+	} else {
+		userState.LockedNumber += lock.Number
+		if err = this.UserSateSet(db, from, userState); err != nil {
+			return errors.New("set data failed")
+		}
+	}
+
+	// sub balance
+	fromState.SubBalance(lockwei)
+
+	// add user in AllUsers.
+	if allUser, err := this.AllUsersGet(db); err != nil {
+		return errors.New("get data failed")
+	} else {
+		var userSet = set.New()
+		userSet.Add(allUser)
+		if !userSet.Has(from) {
+			allUser = append(allUser, from)
+			if err = this.AllUsersSet(allUser, db); err != nil {
+				return errors.New("set data failed")
+			}
+		}
+	}
+	return nil
+}
+
+
+func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from common.Address, unlock *mtypes.UnlockMsg, db *state.StateDB) error {
+	// check user in AllUsers.
+	if allUser, err := this.AllUsersGet(db); err != nil {
+		return errors.New("get data failed")
+	} else {
+		var userSet = set.New()
+		userSet.Add(allUser)
+		if !userSet.Has(from) {
+			return errors.New("user have no locked token")
+		}
+	}
+
+	frozenStates, err := this.AllFrozenStatesGet(db)
+	if err != nil {
+		return errors.New("get data failed")
+	}
+
+	// get user state.
+	if userState, err := this.UserStateGet(db, from); err != nil {
+		return errors.New("get data failed")
+	} else {
+		if userState.HasFrozen {
+			return errors.New("can't unlock token when has frozen not finished")
+		} else {
+			userState.FrozenNumber = unlock.Number
+			userState.HasFrozen = true
+			if err = this.UserSateSet(db, from, userState); err != nil {
+				return errors.New("set data failed")
+			}
+
+			userFrozen := FrozenState{Addr:from, StartTime:header.Time.Uint64(), WaitTime:unlock.FrozenTime}
+			frozenStates = append(frozenStates, userFrozen)
+			err = this.AllFrozenStatesSet(db, frozenStates)
+			if err != nil {
+				return errors.New("set data failed")
+			}
+		}
+	}
+
 	return nil
 }
