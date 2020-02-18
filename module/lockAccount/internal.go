@@ -9,7 +9,6 @@ import (
 // 1. add: when user create new project.
 // 2. del: when project process finished.
 
-
 // ProjectState storage in stateDB. key: 'ps' + hash, val: projectState
 // 1. add: when user create new project.
 // 2. del: when project process finished.
@@ -47,13 +46,6 @@ type ProjectInfo struct {
 	JoinDeadLine uint64			`json:"deadLine"`
 }
 
-// UserState storage in stateDB. key: 'us' + addr, val: userState
-type UserState struct {
-
-}
-
-
-
 type LockProject struct {
 	Hash		common.Hash		`json:"hash"`			// project hash
 	Account     common.Address 	`json:"account"`		// account that created the project
@@ -76,15 +68,10 @@ type LockRecord struct {
 	LeftNumber  uint64 			`json:"leftNumber"`		// left HPB token number locked.
 }
 
-type UnlockRecord struct {
-
-}
-
 type ModuleLockInfo struct {
 	Projects []LockProject
 	Records []LockRecord
 }
 
-type CommonParam struct {
-	MaxLockedRecordCountPerAddr uint32
-}
+
+
