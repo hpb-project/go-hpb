@@ -6,8 +6,11 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	mtypes "github.com/hpb-project/go-hpb/module/types"
 	"gopkg.in/fatih/set.v0"
+	"math/big"
+	"time"
 )
 
 /*
@@ -15,7 +18,9 @@ import (
  */
 // CommonParam storage in stateDB, key: 'Config', val: commonParam
 type CommonParam struct {
-	MinUnlockFrozenTime uint64 // min unlock token frozen time (unit Day).
+	MinUnlockFrozenTime uint64 		`json:"minFrozenTime"`// min unlock token frozen time (unit Day).
+	ProcessFrozenPeorid	uint64		`json:"processFrozenPeorid"`
+	ProcessFrozenIndex  uint64  	`json:"processFrozenIndex"`
 }
 // AllUsers storage in stateDB, key: 'AllUsers', val: []addr
 // 1. Add, new user create lock tx.
@@ -53,6 +58,24 @@ const (
 
 var DefaultParam = CommonParam{
 	MinUnlockFrozenTime:7,
+	ProcessFrozenPeorid:200,
+	ProcessFrozenIndex:150,
+}
+
+func (this *LockAccountModule)SetConfig(config *CommonParam, db *state.StateDB) (error) {
+	// check with project info.
+	if config.ProcessFrozenPeorid == 0 {
+		return errors.New("invalid param processFrozenPeorid")
+	} else {
+		if param,err := json.Marshal(config); err != nil {
+			return errors.New("marshal config failed")
+		} else {
+			// set config
+			db.SetValue(this.LockDataAddr, common.StringToHash(CONFIGKEY), param)
+		}
+	}
+
+	return nil
 }
 
 func (this *LockAccountModule)GetConfig(db *state.StateDB) (*CommonParam, error) {
@@ -61,6 +84,7 @@ func (this *LockAccountModule)GetConfig(db *state.StateDB) (*CommonParam, error)
 	encode := db.GetValue(this.LockDataAddr, common.StringToHash(CONFIGKEY))
 	if len(encode) == 0 {
 		defaultParam,_ := json.Marshal(DefaultParam)
+		// set default
 		db.SetValue(this.LockDataAddr, common.StringToHash(CONFIGKEY), defaultParam)
 		param = DefaultParam
 	} else {
@@ -143,6 +167,9 @@ func (this *LockAccountModule)AllFrozenStatesSet(db *state.StateDB, fs []FrozenS
 
 
 func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.LockMsg, db *state.StateDB) error {
+	log.Trace("LockAccountModule Profile", "ProcessLockMsg Start", time.Now().Unix())
+	defer log.Trace("LockAccountModule Profile", "ProcessLockMsg End", time.Now().Unix())
+
 	fromState := db.GetOrNewStateObject(from)
 	balance := fromState.Balance()
 	lockwei := hpbToWei(lock.Number)
@@ -152,10 +179,12 @@ func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.
 
 	// get user state.
 	if userState, err := this.UserStateGet(db, from); err != nil {
+		log.Error("Get userState failed,", "err", err)
 		return errors.New("get data failed")
 	} else {
 		userState.LockedNumber += lock.Number
 		if err = this.UserSateSet(db, from, userState); err != nil {
+			log.Error("Set userState failed,", "err", err)
 			return errors.New("set data failed")
 		}
 	}
@@ -165,6 +194,7 @@ func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.
 
 	// add user in AllUsers.
 	if allUser, err := this.AllUsersGet(db); err != nil {
+		log.Error("Get AllUsers failed,", "err", err)
 		return errors.New("get data failed")
 	} else {
 		var userSet = set.New()
@@ -172,6 +202,7 @@ func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.
 		if !userSet.Has(from) {
 			allUser = append(allUser, from)
 			if err = this.AllUsersSet(allUser, db); err != nil {
+				log.Error("Set AllUsers failed,", "err", err)
 				return errors.New("set data failed")
 			}
 		}
@@ -181,8 +212,12 @@ func (this *LockAccountModule) ProcessLockMsg(from common.Address, lock *mtypes.
 
 
 func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from common.Address, unlock *mtypes.UnlockMsg, db *state.StateDB) error {
+	log.Trace("LockAccountModule Profile", "ProcessUnLockMsg Start", time.Now().Unix())
+	defer log.Trace("LockAccountModule Profile", "ProcessUnLockMsg End", time.Now().Unix())
+
 	// check user in AllUsers.
 	if allUser, err := this.AllUsersGet(db); err != nil {
+		log.Error("Get allUsers failed", "err", err)
 		return errors.New("get data failed")
 	} else {
 		var userSet = set.New()
@@ -194,11 +229,13 @@ func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from commo
 
 	frozenStates, err := this.AllFrozenStatesGet(db)
 	if err != nil {
+		log.Error("Get allFrozenStates failed", "err", err)
 		return errors.New("get data failed")
 	}
 
 	// get user state.
 	if userState, err := this.UserStateGet(db, from); err != nil {
+		log.Error("Get userState failed", "err", err)
 		return errors.New("get data failed")
 	} else {
 		if userState.HasFrozen {
@@ -207,6 +244,7 @@ func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from commo
 			userState.FrozenNumber = unlock.Number
 			userState.HasFrozen = true
 			if err = this.UserSateSet(db, from, userState); err != nil {
+				log.Error("UserSateSet failed", "err", err)
 				return errors.New("set data failed")
 			}
 
@@ -214,8 +252,98 @@ func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from commo
 			frozenStates = append(frozenStates, userFrozen)
 			err = this.AllFrozenStatesSet(db, frozenStates)
 			if err != nil {
+				log.Error("AllFrozenStatesSet failed", "err", err)
 				return errors.New("set data failed")
 			}
+		}
+	}
+
+	return nil
+}
+
+func (this *LockAccountModule)ProcessFrozenStates(block *types.Block, db *state.StateDB) error {
+	log.Trace("LockAccountModule Profile", "ProcessFrozenStates Start", time.Now().Unix())
+	defer log.Trace("LockAccountModule Profile", "ProcessFrozenStates End", time.Now().Unix())
+
+	// 1. get config
+	config,err := this.GetConfig(db)
+	if err != nil {
+		return errors.New("get config failed")
+	}
+	// 2. check process frozen index
+	idx := big.NewInt(0)
+	peorid := big.NewInt(int64(config.ProcessFrozenPeorid))
+	big.NewInt(0).DivMod(block.Number(), peorid, idx)
+	if idx.Uint64() != config.ProcessFrozenIndex {
+		return nil
+	}
+
+	// 3. range process each frozen state.
+	currentTime := block.Time().Uint64()
+	allFrozenStates, err := this.AllFrozenStatesGet(db)
+	if err != nil {
+		return errors.New("get allFrozenStates failed")
+	}
+
+	newAllFrozen := make([]FrozenState,0)
+	for _, frozen := range allFrozenStates {
+		if (frozen.StartTime + frozen.WaitTime) < currentTime {
+			newAllFrozen = append(newAllFrozen, frozen)
+			continue
+		} else {
+			// process unFrozen
+			addr := frozen.Addr
+			usState, err := this.UserStateGet(db, addr)
+			if err != nil {
+				return errors.New("get user state failed")
+			}
+			// add balance for user.
+			fnumber := usState.FrozenNumber
+			db.GetOrNewStateObject(addr).AddBalance(hpbToWei(fnumber))
+
+			usState.HasFrozen = false
+			usState.FrozenNumber = 0
+			if usState.LockedNumber == 0 {
+				// need remove from AllUsers.
+				allUsers,err := this.AllUsersGet(db)
+				if err != nil {
+					return errors.New("get allUsers failed")
+				}
+				userSet := set.New(allUsers)
+				userSet.Remove(addr)
+				newUsers := make([]common.Address,0)
+				addFunc := func(item interface{}) bool {
+					addr := item.(common.Address)
+					newUsers = append(newUsers, addr)
+					return true
+				}
+				userSet.Each(addFunc)
+				err = this.AllUsersSet(newUsers, db)
+				if err != nil {
+					log.Error("Update all user failed","err", err)
+					return errors.New("update all user failed")
+				}
+
+				// del userState
+				err = this.UserStateDel(db, addr)
+				if err != nil {
+					log.Error("userstate delete failed", "err", err)
+				}
+			} else {
+				// update userState
+				if err = this.UserSateSet(db, addr, usState); err != nil {
+					log.Error("update user state failed,", "err", err)
+					return errors.New("update user state failed")
+				}
+			}
+
+		}
+	}
+	if len(allFrozenStates) != len(newAllFrozen) {
+		err = this.AllFrozenStatesSet(db, newAllFrozen)
+		if err != nil {
+			log.Error("update allFrozenState failed,", "err", err)
+			return errors.New("update allFrozen states failed ")
 		}
 	}
 
