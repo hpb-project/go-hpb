@@ -132,10 +132,16 @@ func (this LockAccountModule)GetQuerier(cmd string) bc.Querier{
 	switch cmd{
 	case QueryMethods:
 		return this.handleQueryMethods
-	case QueryMethodProjects:
-		return this.handleQueryProjects
-	case QueryMethodRecords:
-		return this.handleQueryRecords
+	case QueryAllUsers:
+		return this.handleQueryAllUsers
+	case QueryAllFrozen:
+		return this.handleQueryAllFrozen
+	case QueryUserInfo:
+		return this.handleQueryUserInfo
+	case QueryLockStatus:
+		return this.handleQueryLockStatus
+	case QueryLockDetail:
+		return this.handleQueryLockDetail
 	default:
 		return nil
 	}
