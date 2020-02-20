@@ -74,6 +74,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 			types.ASynSender(synsigner, tx)
 		}
 	}(block.Transactions())
+	modules := GetModules()
+
+	// call module block start
+	for _, m := range modules {
+		m.ModuleBlockStart(block, statedb)
+	}
+
 
 	// Iterate over and process the individual transactions
 	author, _ := p.engine.Author(block.Header())
@@ -82,7 +89,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 
 		// module txhandler, must before with ApplyTransaction.
 		if block.Header().Number.Uint64() >= consensus.ModuleExtraVersion {
-				modules := GetModules()
+
 				for _, m := range modules {
 					if handler := m.GetTxHandler(tx); handler != nil {
 						if err := handler(block.Header(), tx, statedb); err != nil {
@@ -124,6 +131,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+	// call module block end
+	for _, m := range modules {
+		m.ModuleBlockEnd(block, statedb)
+	}
+
 	ApplyTransactionFinalize(statedb)
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
