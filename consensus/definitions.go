@@ -73,6 +73,7 @@ var (
 	NewContractVersion        uint64 = 126000
 	CadNodeCheckpointInterval uint64 = 200
 	ModuleExtraVersion		  uint64 = 410000 // Must bigger than `NewContractVersion`
+	LockAccountEnable 		  uint64 = 1000000 // enable lockAccount module, must bigger than `ModuleExtraVersion`
 )
 
 var (

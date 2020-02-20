@@ -8,6 +8,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
 	mtypes "github.com/hpb-project/go-hpb/module/types"
 	"sync"
 )
@@ -61,15 +62,29 @@ func (this LockAccountModule) ModuleClose() error {
 }
 
 func (this LockAccountModule)ModuleBlockStart(block *types.Block, statedb *state.StateDB) error {
-	header := block.Header()
-
-	log.Info("Example BlockStart ", "block ", header.Number.Uint64())
+	number := block.NumberU64()
+	if number < consensus.LockAccountEnable {
+		return nil
+	}
+	if number == consensus.LockAccountEnable {
+		this.SetConfig(&DefaultParam, statedb)
+	}
+	// process all frozen states
+	log.Info("Example BlockStart ", "block ", number)
 	return nil
 }
 
 func (this LockAccountModule) ModuleBlockEnd(block *types.Block, statedb *state.StateDB) error {
-	header := block.Header()
-	log.Info("Example BlockEnd ", "block ", header.Number.Uint64())
+	number := block.NumberU64()
+	if number < consensus.LockAccountEnable {
+		return nil
+	}
+	err := this.ProcessFrozenStates(block, statedb)
+	if err != nil {
+		return err
+	}
+	// process all frozen states
+	log.Info("Example BlockStart ", "block ", number)
 	return nil
 }
 
@@ -84,6 +99,10 @@ func (this LockAccountModule)GetTxHandler(tx *types.Transaction) bc.TxHandler {
 		return this.handleNewLockToken
 	case *mtypes.LockAccountModuleMsg_Project:
 		return this.handleNewProject
+	case *mtypes.LockAccountModuleMsg_Lock:
+		return this.handleLockMsg
+	case *mtypes.LockAccountModuleMsg_Unlock:
+		return this.handleUnLockMsg
 	default:
 		return nil
 	}
@@ -100,6 +119,10 @@ func (this LockAccountModule)GetTxValidator(tx *types.Transaction) bc.TxValidato
 		return this.validateProject
 	case *mtypes.LockAccountModuleMsg_Record:
 		return this.validateRecord
+	case *mtypes.LockAccountModuleMsg_Lock:
+		return this.validateLockMsg
+	case *mtypes.LockAccountModuleMsg_Unlock:
+		return this.validateUnlockMsg
 	default:
 		return nil
 	}
@@ -117,18 +140,6 @@ func (this LockAccountModule)GetQuerier(cmd string) bc.Querier{
 		return nil
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

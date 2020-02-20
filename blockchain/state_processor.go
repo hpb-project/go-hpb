@@ -80,7 +80,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 
-		// module txhandler
+		// module txhandler, must before with ApplyTransaction.
 		if block.Header().Number.Uint64() >= consensus.ModuleExtraVersion {
 				modules := GetModules()
 				for _, m := range modules {
