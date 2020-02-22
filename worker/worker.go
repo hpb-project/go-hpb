@@ -414,6 +414,12 @@ func (self *worker) startNewMinerRound() {
 		return
 	}
 
+	modules := bc.GetModules()
+	// call module block start
+	for _, m := range modules {
+		m.ModuleBlockStart(header, pstate)
+	}
+
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
@@ -455,6 +461,12 @@ func (self *worker) startNewMinerRound() {
 	for _, hash := range badUncles {
 		delete(self.possibleUncles, hash)
 	}
+
+	// time to call moduleBlockEnd
+	for _, m := range modules {
+		m.ModuleBlockEnd(header, pstate)
+	}
+
 	// Create the new block to seal with the consensus engine
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
