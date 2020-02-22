@@ -61,8 +61,8 @@ func (this LockAccountModule) ModuleClose() error {
 	return nil
 }
 
-func (this LockAccountModule)ModuleBlockStart(block *types.Block, statedb *state.StateDB) error {
-	number := block.NumberU64()
+func (this LockAccountModule)ModuleBlockStart(header *types.Header, statedb *state.StateDB) error {
+	number := header.Number.Uint64()
 	if number < consensus.LockAccountEnable {
 		return nil
 	}
@@ -74,12 +74,12 @@ func (this LockAccountModule)ModuleBlockStart(block *types.Block, statedb *state
 	return nil
 }
 
-func (this LockAccountModule) ModuleBlockEnd(block *types.Block, statedb *state.StateDB) error {
-	number := block.NumberU64()
+func (this LockAccountModule) ModuleBlockEnd(header *types.Header, statedb *state.StateDB) error {
+	number := header.Number.Uint64()
 	if number < consensus.LockAccountEnable {
 		return nil
 	}
-	err := this.ProcessFrozenStates(block, statedb)
+	err := this.ProcessFrozenStates(header, statedb)
 	if err != nil {
 		return err
 	}

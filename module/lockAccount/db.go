@@ -261,7 +261,7 @@ func (this *LockAccountModule) ProcessUnLockMsg(header *types.Header, from commo
 	return nil
 }
 
-func (this *LockAccountModule)ProcessFrozenStates(block *types.Block, db *state.StateDB) error {
+func (this *LockAccountModule)ProcessFrozenStates(header *types.Header, db *state.StateDB) error {
 	log.Trace("LockAccountModule Profile", "ProcessFrozenStates Start", time.Now().Unix())
 	defer log.Trace("LockAccountModule Profile", "ProcessFrozenStates End", time.Now().Unix())
 
@@ -273,13 +273,13 @@ func (this *LockAccountModule)ProcessFrozenStates(block *types.Block, db *state.
 	// 2. check process frozen index
 	idx := big.NewInt(0)
 	peorid := big.NewInt(int64(config.ProcessFrozenPeorid))
-	big.NewInt(0).DivMod(block.Number(), peorid, idx)
+	big.NewInt(0).DivMod(header.Number, peorid, idx)
 	if idx.Uint64() != config.ProcessFrozenIndex {
 		return nil
 	}
 
 	// 3. range process each frozen state.
-	currentTime := block.Time().Uint64()
+	currentTime := header.Time.Uint64()
 	allFrozenStates, err := this.AllFrozenStatesGet(db)
 	if err != nil {
 		return errors.New("get allFrozenStates failed")

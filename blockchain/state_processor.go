@@ -78,7 +78,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 
 	// call module block start
 	for _, m := range modules {
-		m.ModuleBlockStart(block, statedb)
+		m.ModuleBlockStart(block.Header(), statedb)
 	}
 
 
@@ -133,7 +133,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	}
 	// call module block end
 	for _, m := range modules {
-		m.ModuleBlockEnd(block, statedb)
+		m.ModuleBlockEnd(block.Header(), statedb)
 	}
 
 	ApplyTransactionFinalize(statedb)

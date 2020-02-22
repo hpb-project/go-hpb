@@ -26,14 +26,12 @@ func (this ExampleModule) ModuleClose() error {
 	return nil
 }
 
-func (this ExampleModule)ModuleBlockStart(block *types.Block, statedb *state.StateDB) error {
-	header := block.Header()
+func (this ExampleModule)ModuleBlockStart(header *types.Header, statedb *state.StateDB) error {
 	log.Info("Example BlockStart ", "block ", header.Number.Uint64())
 	return nil
 }
 
-func (this ExampleModule) ModuleBlockEnd(block *types.Block, statedb *state.StateDB) error {
-	header := block.Header()
+func (this ExampleModule) ModuleBlockEnd(header *types.Header, statedb *state.StateDB) error {
 	log.Info("Example BlockEnd ", "block ", header.Number.Uint64())
 	return nil
 }
