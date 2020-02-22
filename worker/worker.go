@@ -570,20 +570,6 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
 
-	// module txhandler
-	if env.header.Number.Uint64() >= consensus.ModuleExtraVersion {
-		modules := bc.GetModules()
-		for _, m := range modules {
-			if handler := m.GetTxHandler(tx); handler != nil {
-				if err := handler(env.header, tx, env.state); err != nil {
-					env.state.RevertToSnapshot(snap)
-					return err,nil
-				}
-				break
-			}
-		}
-	}
-
 
 	bNewVersion := env.header.Number.Uint64() > consensus.NewContractVersion
 	if bNewVersion {

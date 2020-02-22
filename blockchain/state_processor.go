@@ -151,6 +151,20 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (string, *types.Receipt, *big.Int, error) {
+
+	// module txhandler
+	if header.Number.Uint64() >= consensus.ModuleExtraVersion {
+		modules := GetModules()
+		for _, m := range modules {
+			if handler := m.GetTxHandler(tx); handler != nil {
+				if err := handler(header, tx, statedb); err != nil {
+					return "", nil, nil, err
+				}
+				break
+			}
+		}
+	}
+
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
@@ -200,6 +214,18 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+	// module txhandler
+	if header.Number.Uint64() >= consensus.ModuleExtraVersion {
+		modules := GetModules()
+		for _, m := range modules {
+			if handler := m.GetTxHandler(tx); handler != nil {
+				if err := handler(header, tx, statedb); err != nil {
+					return nil, nil, err
+				}
+				break
+			}
+		}
+	}
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
@@ -237,6 +263,19 @@ func ApplyTransactionNonContract(config *config.ChainConfig, bc *BlockChain, aut
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+	// module txhandler
+	if header.Number.Uint64() >= consensus.ModuleExtraVersion {
+		modules := GetModules()
+		for _, m := range modules {
+			if handler := m.GetTxHandler(tx); handler != nil {
+				if err := handler(header, tx, statedb); err != nil {
+					return nil, nil, err
+				}
+				break
+			}
+		}
+	}
+
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
@@ -283,6 +322,18 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransactionNonContractNonFinallize(config *config.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, *big.Int, error) {
+	// module txhandler
+	if header.Number.Uint64() >= consensus.ModuleExtraVersion {
+		modules := GetModules()
+		for _, m := range modules {
+			if handler := m.GetTxHandler(tx); handler != nil {
+				if err := handler(header, tx, statedb); err != nil {
+					return nil, nil, err
+				}
+				break
+			}
+		}
+	}
 	msg, err := tx.AsMessage(types.MakeSigner(config))
 	if err != nil {
 		log.Error("Asmessage err", "err", err)
