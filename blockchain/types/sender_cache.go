@@ -9,26 +9,27 @@ import (
 )
 
 var (
-	errNotFind  = errors.New("key not found")
-	cacheLength = 1000000
-	cacheLru    = time.Duration(time.Microsecond * 60) // 1min
-	forceFit    = int64(cacheLength * 90 / 100)        // 90% force fit
-	forceLru    = time.Duration(time.Microsecond * 10)
+	errNotFind  		= errors.New("key not found")
+	cacheLength 		= 1000000
+	cacheLru    int64 	= 60 // 1min
+	forceFit    		= int64(cacheLength * 90 / 100)        // 90% force fit
+	forceLru    int64 	= 8		// 8s
 )
 
 type Citem struct {
 	addr  common.Address
-	stamp time.Duration
+	stamp int64
 }
 
 type SenderCache struct {
 	cache sync.Map
 	cnt   int64
+	fitting bool
 	quit  chan interface{}
 }
 
 var (
-	Sendercache = &SenderCache{quit: make(chan interface{})}
+	Sendercache = &SenderCache{quit: make(chan interface{}), fitting:false}
 )
 
 func init() {
@@ -36,7 +37,7 @@ func init() {
 }
 
 func (this *SenderCache) Set(txhash common.Hash, addr common.Address) error {
-	this.cache.Store(txhash, &Citem{addr: addr, stamp: time.Duration(time.Now().Unix())})
+	this.cache.Store(txhash, &Citem{addr: addr, stamp: time.Now().Unix()})
 	atomic.AddInt64(&this.cnt, 1)
 	return nil
 }
@@ -61,8 +62,36 @@ func (this *SenderCache) Quit() {
 	this.quit <- new(interface{})
 }
 
+func (this *SenderCache) fit() {
+	this.fitting = true
+	defer func(){this.fitting = false}()
+
+	now := time.Now().Unix()
+	this.cache.Range(func(k, v interface{}) bool {
+		if item, ok := v.(Citem); ok {
+			if (now - item.stamp) > cacheLru {
+				this.cache.Delete(k)
+				atomic.AddInt64(&this.cnt, -1)
+			}
+		}
+		return true
+	})
+
+	for this.cnt >= forceFit {
+		this.cache.Range(func(k, v interface{}) bool {
+			if item, ok := v.(Citem); ok {
+				if (now - item.stamp) > forceLru {
+					this.cache.Delete(k)
+					atomic.AddInt64(&this.cnt, -1)
+				}
+			}
+			return true
+		})
+	}
+}
+
 func (this *SenderCache) KeepFit() {
-	duration := time.Second * 1
+	duration := time.Second * 2
 	timer := time.NewTimer(duration)
 	defer timer.Stop()
 
@@ -72,28 +101,11 @@ func (this *SenderCache) KeepFit() {
 		case <-this.quit:
 			return
 		case <-timer.C:
-			this.cache.Range(func(k, v interface{}) bool {
-				if item, ok := v.(Citem); ok {
-					if item.stamp > cacheLru {
-						this.cache.Delete(k)
-						atomic.AddInt64(&this.cnt, -1)
-					}
-				}
-				return true
-			})
-
-			for this.cnt >= forceFit {
-				this.cache.Range(func(k, v interface{}) bool {
-					if item, ok := v.(Citem); ok {
-						if item.stamp > forceLru {
-							this.cache.Delete(k)
-							atomic.AddInt64(&this.cnt, -1)
-						}
-					}
-					return true
-				})
+			if !this.fitting {
+				go this.fit()
 			}
 		}
 
 	}
 }
+

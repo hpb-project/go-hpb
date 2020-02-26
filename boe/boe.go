@@ -198,7 +198,7 @@ type BoeHandle struct {
 }
 
 var (
-    boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:2}
+    boeHandle                = &BoeHandle{ boeInit:false, rpFunc:nil, maxThNum:1}
     soft_cnt                 uint32							// metrics tx number recover pubkey with software
     hard_cnt                 uint32							// metrics tx number recover pubkey with hardware
     async_call               uint32							// metrics tx number recover pubkey with async api
@@ -267,17 +267,17 @@ func PostRecoverPubkey(boe *BoeHandle) {
 
 // receive msg and call rpFunc to external module
 func postCallback(boe *BoeHandle) {
-	duration := time.Millisecond * 2
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
+	//duration := time.Second * 2
+	//timer := time.NewTimer(duration)
+	//defer timer.Stop()
 
 	for {
-		timer.Reset(duration)
+		//timer.Reset(duration)
 		select {
-		case <-timer.C:
-			if !boe.bcontinue {
-				return
-			}
+		//case <-timer.C:
+		//	if !boe.bcontinue {
+		//		return
+		//	}
 		case p, ok := <-boe.postCh:
 			if !ok {
 				return
@@ -316,17 +316,17 @@ func (boe *BoeHandle) postToSoft(rs *RecoverPubkey) bool {
 
 // receive task and execute soft ecc-recover
 func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
-	duration := time.Millisecond * 2
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
+	//duration := time.Second * 2
+	//timer := time.NewTimer(duration)
+	//defer timer.Stop()
 
 	for {
-		timer.Reset(duration)
+	//	timer.Reset(duration)
 		select {
-		case <-timer.C:
-			if !boe.bcontinue {
-				return
-			}
+	//	case <-timer.C:
+	//		if !boe.bcontinue {
+	//			return
+	//		}
 		case rs, ok := <-queue:
 			if !ok {
 				return
@@ -404,6 +404,10 @@ func (boe *BoeHandle) Init() error {
 
 func (boe *BoeHandle) Release() error {
 
+	close(boe.postCh)
+	for i:= 0; i < boe.maxThNum; i++ {
+		close(boe.thPool[i].queue)
+	}
 	boe.bcontinue = false
 	ret := C.boe_release()
 	if ret == C.BOE_OK {
