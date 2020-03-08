@@ -1,9 +1,11 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/log"
 )
 
@@ -17,15 +19,48 @@ const (
 )
 
 type ExtraDetail struct {
-	Version       uint8
-	Vanity        [ExtraVanityLength]byte
-	NodesNum      uint8
-	NodesAddr     common.Addresses
-	RealRND       [ExtraRealRNDLength]byte
-	SignedLastRND [ExtraSignedLastRNDLength]byte
-	Seal          [ExtraSealLength]byte
-	//Warning: if you need add new field, you need modify BytesToExtraDetail/ToBytes/ExceptSealToBytes either.
+	Version       uint8						`json:"version"`
+	Vanity        [ExtraVanityLength]byte	`json:"vanity"`
+	NodesNum      uint8						`json:"nodesCount"`
+	NodesAddr     common.Addresses			`json:"nodes"`
+	RealRND       [ExtraRealRNDLength]byte	`json:"realRandom"`
+	SignedLastRND [ExtraSignedLastRNDLength]byte	`json:"signedRealRandom"`
+	Seal          [ExtraSealLength]byte				`json:"seal"`
+	//Warning: if you need add new field, you need modify BytesToExtraDetail/ToBytes/ExceptSealToBytes/MarshalJSON either.
 	//And total length can't mod(common.AddressLength)== 0.
+}
+
+// only use in rpc output format.
+func (h ExtraDetail) MarshalJSON() ([]byte, error) {
+	type Detail struct {
+		Version       uint8						`json:"version"`
+		Vanity        string					`json:"vanity"`
+		NodesNum      uint8						`json:"nodesCount"`
+		NodesAddr     common.Addresses			`json:"nodes"`
+		RealRND       hexutil.Bytes				`json:"realRandom"`
+		SignedLastRND hexutil.Bytes				`json:"signedRealRandom"`
+		Seal          hexutil.Bytes				`json:"seal"`
+	}
+	var enc Detail
+	enc.Version = h.Version
+
+	// change hex to string.
+	var tmps = make([]byte,0)
+	for _,b := range h.Vanity {
+		if b != 0x0 {
+			tmps = append(tmps, b)
+		} else {
+			break
+		}
+	}
+	enc.Vanity = string(tmps)
+
+	enc.NodesNum = h.NodesNum
+	enc.NodesAddr = h.NodesAddr
+	enc.RealRND = h.RealRND[:]
+	enc.SignedLastRND = h.SignedLastRND[:]
+	enc.Seal = h.Seal[:]
+	return json.Marshal(&enc)
 }
 
 func NewExtraDetail(version uint8) (*ExtraDetail, error) {

@@ -124,6 +124,11 @@ func (h *Header) HashNoNonce() common.Hash {
 	})
 }
 
+func (h *Header) ExtraDetail() *ExtraDetail {
+	extra, _ := BytesToExtraDetail(h.Extra)
+	return extra
+}
+
 func (h *Header) FriendlyExtra() string {
 	extra, _ := BytesToExtraDetail(h.Extra)
 	return extra.String()

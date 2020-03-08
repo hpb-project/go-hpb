@@ -744,7 +744,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"voteIndex":        (*hexutil.Big)(head.VoteIndex),
 		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
-		"extraData":        head.FriendlyExtra(),
+		"extraData":        head.ExtraDetail(),
 		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
 		"gasLimit":         (*hexutil.Big)(head.GasLimit),
 		"gasUsed":          (*hexutil.Big)(head.GasUsed),
