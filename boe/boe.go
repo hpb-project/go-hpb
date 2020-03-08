@@ -156,6 +156,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"io/ioutil"
 	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -188,6 +189,7 @@ type postParam struct {
 }
 
 type BoeHandle struct {
+	wg 			sync.WaitGroup
 	boeInit   bool
 	bcontinue bool
 	rpFunc    BoeRecoverPubKeyFunc		// callback function for external module
@@ -224,6 +226,7 @@ func (t TVersion) VersionString() string {
 }
 // PostRecoverPubkey get result from hardware ecc-recover, and post the result to external module.
 func PostRecoverPubkey(boe *BoeHandle) {
+	defer boe.wg.Done()
 	var r *C.SResult
 	for {
 		if !boe.bcontinue {
@@ -267,17 +270,9 @@ func PostRecoverPubkey(boe *BoeHandle) {
 
 // receive msg and call rpFunc to external module
 func postCallback(boe *BoeHandle) {
-	duration := time.Millisecond * 2
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
-
+	defer boe.wg.Done()
 	for {
-		timer.Reset(duration)
 		select {
-		case <-timer.C:
-			if !boe.bcontinue {
-				return
-			}
 		case p, ok := <-boe.postCh:
 			if !ok {
 				return
@@ -316,17 +311,9 @@ func (boe *BoeHandle) postToSoft(rs *RecoverPubkey) bool {
 
 // receive task and execute soft ecc-recover
 func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
-	duration := time.Millisecond * 2
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
-
+	defer boe.wg.Done()
 	for {
-		timer.Reset(duration)
 		select {
-		case <-timer.C:
-			if !boe.bcontinue {
-				return
-			}
 		case rs, ok := <-queue:
 			if !ok {
 				return
@@ -342,6 +329,7 @@ func (boe *BoeHandle) asyncSoftRecoverPubTask(queue chan RecoverPubkey) {
 }
 // performance print the metrics per 10second
 func (boe *BoeHandle) performance(){
+	defer boe.wg.Done()
     duration := time.Second * 10
     timer := time.NewTimer(duration)
     defer timer.Stop()
@@ -381,17 +369,20 @@ func (boe *BoeHandle) Init() error {
 
 	for i := 0; i < boe.maxThNum; i++ {
 		boe.thPool[i] = &TaskTh{isFull: false, queue: make(chan RecoverPubkey, 100000)}
-
+		boe.wg.Add(1)
 		go boe.asyncSoftRecoverPubTask(boe.thPool[i].queue)
 	}
-
+	boe.wg.Add(1)
 	go postCallback(boe)
+
+	boe.wg.Add(1)
 	go boe.performance()
 
 	ret := C.boe_init()
 	if ret == C.BOE_OK {
 		boe.boeInit = true
 		C.initRQ()
+		boe.wg.Add(1)
 		go PostRecoverPubkey(boe)
 
 		C.boe_valid_sign_callback((C.BoeValidSignCallback)(unsafe.Pointer(C.recover_pubkey_callback)))
@@ -405,10 +396,16 @@ func (boe *BoeHandle) Init() error {
 func (boe *BoeHandle) Release() error {
 
 	boe.bcontinue = false
+	for i := 0; i < boe.maxThNum; i++ {
+		close(boe.thPool[i].queue)
+	}
+	close(boe.postCh)
+
 	ret := C.boe_release()
 	if ret == C.BOE_OK {
 		return nil
 	}
+	boe.wg.Wait()
 	log.Error("boe", "Release ecode:", uint32(ret.ecode))
 	C.boe_err_free(ret)
 	return ErrInitFailed
