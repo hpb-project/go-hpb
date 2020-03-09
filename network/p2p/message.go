@@ -67,6 +67,8 @@ const (
 
 	NewHashBlockMsg    uint64 = 0x2020
 
+	ReqPeerTdMsg       uint64 = 0x2021
+	ResPeerTdMsg       uint64 = 0x2022
 
 )
 
