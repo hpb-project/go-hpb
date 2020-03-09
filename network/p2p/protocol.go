@@ -232,7 +232,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		}
 		return nil
 
-	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
+	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg,ReqPeerTdMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
 			p.log.Trace("Process syn get msg", "msg", msg, "err", err)
@@ -242,7 +242,7 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		}
 		return nil
 
-	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
+	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg,ResPeerTdMsg:
 		if cb := hp.msgProcess[msg.Code]; cb != nil{
 			err := cb(p,msg)
 			p.log.Trace("Process syn msg","msg",msg,"err",err)

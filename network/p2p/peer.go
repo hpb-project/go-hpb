@@ -41,6 +41,7 @@ const (
 	baseProtocolMaxMsgSize = 80 * 1024   // the max msg size only for protocol handshake
 	pingInterval    = 5 * time.Second    // ping msg loop for peer
 	nodereqInterval = 15 * time.Second   //interval for request nodes
+	remotePeerTdInterval = 20 * time.Second //request peer td
 )
 
 // PeerEventType is the type of peer events emitted by a p2p.Server
@@ -254,6 +255,7 @@ func (p *PeerBase) run() (remoteRequested bool, err error) {
 	go p.readLoop(readErr)
 	go p.pingLoop()
 	go p.updateNodesLoop()
+	go p.requestRemotePeerTdLoop()// request remote peer td
 
 	// Start all protocol handlers.
 	writeStart <- struct{}{}
@@ -320,7 +322,26 @@ func (p *PeerBase) pingLoop() {
 	}
 	p.log.Debug("PeerBase pingLoop STOP")
 }
+func (p *PeerBase)requestRemotePeerTdLoop(){
+	peerTdTime := time.NewTimer(remotePeerTdInterval)
+	defer p.wg.Done()
+	defer peerTdTime.Stop()
+	for{
+		select{
+		case <- peerTdTime.C:
+			if err := sendItems(p.rw, ReqPeerTdMsg); err != nil {
+				p.log.Debug("Request Peer Td  ERROR","error",err)
+				p.protoErr <- err
+				return
+			}
+			peerTdTime.Reset(remotePeerTdInterval)
+		case <-p.closed:
+			p.log.Debug("peer td Loop CLOSED")
+			return
 
+		}
+	}
+}
 
 func (p *PeerBase) updateNodesLoop() {
 	nodeTime := time.NewTimer(nodereqInterval) //TODO only send to bootnode
