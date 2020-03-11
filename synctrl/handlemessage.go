@@ -151,7 +151,7 @@ func HandleResPeerTdMsg(p *p2p.Peer, msg p2p.Msg) error{
 		log.Debug("remote peer td msg decode error")
 	}
 	log.Debug("remote peer id ",p.PeerBase.ID(),"td ",td)
-	p.td.Set(td)
+	//p.td.Set(td)
 
 	return nil
 }

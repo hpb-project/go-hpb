@@ -140,6 +140,7 @@ int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, 
         r->flag = 1; // timeout
     }
     pushResult(r);
+    HardwareRecoverCallback();
 
     return 0;
 }
@@ -196,6 +197,7 @@ type BoeHandle struct {
 	maxThNum  int						// thread number for soft ecc recover.
 	thPool    []*TaskTh					// task pool
 	postCh    chan postParam
+	rboeCh	  chan struct{}
 	idx       int
 }
 
@@ -224,45 +226,49 @@ func (t TVersion) VersionString() string {
 	var v = fmt.Sprintf("%d.%d.%d.%d", t.H, t.M, t.F, t.D)
 	return v
 }
+
 // PostRecoverPubkey get result from hardware ecc-recover, and post the result to external module.
 func PostRecoverPubkey(boe *BoeHandle) {
 	defer boe.wg.Done()
 	var r *C.SResult
 	for {
-		if !boe.bcontinue {
-			break
-		}
-		var err error
-		// get hardware ecc recover result
-		r = C.getResult()
-		if r == nil {
-			time.Sleep(2 * time.Microsecond)
-		} else {
-			var fullsig = make([]byte, 97)
-			rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
-
-			// change format from C.array to go array
-			cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
-			cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
-			if r.flag == 0 {
-				// hardware recover succeed
-				pubkey65 := make([]byte, 65)
-				cArrayToGoArray(unsafe.Pointer(r.pub), pubkey65, len(pubkey65))
-				copy(rs.Hash, fullsig[64:96])
-				copy(rs.Sig[0:32], fullsig[0:32])
-				copy(rs.Sig[32:64], fullsig[32:64])
-				rs.Sig[64] = fullsig[96]
-				hard_cnt++
-				copy(rs.Pub, pubkey65)
-				// post to external module
-				boe.postResult(&rs, err)
+		select {
+		case _,ok := <- boe.rboeCh :
+			if !ok {
+				return
 			} else {
-				// hardware recover failed, and then post to use soft ecc-recover.
-				copy(rs.Hash, fullsig[64:96])
-				copy(rs.Sig[0:32], fullsig[0:32])
-				copy(rs.Sig[32:64], fullsig[32:64])
-				rs.Sig[64] = fullsig[96]
-				boe.postToSoft(&rs)
+				// get hardware ecc recover result
+				var err error
+				r = C.getResult()
+				if r == nil {
+					continue
+				}
+				var fullsig = make([]byte, 97)
+				rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
+
+				// change format from C.array to go array
+				cArrayToGoArray(unsafe.Pointer(r.txhash), rs.TxHash, len(rs.TxHash))
+				cArrayToGoArray(unsafe.Pointer(r.sig), fullsig, len(fullsig))
+				if r.flag == 0 {
+					// hardware recover succeed
+					pubkey65 := make([]byte, 65)
+					cArrayToGoArray(unsafe.Pointer(r.pub), pubkey65, len(pubkey65))
+					copy(rs.Hash, fullsig[64:96])
+					copy(rs.Sig[0:32], fullsig[0:32])
+					copy(rs.Sig[32:64], fullsig[32:64])
+					rs.Sig[64] = fullsig[96]
+					hard_cnt++
+					copy(rs.Pub, pubkey65)
+					// post to external module
+					boe.postResult(&rs, err)
+				} else {
+					// hardware recover failed, and then post to use soft ecc-recover.
+					copy(rs.Hash, fullsig[64:96])
+					copy(rs.Sig[0:32], fullsig[0:32])
+					copy(rs.Sig[32:64], fullsig[32:64])
+					rs.Sig[64] = fullsig[96]
+					boe.postToSoft(&rs)
+				}
 			}
 		}
 	}
@@ -366,6 +372,7 @@ func (boe *BoeHandle) Init() error {
 
 	boe.thPool = make([]*TaskTh, boe.maxThNum)
 	boe.postCh = make(chan postParam, 1000000)
+	boe.rboeCh = make(chan struct{}, 1000000)
 
 	for i := 0; i < boe.maxThNum; i++ {
 		boe.thPool[i] = &TaskTh{isFull: false, queue: make(chan RecoverPubkey, 100000)}
@@ -396,6 +403,7 @@ func (boe *BoeHandle) Init() error {
 func (boe *BoeHandle) Release() error {
 
 	boe.bcontinue = false
+	close(boe.rboeCh)
 	for i := 0; i < boe.maxThNum; i++ {
 		close(boe.thPool[i].queue)
 	}
