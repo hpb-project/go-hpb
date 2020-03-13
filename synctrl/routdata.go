@@ -23,9 +23,13 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"math"
 	"math/big"
 	"time"
+)
+
+const (
+	minRoutBlockpeers  = 10
+	routPeerParameter = 3
 )
 
 // routingBlock will either propagate a block to a subset of it's peers, or
@@ -45,7 +49,12 @@ func routBlock(block *types.Block, propagate bool) {
 			return
 		}
 		// Send the block to a subset of our peers
-		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
+		transferLen := len(peers)/routPeerParameter
+		if transferLen < minRoutBlockpeers{
+			transferLen = minRoutBlockpeers
+		}
+
+		transfer := peers[:transferLen]
 		for _, peer := range transfer {
 			switch peer.LocalType() {
 			case discover.PreNode:
