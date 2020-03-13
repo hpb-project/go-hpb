@@ -53,6 +53,9 @@ func routBlock(block *types.Block, propagate bool) {
 		if transferLen < minRoutBlockpeers{
 			transferLen = minRoutBlockpeers
 		}
+		if transferLen > len(peers){
+			transferLen = len(peers)
+		}
 
 		transfer := peers[:transferLen]
 		for _, peer := range transfer {
