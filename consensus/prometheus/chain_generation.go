@@ -612,11 +612,11 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		}
 	}
 
-	config := config.GetHpbConfigInstance()
-	if number == 1200001 && config.Node.NetworkId == consensus.HPBMainNetWorkId {
+	// fix bug : in full sync mode, process the block after StageNumberIII will occur a bad block,
+	// because there is no snap in promethus.recents , so need call voting.GetCadNodeSnap by manual.
+	if number == (consensus.StageNumberIII + 1){
 		chain := bc.InstanceBlockChain()
-		parentH := chain.GetHeaderByNumber(1200000)
-		// 120w
+		parentH := chain.GetHeaderByNumber(number-1)
 		voting.GetCadNodeSnap(c.db, c.recents, chain, parentH.Number.Uint64(), parentH.ParentHash)
 	}
 
