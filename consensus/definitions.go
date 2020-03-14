@@ -58,6 +58,7 @@ const InvokeIndexThree = 3
 const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
+const HPBMainNetWorkId = 100
 
 var (
 	HpbNodenumber = 31    //hpb nodes number

@@ -18,6 +18,7 @@ package prometheus
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"math/big"
 	"sort"
 	"sync"
@@ -610,6 +611,15 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 			return err
 		}
 	}
+
+	config := config.GetHpbConfigInstance()
+	if number == 1200001 && config.Node.NetworkId == consensus.HPBMainNetWorkId {
+		chain := bc.InstanceBlockChain()
+		parentH := chain.GetHeaderByNumber(1200000)
+		// 120w
+		voting.GetCadNodeSnap(c.db, c.recents, chain, parentH.Number.Uint64(), parentH.ParentHash)
+	}
+
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {

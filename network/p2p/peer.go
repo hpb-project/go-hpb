@@ -255,7 +255,7 @@ func (p *PeerBase) run() (remoteRequested bool, err error) {
 	go p.readLoop(readErr)
 	go p.pingLoop()
 	go p.updateNodesLoop()
-	go p.requestRemotePeerTdLoop()// request remote peer td
+	//go p.requestRemotePeerTdLoop()// request remote peer td
 
 	// Start all protocol handlers.
 	writeStart <- struct{}{}
