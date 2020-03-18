@@ -147,9 +147,6 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewHashBlockMsg, HandleNewHashBlockMsg)
 
-	p2p.PeerMgrInst().RegMsgProcess(p2p.ReqPeerTdMsg, HandleReqPeerTdMsg)
-	p2p.PeerMgrInst().RegMsgProcess(p2p.ResPeerTdMsg, HandleResPeerTdMsg)
-
 
 
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)

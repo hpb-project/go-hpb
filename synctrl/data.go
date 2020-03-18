@@ -170,12 +170,4 @@ func requestBodies(peer *p2p.Peer, hashes []common.Hash) error {
 	log.Debug("Fetching batch of block bodies", "count", len(hashes))
 	return p2p.SendData(peer, p2p.GetBlockBodiesMsg, hashes)
 }
-func sendLocalPeerTd(peer *p2p.Peer, td *big.Int) error{
-	log.Debug("response local peer td = ",td)
-	return p2p.SendData(peer, p2p.ResPeerTdMsg, td)
-}
-/*
-func requestRemotePeerTd(peer *p2p.Peer, td *big.Int)error{
-	log.Debug("request remote peer td")
-	return p2p.SendData(peer, p2p.ReqPeerTdMsg, td)
-}*/
+

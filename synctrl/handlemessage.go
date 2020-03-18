@@ -134,29 +134,6 @@ func HandleBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 	}
 	return nil
 }
-//request local td
-func HandleReqPeerTdMsg(p *p2p.Peer, msg p2p.Msg) error{
-
-	currentBlock := bc.InstanceBlockChain().CurrentBlock()
-	td := bc.InstanceBlockChain().GetTd(currentBlock.Hash(), currentBlock.NumberU64())
-
-	return sendLocalPeerTd(p, td)
-
-
-}
-//解析收到的回复包
-func HandleResPeerTdMsg(p *p2p.Peer, msg p2p.Msg) error{
-	var td *big.Int
-	if err := msg.Decode(&td); err != nil{
-		log.Debug("remote peer td msg decode error")
-	}
-	log.Debug("remote peer id ",p.PeerBase.ID(),"td ",td)
-	//p.td.Set(td)
-
-	return nil
-}
-
-
 // HandleGetBlockBodiesMsg deal received GetBlockBodiesMsg
 func HandleGetBlockBodiesMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Decode the retrieval message
