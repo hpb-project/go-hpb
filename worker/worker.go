@@ -18,13 +18,12 @@ package worker
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/hpb-project/go-hpb/network/p2p"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -411,14 +410,11 @@ func (self *worker) startNewMinerRound() {
 	extra.SetVanity(self.extra)
 	header.Extra = common.CopyBytes(extra.ToBytes())
 
-	if p2p.PeerMgrInst().GetLocalType() == discover.SynNode || p2p.PeerMgrInst().GetLocalType() == discover.PreNode {
-		return
-	}
-
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	} else {
+		log.Debug("worker Current is mining...")
 		return
 	}
 	pstate, _ := self.chain.StateAt(parent.Root())
@@ -431,6 +427,11 @@ func (self *worker) startNewMinerRound() {
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
+		return
+	}
+
+	if p2p.PeerMgrInst().GetLocalType() == discover.SynNode || p2p.PeerMgrInst().GetLocalType() == discover.PreNode {
+		log.Debug("This is not hpnode, exit mine.")
 		return
 	}
 
