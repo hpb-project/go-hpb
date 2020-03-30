@@ -304,7 +304,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 	if header.Difficulty == diffNoTurn {
 		// check mine backup block.
-		var chooseBackupMiner = 100
+		var chooseBackupMiner = consensus.HpbNodeCheckpointInterval
 		if header.Number.Int64() > int64(chooseBackupMiner) {
 			signersgenblks := make([]types.Header, 0, chooseBackupMiner)
 			for i := uint64(0); i < uint64(chooseBackupMiner); i++ {
@@ -317,7 +317,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				return errors.New("Not in turn")
 			}
 		} else {
-			return errors.New("Not in turn")
+			// should mine backup block.
 		}
 	}
 
