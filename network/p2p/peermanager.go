@@ -561,18 +561,27 @@ func (prm *PeerManager) startServerBW(port string) error {
 		panic("Can not open iperf log file")
 		return err
 	}
-
-	cmd := ipfbin + " -s -p " + port
-	prm.isrvcmd = exec.Command("/bin/bash", "-c", cmd)
-	prm.isrvcmd.Stdout = prm.isrvout
-
-	if err := prm.isrvcmd.Start(); err != nil {
-		log.Error("Start iperf server", "err", err)
-		panic("Can not start iperf server")
-		return err
-	}
-
 	log.Info("Start server of bandwidth test.", "port", port)
+	cmd := ipfbin + " -s -p " + port
+	go func(cmdline string, logout *os.File){
+		var firsttime = true
+		for {
+			isrvcmd := exec.Command("/bin/bash", "-c", cmd)
+			isrvcmd.Stdout = logout
+			log.Info("start iperf server and daemon")
+			if err := isrvcmd.Start(); err != nil {
+				if firsttime {
+					log.Error("Start iperf server", "err", err)
+					panic("start iperf server failed")
+				}
+			}
+			firsttime = false
+			if err := isrvcmd.Wait(); err != nil {
+				log.Debug("iperf server exit", "err", err)
+			}
+			log.Debug("iperf server restart")
+		}
+	}(cmd, prm.isrvout)
 	return nil
 }
 
