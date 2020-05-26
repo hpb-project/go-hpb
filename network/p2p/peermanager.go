@@ -568,7 +568,7 @@ func (prm *PeerManager) startServerBW(port string) error {
 		for {
 			isrvcmd := exec.Command("/bin/bash", "-c", cmd)
 			isrvcmd.Stdout = logout
-			log.Info("start iperf server and daemon")
+			log.Debug("start iperf server and daemon")
 			if err := isrvcmd.Start(); err != nil {
 				if firsttime {
 					log.Error("Start iperf server", "err", err)
@@ -580,6 +580,7 @@ func (prm *PeerManager) startServerBW(port string) error {
 				log.Debug("iperf server exit", "err", err)
 			}
 			log.Debug("iperf server restart")
+			time.Sleep(time.Second) // add some delay
 		}
 	}(cmd, prm.isrvout)
 	return nil
