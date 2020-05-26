@@ -25,6 +25,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
@@ -314,7 +315,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 	}
 	s, err = h.secrets(authPacket, authRespPacket)
 	t = append(t, authRespMsg.Rand...)
-	log.Debug("Initiator Enc Handshake","ourRand",authMsg.Rand,"theirRand",authRespMsg.Rand,"err",err)
+	log.Debug("Initiator Enc Handshake","ourRand",hex.EncodeToString(authMsg.Rand),"theirRand",hex.EncodeToString(authRespMsg.Rand),"err",err)
 	return s, t, err
 }
 

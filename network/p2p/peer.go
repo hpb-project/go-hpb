@@ -291,12 +291,13 @@ loop:
 			break loop
 		}
 	}
-
+	p.log.Debug("PeerBase run loop stoped")
 
 	p.msgLooping = false
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
+	p.log.Debug("PeerBase run loop exited")
 	return remoteRequested, err
 }
 
@@ -304,6 +305,7 @@ func (p *PeerBase) pingLoop() {
 	pingTime := time.NewTimer(pingInterval)
 	defer p.wg.Done()
 	defer pingTime.Stop()
+	defer p.log.Trace("peerbase pingloop stop")
 	for {
 		select {
 		case <-pingTime.C:
@@ -318,13 +320,14 @@ func (p *PeerBase) pingLoop() {
 			return
 		}
 	}
-	p.log.Debug("PeerBase pingLoop STOP")
+
 }
 
 func (p *PeerBase) updateNodesLoop() {
 	nodeTime := time.NewTimer(nodereqInterval) //TODO only send to bootnode
 	defer p.wg.Done()
 	defer nodeTime.Stop()
+	defer p.log.Trace("peerbase updatenodesloop CLOSED")
 	for {
 		select {
 		case <-nodeTime.C:
@@ -337,7 +340,7 @@ func (p *PeerBase) updateNodesLoop() {
 				p.log.Debug("Only update nodes form BootNode.")
 				return
 			}
-
+			p.log.Trace("PeerBase Send ReqNodesMsg")
 			if err := sendItems(p.rw, ReqNodesMsg); err != nil {
 				p.log.Debug("PeerBase Send ReqNodesMsg ERROR","error",err)
 				p.protoErr <- err
@@ -349,22 +352,23 @@ func (p *PeerBase) updateNodesLoop() {
 			return
 		}
 	}
-	p.log.Error("PeerBase update nodes loop  STOP")
 }
 
 
 func (p *PeerBase) readLoop(errc chan<- error) {
 	defer p.wg.Done()
+	defer p.log.Trace("readloop exit")
+
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
-			log.Trace("Peer base read loop error","error",err)
+			p.log.Trace("Peer base read loop error","error",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
 		if err = p.handle(msg); err != nil {
-			log.Trace("Peer base handle msg error","error",err)
+			p.log.Trace("Peer base handle msg error","error",err)
 			errc <- err
 			return
 		}
@@ -589,7 +593,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
-		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis,"block",head,"td",td,"head",head)
+		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis.TerminalString(),"block",head.TerminalString(),"td",td,"head",head.TerminalString())
 		errc <- SendData(p,StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,

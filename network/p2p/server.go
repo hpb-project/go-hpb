@@ -19,6 +19,7 @@ package p2p
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -712,7 +713,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err!=nil{
 		clog.Debug("Do hardware sign  error.","err",err)
 	}
-	clog.Debug("Hardware has signed remote rand.","rand",theirRand,"sign",c.our.Sign)
+	clog.Debug("Hardware has signed remote rand.","rand",hex.EncodeToString(theirRand),"sign",hex.EncodeToString(c.our.Sign))
 
 	their, err := c.doProtoHandshake(&c.our)
 	if err != nil {
@@ -751,7 +752,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 
 		for _,hw := range hdtab {
 			if hw.Adr == remoteCoinbase {
-				clog.Trace("Input to boe paras","rand",c.our.RandNonce,"hid",hw.Hid,"cid",hw.Cid,"sign",c.their.Sign)
+				clog.Trace("Input to boe paras","rand",hex.EncodeToString(c.our.RandNonce),"hid",hex.EncodeToString(hw.Hid),"cid",hex.EncodeToString(hw.Cid),"sign",hex.EncodeToString(c.their.Sign))
 				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce,hw.Hid,hw.Cid,c.their.Sign)
 				clog.Info("Boe verify the remote.","id",c.id.TerminalString(),"result",c.isboe)
 			}

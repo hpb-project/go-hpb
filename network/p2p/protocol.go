@@ -300,21 +300,22 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 }
 
 func HandleResNodesMsg(p *Peer, msg Msg) error {
-	var request nodeRes
-	if err := msg.Decode(&request); err != nil {
+	var response nodeRes
+	if err := msg.Decode(&response); err != nil {
 		log.Error("Received nodes from remote","msg", msg, "error", err)
 		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	log.Trace("Received nodes from remote","request", request)
+	log.Trace("Received nodes from remote","response", response)
 
 
 	self := p.ntab.Self().ID
-	toBondNode := make([]*discover.Node, 0, len(request.Nodes))
+	toBondNode := make([]*discover.Node, 0, len(response.Nodes))
 	nodes := p.ntab.FindNodes()
-	log.Debug("Received nodes from remote", "requestlen", len(request.Nodes), "len buckets", len(nodes))
-	log.Trace("nodeInfo", "received:", request.Nodes, "buckets", nodes)
+	log.Debug("Received nodes from remote", "response len", len(response.Nodes), "local buckets len", len(nodes))
+
+	log.Trace("nodeInfo", "received:", response.Nodes, "buckets", nodes)
 	btest := true
-	for _, n := range request.Nodes {
+	for _, n := range response.Nodes {
 		if self == n.ID {
 			continue
 		}
