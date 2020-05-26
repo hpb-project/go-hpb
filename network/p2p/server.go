@@ -413,6 +413,25 @@ type dialer interface {
 	removeStatic(*discover.Node)
 }
 
+func (srv *Server) checkHeartBeatStoped(lasttime time.Time) time.Time{
+	now := time.Now()
+	if now.After(lasttime.Add(time.Second * 60)) {
+		mgr := PeerMgrInst()
+		peers := mgr.PeersAll()
+		for _, peer := range peers {
+			if peer.lastpingpong.Before(lasttime) {
+				nid := peer.ID()
+				shortid := fmt.Sprintf("%x", nid[0:8])
+				mgr.unregister(shortid)
+				peer.Disconnect(DiscReadTimeout)
+
+			}
+		}
+		return now
+	}
+	return lasttime
+}
+
 func (srv *Server) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
@@ -458,10 +477,13 @@ func (srv *Server) run(dialstate dialer) {
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
+	heartbeatCheckTime := time.Now()
 
 running:
 	for {
 		scheduleTasks()
+		heartbeatCheckTime = srv.checkHeartBeatStoped(heartbeatCheckTime)
+
 
 		srv.delHist.expire(time.Now())
 		log.Trace("Server running: expire node from history.","DelHist",srv.delHist.Len())

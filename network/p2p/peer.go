@@ -23,15 +23,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/go-hpb/common/mclock"
+	"errors"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/common/mclock"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/event"
-	"github.com/hpb-project/go-hpb/common"
-	"math/big"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"gopkg.in/fatih/set.v0"
-	"errors"
+	"math/big"
 	//"github.com/hpb-project/go-hpb/boe"
 	//"github.com/hpb-project/go-hpb/boe"
 )
@@ -112,6 +112,7 @@ type PeerBase struct {
 	remoteType discover.NodeType
 
 	beatStart  time.Time
+	lastpingpong time.Time
 	count      uint64
 	msgLooping bool
 
@@ -146,7 +147,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		running:  protorw,
 		created:  mclock.Now(),
 		disc:     make(chan DiscReason),
-		protoErr: make(chan error, 1), // protocols + pingLoop
+		protoErr: make(chan error, 3), // protocols + pingLoop + updateNodesLoop
 		closed:   make(chan struct{}),
 		log:      log.New("id", conn.id,"port",conn.their.End.TCP),
 		ntab:     ntb,
@@ -232,6 +233,11 @@ func (p *PeerBase) Address() common.Address {
 // Disconnect terminates the peer connection with the given reason.
 // It returns immediately and does not wait until the connection is closed.
 func (p *PeerBase) Disconnect(reason DiscReason) {
+	defer func() {
+		if r := recover(); r != nil {
+			p.log.Error("maybe use closed channel:","r",r)
+		}
+	}()
 	select {
 	case p.disc <- reason:
 	case <-p.closed:
@@ -358,7 +364,7 @@ func (p *PeerBase) updateNodesLoop() {
 func (p *PeerBase) readLoop(errc chan<- error) {
 	defer p.wg.Done()
 	defer p.log.Trace("readloop exit")
-
+	defer p.running.Close()
 	for {
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
@@ -376,6 +382,11 @@ func (p *PeerBase) readLoop(errc chan<- error) {
 }
 
 func (p *PeerBase) handle(msg Msg) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p.log.Error("maybe use closed channel:","r",r)
+		}
+	}()
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
@@ -383,6 +394,7 @@ func (p *PeerBase) handle(msg Msg) error {
 		go sendItems(p.rw, pongMsg)
 	case msg.Code == pongMsg:
 		p.count = p.count+1
+		p.lastpingpong = time.Now()
 		p.log.Trace("PeerBase receive heartbeat from remote.")
 		msg.Discard()
 	case msg.Code == discMsg:
@@ -454,6 +466,10 @@ type protoRW struct {
 	w      MsgWriter
 }
 
+func (rw *protoRW) Close() {
+	close(rw.in)
+}
+
 func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 	//log.Trace("protoRW WriteMsg","msg",msg.String())
 	select {
@@ -475,7 +491,10 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 
 func (rw *protoRW) ReadMsg() (Msg, error) {
 	select {
-	case msg := <-rw.in:
+	case msg,ok := <-rw.in:
+		if !ok {
+			return Msg{}, errors.New("has been closed")
+		}
 		//log.Trace("protoRW ReadMsg","Msg",msg)
 		return msg, nil
 	case <-rw.closed:
@@ -593,7 +612,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	var status statusData // safe to read after two values have been received from errc
 
 	go func() {
-		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis.TerminalString(),"block",head.TerminalString(),"td",td,"head",head.TerminalString())
+		p.log.Debug("Do hpb handshake send.","networkid",network,"genesis",genesis.TerminalString(),"block",head.TerminalString(),"td",td)
 		errc <- SendData(p,StatusMsg, &statusData{
 			ProtocolVersion: uint32(p.version),
 			NetworkId:       network,
@@ -604,7 +623,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	}()
 	go func() {
 		errc <- p.readStatus(network, &status, genesis)
-		p.log.Debug("Do hpb handshake recv.","networkid",status.NetworkId,"genesis",status.GenesisBlock,"block",status.CurrentBlock,"td",p.td,"head", p.head)
+		p.log.Debug("Do hpb handshake recv.","networkid",status.NetworkId,"genesis",status.GenesisBlock,"block",status.CurrentBlock,"td",p.td)
 	}()
 
 	timeout := time.NewTimer(handshakeTimeout)
