@@ -645,8 +645,8 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 	if (*big.Int)(&args.Gas).Uint64() >= params.TxGas {
 		hi = (*big.Int)(&args.Gas).Uint64()
 	} else {
-		// Retrieve the current pending block to act as the gas ceiling
-		block, err := s.b.BlockByNumber(ctx, rpc.PendingBlockNumber)
+		// Retrieve the latest block to act as the gas ceiling
+		block, err := s.b.BlockByNumber(ctx, rpc.LatestBlockNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -657,7 +657,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 		mid := (hi + lo) / 2
 		(*big.Int)(&args.Gas).SetUint64(mid)
 
-		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, evm.Config{})
+		_, _, failed, err := s.doCall(ctx, args, rpc.LatestBlockNumber, evm.Config{})
 
 		// If the transaction became invalid or execution failed, raise the gas limit
 		if err != nil || failed {
