@@ -242,6 +242,21 @@ func (prm *PeerManager) PeersAll() []*Peer {
 	return list
 }
 
+func (prm *PeerManager) PeersAllWithBoots() []*Peer {
+	prm.lock.RLock()
+	defer prm.lock.RUnlock()
+
+	list := make([]*Peer, 0, len(prm.peers))
+	for _, p := range prm.peers {
+		list = append(list, p)
+	}
+	// add bootnode peer
+	for _, p := range prm.boots {
+		list = append(list, p)
+	}
+	return list
+}
+
 func (prm *PeerManager) GetLocalType() discover.NodeType {
 	return prm.server.localType
 }

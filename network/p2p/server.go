@@ -417,7 +417,7 @@ func (srv *Server) checkHeartBeatStoped(lasttime time.Time) time.Time{
 	now := time.Now()
 	if now.After(lasttime.Add(time.Second * 60)) {
 		mgr := PeerMgrInst()
-		peers := mgr.PeersAll()
+		peers := mgr.PeersAllWithBoots()
 		for _, peer := range peers {
 			if peer.lastpingpong.Before(lasttime) {
 				nid := peer.ID()
