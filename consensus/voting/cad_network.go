@@ -17,7 +17,6 @@
 package voting
 
 import (
-	"fmt"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"math/big"
 
@@ -35,7 +34,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 
 	bestCadWinners := []*snapshots.CadWinner{}
 	peerp2ps := p2p.PeerMgrInst().PeersAll()
-	fmt.Println("peers length is:", len(peerp2ps))
+	log.Info("","peers length ", len(peerp2ps))
 	peers := make([]*p2p.Peer, 0, len(peerp2ps))
 
 	for i := 0; i < len(peerp2ps); i++ {
