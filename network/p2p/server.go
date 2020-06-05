@@ -413,18 +413,19 @@ type dialer interface {
 	removeStatic(*discover.Node)
 }
 
-func (srv *Server) checkHeartBeatStoped(lasttime time.Time) time.Time{
+func (srv *Server) checkHeartBeatStoped(lasttime time.Time, peers map[discover.NodeID]*PeerBase) time.Time{
 	now := time.Now()
 	if now.After(lasttime.Add(time.Second * 60)) {
 		mgr := PeerMgrInst()
-		peers := mgr.PeersAllWithBoots()
-		for _, peer := range peers {
+		pmrpeers := mgr.PeersAllWithBoots()
+		for _, peer := range pmrpeers {
 			if peer.lastpingpong.Before(lasttime) {
 				nid := peer.ID()
 				shortid := fmt.Sprintf("%x", nid[0:8])
 				mgr.unregister(shortid)
 				peer.Disconnect(DiscReadTimeout)
-
+				// remove peers from loop list.
+				delete(peers,nid)
 			}
 		}
 		return now
@@ -482,7 +483,7 @@ func (srv *Server) run(dialstate dialer) {
 running:
 	for {
 		scheduleTasks()
-		heartbeatCheckTime = srv.checkHeartBeatStoped(heartbeatCheckTime)
+		heartbeatCheckTime = srv.checkHeartBeatStoped(heartbeatCheckTime,peers)
 
 
 		srv.delHist.expire(time.Now())
