@@ -415,12 +415,13 @@ type dialer interface {
 
 func (srv *Server) checkHeartBeatStoped(lasttime time.Time, peers map[discover.NodeID]*PeerBase) time.Time{
 	now := time.Now()
-	if now.After(lasttime.Add(time.Second * 60)) {
+	if now.After(lasttime.Add(time.Minute * 5)) {
 		mgr := PeerMgrInst()
 		pmrpeers := mgr.PeersAllWithBoots()
 		for _, peer := range pmrpeers {
-			if peer.lastpingpong.Before(lasttime) {
+			if peer.lastpingpong.Before(lasttime) && peer.bremove {
 				nid := peer.ID()
+				log.Debug("peer should remove from peerlist","id",nid,"lastpingpong", peer.lastpingpong)
 				shortid := fmt.Sprintf("%x", nid[0:8])
 				mgr.unregister(shortid)
 				peer.Disconnect(DiscReadTimeout)

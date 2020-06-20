@@ -115,6 +115,7 @@ type PeerBase struct {
 	lastpingpong time.Time
 	count      uint64
 	msgLooping bool
+	bremove bool
 
 
 }
@@ -151,6 +152,7 @@ func newPeerBase(conn *conn, proto Protocol, ntb discoverTable) *PeerBase {
 		closed:   make(chan struct{}),
 		log:      log.New("id", conn.id,"port",conn.their.End.TCP),
 		ntab:     ntb,
+		bremove: false,
 	}
 	return p
 }
@@ -298,6 +300,7 @@ loop:
 		}
 	}
 	p.log.Debug("PeerBase run loop stoped")
+	p.bremove = true
 
 	p.msgLooping = false
 	close(p.closed)
