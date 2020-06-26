@@ -626,7 +626,7 @@ func (p *Peer) Handshake(network uint64,td *big.Int, head common.Hash, genesis c
 	}()
 	go func() {
 		errc <- p.readStatus(network, &status, genesis)
-		p.log.Debug("Do hpb handshake recv.","networkid",status.NetworkId,"genesis",status.GenesisBlock,"block",status.CurrentBlock,"td",p.td)
+		p.log.Debug("Do hpb handshake recv.","networkid",status.NetworkId,"genesis",status.GenesisBlock,"block",status.CurrentBlock,"td",status.TD)
 	}()
 
 	timeout := time.NewTimer(handshakeTimeout)
