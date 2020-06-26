@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
@@ -825,8 +826,8 @@ func  (srv *Server) updateHdtab(pairs [] HwPair, boot bool) error {
 		theSame := true
 		for _,our := range srv.hdtab {
 			find := false
-			for _, there:= range pairs {
-				if our.Adr == there.Adr{
+			for _, their:= range pairs {
+				if our.Adr == their.Adr && bytes.Compare(our.Cid,their.Cid) == 0 && bytes.Compare(our.Hid, their.Hid) == 0{
 					find = true
 					break
 				}
