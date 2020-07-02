@@ -857,10 +857,11 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	var breorg bool
 	breorg = false
-	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
-		breorg = true
-		log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
-	}
+	//if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
+	//	breorg = true
+	//	log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
+	//}
+
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
