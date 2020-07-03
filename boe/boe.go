@@ -158,6 +158,7 @@ import (
 	"io/ioutil"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 )
@@ -207,6 +208,7 @@ var (
     hard_cnt                 uint32							// metrics tx number recover pubkey with hardware
     async_call               uint32							// metrics tx number recover pubkey with async api
     sync_call                uint32							// metrics tx number recover pubkey with sync  api
+	boeversion 				 atomic.Value					// cache boeversion
 )
 
 func BoeGetInstance() (*BoeHandle) {
@@ -438,17 +440,22 @@ func (boe *BoeHandle) GetBindAccount() (string, error) {
 
 // get boe firmware version
 func (boe *BoeHandle) GetVersion() (TVersion, error) {
-	var H, M, F, D C.uchar
-	ret := C.boe_get_version(&H, &M, &F, &D)
-	if ret == C.BOE_OK {
-		var v = TVersion{H: int(H), M: int(M), F: int(F), D: int(D)}
-		return v, nil
+	if tv := boeversion.Load(); tv != nil {
+		version := tv.(TVersion)
+		return version, nil
+	} else {
+		var H, M, F, D C.uchar
+		ret := C.boe_get_version(&H, &M, &F, &D)
+		if ret == C.BOE_OK {
+			var v = TVersion{H: int(H), M: int(M), F: int(F), D: int(D)}
+			boeversion.Store(v)
+			return v, nil
+		}
+		log.Debug("boe", "GetVersion ecode", uint32(ret.ecode))
+		C.boe_err_free(ret)
 	}
-	log.Debug("boe", "GetVersion ecode", uint32(ret.ecode))
 
-	C.boe_err_free(ret)
-	var v TVersion
-	return v, ErrInitFailed
+	return TVersion{}, ErrInitFailed
 }
 
 func (boe *BoeHandle) GetBoeId() (string, error) {
@@ -693,7 +700,7 @@ func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
 	}
 	version, err := boe.GetVersion()
 	if err != nil {
-		return ErrHashVerifyFailed
+		return errors.New("get version failed.")
 	}
 	// The hashVerify is added at version v1.0.1.0.
 	if version.F >= 1 {
