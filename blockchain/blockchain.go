@@ -857,10 +857,10 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	var breorg bool
 	breorg = false
-	//if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
-	//	breorg = true
-	//	log.Warn("WriteBlockAndState breorg is true", "block number", block.Number())
-	//}
+	if block.Number().Uint64()%consensus.HpbNodeCheckpointInterval == 199 {
+		breorg = true
+		log.Debug("WriteBlockAndState breorg is true", "block number", block.Number())
+	}
 
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
@@ -892,7 +892,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 		}
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != bc.currentBlock.Hash() {
-			log.Warn("execute reorg", "current block number", bc.currentBlock.Number(), "input block number", block.Number())
+			log.Debug("execute reorg", "current block number", bc.currentBlock.Number(), "input block number", block.Number())
 			if err := bc.reorg(bc.currentBlock, block); err != nil {
 				return NonStatTy, err
 			}
@@ -1225,8 +1225,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
-		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		log.Debug("old and new Chain length", "len(oldChain)", len(oldChain), "len(newChain)", len(newChain))
+		log.Debug("Impossible reorg, ", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
 	}
 	var addedTxs types.Transactions
 	// insert blocks. Order does not matter. Last block will be written in ImportChain itself which creates the new head properly
