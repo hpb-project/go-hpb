@@ -29,6 +29,7 @@ import (
 // don't get the signature canonical representation as the first LOG topic.
 type Event struct {
 	Name      string
+	RawName   string
 	Anonymous bool
 	Inputs    Arguments
 }
@@ -45,13 +46,17 @@ func (e Event) String() string {
 }
 
 // Id returns the canonical representation of the event's signature used by the
-// abi definition to identify event names and types.
-func (e Event) Id() common.Hash {
+
+func (e Event) Sig() string {
 	types := make([]string, len(e.Inputs))
-	i := 0
-	for _, input := range e.Inputs {
+	for i, input := range e.Inputs {
 		types[i] = input.Type.String()
-		i++
 	}
-	return common.BytesToHash(crypto.Keccak256([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ",")))))
+	return fmt.Sprintf("%v(%v)", e.RawName, strings.Join(types, ","))
+}
+
+// ID returns the canonical representation of the event's signature used by the
+// abi definition to identify event names and types.
+func (e Event) ID() common.Hash {
+	return common.BytesToHash(crypto.Keccak256([]byte(e.Sig())))
 }

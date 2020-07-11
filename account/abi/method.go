@@ -33,6 +33,7 @@ import (
 // Input specifies the required input parameters for this gives method.
 type Method struct {
 	Name    string
+	RawName string
 	Const   bool
 	Inputs  Arguments
 	Outputs Arguments
@@ -50,7 +51,7 @@ func (method Method) Sig() string {
 	for i, input := range method.Inputs {
 		types[i] = input.Type.String()
 	}
-	return fmt.Sprintf("%v(%v)", method.Name, strings.Join(types, ","))
+	return fmt.Sprintf("%v(%v)", method.RawName, strings.Join(types, ","))
 }
 
 func (method Method) String() string {
@@ -72,6 +73,6 @@ func (method Method) String() string {
 	return fmt.Sprintf("function %v(%v) %sreturns(%v)", method.Name, strings.Join(inputs, ", "), constant, strings.Join(outputs, ", "))
 }
 
-func (method Method) Id() []byte {
+func (method Method) ID() []byte {
 	return crypto.Keccak256([]byte(method.Sig()))[:4]
 }
