@@ -29,7 +29,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
-
 )
 
 var (
@@ -308,10 +307,12 @@ func (self *JSRE) loadScript(call otto.FunctionCall) otto.Value {
 // Evaluate executes code and pretty prints the result to the specified output
 // stream.
 func (self *JSRE) Evaluate(code string, w io.Writer) error {
+	fmt.Println("jsre:", code)
 	var fail error
 
 	self.Do(func(vm *otto.Otto) {
 		val, err := vm.Run(code)
+		fmt.Println(err)
 		if err != nil {
 			prettyError(vm, err, w)
 		} else {

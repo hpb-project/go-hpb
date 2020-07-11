@@ -290,7 +290,7 @@ func (c *Console) Evaluate(statement string) error {
 			fmt.Fprintf(c.printer, "[native] error: %v\n", r)
 		}
 	}()
-
+	fmt.Println("console:", statement)
 	return c.jsre.Evaluate(statement, c.printer)
 }
 
@@ -348,6 +348,7 @@ func (c *Console) Interactive() {
 			}
 			// Append the line to the input and check for multi-line interpretation
 			input += line + "\n"
+			fmt.Println(input)
 			indents = countIndents(input)
 			if indents <= 0 {
 				prompt = c.prompt
