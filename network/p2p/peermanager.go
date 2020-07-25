@@ -26,6 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"math/big"
 	"math/rand"
 	"net"
@@ -147,7 +148,19 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	add, _ := net.ResolveUDPAddr("udp", prm.server.ListenAddr)
 	prm.iport = add.Port + 100
 	log.Debug("Iperf server start", "port", prm.iport)
-	prm.startServerBW(strconv.Itoa(prm.iport))
+	if err := prm.startServerBW(strconv.Itoa(prm.iport)); err == nil {
+		srvaddr := prm.server.listener.Addr().(*net.TCPAddr)
+		if !srvaddr.IP.IsLoopback() && prm.server.NAT != nil {
+			prm.server.loopWG.Add(1)
+			go func(port int) {
+				log.Debug("goto add iperf port nat Map")
+				nat.Map(prm.server.NAT, prm.server.quit, "tcp", port, port, "hpb iperf")
+				prm.server.loopWG.Done()
+			}(prm.iport)
+		} else {
+			log.Debug("not use NAT on iperf")
+		}
+	}
 
 	if prm.server.localType != discover.BootNode && prm.server.localType != discover.SynNode {
 		go prm.startClientBW()
