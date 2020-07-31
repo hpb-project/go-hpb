@@ -184,7 +184,9 @@ func (prm *PeerManager) Stop() {
 	prm.close()
 
 	prm.isrvout.Close()
-	prm.isrvcmd.Process.Kill()
+	if prm.isrvcmd != nil && prm.isrvcmd.Process != nil {
+		prm.isrvcmd.Process.Kill()
+	}
 }
 
 func (prm *PeerManager) P2pSvr() *Server {
