@@ -303,7 +303,11 @@ func (boe *BoeHandle) postResult(rs *RecoverPubkey, err error) {
 }
 
 func (boe *BoeHandle) postToSoft(rs *RecoverPubkey) bool {
-
+	defer func() {
+		if err := recover(); err != nil {
+			// send on closed channel when program exit.
+		}
+	}()
 	for i := 0; i < boe.maxThNum; i++ {
 		idx := (boe.idx + i) % boe.maxThNum
 		select {
