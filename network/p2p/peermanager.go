@@ -183,8 +183,8 @@ func (prm *PeerManager) Stop() {
 
 	prm.close()
 
-	prm.isrvout.Close()
 	if prm.isrvcmd != nil && prm.isrvcmd.Process != nil {
+		prm.isrvout.Close()
 		prm.isrvcmd.Process.Kill()
 	}
 }
@@ -309,8 +309,8 @@ func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*Peer {
 
 	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p)
+		if !p.KnownBlockHas(hash){
+			list = append(list,p)
 		}
 	}
 	return list
@@ -324,7 +324,7 @@ func (prm *PeerManager) PeersWithoutTx(hash common.Hash) []*Peer {
 
 	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
-		if !p.knownTxs.Has(hash) {
+		if !p.KnownTxsHas(hash) {
 			list = append(list, p)
 		}
 	}
@@ -593,26 +593,27 @@ func (prm *PeerManager) startServerBW(port string) error {
 	}
 	log.Info("Start server of bandwidth test.", "port", port)
 	cmd := ipfbin + " -s -p " + port
-	go func(cmdline string, logout *os.File){
+	go func(cmdline string, logout *os.File, isrvcmd **exec.Cmd){
 		var firsttime = true
 		for {
-			isrvcmd := exec.Command("/bin/bash", "-c", cmd)
-			isrvcmd.Stdout = logout
+			c := exec.Command("/bin/bash", "-c", cmd)
+			*isrvcmd = c
+			c.Stdout = logout
 			log.Debug("start iperf server and daemon")
-			if err := isrvcmd.Start(); err != nil {
+			if err := c.Start(); err != nil {
 				if firsttime {
 					log.Error("Start iperf server", "err", err)
 					panic("start iperf server failed")
 				}
 			}
 			firsttime = false
-			if err := isrvcmd.Wait(); err != nil {
+			if err := c.Wait(); err != nil {
 				log.Debug("iperf server exit", "err", err)
 			}
 			log.Debug("iperf server restart")
 			time.Sleep(time.Second) // add some delay
 		}
-	}(cmd, prm.isrvout)
+	}(cmd, prm.isrvout, &prm.isrvcmd)
 	return nil
 }
 
