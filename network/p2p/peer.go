@@ -18,6 +18,7 @@ package p2p
 
 import (
 	"fmt"
+	"github.com/hashicorp/golang-lru"
 	"io"
 	"net"
 	"sync"
@@ -30,7 +31,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"gopkg.in/fatih/set.v0"
 	"math/big"
 	//"github.com/hpb-project/go-hpb/boe"
 	//"github.com/hpb-project/go-hpb/boe"
@@ -135,8 +135,8 @@ type Peer struct {
 
 	chbond      chan *discover.Node
 
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	knownTxsCache 	*lru.Cache
+	knownBlocksCache *lru.Cache
 
 	statMining  string
 }
@@ -511,15 +511,16 @@ func (rw *protoRW) ReadMsg() (Msg, error) {
 func NewPeer(version uint, pr *PeerBase, rw MsgReadWriter) *Peer {
 	id := pr.ID()
 
-	return &Peer{
+	p := &Peer{
 		PeerBase:    pr,
 		rw:          rw,
 		version:     version,
 		id:          fmt.Sprintf("%x", id[:8]),
 		chbond:      make(chan *discover.Node, 1),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
 	}
+	p.knownBlocksCache,_ = lru.New(maxKnownBlocks)
+	p.knownTxsCache,_ = lru.New(maxKnownTxs)
+	return p
 }
 
 func (p *Peer) GetID() string {
@@ -570,33 +571,27 @@ func (p *Peer) Bandwidth() float64 {
 }
 
 func (p *Peer) KnownBlockAdd(hash common.Hash){
-	for p.knownBlocks.Size() >= maxKnownBlocks {
-		p.knownBlocks.Pop()
-	}
-	p.knownBlocks.Add(hash)
+	p.knownBlocksCache.Add(hash,struct{}{})
 }
 
 func (p *Peer) KnownBlockHas(hash common.Hash) bool{
-	return p.knownBlocks.Has(hash)
+	return p.knownBlocksCache.Contains(hash)
 }
 
 func (p *Peer) KnownBlockSize() int{
-	return p.knownBlocks.Size()
+	return p.knownBlocksCache.Len()
 }
 
 func (p *Peer) KnownTxsAdd(hash common.Hash){
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
-	}
-	p.knownTxs.Add(hash)
+	p.knownTxsCache.Add(hash, struct{}{})
 }
 
 func (p *Peer) KnownTxsHas(hash common.Hash) bool{
-	return p.knownTxs.Has(hash)
+	return p.knownTxsCache.Contains(hash)
 }
 
 func (p *Peer) KnownTxsSize() int{
-	return p.knownTxs.Size()
+	return p.knownTxsCache.Len()
 }
 
 func SendData(p *Peer, msgCode uint64, data interface{}) error {
