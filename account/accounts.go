@@ -18,9 +18,10 @@
 package accounts
 
 import (
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
+
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/event/sub"
 )
 

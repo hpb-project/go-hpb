@@ -14,24 +14,23 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// Package miner implements HPB block creation and mining.
+// Package worker implements HPB block creation and mining.
 package worker
 
 import (
 	"fmt"
 	"sync/atomic"
 
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/synctrl"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/synctrl"
 )
-
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
@@ -47,7 +46,7 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine,coinbase common.Address) *Miner {
+func New(config *config.ChainConfig, mux *sub.TypeMux, engine consensus.Engine, coinbase common.Address) *Miner {
 	miner := &Miner{
 		mux:      mux,
 		engine:   engine,
@@ -92,7 +91,7 @@ out:
 
 func (self *Miner) Start(coinbase common.Address) {
 	go self.update()
-	
+
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.worker.setHpberbase(coinbase)
 	self.coinbase = coinbase

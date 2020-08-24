@@ -159,7 +159,7 @@ func compableV(v *big.Int) bool {
 }
 
 func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
-if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
+	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
 	if compableV(tx.data.V) {

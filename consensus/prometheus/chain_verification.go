@@ -35,7 +35,6 @@ import (
 	"time"
 )
 
-
 // Verify one header
 func (c *Prometheus) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool, mode config.SyncMode) error {
 	return c.verifyHeader(chain, header, nil, mode)
@@ -74,7 +73,6 @@ func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *
 	}
 	SetNetNodeType(snap)
 }
-
 
 func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, mode config.SyncMode) error {
 	if header.Number == nil {
@@ -160,7 +158,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		state, _ := chain.StateAt(lastheader.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
-				log.Error("BAD COIN BASE","miner",header.Coinbase.String(),"local",cadWinner[0].Address[:],"header",header.CandAddress[:])
+				log.Error("BAD COIN BASE", "miner", header.Coinbase.String(), "local", cadWinner[0].Address[:], "header", header.CandAddress[:])
 				return consensus.ErrInvalidCadaddr
 			}
 		} else {
@@ -204,9 +202,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 	extra, err := types.BytesToExtraDetail(header.Extra)
 	if err != nil {
-        log.Error("PrepareBlockHeader", "Header bytesToExtraDetail error", err, "Block number", number)
-        return err
-    }
+		log.Error("PrepareBlockHeader", "Header bytesToExtraDetail error", err, "Block number", number)
+		return err
+	}
 
 	parentExtra, err := types.BytesToExtraDetail(parentheader.Extra)
 	if err != nil {
@@ -221,7 +219,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 	}
 
 	if number > consensus.StageNumberRealRandom && mode == config.FullSync {
-		var realrandom = make([]byte,0)
+		var realrandom = make([]byte, 0)
 		var checkRandom = true
 		if number%200 == 0 {
 			bigsignlsthwrnd := new(big.Int).SetBytes(parentExtra.GetSignedLastRND())
@@ -231,7 +229,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 			var index = uint64(number - 200 + bigsignlsthwrndmod.Uint64())
 			curHeader := chain.CurrentHeader().Number.Uint64()
 			if curHeader < index {
-				log.Debug("verifySeal","future header",number,"index",index,"currentHeader",curHeader)
+				log.Debug("verifySeal", "future header", number, "index", index, "currentHeader", curHeader)
 				checkRandom = false
 			} else {
 				seedswitchheader := chain.GetHeaderByNumber(index)
@@ -306,7 +304,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		if mode == config.FullSync {
 			var inturn bool
 			if number < consensus.StateNumberNewHash {
-				_,inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+				_, inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
 				latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
@@ -318,29 +316,29 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				for i <= number {
 					var chooseSet = common.Addresses{}
 					//var chooseSet = make([]common.Address, 0, len(snap.Signers))
-					for k,_ := range snap.Signers {
+					for k, _ := range snap.Signers {
 						if k != lastMiner {
-							chooseSet = append(chooseSet,k)
+							chooseSet = append(chooseSet, k)
 						}
 					}
 					sort.Sort(chooseSet)
 					if i < number {
 						if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
 							random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
-							lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+							lastMiner, _ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
 						} else {
 							if retry > 0 {
-								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)
+								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying", retry)
 								retry--
-								time.Sleep(time.Microsecond*100)
+								time.Sleep(time.Microsecond * 100)
 								continue
 							} else {
-								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry",retry)
+								log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry", retry)
 								return errors.New("chainGetHeaderByNumber failed")
 							}
 						}
 					} else {
-						_,inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSet)
+						_, inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSet)
 					}
 					retry = 5
 					i++

@@ -19,20 +19,20 @@ package discover
 import (
 	"errors"
 	"fmt"
-	"net"
-	"sync"
-	"time"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
+	"net"
+	"sync"
+	"time"
 )
 
 const (
-	bucketSize = 500
-	hashBits   = len(common.Hash{}) * 8
-	nBuckets   = hashBits + 1
-	maxBonding = 5
-	autoRefreshMin = time.Second *60
+	bucketSize     = 500
+	hashBits       = len(common.Hash{}) * 8
+	nBuckets       = hashBits + 1
+	maxBonding     = 5
+	autoRefreshMin = time.Second * 60
 )
 
 type Table struct {
@@ -55,8 +55,8 @@ type Table struct {
 	self *Node // metadata of the local node
 
 	///////////////////////////
-	lock       sync.RWMutex
-	allNodes   map[NodeID]*Node  //Node Sets all nodes
+	lock     sync.RWMutex
+	allNodes map[NodeID]*Node //Node Sets all nodes
 }
 
 type bondproc struct {
@@ -113,7 +113,7 @@ func (tab *Table) Self() *Node {
 	return tab.self
 }
 
-func (tab *Table) FindNodes()(buf []*Node) {
+func (tab *Table) FindNodes() (buf []*Node) {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 
@@ -121,7 +121,7 @@ func (tab *Table) FindNodes()(buf []*Node) {
 	for _, b := range tab.buckets {
 		for _, n := range b.entries {
 			buf = append(buf, n)
-			count = count+1
+			count = count + 1
 		}
 	}
 
@@ -129,7 +129,7 @@ func (tab *Table) FindNodes()(buf []*Node) {
 	return buf
 }
 
-func (tab *Table) Bondall(nodes []*Node) int{
+func (tab *Table) Bondall(nodes []*Node) int {
 
 	boned := tab.bondall(nodes)
 
@@ -146,7 +146,7 @@ func (tab *Table) Bondall(nodes []*Node) int{
 	return len(boned)
 }
 
-func (tab *Table) AddNode(node *Node)  {
+func (tab *Table) AddNode(node *Node) {
 
 	return
 }
@@ -158,7 +158,7 @@ func (tab *Table) RemoveNode(nid NodeID) {
 	for _, bucket := range tab.buckets {
 		for i := range bucket.entries {
 			if bucket.entries[i].ID == nid {
-				log.Debug("Remove node from table","ID",nid,"Node",bucket.entries[i])
+				log.Debug("Remove node from table", "ID", nid, "Node", bucket.entries[i])
 				bucket.entries = append(bucket.entries[:i], bucket.entries[i+1:]...)
 				return
 			}
@@ -358,7 +358,6 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 	return node, result
 }
 
-
 func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16) {
 	// Request a bonding slot to limit network usage
 	<-tab.bondslots
@@ -376,7 +375,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
-	w.n = NewNode(id,addr.IP, uint16(addr.Port), tcpPort)
+	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort)
 
 	tab.db.updateNode(w.n)
 	close(w.done)
@@ -387,7 +386,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
 	tab.db.updateLastPing(id, time.Now())
 	if err := tab.net.ping(id, addr); err != nil {
-		log.Debug("Send udp ping msg","id",id,"addr",addr,"err",err)
+		log.Debug("Send udp ping msg", "id", id, "addr", addr, "err", err)
 		return err
 	}
 	tab.db.updateLastPong(id, time.Now())
@@ -438,7 +437,7 @@ func (tab *Table) add(new *Node) {
 	}
 
 	added := b.replace(new, oldest)
-	log.Trace("Find one node to dial.","added",added,"node",new.String())
+	log.Trace("Find one node to dial.", "added", added, "node", new.String())
 	if added && tab.nodeAddedHook != nil {
 		tab.nodeAddedHook(new)
 	}
@@ -517,6 +516,3 @@ func (b *bucket) bump(n *Node) bool {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-
-
-

@@ -89,7 +89,6 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 		headers []*types.Header
 	)
 
-
 	gobacknum := 200
 	if number > consensus.StageNumberIII {
 		if number <= consensus.CadNodeCheckpointInterval+200 {
@@ -172,7 +171,6 @@ func GetCandDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, hash co
 	}
 	return nil, nil
 }
-
 
 func StoreCanDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.CadNodeSnap, latestCheckPointHash common.Hash) error {
 

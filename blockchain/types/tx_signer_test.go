@@ -1,12 +1,12 @@
 package types
 
 import (
-	"testing"
 	"crypto/ecdsa"
-	"math/big"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/config"
+	"math/big"
+	"testing"
 )
 
 func makeTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *Transaction {
@@ -21,9 +21,9 @@ func TestBoeSigner_Sender(t *testing.T) {
 	signer := NewBoeSigner(config.MainnetChainConfig.ChainId)
 	tx := makeTransaction(0, big.NewInt(1000), big.NewInt(1000), key)
 	sender, _ := signer.Sender(tx)
-	t.Logf("sender : %x",sender)
-	t.Logf("address : %x",address)
-	if sender != address{
+	t.Logf("sender : %x", sender)
+	t.Logf("address : %x", address)
+	if sender != address {
 		t.Fatal("not equal")
 	}
 }

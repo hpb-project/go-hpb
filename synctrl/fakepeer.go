@@ -28,9 +28,9 @@ import (
 // instead of being an actual live node. It's useful for testing and to implement
 // sync commands from an xisting local database.
 type FakePeer struct {
-	id string
-	db hpbdb.Database
-	hc *bc.HeaderChain
+	id     string
+	db     hpbdb.Database
+	hc     *bc.HeaderChain
 	syncer *Syncer
 }
 

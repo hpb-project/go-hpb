@@ -17,18 +17,18 @@
 package bc
 
 import (
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"testing"
+
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"testing"
 )
-
 
 func TestVoteResultStorage(t *testing.T) {
 	db, _ := hpbdb.NewMemDatabase()
 
-	vr := &types.VoteResult {
-		Version  : 1 ,
+	vr := &types.VoteResult{
+		Version: 1,
 	}
 
 	vr.Winners = append(vr.Winners, common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"))
@@ -41,7 +41,7 @@ func TestVoteResultStorage(t *testing.T) {
 	if entry := GetVoteResult(db); entry == nil {
 		t.Fatalf("Stored vote not found")
 	} else {
-		t.Log( entry)
+		t.Log(entry)
 	}
 	DeleteVoteResult(db)
 	if entry := GetVoteResult(db); entry != nil {

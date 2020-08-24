@@ -25,7 +25,6 @@ import (
 
 	"github.com/hpb-project/ghpb/common"
 	"github.com/hpb-project/ghpb/core/vm"
-	"github.com/hpb-project/ghpb/common/constant"
 )
 
 type account struct{}

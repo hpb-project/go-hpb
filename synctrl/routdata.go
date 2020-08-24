@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	minRoutBlockpeers  = 10
+	minRoutBlockpeers = 10
 	routPeerParameter = 3
 )
 
@@ -49,11 +49,11 @@ func routBlock(block *types.Block, propagate bool) {
 			return
 		}
 		// Send the block to a subset of our peers
-		transferLen := len(peers)/routPeerParameter
-		if transferLen < minRoutBlockpeers{
+		transferLen := len(peers) / routPeerParameter
+		if transferLen < minRoutBlockpeers {
 			transferLen = minRoutBlockpeers
 		}
-		if transferLen > len(peers){
+		if transferLen > len(peers) {
 			transferLen = len(peers)
 		}
 
@@ -139,16 +139,18 @@ func routTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
 
 	if tx.IsForward() {
-		routForwardTx(hash,tx)
+		routForwardTx(hash, tx)
 	} else {
 		tx.SetForward(true)
-		routNativeTx(hash,tx)
+		routNativeTx(hash, tx)
 	}
 }
 
 func routNativeTx(hash common.Hash, tx *types.Transaction) {
 	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	if len(peers) == 0 { return }
+	if len(peers) == 0 {
+		return
+	}
 
 	switch p2p.PeerMgrInst().GetLocalType() {
 	case discover.HpNode:
@@ -212,7 +214,9 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 
 func routForwardTx(hash common.Hash, tx *types.Transaction) {
 	peers := p2p.PeerMgrInst().PeersWithoutTx(hash)
-	if len(peers) == 0 { return }
+	if len(peers) == 0 {
+		return
+	}
 
 	switch p2p.PeerMgrInst().GetLocalType() {
 	case discover.HpNode:

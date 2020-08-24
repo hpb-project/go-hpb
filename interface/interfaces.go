@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.

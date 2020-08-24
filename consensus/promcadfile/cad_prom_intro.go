@@ -19,18 +19,18 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/hpb-project/go-hpb/common/log"
 	"os"
 	"path/filepath"
 	"strings"
-	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // makeWizard creates and returns a new prometh prometh.
 func makeCadPrometh(network string) *prometh {
 	return &prometh{
 		network: network,
-		conf:  config{},
-		in:       bufio.NewReader(os.Stdin),
+		conf:    config{},
+		in:      bufio.NewReader(os.Stdin),
 	}
 }
 
@@ -66,7 +66,7 @@ func (p *prometh) run() {
 
 	p.conf.path = filepath.Join(os.Getenv("HOME"), ".prometh", p.network)
 
-	for{
+	for {
 		fmt.Println()
 		fmt.Println("What would you like to do? (default = stats)")
 		fmt.Println(" 1. Configure new genesis")

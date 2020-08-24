@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	pk_Header          = 0x00
-	pk_Body            = 0x01
-	pk_Receipt         = 0x02
-	pk_State           = 0x03
+	pk_Header  = 0x00
+	pk_Body    = 0x01
+	pk_Receipt = 0x02
+	pk_State   = 0x03
 )
 
 type pkFactory struct {

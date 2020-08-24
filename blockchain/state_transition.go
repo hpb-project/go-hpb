@@ -24,7 +24,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
+	params "github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
@@ -107,7 +107,7 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 		initialGas: new(big.Int),
 		value:      msg.Value(),
 		data:       msg.Data(),
-		state: evm.StateDB,
+		state:      evm.StateDB,
 	}
 }
 func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
@@ -119,8 +119,8 @@ func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.State
 		value:      msg.Value(),
 		data:       msg.Data(),
 		header:     header,
-		state:  statedb,
-		author: author,
+		state:      statedb,
+		author:     author,
 	}
 }
 

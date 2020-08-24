@@ -19,26 +19,25 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"io/ioutil"
 )
 
-
 type CadWinner struct {
-    NetworkId     string 
-	Address       common.Address
-	VoteIndex     uint64 
+	NetworkId string
+	Address   common.Address
+	VoteIndex uint64
 }
 
 func (p *prometh) makeGenesis() {
-	
+
 	fmt.Println()
 	fmt.Println("Welcome to HPB consensus engine file maker")
-    fmt.Println("Please input the networkid one by one")
-    
+	fmt.Println("Please input the networkid one by one")
+
 	var networkids []string
-    var cNodes []CadWinner
+	var cNodes []CadWinner
 	for {
 		if networkid := p.read(); networkid != "" {
 			networkids = append(networkids, networkid)
@@ -51,15 +50,14 @@ func (p *prometh) makeGenesis() {
 
 	fmt.Println()
 	fmt.Println("Please input the corresponding address, the same order with above networkid")
-	for i := 0; i < len(networkids); i++{
+	for i := 0; i < len(networkids); i++ {
 		if address := p.readAddress(); address != nil {
-			cNodes = append(cNodes,CadWinner{NetworkId: networkids[i], Address: *address,VoteIndex:uint64(0)})
+			cNodes = append(cNodes, CadWinner{NetworkId: networkids[i], Address: *address, VoteIndex: uint64(0)})
 			continue
 		}
 	}
 	p.conf.genesis = cNodes
 }
-
 
 // manageGenesis permits the modification of chain configuration parameters in
 // a genesis config and the export of the entire genesis spec.
@@ -87,5 +85,3 @@ func (p *prometh) manageGenesis() {
 		log.Error("That's not something I can do")
 	}
 }
-
-

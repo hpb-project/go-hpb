@@ -19,17 +19,18 @@ package txpool
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"testing"
+	"time"
+
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk

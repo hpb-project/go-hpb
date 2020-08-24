@@ -125,7 +125,6 @@ func discReasonForError(err error) DiscReason {
 	return DiscSubprotocolError
 }
 
-
 /////////////////////////////////////////
 //dial
 var (
@@ -135,12 +134,13 @@ var (
 	errRecentlyDialed   = errors.New("recently dialed")
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
+
 // protocal
 var (
-	errProtNoStatusCB             = errors.New("protocol this is no status callback")
+	errProtNoStatusCB = errors.New("protocol this is no status callback")
 )
 
 // Peer
 var (
-	errPeerBWTestTimeout             = errors.New("peer test bandwidth timeout")
+	errPeerBWTestTimeout = errors.New("peer test bandwidth timeout")
 )

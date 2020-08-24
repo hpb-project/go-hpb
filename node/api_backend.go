@@ -15,25 +15,26 @@
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
 package node
+
 import (
 	"context"
 	"errors"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/bloombits"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/network/rpc"
-	"github.com/hpb-project/go-hpb/node/gasprice"
-	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/blockchain/bloombits"
-	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/synctrl"
 )
 
@@ -117,7 +118,7 @@ func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *st
 	vmError := func() error { return nil }
 
 	context := hvm.NewEVMContext(msg, header, b.hpb.BlockChain(), nil)
-	return evm.NewEVM(context, state, &b.hpb.Hpbconfig.BlockChain,vmConfig), vmError, nil
+	return evm.NewEVM(context, state, &b.hpb.Hpbconfig.BlockChain, vmConfig), vmError, nil
 }
 
 func (b *HpbApiBackend) SubscribeRemovedLogsEvent(ch chan<- bc.RemovedLogsEvent) sub.Subscription {
@@ -176,7 +177,7 @@ func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscri
 	return b.hpb.TxPool().SubscribeTxPreEvent(ch)
 }
 
-func (b *HpbApiBackend) Downloader() *synctrl.Syncer  {
+func (b *HpbApiBackend) Downloader() *synctrl.Syncer {
 	return b.hpb.Hpbsyncctr.Syncer()
 }
 

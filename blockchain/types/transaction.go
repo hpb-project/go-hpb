@@ -200,10 +200,10 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
 		ExData       TxExdata        `json:"exdata" rlp:"-"`
-		V    *hexutil.Big `json:"v" gencodec:"required"`
-		R    *hexutil.Big `json:"r" gencodec:"required"`
-		S    *hexutil.Big `json:"s" gencodec:"required"`
-		Hash *common.Hash `json:"hash" rlp:"-"`
+		V            *hexutil.Big    `json:"v" gencodec:"required"`
+		R            *hexutil.Big    `json:"r" gencodec:"required"`
+		S            *hexutil.Big    `json:"s" gencodec:"required"`
+		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
 	var enc txdata
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
@@ -229,10 +229,10 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
 		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
 		ExData       TxExdata        `json:"exdata" rlp:"-"`
-		V    *hexutil.Big `json:"v" gencodec:"required"`
-		R    *hexutil.Big `json:"r" gencodec:"required"`
-		S    *hexutil.Big `json:"s" gencodec:"required"`
-		Hash *common.Hash `json:"hash" rlp:"-"`
+		V            *hexutil.Big    `json:"v" gencodec:"required"`
+		R            *hexutil.Big    `json:"r" gencodec:"required"`
+		S            *hexutil.Big    `json:"s" gencodec:"required"`
+		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {

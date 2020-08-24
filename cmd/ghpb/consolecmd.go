@@ -23,9 +23,9 @@ import (
 
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common/console"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/hpb-project/go-hpb/config"
 )
 
 var (

@@ -72,8 +72,8 @@ var (
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
 
-	StageNumberRealRandom   uint64 = 5159000 // used to enable real random.
-	StateNumberNewHash  = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
+	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
+	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
 
 	ContinuousGenBlkLimit uint64 = 2
 

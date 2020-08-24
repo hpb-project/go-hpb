@@ -19,8 +19,8 @@
 package p2p
 
 import (
-	"net"
 	"github.com/hpb-project/go-hpb/common/metrics"
+	"net"
 )
 
 var (
@@ -99,7 +99,7 @@ var (
 
 type meteredMsgReadWriter struct {
 	MsgReadWriter
-	version           uint
+	version uint
 }
 
 func newMeteredMsgWriter(rw MsgReadWriter) MsgReadWriter {

@@ -19,15 +19,15 @@ package sub
 import (
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"reflect"
 	"sync"
 	"time"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 
-type TxPreEvent struct{Tx *types.Transaction}
+type TxPreEvent struct{ Tx *types.Transaction }
 
 type TypeMuxEvent struct {
 	Time time.Time

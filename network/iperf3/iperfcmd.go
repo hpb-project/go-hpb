@@ -1,18 +1,18 @@
 package iperf3
 
 import (
-	"os/exec"
-	"bytes"
-	"fmt"
 	"bufio"
-	"io"
-	"github.com/hpb-project/go-hpb/common/log"
-	"strings"
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/hpb-project/go-hpb/common/log"
+	"io"
 	"os"
+	"os/exec"
+	"strings"
 )
 
-func exec_shell(s string) (string, error){
+func exec_shell(s string) (string, error) {
 	var out bytes.Buffer
 	cmd := exec.Command("/bin/bash", "-c", s)
 
@@ -38,21 +38,21 @@ func IperfServer() string {
 			break
 		}
 
-		count = count +1
+		count = count + 1
 		fmt.Println(line)
-		log.Info("Read","Num",count,"Out",line)
+		log.Info("Read", "Num", count, "Out", line)
 	}
 	cmd.Wait()
 	log.Info("Over End.")
 	return "Over"
 }
 
-func StartSever(port int) (error) {
+func StartSever(port int) error {
 
 	cmd := exec.Command("./iperf3", " -s ", " -p "+string(port))
 	stdout, err := os.OpenFile("./iperf_server.log", os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Error("open iperf_server.log","err",err)
+		log.Error("open iperf_server.log", "err", err)
 		return err
 
 	}
@@ -60,17 +60,17 @@ func StartSever(port int) (error) {
 	cmd.Stdout = stdout
 
 	if err := cmd.Start(); err != nil {
-		log.Error("start iperf server","err",err)
+		log.Error("start iperf server", "err", err)
 		return err
 	}
 
 	return nil
 }
 
-func StartTest(host string, port string) (float64) {
-	result,_ :=exec_shell("./iperf3 -c "+host+" -p "+port +"-t 10 -J")
+func StartTest(host string, port string) float64 {
+	result, _ := exec_shell("./iperf3 -c " + host + " -p " + port + "-t 10 -J")
 
-	if !strings.Contains(result, "bits_per_second"){
+	if !strings.Contains(result, "bits_per_second") {
 		log.Warn("Test string in not right.")
 		return 0
 	}
@@ -78,13 +78,13 @@ func StartTest(host string, port string) (float64) {
 	var dat map[string]interface{}
 	json.Unmarshal([]byte(result), &dat)
 
-	sum:= dat["end"].(map[string]interface{})
+	sum := dat["end"].(map[string]interface{})
 
-	sum_sent     := sum["sum_sent"].(map[string]interface{})
+	sum_sent := sum["sum_sent"].(map[string]interface{})
 	sum_received := sum["sum_received"].(map[string]interface{})
 
 	send := sum_sent["bits_per_second"].(float64)
 	recv := sum_received["bits_per_second"].(float64)
-	log.Debug("iperf test result","sendrate",send, "recvrate",recv,"avg",(send+recv)/2)
-	return  (send+recv)/2
+	log.Debug("iperf test result", "sendrate", send, "recvrate", recv, "avg", (send+recv)/2)
+	return (send + recv) / 2
 }

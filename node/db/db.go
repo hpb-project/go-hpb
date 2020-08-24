@@ -17,24 +17,20 @@
 package db
 
 import (
-	"sync/atomic"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"sync/atomic"
 )
-
-
 
 // config instance
 var DBINSTANCE = atomic.Value{}
 
-
-
 // CreateDB creates the chain database.
-func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
+func CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
 
 	if DBINSTANCE.Load() != nil {
-		return DBINSTANCE.Load().(*hpbdb.LDBDatabase),nil
+		return DBINSTANCE.Load().(*hpbdb.LDBDatabase), nil
 	}
 	db, err := OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
@@ -53,11 +49,11 @@ func  CreateDB(config *config.Nodeconfig, name string) (hpbdb.Database, error) {
 func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 
 	if DBINSTANCE.Load() != nil {
-		return DBINSTANCE.Load().(*hpbdb.LDBDatabase),nil
+		return DBINSTANCE.Load().(*hpbdb.LDBDatabase), nil
 	}
 
 	var cfg = config.GetHpbConfigInstance()
-	if cfg.Node.DataDir == ""{
+	if cfg.Node.DataDir == "" {
 		return hpbdb.NewMemDatabase()
 	}
 	db, err := hpbdb.NewLDBDatabase(cfg.Node.ResolvePath(name), cache, handles)
@@ -69,7 +65,7 @@ func OpenDatabase(name string, cache int, handles int) (hpbdb.Database, error) {
 	return db, nil
 }
 
-func GetHpbDbInstance() (*hpbdb.LDBDatabase) {
+func GetHpbDbInstance() *hpbdb.LDBDatabase {
 	if DBINSTANCE.Load() != nil {
 		return DBINSTANCE.Load().(*hpbdb.LDBDatabase)
 	}

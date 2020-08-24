@@ -26,22 +26,21 @@ import (
 	"time"
 	//"encoding/hex"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 )
 
 // generate genesis file with user input.
 func (p *prometh) makeGenesis() {
-	
+
 	genesis := &bc.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
 		GasLimit:   config.GenesisGasLimit.Uint64(),
 		Difficulty: big.NewInt(1048576),
 		Alloc:      make(bc.GenesisAlloc),
-		Config: &config.ChainConfig{
-		},
+		Config:     &config.ChainConfig{},
 	}
 	// Figure out which consensus engine to choose
 	fmt.Println()
@@ -89,7 +88,7 @@ func (p *prometh) makeGenesis() {
 	for i, signer := range signers {
 		copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 	}
-   
+
 	fmt.Println()
 	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
 	for {
@@ -102,16 +101,15 @@ func (p *prometh) makeGenesis() {
 		}
 		break
 	}
-	
-	
+
 	fmt.Println()
 	fmt.Println("Please input the initialization hardware random")
-	
+
 	genesis.HardwareRandom = make([]byte, 32)
 	if hardwareRandom := p.readAddress(); hardwareRandom != nil {
 		copy(genesis.HardwareRandom[0:], hardwareRandom[:])
 	}
-	
+
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainId = new(big.Int).SetUint64(uint64(p.readDefaultInt(rand.Intn(65536))))

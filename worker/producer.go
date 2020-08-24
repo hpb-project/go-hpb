@@ -21,8 +21,8 @@ import (
 
 	"sync/atomic"
 
-	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/consensus"
 )
 
 type CpuAgent struct {
@@ -87,7 +87,7 @@ out:
 			self.quitCurrentOp = make(chan struct{})
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
-			
+
 		case <-self.stop:
 			self.mu.Lock()
 			if self.quitCurrentOp != nil {
@@ -102,7 +102,7 @@ out:
 
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
 	if result, err := self.engine.GenBlockWithSig(self.chain, work.Block, stop); result != nil {
-		log.Info("Successfully sealed new block", "number -> ", result.Number(), "hash -> ", result.Hash(),"difficulty -> ",result.Difficulty())
+		log.Info("Successfully sealed new block", "number -> ", result.Number(), "hash -> ", result.Hash(), "difficulty -> ", result.Difficulty())
 		self.returnCh <- &Result{work, result}
 	} else {
 		if err != nil {

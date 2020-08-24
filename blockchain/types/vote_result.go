@@ -22,6 +22,6 @@ import (
 )
 
 type VoteResult struct {
-	Version     uint            `json:"version"`
-	Winners     [] common.Hash  `json:"winners"`
+	Version uint          `json:"version"`
+	Winners []common.Hash `json:"winners"`
 }

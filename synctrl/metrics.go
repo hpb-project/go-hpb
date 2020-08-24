@@ -59,5 +59,4 @@ var (
 	headerFilterOutMeter = metrics.NewMeter("hpb/puller/filter/headers/out")
 	bodyFilterInMeter    = metrics.NewMeter("hpb/puller/filter/bodies/in")
 	bodyFilterOutMeter   = metrics.NewMeter("hpb/puller/filter/bodies/out")
-
 )

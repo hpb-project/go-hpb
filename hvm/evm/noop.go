@@ -19,8 +19,8 @@ package evm
 import (
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 func NoopCanTransfer(db StateDB, from common.Address, balance *big.Int) bool {

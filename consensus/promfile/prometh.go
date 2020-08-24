@@ -235,8 +235,8 @@ func (p *prometh) readAddress() *common.Address {
 		}
 
 		/**
-			SetString sets z to the value of s, interpreted in the given base, and returns z and a boolean indicating success. The entire string (not just a prefix) must be valid for success. If SetString fails, the value of z is undefined but the returned value is nil.
-			The base argument must be 0 or a value between 2 and MaxBase. If the base is 0, the string prefix determines the actual conversion base. A prefix of “0x” or “0X” selects base 16; the “0” prefix selects base 8, and a “0b” or “0B” prefix selects base 2. Otherwise the selected base is 10.
+		SetString sets z to the value of s, interpreted in the given base, and returns z and a boolean indicating success. The entire string (not just a prefix) must be valid for success. If SetString fails, the value of z is undefined but the returned value is nil.
+		The base argument must be 0 or a value between 2 and MaxBase. If the base is 0, the string prefix determines the actual conversion base. A prefix of “0x” or “0X” selects base 16; the “0” prefix selects base 8, and a “0b” or “0B” prefix selects base 2. Otherwise the selected base is 10.
 		*/
 
 		bigaddr, _ := new(big.Int).SetString(text, 16)

@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -271,7 +271,7 @@ func (c *ChainIndexer) updateLoop() {
 				c.lock.Lock()
 
 				// If processing succeeded and no reorgs occcurred, mark the section completed
-				if err == nil && (section == 0||oldHead == c.sectionHead(section-1)) {
+				if err == nil && (section == 0 || oldHead == c.sectionHead(section-1)) {
 					c.setSectionHead(section, newHead)
 					c.setValidSections(section + 1)
 					if c.storedSections == c.knownSections && updating {
@@ -335,8 +335,6 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 	}
 	return lastHead, nil
 }
-
-
 
 // verifyLastHead compares last stored section head with the corresponding block hash in the
 // actual canonical chain and rolls back reorged sections if necessary to ensure that stored

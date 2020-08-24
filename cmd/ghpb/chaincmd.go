@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/synctrl"
@@ -42,8 +43,8 @@ import (
 
 	//"path/filepath"
 	//"io/ioutil"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/node/db"
@@ -202,7 +203,7 @@ func boeupdate(ctx *cli.Context) error {
 
 	log.Trace("start boe fw update")
 	if fpath != "" {
-		log.Info("boe update ", "with file ",fpath)
+		log.Info("boe update ", "with file ", fpath)
 		error = boehandle.FWUpdateWithFile(fpath)
 		if error != nil {
 			log.Error("boe fw update failed", " ", error)
@@ -216,7 +217,6 @@ func boeupdate(ctx *cli.Context) error {
 			return error
 		}
 	}
-
 
 	log.Trace("boe fw update complete")
 	error = boehandle.Release()
@@ -240,10 +240,10 @@ func boecheck(ctx *cli.Context) error {
 	} else {
 		log.Info("boe not found")
 	}
-	
-	version,err := boehandle.GetVersion()
+
+	version, err := boehandle.GetVersion()
 	if err == nil {
-		log.Info("boe ","firmware version",version.VersionString())
+		log.Info("boe ", "firmware version", version.VersionString())
 	}
 	return nil
 }

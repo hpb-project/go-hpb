@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/interface"
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 // Client defines typed wrappers for the Hpb RPC API.

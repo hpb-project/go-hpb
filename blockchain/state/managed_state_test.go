@@ -19,8 +19,8 @@ package state
 import (
 	"testing"
 
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
 )
 
 var addr = common.BytesToAddress([]byte("test"))

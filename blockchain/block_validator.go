@@ -18,12 +18,13 @@ package bc
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"math/big"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

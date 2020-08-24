@@ -22,12 +22,11 @@ import (
 	"runtime"
 	"strings"
 
-
-	"gopkg.in/urfave/cli.v1"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

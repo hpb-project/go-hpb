@@ -39,9 +39,9 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto/ecies"
 	"github.com/hpb-project/go-hpb/common/crypto/secp256k1"
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 )
 
 const (
@@ -127,13 +127,13 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 	werr := make(chan error, 1)
 	go func() {
 		err := send(t.rw, handshakeMsg, our)
-		if err != nil{
-			log.Debug("send handshake message","err",err)
+		if err != nil {
+			log.Debug("send handshake message", "err", err)
 		}
 		werr <- err
-		}()
+	}()
 	if their, err = readProtocolHandshake(t.rw, our); err != nil {
-		log.Debug("read handshake message","err",err)
+		log.Debug("read handshake message", "err", err)
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
@@ -176,21 +176,21 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	return &hs, nil
 }
 
-func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, []byte,  []byte, error) {
+func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, []byte, []byte, error) {
 	var (
-		sec secrets
-		err error
+		sec       secrets
+		err       error
 		ourRand   []byte
 		thereRand []byte
 	)
-	ourRand    = make([]byte,RandNonceSize)
-	thereRand  = make([]byte,RandNonceSize)
+	ourRand = make([]byte, RandNonceSize)
+	thereRand = make([]byte, RandNonceSize)
 	rand.Read(ourRand)
 
 	if dial == nil {
-		sec, thereRand, err = receiverEncHandshake(t.fd, prv, nil,ourRand)
+		sec, thereRand, err = receiverEncHandshake(t.fd, prv, nil, ourRand)
 	} else {
-		sec, thereRand, err = initiatorEncHandshake(t.fd, prv, dial.ID, nil,ourRand)
+		sec, thereRand, err = initiatorEncHandshake(t.fd, prv, dial.ID, nil, ourRand)
 	}
 	if err != nil {
 		return discover.NodeID{}, nil, nil, err
@@ -230,9 +230,9 @@ type authMsgV4 struct {
 	Nonce           [shaLen]byte
 	Version         uint
 
-	Rand            []byte
+	Rand []byte
 	// Ignore additional fields (forward-compatibility)
-	Rest            []rlp.RawValue `rlp:"tail"`
+	Rest []rlp.RawValue `rlp:"tail"`
 }
 
 // RLPx v4 handshake response (defined in EIP-8).
@@ -241,7 +241,7 @@ type authRespV4 struct {
 	Nonce        [shaLen]byte
 	Version      uint
 
-	Rand         []byte
+	Rand []byte
 	// Ignore additional fields (forward-compatibility)
 	Rest []rlp.RawValue `rlp:"tail"`
 }
@@ -301,7 +301,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 		return s, t, err
 	}
 	if _, err = conn.Write(authPacket); err != nil {
-		log.Debug("initiator io write","err",err)
+		log.Debug("initiator io write", "err", err)
 		return s, t, err
 	}
 
@@ -315,7 +315,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 	}
 	s, err = h.secrets(authPacket, authRespPacket)
 	t = append(t, authRespMsg.Rand...)
-	log.Debug("Initiator Enc Handshake","ourRand",hex.EncodeToString(authMsg.Rand),"theirRand",hex.EncodeToString(authRespMsg.Rand),"err",err)
+	log.Debug("Initiator Enc Handshake", "ourRand", hex.EncodeToString(authMsg.Rand), "theirRand", hex.EncodeToString(authRespMsg.Rand), "err", err)
 	return s, t, err
 }
 
@@ -367,7 +367,7 @@ func (h *encHandshake) handleAuthResp(msg *authRespV4) (err error) {
 //
 // prv is the local client's private key.
 // token is the token from a previous session with this node.
-func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byte, ourRand []byte) (s secrets, t []byte,err error) {
+func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byte, ourRand []byte) (s secrets, t []byte, err error) {
 	authMsg := new(authMsgV4)
 	authPacket, err := readHandshakeMsg(authMsg, encAuthMsgLen, prv, conn)
 	if err != nil {
@@ -397,8 +397,8 @@ func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byt
 	if _, err = conn.Write(authRespPacket); err != nil {
 		return s, t, err
 	}
-	s , err = h.secrets(authPacket, authRespPacket)
-	log.Debug("Receiver Enc Handshake","ourRand",authRespMsg.Rand,"theirRand",authMsg.Rand,"err",err)
+	s, err = h.secrets(authPacket, authRespPacket)
+	log.Debug("Receiver Enc Handshake", "ourRand", authRespMsg.Rand, "theirRand", authMsg.Rand, "err", err)
 	return s, t, err
 }
 
@@ -506,7 +506,7 @@ type plainDecoder interface {
 func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r io.Reader) ([]byte, error) {
 	buf := make([]byte, plainSize)
 	if _, err := io.ReadFull(r, buf); err != nil {
-		log.Debug("io read error","err",err)
+		log.Debug("io read error", "err", err)
 		return buf, err
 	}
 	// Attempt decoding pre-EIP-8 "plain" format.
@@ -523,7 +523,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	}
 	buf = append(buf, make([]byte, size-uint16(plainSize)+2)...)
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
-		log.Debug("io read buf","error",err)
+		log.Debug("io read buf", "error", err)
 		return buf, err
 	}
 	dec, err := key.Decrypt(rand.Reader, buf[2:], nil, prefix)
@@ -636,7 +636,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// write header MAC
 	copy(headbuf[16:], updateMAC(rw.egressMAC, rw.macCipher, headbuf[:16]))
 	if _, err := rw.conn.Write(headbuf); err != nil {
-		log.Debug("rlpx frame write head","err",err)
+		log.Debug("rlpx frame write head", "err", err)
 		return err
 	}
 
@@ -644,7 +644,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	// the data written to conn.
 	tee := cipher.StreamWriter{S: rw.enc, W: io.MultiWriter(rw.conn, rw.egressMAC)}
 	if _, err := tee.Write(ptype); err != nil {
-		log.Debug("rlpx frame write tee","err",err)
+		log.Debug("rlpx frame write tee", "err", err)
 		return err
 	}
 	if _, err := io.Copy(tee, msg.Payload); err != nil {
@@ -652,7 +652,7 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	}
 	if padding := fsize % 16; padding > 0 {
 		if _, err := tee.Write(zero16[:16-padding]); err != nil {
-			log.Debug("rlpx frame write padding","err",err)
+			log.Debug("rlpx frame write padding", "err", err)
 			return err
 		}
 	}
@@ -662,8 +662,8 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	fmacseed := rw.egressMAC.Sum(nil)
 	mac := updateMAC(rw.egressMAC, rw.macCipher, fmacseed)
 	_, err := rw.conn.Write(mac)
-	if err != nil{
-		log.Debug("rlpx frame write mac","err",err)
+	if err != nil {
+		log.Debug("rlpx frame write mac", "err", err)
 	}
 
 	return err
@@ -673,7 +673,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	// read the header
 	headbuf := make([]byte, 32)
 	if _, err := io.ReadFull(rw.conn, headbuf); err != nil {
-		log.Debug("rlpx frame read mac","err",err)
+		log.Debug("rlpx frame read mac", "err", err)
 		return msg, err
 	}
 	// verify header mac
@@ -692,7 +692,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	}
 	framebuf := make([]byte, rsize)
 	if _, err := io.ReadFull(rw.conn, framebuf); err != nil {
-		log.Debug("rlpx frame read frame","err",err)
+		log.Debug("rlpx frame read frame", "err", err)
 		return msg, err
 	}
 
@@ -743,6 +743,7 @@ func putInt32(v uint32, b []byte) {
 	b[2] = byte(v >> 8)
 	b[3] = byte(v)
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err error) {
@@ -750,20 +751,19 @@ func (t *rlpx) doHardwareTable(our *hardwareTable) (their *hardwareTable, err er
 	werr := make(chan error, 1)
 	go func() {
 		err := send(t.rw, hardwareMsg, our)
-		if err != nil{
-			log.Error("send hardware table message","err",err)
+		if err != nil {
+			log.Error("send hardware table message", "err", err)
 		}
 		werr <- err
 	}()
 	if their, err = readHardwareTable(t.rw, our); err != nil {
-		log.Debug("read hardware table message","reason",err)
+		log.Debug("read hardware table message", "reason", err)
 		<-werr // make sure the write terminates too
 		return nil, err
 	}
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("do hardware table write error: %v", err)
 	}
-
 
 	return their, nil
 }
@@ -791,7 +791,7 @@ func readHardwareTable(rw MsgReader, our *hardwareTable) (*hardwareTable, error)
 	}
 	var hdtab hardwareTable
 	if err := msg.Decode(&hdtab); err != nil {
-		log.Error("Do hardware table decode","error",err)
+		log.Error("Do hardware table decode", "error", err)
 		return nil, err
 	}
 

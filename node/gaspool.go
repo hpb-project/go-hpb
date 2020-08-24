@@ -17,8 +17,8 @@
 package node
 
 import (
-	"math/big"
 	"github.com/hpb-project/go-hpb/blockchain"
+	"math/big"
 )
 
 // GasPool tracks the amount of gas available during

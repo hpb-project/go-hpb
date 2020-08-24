@@ -23,10 +23,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 type Storage map[common.Hash]common.Hash

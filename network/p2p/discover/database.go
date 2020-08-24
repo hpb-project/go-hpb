@@ -39,9 +39,9 @@ import (
 )
 
 var (
-	nodeDBNilNodeID      = NodeID{}       // Special node ID to use as a nil element.
-	nodeDBNodeExpiration = 1 * time.Hour  // Time after which an unseen node should be dropped.
-	nodeDBCleanupCycle   = time.Hour      // Time period for running the expiration task.
+	nodeDBNilNodeID      = NodeID{}      // Special node ID to use as a nil element.
+	nodeDBNodeExpiration = 1 * time.Hour // Time after which an unseen node should be dropped.
+	nodeDBCleanupCycle   = time.Hour     // Time period for running the expiration task.
 )
 
 // nodeDB stores all nodes we know about.

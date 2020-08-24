@@ -19,19 +19,18 @@
 package filters
 
 import (
-
-	"sync"
-	"fmt"
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"time"
 
-	"github.com/hpb-project/go-hpb/network/rpc"
+	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -110,7 +109,6 @@ func NewEventSystem(mux *sub.TypeMux, backend Backend, lightMode bool) *EventSys
 		install:   make(chan *subscription),
 		uninstall: make(chan *subscription),
 	}
-
 
 	go m.eventLoop()
 
@@ -399,27 +397,25 @@ func (es *EventSystem) lightFilterLogs(header *types.Header, addresses []common.
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		subs   = es.mux.Subscribe(bc.PendingLogsEvent{})
+		subs  = es.mux.Subscribe(bc.PendingLogsEvent{})
 		// Subscribe TxPreEvent form txpool
 
 		// Subscribe RemovedLogsEvent
 
-
 	)
 
-	txCh  := make(chan bc.TxPreEvent, txChanSize) //TODO fix
+	txCh := make(chan bc.TxPreEvent, txChanSize)  //TODO fix
 	txSub := es.backend.SubscribeTxPreEvent(txCh) //TODO fix
 
-	rmLogsCh  := make(chan bc.RemovedLogsEvent, rmLogsChanSize)
+	rmLogsCh := make(chan bc.RemovedLogsEvent, rmLogsChanSize)
 	rmLogsSub := es.backend.SubscribeRemovedLogsEvent(rmLogsCh)
 
 	// Subscribe []*types.Log
-	logsCh  := make(chan []*types.Log, logsChanSize)
+	logsCh := make(chan []*types.Log, logsChanSize)
 	logsSub := es.backend.SubscribeLogsEvent(logsCh)
 	// Subscribe ChainEvent
-	chainEvCh  := make(chan bc.ChainEvent, chainEvChanSize)
+	chainEvCh := make(chan bc.ChainEvent, chainEvChanSize)
 	chainEvSub := es.backend.SubscribeChainEvent(chainEvCh)
-
 
 	txPreReceiver := event.RegisterReceiver("tx_pool_tx_pre_receiver",
 		func(payload interface{}) {

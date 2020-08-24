@@ -91,7 +91,7 @@ func (p *prometh) run() {
 		p.networkStats(false)
 	}
 	// Basics done, loop ad infinitum about what to do
-	for{
+	for {
 		fmt.Println()
 		fmt.Println("What would you like to do? (default = stats)")
 		fmt.Println(" 1. Configure new genesis")
