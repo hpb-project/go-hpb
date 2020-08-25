@@ -19,16 +19,16 @@ package node
 
 import (
 	"github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/worker"
-	"github.com/hpb-project/go-hpb/txpool"
-	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/node/filters"
+	"github.com/hpb-project/go-hpb/synctrl"
+	"github.com/hpb-project/go-hpb/txpool"
+	"github.com/hpb-project/go-hpb/worker"
 )
 
 type LesServer interface {
@@ -54,7 +54,7 @@ func (s *Node) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
-		},{
+		}, {
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
@@ -80,15 +80,14 @@ func (s *Node) APIs() []rpc.API {
 		},
 	}...)
 
-
 	// Append any APIs exposed explicitly by the consensus engine
 	if s.Hpbengine != nil {
 		apis = append(apis, s.Hpbengine.APIs(s.BlockChain())...)
 		apis = append(apis, []rpc.API{
 			{Namespace: "hpb",
-				Version:   "1.0",
-					Service:   synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
-					Public:    true,
+				Version: "1.0",
+				Service: synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
+				Public:  true,
 			},
 		}...)
 
@@ -96,15 +95,15 @@ func (s *Node) APIs() []rpc.API {
 	return apis
 }
 
-func (s *Node) StopMining()         { s.miner.Stop() }
-func (s *Node) IsMining() bool      { return s.miner.Mining() }
+func (s *Node) StopMining()          { s.miner.Stop() }
+func (s *Node) IsMining() bool       { return s.miner.Mining() }
 func (s *Node) Miner() *worker.Miner { return s.miner }
 
-func (s *Node) APIAccountManager() *accounts.Manager  { return s.accman }
-func (s *Node) BlockChain() *bc.BlockChain         { return s.Hpbbc }
-func (s *Node) TxPool() *txpool.TxPool             { return s.Hpbtxpool }
-func (s *Node) Engine() consensus.Engine           { return s.Hpbengine }
-func (s *Node) ChainDb() hpbdb.Database            { return s.HpbDb }
-func (s *Node) IsListening() bool                  { return true } // Always listening
-func (s *Node) EthVersion() int                    { return int(s.Hpbpeermanager.Protocol()[0].Version)}
-func (s *Node) NetVersion() uint64                 { return s.networkId }
+func (s *Node) APIAccountManager() *accounts.Manager { return s.accman }
+func (s *Node) BlockChain() *bc.BlockChain           { return s.Hpbbc }
+func (s *Node) TxPool() *txpool.TxPool               { return s.Hpbtxpool }
+func (s *Node) Engine() consensus.Engine             { return s.Hpbengine }
+func (s *Node) ChainDb() hpbdb.Database              { return s.HpbDb }
+func (s *Node) IsListening() bool                    { return true } // Always listening
+func (s *Node) EthVersion() int                      { return int(s.Hpbpeermanager.Protocol()[0].Version) }
+func (s *Node) NetVersion() uint64                   { return s.networkId }

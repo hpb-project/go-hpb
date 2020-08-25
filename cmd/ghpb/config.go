@@ -1,18 +1,18 @@
 package main
 
 import (
-
 	"os"
+
+	"fmt"
+	"io"
+	"reflect"
+	"unicode"
 
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
-	"gopkg.in/urfave/cli.v1"
-	"io"
 	"github.com/naoina/toml"
-	"reflect"
-	"unicode"
-	"fmt"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -54,7 +54,6 @@ func dumpConfig(ctx *cli.Context) error {
 	cfg := MakeConfigNode(ctx)
 	comment := ""
 
-
 	out, err := tomlSettings.Marshal(&cfg)
 	if err != nil {
 		return err
@@ -64,10 +63,10 @@ func dumpConfig(ctx *cli.Context) error {
 	return nil
 }
 
-func MakeConfigNode(ctx *cli.Context) (*config.HpbConfig) {
+func MakeConfigNode(ctx *cli.Context) *config.HpbConfig {
 	// Load defaults config
 	cfg := config.New()
-	if cfg == nil{
+	if cfg == nil {
 		log.Error("Get Hpb config fail, so exit")
 		os.Exit(1)
 	}
@@ -78,10 +77,8 @@ func MakeConfigNode(ctx *cli.Context) (*config.HpbConfig) {
 
 	utils.SetTxPool(ctx, &cfg.TxPool)
 
-
-
 	if ctx.GlobalIsSet(utils.HpbStatsURLFlag.Name) {
-	cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
+		cfg.HpbStats.URL = ctx.GlobalString(utils.HpbStatsURLFlag.Name)
 	}
 
 	return cfg

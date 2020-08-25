@@ -20,8 +20,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC
@@ -64,7 +64,8 @@ func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 func (s *senderFromServer) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	panic("can't sign with senderFromServer")
 }
+
 // Compable Hash, returns the hash with tx.ChainId(), only used to recover pubkey, can't used to signTx.
-func (s *senderFromServer)CompableHash(tx *types.Transaction) common.Hash {
+func (s *senderFromServer) CompableHash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }

@@ -18,6 +18,6 @@ package params
 
 // hpb protocol version control
 const (
-	ProtocolV111 uint    = 111 // match up protocol versions and messages versions
+	ProtocolV111    uint = 111 // match up protocol versions and messages versions
 	SubProtocolV111 uint = 111 // Light Hpb Sub-protocol versions
 )

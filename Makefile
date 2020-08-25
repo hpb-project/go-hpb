@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: geth android ios geth-cross swarm evm all test clean
+.PHONY: geth android ios geth-cross swarm evm all test clean fmt
 .PHONY: geth-linux geth-linux-386 geth-linux-amd64 geth-linux-mips64 geth-linux-mips64le
 .PHONY: geth-linux-arm geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
 .PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
@@ -11,6 +11,7 @@
 GOBIN = $(shell pwd)/build/bin
 GOHPB = $(shell pwd)
 GO ?= latest
+GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 
 ghpb:
 	build/env.sh go run build/ci.go install ./cmd/ghpb
@@ -52,6 +53,12 @@ test: all
 
 clean:
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*
+
+# fmt runs gofmt -w on the code, modifying any files that do not match
+# the style guide.
+fmt:
+	@echo "Correcting any formatting style corrections."
+	@gofmt -l -w ${GOFILES_NOVENDOR}
 
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.

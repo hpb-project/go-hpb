@@ -61,22 +61,23 @@ web3._extend({
 		}),
 	]
 });
-` 
+`
+
 /*
 new web3._extend.Method({
 			name: 'getHpbNodeSnapAtHash',
 			call: 'prometheus_getHpbNodeSnapAtHash',
 			params: 1
 		}),
-		
+
 		,
 	properties: [
 		new web3._extend.Property({
 			name: 'proposals',
 			getter: 'prometheus_proposals'
 		}),
-	] 
-	
+	]
+
 	new web3._extend.Method({
 			name: 'propose',
 			call: 'prometheus_propose',

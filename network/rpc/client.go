@@ -47,7 +47,7 @@ const (
 	tcpKeepAliveInterval = 60 * time.Second
 	defaultDialTimeout   = 40 * time.Second // used when dialing if the context has no deadline
 	defaultWriteTimeout  = 40 * time.Second // used for calls if the context has no deadline
-	subscribeTimeout     = 10 * time.Second  // overall timeout hpb_subscribe, rpc_modules calls
+	subscribeTimeout     = 10 * time.Second // overall timeout hpb_subscribe, rpc_modules calls
 )
 
 const (

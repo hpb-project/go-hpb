@@ -151,7 +151,6 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 		return string("getstateerror")
 	}
 
-
 	var (
 		gp            = new(bc.GasPool).AddGas(block.GasLimit())
 		header        = block.Header()
@@ -188,7 +187,7 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 			log.Debug("json----", "jsons", string(jsons), "errs", errs)
 			return string(jsons)
 		}
-		
+
 	}
 
 	jsons, errs := json.Marshal(allState_Diff)

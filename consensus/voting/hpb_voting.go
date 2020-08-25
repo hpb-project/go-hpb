@@ -17,7 +17,6 @@
 package voting
 
 import (
-	"math"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -26,6 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"math"
 )
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
@@ -117,7 +117,6 @@ func GetDataFromCacheAndDb(db hpbdb.Database, recents *lru.ARCCache, signatures 
 	}
 	return nil, nil
 }
-
 
 func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snapshots.HpbNodeSnap, latestCheckPointHash common.Hash) error {
 

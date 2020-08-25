@@ -19,13 +19,13 @@ const (
 )
 
 type ExtraDetail struct {
-	Version       uint8						`json:"version"`
-	Vanity        [ExtraVanityLength]byte	`json:"vanity"`
-	NodesNum      uint8						`json:"nodesCount"`
-	NodesAddr     common.Addresses			`json:"nodes"`
-	RealRND       [ExtraRealRNDLength]byte	`json:"realRandom"`
-	SignedLastRND [ExtraSignedLastRNDLength]byte	`json:"signedRealRandom"`
-	Seal          [ExtraSealLength]byte				`json:"seal"`
+	Version       uint8                          `json:"version"`
+	Vanity        [ExtraVanityLength]byte        `json:"vanity"`
+	NodesNum      uint8                          `json:"nodesCount"`
+	NodesAddr     common.Addresses               `json:"nodes"`
+	RealRND       [ExtraRealRNDLength]byte       `json:"realRandom"`
+	SignedLastRND [ExtraSignedLastRNDLength]byte `json:"signedRealRandom"`
+	Seal          [ExtraSealLength]byte          `json:"seal"`
 	//Warning: if you need add new field, you need modify BytesToExtraDetail/ToBytes/ExceptSealToBytes/MarshalJSON either.
 	//And total length can't mod(common.AddressLength)== 0.
 }
@@ -33,20 +33,20 @@ type ExtraDetail struct {
 // only use in rpc output format.
 func (h ExtraDetail) MarshalJSON() ([]byte, error) {
 	type Detail struct {
-		Version       uint8						`json:"version"`
-		Vanity        string					`json:"vanity"`
-		NodesNum      uint8						`json:"nodesCount"`
-		NodesAddr     common.Addresses			`json:"nodes"`
-		RealRND       hexutil.Bytes				`json:"realRandom"`
-		SignedLastRND hexutil.Bytes				`json:"signedRealRandom"`
-		Seal          hexutil.Bytes				`json:"seal"`
+		Version       uint8            `json:"version"`
+		Vanity        string           `json:"vanity"`
+		NodesNum      uint8            `json:"nodesCount"`
+		NodesAddr     common.Addresses `json:"nodes"`
+		RealRND       hexutil.Bytes    `json:"realRandom"`
+		SignedLastRND hexutil.Bytes    `json:"signedRealRandom"`
+		Seal          hexutil.Bytes    `json:"seal"`
 	}
 	var enc Detail
 	enc.Version = h.Version
 
 	// change hex to string.
-	var tmps = make([]byte,0)
-	for _,b := range h.Vanity {
+	var tmps = make([]byte, 0)
+	for _, b := range h.Vanity {
 		if b != 0x0 {
 			tmps = append(tmps, b)
 		} else {
@@ -84,7 +84,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 		copy(detail.Vanity[:], data[:ExtraVanityLength])
 		offset += ExtraVanityLength
 
-		detail.NodesNum = uint8((len(data)-ExtraVanityLength-ExtraSealLength) / common.AddressLength)
+		detail.NodesNum = uint8((len(data) - ExtraVanityLength - ExtraSealLength) / common.AddressLength)
 		if detail.NodesNum > 0 {
 			for t := 0; t < int(detail.NodesNum); t++ {
 				var addr common.Address
@@ -126,7 +126,7 @@ func BytesToExtraDetail(data []byte) (*ExtraDetail, error) {
 
 	}
 	if len(data) != offset {
-		log.Error("BytesToExtraDetail","len(data)",len(data),"offset",offset)
+		log.Error("BytesToExtraDetail", "len(data)", len(data), "offset", offset)
 		return nil, errors.New("Invalid ExtraData, Unmatched length. ")
 	}
 	return detail, nil

@@ -27,7 +27,7 @@ import (
 // PublicSyncerAPI provides an API which gives information about the current synchronisation status.
 // It offers only methods that operates on data that can be available to anyone without security risks.
 type PublicSyncerAPI struct {
-	syncer                         *Syncer
+	syncer                    *Syncer
 	mux                       *sub.TypeMux
 	installSyncSubscription   chan chan interface{}
 	uninstallSyncSubscription chan *uninstallSyncSubscriptionRequest
@@ -39,8 +39,8 @@ type PublicSyncerAPI struct {
 // installSyncSubscription channel.
 func NewPublicSyncerAPI(syncer *Syncer, m *sub.TypeMux) *PublicSyncerAPI {
 	api := &PublicSyncerAPI{
-		syncer:   syncer,
-		mux:      m,
+		syncer:                    syncer,
+		mux:                       m,
 		installSyncSubscription:   make(chan chan interface{}),
 		uninstallSyncSubscription: make(chan *uninstallSyncSubscriptionRequest),
 	}
@@ -120,8 +120,8 @@ func (api *PublicSyncerAPI) Syncing(ctx context.Context) (*rpc.Subscription, err
 
 // SyncingResult provides information about the current synchronisation status for this node.
 type SyncingResult struct {
-	Syncing bool                  `json:"syncing"`
-	Status  hpb.SyncProgress      `json:"status"`
+	Syncing bool             `json:"syncing"`
+	Status  hpb.SyncProgress `json:"status"`
 }
 
 // uninstallSyncSubscriptionRequest uninstalles a syncing subscription in the API event loop.
@@ -133,8 +133,8 @@ type uninstallSyncSubscriptionRequest struct {
 // SyncStatusSubscription represents a syncing subscription.
 type SyncStatusSubscription struct {
 	api       *PublicSyncerAPI // register subscription in event loop of this api instance
-	c         chan interface{}     // channel where events are broadcasted to
-	unsubOnce sync.Once            // make sure unsubscribe logic is executed once
+	c         chan interface{} // channel where events are broadcasted to
+	unsubOnce sync.Once        // make sure unsubscribe logic is executed once
 }
 
 // Unsubscribe uninstalls the subscription from the SynAPI event loop.

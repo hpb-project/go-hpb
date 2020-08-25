@@ -33,8 +33,8 @@ import (
 
 	"github.com/hpb-project/go-hpb/common/log"
 
-	"github.com/rs/cors"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/rs/cors"
 )
 
 const (
@@ -68,7 +68,6 @@ func (hc *httpConn) Close() error {
 	hc.closeOnce.Do(func() { close(hc.closed) })
 	return nil
 }
-
 
 // DialHTTPWithClient creates a new RPC client that connects to an RPC server over HTTP
 // using the provided HTTP Client.

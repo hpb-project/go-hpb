@@ -34,14 +34,12 @@ import (
 	//"errors"
 )
 
-
 type CadNodeSnap struct {
-	Number       uint64                     `json:"number"`      
-	Hash         common.Hash                `json:"hash"`         
-	CanAddresses []common.Address           `json:"cadaddresses"` 
-	VotePercents map[common.Address]float64 `json:"VotePercents"` 
+	Number       uint64                     `json:"number"`
+	Hash         common.Hash                `json:"hash"`
+	CanAddresses []common.Address           `json:"cadaddresses"`
+	VotePercents map[common.Address]float64 `json:"VotePercents"`
 }
-
 
 type CadWinner struct {
 	NetworkId string         `json:"networkid"` // winner id
@@ -96,7 +94,7 @@ func CalcuCadNodeSnap(db hpbdb.Database, number uint64, hash common.Hash, header
 			continue
 		}
 		votes = votes + 1
-		
+
 		if old, ok := Cadvotepercents[header.CandAddress]; ok {
 			Cadvotepercents[header.CandAddress] = old + 1
 		} else {

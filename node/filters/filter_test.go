@@ -23,13 +23,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 func makeReceipt(addr common.Address) *types.Receipt {

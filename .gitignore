@@ -27,3 +27,6 @@ build/_vendor/pkg
 build/bin
 build/workspace
 chain/
+
+# vscode
+.vscode

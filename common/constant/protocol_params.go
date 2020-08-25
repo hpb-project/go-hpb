@@ -24,7 +24,7 @@ const (
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
-	TxGas                 uint64 = 10 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
+	TxGas                 uint64 = 10    // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
 	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
 	TxDataZeroGas         uint64 = 1     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. //for testnet
 	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
@@ -51,7 +51,7 @@ const (
 	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
 	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
-	TxDataNonZeroGas uint64 = 1    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
+	TxDataNonZeroGas uint64 = 1     // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. //for testnet
 
 	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 
@@ -74,7 +74,7 @@ const (
 var (
 	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(100000000)               // Gas limit of the Genesis block. //for testnet
+	GenesisGasLimit        = big.NewInt(100000000)             // Gas limit of the Genesis block. //for testnet
 	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
 	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
 	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.

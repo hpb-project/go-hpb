@@ -31,10 +31,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hpb-project/go-hpb/account"
+	accounts "github.com/hpb-project/go-hpb/account"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/event/sub"
 )
 
@@ -60,10 +60,10 @@ type KeyStore struct {
 	changes  chan struct{}                // Channel receiving change notifications from the cache
 	unlocked map[common.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
-	wallets     []accounts.Wallet       // Wallet wrappers around the individual key files
+	wallets     []accounts.Wallet     // Wallet wrappers around the individual key files
 	updateFeed  sub.Feed              // Event feed to notify wallet additions/removals
 	updateScope sub.SubscriptionScope // Subscription scope tracking current live listeners
-	updating    bool                    // Whether the event notification loop is running
+	updating    bool                  // Whether the event notification loop is running
 
 	mu sync.RWMutex
 }

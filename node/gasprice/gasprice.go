@@ -23,8 +23,8 @@ import (
 	"sync"
 
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
@@ -68,7 +68,6 @@ func NewOracle(backend hpbapi.Backend, params config.GpoConfig) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
-
 
 	gpo.cacheLock.RLock()
 	lastHead := gpo.lastHead

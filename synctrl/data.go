@@ -170,4 +170,3 @@ func requestBodies(peer *p2p.Peer, hashes []common.Hash) error {
 	log.Debug("Fetching batch of block bodies", "count", len(hashes))
 	return p2p.SendData(peer, p2p.GetBlockBodiesMsg, hashes)
 }
-

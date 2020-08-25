@@ -30,21 +30,21 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 
+	"errors"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hpb-project/go-hpb/account/abi"
 	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/boe"
+	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
+	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/db"
-	"errors"
-	"github.com/hpb-project/go-hpb/account/abi"
-	"github.com/hpb-project/go-hpb/boe"
-	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	"math"
 	"strings"
 )
@@ -250,7 +250,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 	header.Difficulty = diffNoTurn
 	if number < consensus.StateNumberNewHash {
-		if _,inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()); inturn {
+		if _, inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()); inturn {
 			header.Difficulty = diffInTurn
 		}
 	} else {
@@ -264,26 +264,25 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 
 		for i <= number {
 			var chooseSet = common.Addresses{}
-			for k,_ := range snap.Signers {
+			for k, _ := range snap.Signers {
 				if k != lastMiner {
-					chooseSet = append(chooseSet,k)
+					chooseSet = append(chooseSet, k)
 				} else {
 					//log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
 				}
 			}
 			sort.Sort(chooseSet)
 
-
 			if i < number {
 				if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
 					random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
-					lastMiner,_ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
+					lastMiner, _ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
 					//log.Debug("PrepareHeader", "number",i, "random",hex.EncodeToString(oldHeader.HardwareRandom),"random",random,"lastMiner",lastMiner)
 				} else {
 					if retry > 0 {
 						//log.Debug("chainGetHeaderByNumber failed ", "number", i, "retrying",retry)
 						retry--
-						time.Sleep(time.Microsecond*100)
+						time.Sleep(time.Microsecond * 100)
 						continue
 					} else {
 						//log.Debug("chainGetHeaderByNumber failed ", "number", i, "retry",retry)
@@ -291,8 +290,8 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					}
 				}
 			} else {
-				m,inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet)
-				log.Debug("PrepareHeader","current miner",m,"inturn",inturn, "random", hex.EncodeToString(header.HardwareRandom))
+				m, inturn := snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger(), chooseSet)
+				log.Debug("PrepareHeader", "current miner", m, "inturn", inturn, "random", hex.EncodeToString(header.HardwareRandom))
 				if inturn {
 					header.Difficulty = diffInTurn
 				}
@@ -614,12 +613,11 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	// fix bug : in full sync mode, process the block after StageNumberIII will occur a bad block,
 	// because there is no snap in promethus.recents , so need call voting.GetCadNodeSnap by manual.
-	if number == (consensus.StageNumberIII + 1){
+	if number == (consensus.StageNumberIII + 1) {
 		chain := bc.InstanceBlockChain()
-		parentH := chain.GetHeaderByNumber(number-1)
+		parentH := chain.GetHeaderByNumber(number - 1)
 		voting.GetCadNodeSnap(c.db, c.recents, chain, parentH.Number.Uint64(), parentH.ParentHash)
 	}
-
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {

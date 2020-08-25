@@ -52,18 +52,18 @@ const (
 )
 
 type PeerManager struct {
-	peers  map[string]*Peer  //current peers list
-	boots  map[string]*Peer  //current boost list
+	peers  map[string]*Peer //current peers list
+	boots  map[string]*Peer //current boost list
 	lock   sync.RWMutex
 	closed bool
 
-	server *Server    // pointer to server of p2p
-	hpbpro *HpbProto  // pointer to hpb protocol
+	server *Server   // pointer to server of p2p
+	hpbpro *HpbProto // pointer to hpb protocol
 
 	ilock   sync.Mutex
 	iport   int       //iperf test port
-	isrvcmd *exec.Cmd  // for bandwidth test
-	isrvout *os.File   // for bandwidth test
+	isrvcmd *exec.Cmd // for bandwidth test
+	isrvout *os.File  // for bandwidth test
 }
 
 var INSTANCE = atomic.Value{}
@@ -118,7 +118,6 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 
 	prm.hpbpro.regMsgProcess(ReqRemoteStateMsg, HandleReqRemoteStateMsg)
 	prm.hpbpro.regMsgProcess(ResRemoteStateMsg, HandleResRemoteStateMsg)
-
 
 	copy(prm.server.Protocols, prm.hpbpro.Protocols())
 
@@ -309,8 +308,8 @@ func (prm *PeerManager) PeersWithoutBlock(hash common.Hash) []*Peer {
 
 	list := make([]*Peer, 0, len(prm.peers))
 	for _, p := range prm.peers {
-		if !p.KnownBlockHas(hash){
-			list = append(list,p)
+		if !p.KnownBlockHas(hash) {
+			list = append(list, p)
 		}
 	}
 	return list
@@ -375,52 +374,51 @@ func (prm *PeerManager) Protocol() []Protocol {
 ////////////////////////////////////////////////////////////////////
 
 type PeerInfo struct {
-	ID      string `json:"id"`     // Unique node identifier (also the encryption key)
-	Name    string `json:"name"`   // Name of the node, including client type, version, OS, custom data
-	Version string `json:"version"`// Ghpb version
-	Remote  string `json:"remote"` // Remote node type
-	Cap     string `json:"cap"`    // Sum-protocols advertised by this particular peer
+	ID      string `json:"id"`      // Unique node identifier (also the encryption key)
+	Name    string `json:"name"`    // Name of the node, including client type, version, OS, custom data
+	Version string `json:"version"` // Ghpb version
+	Remote  string `json:"remote"`  // Remote node type
+	Cap     string `json:"cap"`     // Sum-protocols advertised by this particular peer
 	Network struct {
 		Local  string `json:"local"`  // Local endpoint of the TCP data connection
 		Remote string `json:"remote"` // Remote endpoint of the TCP data connection
 	} `json:"network"`
-	Start   string      `json:"start"` //
-	Beat    string      `json:"beat"`  //
-	Mining  string      `json:"mining"`  //
-	HPB   interface{} `json:"hpb"`   // Sub-protocol specific metadata fields
+	Start  string      `json:"start"`  //
+	Beat   string      `json:"beat"`   //
+	Mining string      `json:"mining"` //
+	HPB    interface{} `json:"hpb"`    // Sub-protocol specific metadata fields
 }
 
 type HpbInfo struct {
-	TD      *big.Int `json:"handshakeTD"` // Total difficulty of the peer's blockchain
-	Head    string   `json:"handshakeHD"` // SHA3 hash of the peer's best owned block
+	TD   *big.Int `json:"handshakeTD"` // Total difficulty of the peer's blockchain
+	Head string   `json:"handshakeHD"` // SHA3 hash of the peer's best owned block
 }
 
 func (prm *PeerManager) PeersInfo() []*PeerInfo {
 	prm.lock.RLock()
 	defer prm.lock.RUnlock()
 
-	req := statusRes{Version:0x01}
+	req := statusRes{Version: 0x01}
 	req.Status = append(req.Status, StatDetail{0x00, ""})
 	for _, p := range prm.peers {
 		if p.remoteType == discover.PreNode || p.remoteType == discover.HpNode {
-			SendData(p,ReqRemoteStateMsg,req)
+			SendData(p, ReqRemoteStateMsg, req)
 		}
 	}
 	time.Sleep(time.Second)
 
-
 	allinfos := make([]*PeerInfo, 0, len(prm.boots)+len(prm.peers))
 	for _, p := range prm.boots {
 		info := &PeerInfo{
-			ID:     p.ID().TerminalString(),
-			Name:   p.Name(),
-			Version:p.Version(),
-			Remote: p.remoteType.ToString(),
-			Cap:    p.Caps()[0].String(),
-			Start:  p.beatStart.String(),
-			Beat:   strconv.FormatUint(p.count, 10),
-			Mining: p.statMining,
-			HPB:    "",
+			ID:      p.ID().TerminalString(),
+			Name:    p.Name(),
+			Version: p.Version(),
+			Remote:  p.remoteType.ToString(),
+			Cap:     p.Caps()[0].String(),
+			Start:   p.beatStart.String(),
+			Beat:    strconv.FormatUint(p.count, 10),
+			Mining:  p.statMining,
+			HPB:     "",
 		}
 		info.Network.Local = p.LocalAddr().String()
 		info.Network.Remote = p.RemoteAddr().String()
@@ -432,17 +430,17 @@ func (prm *PeerManager) PeersInfo() []*PeerInfo {
 	for _, p := range prm.peers {
 		hash, td := p.Head()
 		info := &PeerInfo{
-			ID:     p.ID().TerminalString(),
-			Name:   p.Name(),
-			Version:p.Version(),
-			Remote: p.remoteType.ToString(),
-			Cap:    p.Caps()[0].String(),
-			Start:  p.beatStart.String(),
-			Beat:   strconv.FormatUint(p.count, 10),
-			Mining: p.statMining,
+			ID:      p.ID().TerminalString(),
+			Name:    p.Name(),
+			Version: p.Version(),
+			Remote:  p.remoteType.ToString(),
+			Cap:     p.Caps()[0].String(),
+			Start:   p.beatStart.String(),
+			Beat:    strconv.FormatUint(p.count, 10),
+			Mining:  p.statMining,
 			HPB: &HpbInfo{
-				TD:      td,
-				Head:    hash.Hex(),
+				TD:   td,
+				Head: hash.Hex(),
 			},
 		}
 		info.Network.Local = p.LocalAddr().String()
@@ -519,6 +517,7 @@ func (prm *PeerManager) RegStatMining(cb StatMining) {
 	log.Debug("StatMining has been register")
 	return
 }
+
 ////////////////////////////////////////////////////////////////////
 const bindInfoFileName = "binding.json"
 
@@ -539,7 +538,7 @@ func (prm *PeerManager) GetHwInfo() []HwPair {
 }
 
 func (prm *PeerManager) SetHwInfo(pairs []HwPair) error {
-	return prm.server.updateHdtab(pairs,false)
+	return prm.server.updateHdtab(pairs, false)
 }
 
 func (prm *PeerManager) parseBindInfo(filename string) error {
@@ -555,16 +554,15 @@ func (prm *PeerManager) parseBindInfo(filename string) error {
 		cid, cerr := hex.DecodeString(b.CID)
 		hid, herr := hex.DecodeString(b.HID)
 		if cerr != nil || herr != nil {
-			log.Error(fmt.Sprintf("Can't parse node file %s(index=%d)", filename,i))
+			log.Error(fmt.Sprintf("Can't parse node file %s(index=%d)", filename, i))
 			panic("Hardware Info Parse Error.")
 		}
 
 		hdtab = append(hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
 	}
 
-
 	log.Debug("Boot node parse binding hardware table.", "hdtab", hdtab)
-	prm.server.updateHdtab(hdtab,true)
+	prm.server.updateHdtab(hdtab, true)
 
 	return nil
 }
@@ -593,7 +591,7 @@ func (prm *PeerManager) startServerBW(port string) error {
 	}
 	log.Info("Start server of bandwidth test.", "port", port)
 	cmd := ipfbin + " -s -p " + port
-	go func(cmdline string, logout *os.File, isrvcmd **exec.Cmd){
+	go func(cmdline string, logout *os.File, isrvcmd **exec.Cmd) {
 		var firsttime = true
 		for {
 			c := exec.Command("/bin/bash", "-c", cmd)

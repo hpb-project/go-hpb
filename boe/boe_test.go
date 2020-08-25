@@ -15,66 +15,69 @@
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
 package boe
-import (
-    "fmt"
-    "testing"
-)
-var (
-    boe = BoeGetInstance()
 
+import (
+	"fmt"
+	"testing"
+
+	"github.com/hpb-project/go-hpb/common/log"
+)
+
+var (
+	boe = BoeGetInstance()
 )
 
 func TestCheck(t *testing.T) {
-    err := boe.Init()
-    if err != nil {
-        log.Error("boe init failed")
-    }
-    boe.HWCheck()
+	err := boe.Init()
+	if err != nil {
+		log.Error("boe init failed")
+	}
+	boe.HWCheck()
 }
 
 func TestUpgrade(t *testing.T) {
-    err := boe.FWUpdate()
-    if err != nil {
-        log.Error("boe upgrade failed")
-    }
-    log.Debug("boe upgrade successful.")
+	err := boe.FWUpdate()
+	if err != nil {
+		log.Error("boe upgrade failed")
+	}
+	log.Debug("boe upgrade successful.")
 }
 
 func TestValidateSign(t *testing.T) {
-    var (
-        hash = make([]byte, 32)
-        r    = make([]byte, 32)
-        s    = make([]byte, 32)
-    )
-    var v byte
+	var (
+		hash = make([]byte, 32)
+		r    = make([]byte, 32)
+		s    = make([]byte, 32)
+	)
+	var v byte
 
-    result,err := boe.ValidateSign(hash, r, s, v)
-    if err == nil {
-        //fmt.Printf("len(x)=%d\n", len(x))
-        for i:=0; i < len(result); i++ {
-            fmt.Printf("result[%d]=%02x\n", i, result[i])
-        }
-    }else {
-        fmt.Printf("check failed\n")
-    }
+	result, err := boe.ValidateSign(hash, r, s, v)
+	if err == nil {
+		//fmt.Printf("len(x)=%d\n", len(x))
+		for i := 0; i < len(result); i++ {
+			fmt.Printf("result[%d]=%02x\n", i, result[i])
+		}
+	} else {
+		fmt.Printf("check failed\n")
+	}
 
 }
 
 func TestHWSign(t *testing.T) {
-    var (
-        hash = "test"
-    )
+	var (
+		hash = "test"
+	)
 
-    result,err := boe.HWSign([]byte(hash))
-    if err == nil {
-        //fmt.Printf("len(x)=%d\n", len(x))
-        for i:=0; i < 32; i++ {
-            fmt.Printf("signval[%d]=%02x\n",i,result.r[i])
-        }
-    }
+	result, err := boe.HWSign([]byte(hash))
+	if err == nil {
+		//fmt.Printf("len(x)=%d\n", len(x))
+		for i := 0; i < 32; i++ {
+			fmt.Printf("signval[%d]=%02x\n", i, result.r[i])
+		}
+	}
 }
 
 func TestNewEvent(t *testing.T) {
-    var ver = boe.GetHWVersion()
-    fmt.Printf("hwversion = %02x\n", ver)
+	var ver = boe.GetHWVersion()
+	fmt.Printf("hwversion = %02x\n", ver)
 }

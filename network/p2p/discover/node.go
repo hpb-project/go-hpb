@@ -35,18 +35,18 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto/secp256k1"
 )
 
-const NodeIDBits    = 512
+const NodeIDBits = 512
 
+type NodeType uint8
 
-type NodeType  uint8
-const(
-	SynNode    NodeType = 0x10
-	PreNode    NodeType = 0x30
-	HpNode     NodeType = 0x60
-	BootNode   NodeType = 0xA0
+const (
+	SynNode  NodeType = 0x10
+	PreNode  NodeType = 0x30
+	HpNode   NodeType = 0x60
+	BootNode NodeType = 0xA0
 )
 
-func (nt NodeType)ToString() string {
+func (nt NodeType) ToString() string {
 	switch nt {
 	case SynNode:
 		return "SynNode"
@@ -60,16 +60,15 @@ func (nt NodeType)ToString() string {
 	return "UnknownNode"
 }
 
-
 // Node represents a host on the network.
 // The fields of Node may not be modified.
 type Node struct {
-	IP       net.IP    // len 4 for IPv4 or 16 for IPv6
-	UDP, TCP uint16    // port numbers
-	ID       NodeID    // the node's public key
+	IP       net.IP // len 4 for IPv4 or 16 for IPv6
+	UDP, TCP uint16 // port numbers
+	ID       NodeID // the node's public key
 
-	TYPE     NodeType
-	Ext      ExtData
+	TYPE NodeType
+	Ext  ExtData
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
 	// possible to write tests that need a node at a certain distance.
@@ -83,11 +82,10 @@ type Node struct {
 }
 
 type EndPoint struct {
-	IP   net.IP // len 4 for IPv4 or 16 for IPv6
-	UDP  uint16 // for discovery protocol
-	TCP  uint16 // for RLPx protocol
+	IP  net.IP // len 4 for IPv4 or 16 for IPv6
+	UDP uint16 // for discovery protocol
+	TCP uint16 // for RLPx protocol
 }
-
 
 // getnodes is a query for nodes
 type NodeReq struct {
@@ -95,14 +93,12 @@ type NodeReq struct {
 	Expiration uint64
 }
 
-
 // reply to getnodes
 type NodeRes struct {
 	Version    uint
 	Nodes      []RpcNode
 	Expiration uint64
 }
-
 
 type RpcNode struct {
 	IP  net.IP // len 4 for IPv4 or 16 for IPv6
@@ -112,7 +108,7 @@ type RpcNode struct {
 }
 
 type ExtData struct {
-	Loacation  uint8
+	Loacation uint8
 }
 
 // NewNode creates a new node. It is mostly meant to be used for
@@ -122,12 +118,12 @@ func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16) *Node {
 		ip = ipv4
 	}
 	return &Node{
-		IP:   ip,
-		UDP:  udpPort,
-		TCP:  tcpPort,
-		ID:   id,
-		sha:  crypto.Keccak256Hash(id[:]),
-		Ext:  ExtData{0xFF},
+		IP:  ip,
+		UDP: udpPort,
+		TCP: tcpPort,
+		ID:  id,
+		sha: crypto.Keccak256Hash(id[:]),
+		Ext: ExtData{0xFF},
 	}
 }
 
@@ -206,7 +202,7 @@ func ParseNode(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id,nil, 0, 0), nil
+		return NewNode(id, nil, 0, 0), nil
 	}
 	return parseComplete(rawurl)
 }

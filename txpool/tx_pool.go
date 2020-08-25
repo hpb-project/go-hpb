@@ -18,7 +18,14 @@ package txpool
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/blockchain"
+	"math"
+	"math/big"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -27,12 +34,6 @@ import (
 	"github.com/hpb-project/go-hpb/event"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"math"
-	"math/big"
-	"sort"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -59,18 +60,18 @@ type Txchevent struct {
 	Tx *types.Transaction
 }
 type TxPool struct {
-	wg     sync.WaitGroup
-	stopCh chan struct{}
-	chain blockChain
+	wg           sync.WaitGroup
+	stopCh       chan struct{}
+	chain        blockChain
 	chainHeadSub sub.Subscription
 	chainHeadCh  chan bc.ChainHeadEvent
 	txFeed       sub.Feed
 	scope        sub.SubscriptionScope
 
 	txPreTrigger *event.Trigger
-	signer   types.Signer
-	config   config.TxPoolConfiguration
-	gasPrice *big.Int
+	signer       types.Signer
+	config       config.TxPoolConfiguration
+	gasPrice     *big.Int
 
 	// use sync.map instead of map.
 	beats    sync.Map //map[common.Address]time.Time  	   Last heartbeat from each known account
@@ -101,7 +102,7 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 	}
 	//2.Create the transaction pool with its initial settings
 	pool := &TxPool{
-		config: config,
+		config:      config,
 		gasPrice:    new(big.Int).SetUint64(config.PriceLimit),
 		chain:       blockChain,
 		signer:      types.NewBoeSigner(chainConfig.ChainId),
@@ -398,8 +399,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 }
 
 var (
-	allCnt     = int64(0)
-	pendingCnt = int64(0)
+	allCnt         = int64(0)
+	pendingCnt     = int64(0)
 	normalQueueLen = uint64(200000) // nornal queue/pending account number
 )
 
@@ -427,9 +428,9 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 func (pool *TxPool) AddTx(tx *types.Transaction) error {
 	// If the transaction txpool pending is full
 	if uint64(pendingCnt) >= pool.config.GlobalSlots {
-			log.Warn("TxPool pending is full", "pending size", pendingCnt,
-				"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
-			return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
+		log.Warn("TxPool pending is full", "pending size", pendingCnt,
+			"max size", pool.config.GlobalSlots, "Hash", tx.Hash(), "to", tx.To())
+		return fmt.Errorf("the transaction txpool pending is full: %x", tx.Hash())
 	}
 
 	hash := tx.Hash()
@@ -782,7 +783,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 		atomic.AddInt64(&allCnt, -1)
 	}
 	// Failsafe to work around direct pending inserts (tests)
-	_,exist = pool.all.LoadOrStore(hash, tx)
+	_, exist = pool.all.LoadOrStore(hash, tx)
 	if !exist {
 		atomic.AddInt64(&allCnt, 1)
 	}

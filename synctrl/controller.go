@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
@@ -147,8 +147,6 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewBlockMsg, HandleNewBlockMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.NewHashBlockMsg, HandleNewHashBlockMsg)
 
-
-
 	p2p.PeerMgrInst().RegMsgProcess(p2p.TxMsg, HandleTxMsg)
 
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
@@ -205,8 +203,8 @@ func (this *SynCtrl) minedRoutingLoop() {
 	for obj := range this.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case bc.NewMinedBlockEvent:
-			go routBlock(ev.Block, true)  // First propagate block to peers
-			routBlock(ev.Block, false) // Only then announce to the rest
+			go routBlock(ev.Block, true) // First propagate block to peers
+			routBlock(ev.Block, false)   // Only then announce to the rest
 		}
 	}
 }

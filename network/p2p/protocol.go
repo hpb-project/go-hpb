@@ -30,9 +30,9 @@ import (
 
 // Protocol represents a P2P subprotocol implementation.
 type Protocol struct {
-	Name     string
-	Version  uint
-	Run      func(p *PeerBase, rw MsgReadWriter) error
+	Name    string
+	Version uint
+	Run     func(p *PeerBase, rw MsgReadWriter) error
 }
 
 func (p Protocol) cap() Cap {
@@ -50,29 +50,30 @@ func (cap Cap) String() string {
 
 ////////////////////////////////////////////////////////
 type HpbProto struct {
-	networkId   uint64
-	protos      []Protocol
+	networkId uint64
+	protos    []Protocol
 
-	msgProcess  map[uint64]MsgProcessCB
-	chanStatus  ChanStatusCB
-	onAddPeer   OnAddPeerCB
-	onDropPeer  OnDropPeerCB
+	msgProcess map[uint64]MsgProcessCB
+	chanStatus ChanStatusCB
+	onAddPeer  OnAddPeerCB
+	onDropPeer OnDropPeerCB
 
-	statMining  StatMining
+	statMining StatMining
 }
 
-const ProtoName        = "hpb"
-var ProtocolVersions   = []uint{ProtoVersion100}
-const ProtoVersion100  uint   =  100
+const ProtoName = "hpb"
+
+var ProtocolVersions = []uint{ProtoVersion100}
+
+const ProtoVersion100 uint = 100
 
 type MsgProcessCB func(p *Peer, msg Msg) error
-type ChanStatusCB func()(td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
+type ChanStatusCB func() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
 
-type OnAddPeerCB  func(p *Peer) error
+type OnAddPeerCB func(p *Peer) error
 type OnDropPeerCB func(p *Peer) error
 
 type StatMining func() bool
-
 
 type errCode int
 
@@ -87,9 +88,9 @@ const (
 )
 
 func NewProtos() *HpbProto {
-	hpb :=&HpbProto{
-		protos:       make([]Protocol, 0, len(ProtocolVersions)),
-		msgProcess:   make(map[uint64]MsgProcessCB),
+	hpb := &HpbProto{
+		protos:     make([]Protocol, 0, len(ProtocolVersions)),
+		msgProcess: make(map[uint64]MsgProcessCB),
 	}
 
 	for _, version := range ProtocolVersions {
@@ -114,7 +115,6 @@ func (s *HpbProto) Protocols() []Protocol {
 	return s.protos
 }
 
-
 func ErrResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
@@ -127,7 +127,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		p.msgLooping = false
 		if r := recover(); r != nil {
 			debug.PrintStack()
-			p.log.Error("Handle hpb message panic.","r",r)
+			p.log.Error("Handle hpb message panic.", "r", r)
 		}
 	}()
 
@@ -152,7 +152,7 @@ func (hp *HpbProto) handle(p *Peer) error {
 		return err
 	}
 
-	if  p.localType!=discover.BootNode && p.remoteType != discover.BootNode  && hp.onAddPeer != nil{
+	if p.localType != discover.BootNode && p.remoteType != discover.BootNode && hp.onAddPeer != nil {
 		hp.onAddPeer(p)
 		p.msgLooping = true
 
@@ -168,13 +168,13 @@ func (hp *HpbProto) handle(p *Peer) error {
 
 	for {
 		if err := hp.handleMsg(p); err != nil {
-			p.log.Debug("Stop hpb message loop.","error",err)
+			p.log.Debug("Stop hpb message loop.", "error", err)
 			return err
 		}
 	}
 }
 
-func (hp *HpbProto) regMsgProcess(msg uint64,cb MsgProcessCB) {
+func (hp *HpbProto) regMsgProcess(msg uint64, cb MsgProcessCB) {
 	hp.msgProcess[msg] = cb
 }
 
@@ -199,26 +199,26 @@ func (hp *HpbProto) regStatMining(cb StatMining) {
 func (hp *HpbProto) handleMsg(p *Peer) error {
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
-		log.Debug("Hpb protocol read msg error","error",err)
+		log.Debug("Hpb protocol read msg error", "error", err)
 		return err
 	}
-	p.log.Trace("Protocol handle massage","Msg",msg.String())
+	p.log.Trace("Protocol handle massage", "Msg", msg.String())
 	defer msg.Discard()
 
 	if msg.Size > MaxMsgSize {
-		log.Error("Hpb protocol massage too large.","msg",msg)
+		log.Error("Hpb protocol massage too large.", "msg", msg)
 		return ErrResp(ErrMsgTooLarge, "msg too large %v > %v", msg.Size, MaxMsgSize)
 	}
 
 	// Handle the message depending on its contents
-	switch  msg.Code {
-	case  StatusMsg, ExchangeMsg:
-		p.log.Error("Uncontrolled massage","msg",msg)
+	switch msg.Code {
+	case StatusMsg, ExchangeMsg:
+		p.log.Error("Uncontrolled massage", "msg", msg)
 
 	case ReqNodesMsg, ResNodesMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			p.log.Trace("Handle nodes information message.","msg",msg,"err",err)
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
+			p.log.Trace("Handle nodes information message.", "msg", msg, "err", err)
 			if err != nil {
 				return err
 			}
@@ -226,15 +226,15 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		return nil
 
 	case ReqBWTestMsg, ResBWTestMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			p.log.Trace("Handle bandwidth test message.","msg",msg,"err",err)
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
+			p.log.Trace("Handle bandwidth test message.", "msg", msg, "err", err)
 		}
 		return nil
 
-	case GetBlockHeadersMsg, GetBlockBodiesMsg,GetNodeDataMsg,GetReceiptsMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
+	case GetBlockHeadersMsg, GetBlockBodiesMsg, GetNodeDataMsg, GetReceiptsMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
 			p.log.Trace("Process syn get msg", "msg", msg, "err", err)
 			if err != nil {
 				return err
@@ -242,49 +242,49 @@ func (hp *HpbProto) handleMsg(p *Peer) error {
 		}
 		return nil
 
-	case BlockHeadersMsg,BlockBodiesMsg,NodeDataMsg,ReceiptsMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			p.log.Trace("Process syn msg","msg",msg,"err",err)
+	case BlockHeadersMsg, BlockBodiesMsg, NodeDataMsg, ReceiptsMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
+			p.log.Trace("Process syn msg", "msg", msg, "err", err)
 		}
 		return nil
 
-	case NewBlockHashesMsg,NewBlockMsg,NewHashBlockMsg,TxMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			p.log.Trace("Process syn new msg","msg",msg,"err",err)
+	case NewBlockHashesMsg, NewBlockMsg, NewHashBlockMsg, TxMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
+			p.log.Trace("Process syn new msg", "msg", msg, "err", err)
 		}
 		return nil
 
-	case ReqRemoteStateMsg,ResRemoteStateMsg:
-		if cb := hp.msgProcess[msg.Code]; cb != nil{
-			err := cb(p,msg)
-			p.log.Trace("Process syn new msg","msg",msg,"err",err)
+	case ReqRemoteStateMsg, ResRemoteStateMsg:
+		if cb := hp.msgProcess[msg.Code]; cb != nil {
+			err := cb(p, msg)
+			p.log.Trace("Process syn new msg", "msg", msg, "err", err)
 		}
 		return nil
 
 	default:
-		p.log.Error("there is no handle to process msg","code", msg.Code)
+		p.log.Error("there is no handle to process msg", "code", msg.Code)
 	}
 	return nil
 }
 
 ////////////////////////////////////////////////////////
 type nodeRes struct {
-	Version    uint64
-	Nodes      []*discover.Node
+	Version uint64
+	Nodes   []*discover.Node
 }
 
 func HandleReqNodesMsg(p *Peer, msg Msg) error {
 	nodes := p.ntab.FindNodes()
-	resp := nodeRes{Version:0x01,Nodes:nodes}
+	resp := nodeRes{Version: 0x01, Nodes: nodes}
 
 	// Send in a new thread
 	errc := make(chan error, 1)
 	go func() {
-		errc <- SendData(p,ResNodesMsg, &resp)
+		errc <- SendData(p, ResNodesMsg, &resp)
 	}()
-	timeout := time.NewTimer(time.Second*5)
+	timeout := time.NewTimer(time.Second * 5)
 	defer timeout.Stop()
 	select {
 	case err := <-errc:
@@ -302,11 +302,10 @@ func HandleReqNodesMsg(p *Peer, msg Msg) error {
 func HandleResNodesMsg(p *Peer, msg Msg) error {
 	var response nodeRes
 	if err := msg.Decode(&response); err != nil {
-		log.Error("Received nodes from remote","msg", msg, "error", err)
+		log.Error("Received nodes from remote", "msg", msg, "error", err)
 		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	log.Trace("Received nodes from remote","response", response)
-
+	log.Trace("Received nodes from remote", "response", response)
 
 	self := p.ntab.Self().ID
 	toBondNode := make([]*discover.Node, 0, len(response.Nodes))
@@ -341,6 +340,7 @@ func HandleResNodesMsg(p *Peer, msg Msg) error {
 
 	return nil
 }
+
 ////////////////////////////////////////////////////////
 
 func (hp *HpbProto) proBondall(p *Peer) {
@@ -385,21 +385,19 @@ func (hp *HpbProto) proBondall(p *Peer) {
 	}
 }
 
-
-
 ////////////////////////////////////////////////////////
 type StatDetail struct {
-	ID      uint
-	Detail  string
+	ID     uint
+	Detail string
 }
 
 type statusRes struct {
-	Version    uint64
-	Status     []StatDetail
+	Version uint64
+	Status  []StatDetail
 }
 
 func HandleReqRemoteStateMsg(p *Peer, msg Msg) error {
-	resp := statusRes{Version:0x01}
+	resp := statusRes{Version: 0x01}
 
 	mining := "false"
 	if PeerMgrInst().hpbpro.statMining() {
@@ -410,9 +408,9 @@ func HandleReqRemoteStateMsg(p *Peer, msg Msg) error {
 	// Send in a new thread
 	errc := make(chan error, 1)
 	go func() {
-		errc <- SendData(p,ResRemoteStateMsg, &resp)
+		errc <- SendData(p, ResRemoteStateMsg, &resp)
 	}()
-	timeout := time.NewTimer(time.Second*5)
+	timeout := time.NewTimer(time.Second * 5)
 	defer timeout.Stop()
 	select {
 	case err := <-errc:
@@ -427,15 +425,13 @@ func HandleReqRemoteStateMsg(p *Peer, msg Msg) error {
 	return nil
 }
 
-
-
 func HandleResRemoteStateMsg(p *Peer, msg Msg) error {
 	var request statusRes
 	if err := msg.Decode(&request); err != nil {
-		log.Error("Received status from remote","msg", msg, "error", err)
+		log.Error("Received status from remote", "msg", msg, "error", err)
 		return ErrResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	log.Trace("Received status from remote","request", request)
+	log.Trace("Received status from remote", "request", request)
 
 	for _, sta := range request.Status {
 		switch {

@@ -34,7 +34,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 
 	bestCadWinners := []*snapshots.CadWinner{}
 	peerp2ps := p2p.PeerMgrInst().PeersAll()
-	log.Info("","peers length ", len(peerp2ps))
+	log.Info("", "peers length ", len(peerp2ps))
 	peers := make([]*p2p.Peer, 0, len(peerp2ps))
 
 	for i := 0; i < len(peerp2ps); i++ {
@@ -153,17 +153,17 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 			} else {
 				resbandwith[0] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
-			log.Trace("get 0 bandwith", "id", peer.GetID(),"winners0",resbandwith[0], "vaule", peer.Bandwidth()/ (1024 *1024 * 8))
+			log.Trace("get 0 bandwith", "id", peer.GetID(), "winners0", resbandwith[0], "vaule", peer.Bandwidth()/(1024*1024*8))
 
 		}
 		if peer.Address() == winners[1].Address {
 
-			if peer.Bandwidth()/(1024* 1024 *8) > consensus.BandwithLimit {
+			if peer.Bandwidth()/(1024*1024*8) > consensus.BandwithLimit {
 				resbandwith[1] = consensus.BandwithLimit
 			} else {
 				resbandwith[1] = byte(peer.Bandwidth() / (1024 * 1024 * 8))
 			}
-			log.Trace("get 1 bandwith", "id", peer.GetID(),"winners1",resbandwith[1], "vaule", peer.Bandwidth()/ (1024 *1024 * 8))
+			log.Trace("get 1 bandwith", "id", peer.GetID(), "winners1", resbandwith[1], "vaule", peer.Bandwidth()/(1024*1024*8))
 
 		}
 	}

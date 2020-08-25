@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"sync/atomic"
+
 	"github.com/hpb-project/go-hpb/event/sub"
 )
 
@@ -29,10 +30,10 @@ var INSTANCE = atomic.Value{}
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
 type Manager struct {
-	store   Backend            // Index of backends currently registered
+	store   Backend          // Index of backends currently registered
 	updater sub.Subscription // Wallet update subscriptions for all backends
-	updates chan WalletEvent   // Subscription sink for backend wallet changes
-	wallets []Wallet           // Cache of all wallets from all registered backends
+	updates chan WalletEvent // Subscription sink for backend wallet changes
+	wallets []Wallet         // Cache of all wallets from all registered backends
 
 	feed sub.Feed // Wallet feed notifying of arrivals/departures
 

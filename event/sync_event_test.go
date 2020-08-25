@@ -17,93 +17,92 @@
 package event
 
 import (
-    "fmt"
-    "time"
-    "testing"
+	"fmt"
+	"testing"
+	"time"
 )
 
 func routine_exit(v int) {
-    fmt.Println("routine exit ", v)
+	fmt.Println("routine exit ", v)
 }
 
 func TestNewEvent(t *testing.T) {
-    la_event := NewEvent()
-    fmt.Println("Subscribe...")
-    s_1_1 := la_event.Subscribe(1)
-    s_1_2 := la_event.Subscribe(1)
-    s_2_1 := la_event.Subscribe(2)
-    s_2_2 := la_event.Subscribe(2)
-    go func (){
-        defer routine_exit(1)
-        for {
-            val:= <-s_1_1
-            if val == nil {
-                fmt.Println("channel closed.")
-                return 
-            }
-            if vint, ok := val.(int); ok {
-                fmt.Println("sub1 chan, value = ", vint)
-            }
-        }
-    }()
-    go func (){
-        defer routine_exit(2)
-        for {
-            val:= <-s_1_2
-            if val == nil {
-                fmt.Println("channel closed.")
-                return 
-            }
-            if vint, ok := val.(int); ok {
-                fmt.Println("sub2 chan, value = ", vint)
-            }
-        }
-    }()
-    go func (){
-        defer routine_exit(3)
-        for {
-            val:= <-s_2_1
-            if val == nil {
-                fmt.Println("channel closed.")
-                return 
-            }
-            if vint, ok := val.(int); ok {
-                fmt.Println("sub1 chan, value = ", vint)
-            }
-        }
-    }()
-    go func (){
-        defer routine_exit(4)
-        for {
-            val:= <-s_2_2
-            if val == nil {
-                fmt.Println("channel closed.")
-                return 
-            }
-            if vint, ok := val.(int); ok {
-                fmt.Println("sub2 chan, value = ", vint)
-            }
-        }
-    }()
+	la_event := NewEvent()
+	fmt.Println("Subscribe...")
+	s_1_1 := la_event.Subscribe(1)
+	s_1_2 := la_event.Subscribe(1)
+	s_2_1 := la_event.Subscribe(2)
+	s_2_2 := la_event.Subscribe(2)
+	go func() {
+		defer routine_exit(1)
+		for {
+			val := <-s_1_1
+			if val == nil {
+				fmt.Println("channel closed.")
+				return
+			}
+			if vint, ok := val.(int); ok {
+				fmt.Println("sub1 chan, value = ", vint)
+			}
+		}
+	}()
+	go func() {
+		defer routine_exit(2)
+		for {
+			val := <-s_1_2
+			if val == nil {
+				fmt.Println("channel closed.")
+				return
+			}
+			if vint, ok := val.(int); ok {
+				fmt.Println("sub2 chan, value = ", vint)
+			}
+		}
+	}()
+	go func() {
+		defer routine_exit(3)
+		for {
+			val := <-s_2_1
+			if val == nil {
+				fmt.Println("channel closed.")
+				return
+			}
+			if vint, ok := val.(int); ok {
+				fmt.Println("sub1 chan, value = ", vint)
+			}
+		}
+	}()
+	go func() {
+		defer routine_exit(4)
+		for {
+			val := <-s_2_2
+			if val == nil {
+				fmt.Println("channel closed.")
+				return
+			}
+			if vint, ok := val.(int); ok {
+				fmt.Println("sub2 chan, value = ", vint)
+			}
+		}
+	}()
 
-    time.Sleep(2 * time.Second)
-    fmt.Println("Notify eventtype 1...")
-    la_event.Notify(1,1)
-    fmt.Println("Notify eventtype 2...")
-    la_event.Notify(2,2)
+	time.Sleep(2 * time.Second)
+	fmt.Println("Notify eventtype 1...")
+	la_event.Notify(1, 1)
+	fmt.Println("Notify eventtype 2...")
+	la_event.Notify(2, 2)
 
+	fmt.Println("Unscribe s_1_2 ...")
+	la_event.UnSubscribe(1, s_1_2)
 
-    fmt.Println("Unscribe s_1_2 ...")
-    la_event.UnSubscribe(1,s_1_2)
-
-    fmt.Println("NotifyAll...")
-    la_event.NotifyAll(5)
-    fmt.Println("Unscribe all...")
-    la_event.UnSubscribe(1,s_1_1)
-    la_event.UnSubscribe(1,s_1_2)
-    la_event.UnSubscribe(2,s_2_1)
-    la_event.UnSubscribe(2,s_2_2)
-    time.Sleep(1 * time.Second)
-    fmt.Println("NotifyAll after unscribe all...")
-    la_event.NotifyAll(6)
+	fmt.Println("NotifyAll...")
+	la_event.NotifyAll(5)
+	fmt.Println("Unscribe all...")
+	la_event.UnSubscribe(1, s_1_1)
+	la_event.UnSubscribe(1, s_1_2)
+	la_event.UnSubscribe(2, s_2_1)
+	la_event.UnSubscribe(2, s_2_2)
+	time.Sleep(1 * time.Second)
+	fmt.Println("NotifyAll after unscribe all...")
+	la_event.NotifyAll(6)
 }

@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/common/trie"
 	lru "github.com/hashicorp/golang-lru"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/trie"
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.

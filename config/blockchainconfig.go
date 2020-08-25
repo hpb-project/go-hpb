@@ -100,15 +100,15 @@ var DefaultBlockChainConfig = ChainConfig{
 }
 
 var (
-	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(100000000)             // Gas limit of the Genesis block. //for testnet
-	NormalGasLimit		   = big.NewInt(50000000)
+	GasLimitBoundDivisor   = big.NewInt(1024)      // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit            = big.NewInt(5000)      // Minimum the gas limit may ever be.
+	GenesisGasLimit        = big.NewInt(100000000) // Gas limit of the Genesis block. //for testnet
+	NormalGasLimit         = big.NewInt(50000000)
 	TargetGasLimit         = new(big.Int).Set(NormalGasLimit) // The artificial target
-	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	DifficultyBoundDivisor = big.NewInt(2048)                 // The bound divisor of the difficulty, used in the update calculations.
+	GenesisDifficulty      = big.NewInt(131072)               // Difficulty of the Genesis block.
+	MinimumDifficulty      = big.NewInt(131072)               // The minimum that the difficulty may ever be.
+	DurationLimit          = big.NewInt(13)                   // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )
 
 // CheckCompatible checks whether scheduled fork transitions have been imported

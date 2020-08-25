@@ -60,7 +60,7 @@ type stateSyncStats struct {
 // stateSync schedules requests for downloading a particular state trie defined
 // by a given state root.
 type stateSync struct {
-	syn    *Syncer // syncer instance to access and manage current peerset
+	syn *Syncer // syncer instance to access and manage current peerset
 
 	sched  *trie.TrieSync             // State trie sync scheduler defining the tasks
 	keccak hash.Hash                  // Keccak256 hasher to verify deliveries with

@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
@@ -44,22 +44,22 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
-	Config     *config.ChainConfig `json:"config"`
-	Nonce      uint64              `json:"nonce"`
-	Timestamp  uint64              `json:"timestamp"`
-	ExtraData  []byte              `json:"extraData"`
+	Config    *config.ChainConfig `json:"config"`
+	Nonce     uint64              `json:"nonce"`
+	Timestamp uint64              `json:"timestamp"`
+	ExtraData []byte              `json:"extraData"`
 	//VoteIndex  uint64              `json:"voteIndex"`
-	
+
 	//CandAddress common.Address     `json:"candAddress"`
-	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
-	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
-	Mixhash    common.Hash         `json:"mixHash"`
-	Coinbase   common.Address      `json:"coinbase"`
-	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-	Number     uint64              `json:"number"`
-	GasUsed    uint64              `json:"gasUsed"`
-	ParentHash common.Hash         `json:"parentHash"`
-	HardwareRandom []byte          `json:"hardwareRandom"`
+	GasLimit       uint64         `json:"gasLimit"   gencodec:"required"`
+	Difficulty     *big.Int       `json:"difficulty" gencodec:"required"`
+	Mixhash        common.Hash    `json:"mixHash"`
+	Coinbase       common.Address `json:"coinbase"`
+	Alloc          GenesisAlloc   `json:"alloc"      gencodec:"required"`
+	Number         uint64         `json:"number"`
+	GasUsed        uint64         `json:"gasUsed"`
+	ParentHash     common.Hash    `json:"parentHash"`
+	HardwareRandom []byte         `json:"hardwareRandom"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -88,15 +88,15 @@ type GenesisAccount struct {
 
 // field type overrides for gencodec
 type genesisSpecMarshaling struct {
-	Nonce      math.HexOrDecimal64
-	Timestamp  math.HexOrDecimal64
-	ExtraData  hexutil.Bytes
+	Nonce     math.HexOrDecimal64
+	Timestamp math.HexOrDecimal64
+	ExtraData hexutil.Bytes
 	//VoteIndex  math.HexOrDecimal64
-	GasLimit   math.HexOrDecimal64
-	GasUsed    math.HexOrDecimal64
-	Number     math.HexOrDecimal64
-	Difficulty *math.HexOrDecimal256
-	Alloc      map[common.UnprefixedAddress]GenesisAccount
+	GasLimit       math.HexOrDecimal64
+	GasUsed        math.HexOrDecimal64
+	Number         math.HexOrDecimal64
+	Difficulty     *math.HexOrDecimal256
+	Alloc          map[common.UnprefixedAddress]GenesisAccount
 	HardwareRandom hexutil.Bytes
 }
 
@@ -139,7 +139,6 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database already contains an incompatible genesis block (have %x, new %x)", e.Stored[:8], e.New[:8])
 }
 
-
 func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return config.MainnetChainConfig, common.Hash{}, errGenesisNoConfig
@@ -147,7 +146,7 @@ func SetupGenesisBlock(db hpbdb.Database, genesis *Genesis) (*config.ChainConfig
 
 	// Just commit the new block if there is no stored genesis block.
 	stored := GetCanonicalHash(db, 0)
-	
+
 	if (stored == common.Hash{}) {
 
 		if genesis == nil {
@@ -217,17 +216,17 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	}
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
-		Number:     new(big.Int).SetUint64(g.Number),
-		Nonce:      types.EncodeNonce(g.Nonce),
-		Time:       new(big.Int).SetUint64(g.Timestamp),
-		ParentHash: g.ParentHash,
-		Extra:      g.ExtraData,
-		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
-		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
-		Difficulty: g.Difficulty,
-		MixDigest:  g.Mixhash,
-		Coinbase:   g.Coinbase,
-		Root:       root,
+		Number:         new(big.Int).SetUint64(g.Number),
+		Nonce:          types.EncodeNonce(g.Nonce),
+		Time:           new(big.Int).SetUint64(g.Timestamp),
+		ParentHash:     g.ParentHash,
+		Extra:          g.ExtraData,
+		GasLimit:       new(big.Int).SetUint64(g.GasLimit),
+		GasUsed:        new(big.Int).SetUint64(g.GasUsed),
+		Difficulty:     g.Difficulty,
+		MixDigest:      g.Mixhash,
+		Coinbase:       g.Coinbase,
+		Root:           root,
 		HardwareRandom: g.HardwareRandom,
 	}
 	if g.GasLimit == 0 {
@@ -271,7 +270,7 @@ func (g *Genesis) Commit(db hpbdb.Database) (*types.Block, error) {
 	if configtemp == nil {
 		configtemp = config.MainnetChainConfig
 	}
-	
+
 	return block, WriteChainConfig(db, block.Hash(), configtemp)
 }
 
@@ -294,29 +293,28 @@ func GenesisBlockForTesting(db hpbdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Hpb main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     config.MainnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
+		Config:         config.MainnetChainConfig,
+		Nonce:          66,
+		ExtraData:      hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		HardwareRandom: hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
-		Alloc:      decodePrealloc(mainnetAllocData),
+		GasLimit:       5000,
+		Difficulty:     big.NewInt(17179869184),
+		Alloc:          decodePrealloc(mainnetAllocData),
 	}
 }
 
 // DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     config.MainnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		Config:         config.MainnetChainConfig,
+		Nonce:          66,
+		ExtraData:      hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		HardwareRandom: hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
-		Alloc:      decodePrealloc(testnetAllocData),
+		GasLimit:       16777216,
+		Difficulty:     big.NewInt(1048576),
+		Alloc:          decodePrealloc(testnetAllocData),
 	}
 }
-
 
 // DevGenesisBlock returns the 'geth --dev' genesis block.
 func DevGenesisBlock() *Genesis {

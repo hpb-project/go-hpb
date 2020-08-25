@@ -27,9 +27,9 @@ import (
 
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"github.com/hpb-project/go-hpb/network/p2p/netutil"
-	"github.com/hpb-project/go-hpb/common/rlp"
 )
 
 const Version = 0x01
@@ -49,8 +49,8 @@ var (
 
 // Timeouts
 const (
-	expiration  = 20 * time.Second
-	msgTimeout  = 15 * time.Second
+	expiration = 20 * time.Second
+	msgTimeout = 15 * time.Second
 
 	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
 	ntpWarningCooldown  = 10 * time.Minute // Minimum amount of time to pass before repeating NTP warning
@@ -59,7 +59,7 @@ const (
 
 // RPC packet types
 const (
-	resvPacket         = iota
+	resvPacket = iota
 	pingPacket
 	pongPacket
 	nodereqPacket
@@ -80,7 +80,6 @@ type (
 		ReplyTok   []byte
 		Expiration uint64
 	}
-
 )
 
 func makeEndpoint(addr *net.UDPAddr, tcpPort uint16) EndPoint {
@@ -129,20 +128,18 @@ type udp struct {
 	priv        *ecdsa.PrivateKey
 	ourEndpoint EndPoint
 
-	addpending  chan *pending
-	gotreply    chan reply
+	addpending chan *pending
+	gotreply   chan reply
 
-	closing     chan struct{}
-	nat         nat.Interface
+	closing chan struct{}
+	nat     nat.Interface
 
 	*Table
 }
 
 type pending struct {
-
 	from  NodeID
 	ptype byte
-
 
 	deadline time.Time
 
@@ -170,21 +167,21 @@ type reply struct {
 func ListenUDP(priv *ecdsa.PrivateKey, nodeType NodeType, laddr string, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *EndPoint, error) {
 	addr, err := net.ResolveUDPAddr("udp", laddr)
 	if err != nil {
-		return nil,nil, err
+		return nil, nil, err
 	}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		return nil,nil,  err
+		return nil, nil, err
 	}
 	tab, udp, err := newUDP(priv, conn, natm, nodeDBPath, netrestrict)
 	if err != nil {
 		return nil, nil, err
 	}
 	log.Info("UDP listener up", "self", tab.self)
-	return tab, &(udp.ourEndpoint),nil
+	return tab, &(udp.ourEndpoint), nil
 }
 
-func newUDP(priv *ecdsa.PrivateKey,c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
+func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath string, netrestrict *netutil.Netlist) (*Table, *udp, error) {
 	udp := &udp{
 		conn:        c,
 		priv:        priv,
@@ -468,8 +465,6 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 }
 func (req *ping) name() string { return "PING" }
 
-
-
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -482,7 +477,6 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *pong) name() string { return "PONG" }
 
-
 func (req *NodeReq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -493,7 +487,7 @@ func (req *NodeReq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 		return errUnknownNode
 	}
 
-	p := NodeRes{Version:Version, Expiration: uint64(time.Now().Add(expiration).Unix())}
+	p := NodeRes{Version: Version, Expiration: uint64(time.Now().Add(expiration).Unix())}
 
 	for _, b := range t.buckets {
 		for _, n := range b.entries {
@@ -511,7 +505,7 @@ func (req *NodeReq) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 
 	if len(p.Nodes) > 0 {
 		err := t.send(from, noderesPacket, &p)
-		log.Debug("Send nodes list to","ID",fromID,"NodesCount",len(p.Nodes),"to",from.String(),"error",err)
+		log.Debug("Send nodes list to", "ID", fromID, "NodesCount", len(p.Nodes), "to", from.String(), "error", err)
 		p.Nodes = p.Nodes[:0]
 	}
 
@@ -530,7 +524,6 @@ func (req *NodeRes) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte)
 	return nil
 }
 func (req *NodeRes) name() string { return "NODERES" }
-
 
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	errc := t.pending(toid, pongPacket, func(interface{}) bool { return true })
@@ -567,12 +560,10 @@ func (t *udp) nodeReq(toid NodeID, toaddr *net.UDPAddr) ([]*Node, error) {
 		Version:    Version,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	log.Trace("Send get nodes message","ToID",toid,"Addr",toaddr.String())
+	log.Trace("Send get nodes message", "ToID", toid, "Addr", toaddr.String())
 
 	err := <-errRes
-	log.Trace("Get nodes list form boot node","NodesCount",len(nodes))
+	log.Trace("Get nodes list form boot node", "NodesCount", len(nodes))
 
 	return nodes, err
 }
-
-

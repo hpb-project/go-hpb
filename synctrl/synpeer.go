@@ -72,7 +72,7 @@ type peerConnection struct {
 
 	peer Peer
 
-	version uint        // Hpb protocol version number to switch strategies
+	version uint       // Hpb protocol version number to switch strategies
 	log     log.Logger // Contextual logger to add extra infos to peer logs
 	lock    sync.RWMutex
 }
@@ -437,7 +437,6 @@ func (ps *peerSet) Unregister(id string) error {
 	ps.peerDropFeed.Send(p)
 	delete(ps.peers, id)
 
-
 	return nil
 }
 
@@ -582,33 +581,32 @@ func (ps *peerSet) medianRTT() time.Duration {
 	return median
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////
 type PeerSyn struct {
 	*p2p.Peer
 }
 
-func (ps *PeerSyn) Head() (common.Hash, *big.Int){
+func (ps *PeerSyn) Head() (common.Hash, *big.Int) {
 	return ps.Peer.Head()
 }
 
-func (ps *PeerSyn) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error{
-	log.Debug("Fetching batch of headers", "id",ps.GetID(),"count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
-	return p2p.SendData(ps.Peer,p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+func (ps *PeerSyn) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
+	log.Debug("Fetching batch of headers", "id", ps.GetID(), "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
+	return p2p.SendData(ps.Peer, p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 func (ps *PeerSyn) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
-	log.Debug("Fetching batch of headers", "id",ps.GetID(),"count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
-	return p2p.SendData(ps.Peer,p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
+	log.Debug("Fetching batch of headers", "id", ps.GetID(), "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
+	return p2p.SendData(ps.Peer, p2p.GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
 }
 func (ps *PeerSyn) RequestBodies(hashes []common.Hash) error {
-	log.Debug("Fetching batch of block bodies", "id",ps.GetID(),"count", len(hashes))
-	return p2p.SendData(ps.Peer,p2p.GetBlockBodiesMsg, hashes)
+	log.Debug("Fetching batch of block bodies", "id", ps.GetID(), "count", len(hashes))
+	return p2p.SendData(ps.Peer, p2p.GetBlockBodiesMsg, hashes)
 }
 func (ps *PeerSyn) RequestNodeData(hashes []common.Hash) error {
-	log.Debug("Fetching batch of state data", "id",ps.GetID(),"count", len(hashes))
-	return p2p.SendData(ps.Peer,p2p.GetNodeDataMsg, hashes)
+	log.Debug("Fetching batch of state data", "id", ps.GetID(), "count", len(hashes))
+	return p2p.SendData(ps.Peer, p2p.GetNodeDataMsg, hashes)
 }
 func (ps *PeerSyn) RequestReceipts(hashes []common.Hash) error {
-	log.Debug("Fetching batch of receipts", "id",ps.GetID(),"count", len(hashes))
-	return p2p.SendData(ps.Peer,p2p.GetReceiptsMsg, hashes)
+	log.Debug("Fetching batch of receipts", "id", ps.GetID(), "count", len(hashes))
+	return p2p.SendData(ps.Peer, p2p.GetReceiptsMsg, hashes)
 }

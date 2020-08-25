@@ -73,13 +73,13 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 }
 
 var DefaultConfig = Nodeconfig{
-	SyncMode: FastSync,
-	DataDir:  DefaultDataDir(),
-	NetworkId:     1,
-	LightPeers:    20,
-	DatabaseCache: 128,
-	GasPrice:      big.NewInt(18 * Shannon),
-	IPCPath:       "ghpb.ipc",
+	SyncMode:        FastSync,
+	DataDir:         DefaultDataDir(),
+	NetworkId:       1,
+	LightPeers:      20,
+	DatabaseCache:   128,
+	GasPrice:        big.NewInt(18 * Shannon),
+	IPCPath:         "ghpb.ipc",
 	MaxTrieCacheGen: uint16(120),
 }
 

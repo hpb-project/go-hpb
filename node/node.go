@@ -29,13 +29,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hpb-project/go-hpb/account"
+	accounts "github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	"github.com/hpb-project/go-hpb/common/constant"
+	params "github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -43,6 +43,7 @@ import (
 	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/prometheus/prometheus/util/flock"
+
 	//"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
@@ -69,14 +70,14 @@ type Node struct {
 	Hpbsyncctr     *synctrl.SynCtrl
 	Hpbtxpool      *txpool.TxPool
 	Hpbbc          *bc.BlockChain
-	Hpbboe *boe.BoeHandle
+	Hpbboe         *boe.BoeHandle
 	//HpbDb
 	HpbDb hpbdb.Database
 
 	networkId     uint64
 	netRPCService *hpbapi.PublicNetAPI
 
-	Hpbengine consensus.Engine
+	Hpbengine     consensus.Engine
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *bc.ChainIndexer               // Bloom indexer operating during block imports
 

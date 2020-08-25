@@ -134,6 +134,7 @@ func HandleBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
 	}
 	return nil
 }
+
 // HandleGetBlockBodiesMsg deal received GetBlockBodiesMsg
 func HandleGetBlockBodiesMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Decode the retrieval message
@@ -465,7 +466,7 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) {
 			continue
 		} else {
-			go func(){
+			go func() {
 				poolTxsCh <- tx
 			}()
 		}
