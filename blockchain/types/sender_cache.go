@@ -49,3 +49,10 @@ func (this *SenderCache) GetOrSet(txhash common.Hash, addr common.Address) {
 		}
 	}
 }
+
+func (this *SenderCache) Delete(txhash common.Hash) {
+	if this.cache != nil {
+		this.cache.Remove(txhash)
+	}
+}
+

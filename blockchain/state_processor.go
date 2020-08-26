@@ -83,27 +83,21 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		if bNewVersion {
 			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
 				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					return nil, nil, nil, errs
-				}
 			} else {
 				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					return nil, nil, nil, errs
-				}
 			}
 		} else {
 			if len(tx.Data()) > 0 {
 				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					return nil, nil, nil, errs
-				}
 			} else {
 				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-				if errs != nil {
-					return nil, nil, nil, errs
-				}
 			}
+		}
+
+		if errs != nil {
+			// clear sender cache when tx apply failed.
+			types.Sendercache.Delete(tx.Hash())
+			return nil, nil, nil, errs
 		}
 
 		receipts = append(receipts, receipt)
