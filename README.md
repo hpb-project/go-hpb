@@ -18,11 +18,13 @@ To download all of the code:
 
 Install latest distribution of [Go](https://golang.org/) if you don't have it already. (go version >= go1.10 )
 
-Currently supports the following operating systems:
+Currently supports the following operating systems for `sync node`:
 
-
-- Ubuntu 18.04 and higher
+- Ubuntu 16.04 and higher
 - MacOS Darwin 10.12 and higher
+- CentOS 7 and higher
+
+Only `Ubuntu 16.04` supported for the node that installed BOE card.
 
 ### Build 
 
