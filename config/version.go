@@ -32,8 +32,8 @@ const VersionID uint64 = 0x0002
 const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release
-	VersionMinor = 6        // Minor version component of the current release
-	VersionPatch = 6        // Patch version component of the current release
+	VersionMinor = 7        // Minor version component of the current release
+	VersionPatch = 0        // Patch version component of the current release
 	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 
