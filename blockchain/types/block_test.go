@@ -25,6 +25,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 // from bcValidBlockTest.json, "SimpleTx"
@@ -51,9 +52,9 @@ func TestBlockEncoding(t *testing.T) {
 	check("Time", block.Time(), big.NewInt(1426516743))
 	check("Size", block.Size(), common.StorageSize(len(blockEnc)))
 
-	tx1 := NewTransaction(0, common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"), big.NewInt(10), big.NewInt(50000), big.NewInt(10), nil)
+	tx1 := NewTransaction(0, common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"), big.NewInt(10), big.NewInt(50000), big.NewInt(10), nil, TxExdata{})
 
-	tx1, _ = tx1.WithSignature(HomesteadSigner{}, common.Hex2Bytes("9bea4c4daac7c7c52e093e6a4c35dbbcf8856f1af7b059ba20253e70848d094f8a8fae537ce25ed8cb5af9adac3f141af69bd515bd2ba031522df09b97dd72b100"))
+	tx1, _ = tx1.WithSignature(NewBoeSigner(config.MainnetChainConfig.ChainId), common.Hex2Bytes("9bea4c4daac7c7c52e093e6a4c35dbbcf8856f1af7b059ba20253e70848d094f8a8fae537ce25ed8cb5af9adac3f141af69bd515bd2ba031522df09b97dd72b100"))
 	fmt.Println(block.Transactions()[0].Hash())
 	fmt.Println(tx1.data)
 	fmt.Println(tx1.Hash())

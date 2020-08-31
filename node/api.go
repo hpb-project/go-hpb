@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -194,6 +194,7 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 	log.Debug("json----", "jsons", string(jsons), "errs", errs)
 	return string(jsons)
 }
+
 func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 	log.Debug("Replay_Block", "blockhash", data, "lendata", len(data))
 

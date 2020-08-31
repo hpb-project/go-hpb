@@ -2,16 +2,18 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
-	"math/big"
-	"testing"
 )
 
 func makeTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *Transaction {
 	//tx := types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil)
-	tx, _ := SignTx(NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), NewBoeSigner(config.MainnetChainConfig.ChainId), key)
+	tx, _ := SignTx(NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil,
+		TxExdata{}), NewBoeSigner(config.MainnetChainConfig.ChainId), key)
 	return tx
 }
 

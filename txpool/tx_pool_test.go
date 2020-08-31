@@ -67,7 +67,8 @@ func transaction(nonce uint64, gaslimit *big.Int, key *ecdsa.PrivateKey) *types.
 
 func pricedTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	//tx := types.NewTransaction(nonce, common.Address{}, big.NewInt(100), gaslimit, gasprice, nil)
-	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil), types.NewBoeSigner(config.MainnetChainConfig.ChainId), key)
+	tx, _ := types.SignTx(types.NewTransaction(nonce, common.Address{}, big.NewInt(1), gaslimit, gasprice, nil, types.TxExdata{}),
+		types.NewBoeSigner(config.MainnetChainConfig.ChainId), key)
 	return tx
 }
 
@@ -83,8 +84,8 @@ func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 
 // validateTxPoolInternals checks various consistency invariants within the pool.
 func validateTxPoolInternals(pool *TxPool) error {
-	pool.mu.RLock()
-	defer pool.mu.RUnlock()
+	pool.smu.RLock()
+	defer pool.smu.RUnlock()
 
 	// Ensure the total transaction set is consistent with pending + queued
 	pending, queued := pool.Stats()
