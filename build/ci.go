@@ -138,7 +138,7 @@ func doInstall(cmdline []string) {
 	var minor int
 	fmt.Sscanf(strings.TrimPrefix(runtime.Version(), "go1."), "%d", &minor)
 
-	if minor < 7 && !strings.Contains(runtime.Version(), "devel"){
+	if minor < 7 && !strings.Contains(runtime.Version(), "devel") {
 		log.Println("You have Go version", runtime.Version())
 		log.Println("go-hpb requires at least Go version 1.7 and cannot")
 		log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
@@ -504,7 +504,6 @@ func (meta debMetadata) ExeConflicts(exe debExecutable) string {
 	return ""
 }
 
-
 // Windows installer
 
 func doWindowsInstaller(cmdline []string) {
@@ -575,6 +574,7 @@ func doWindowsInstaller(cmdline []string) {
 		log.Fatal(err)
 	}
 }
+
 // Cross compilation
 
 func doXgo(cmdline []string) {

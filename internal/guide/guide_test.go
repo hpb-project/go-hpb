@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hpb-project/ghpb/account/keystore"
-	"github.com/hpb-project/ghpb/core/types"
+	"github.com/hpb-project/go-hpb/account/keystore"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 )
 
 // Tests that the account management snippets work correctly.

@@ -23,8 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hpb-project/ghpb/common"
-	"github.com/hpb-project/ghpb/core/vm"
+	"github.com/hpb-project/go-hpb/common"
+	config "github.com/hpb-project/go-hpb/config"
+	vm "github.com/hpb-project/go-hpb/hvm/evm"
 )
 
 type account struct{}
@@ -42,7 +43,7 @@ func (account) SetCode(common.Hash, []byte)                         {}
 func (account) ForEachStorage(cb func(key, value common.Hash) bool) {}
 
 func runTrace(tracer *JavascriptTracer) (interface{}, error) {
-	env := vm.NewEVM(vm.Context{}, nil, params.MainnetChainConfig, vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.Context{}, nil, config.MainnetChainConfig, vm.Config{Debug: true, Tracer: tracer})
 
 	contract := vm.NewContract(account{}, account{}, big.NewInt(0), 10000)
 	contract.Code = []byte{byte(vm.PUSH1), 0x1, byte(vm.PUSH1), 0x1, 0x0}
@@ -132,7 +133,7 @@ func TestHaltBetweenSteps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env := vm.NewEVM(vm.Context{}, nil, params.MainnetChainConfig, vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.Context{}, nil, config.MainnetChainConfig, vm.Config{Debug: true, Tracer: tracer})
 	contract := vm.NewContract(&account{}, &account{}, big.NewInt(0), 0)
 
 	tracer.CaptureState(env, 0, 0, 0, 0, nil, nil, contract, 0, nil)

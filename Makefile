@@ -67,7 +67,6 @@ devtools:
 	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
 	env GOBIN= go get -u github.com/jteeuwen/go-bindata/go-bindata
 	env GOBIN= go get -u github.com/fjl/gencodec
-	env GOBIN= go install ./cmd/abigen
 
 # Cross Compilation Targets (xgo)
 
