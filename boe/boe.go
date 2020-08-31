@@ -116,7 +116,7 @@ static void hex_dump(unsigned char * data, int len)
 
     printf("\n");
 }
-
+extern void HardwareRecoverCallback();
 int recover_pubkey_callback(unsigned char *pub, unsigned char *sig,void *param, int param_len)
 {
     SResult *r = rsNew();
@@ -731,3 +731,4 @@ func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
 
 	return ErrHashVerifyFailed
 }
+
