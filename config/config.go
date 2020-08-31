@@ -174,7 +174,7 @@ func New() *HpbConfig {
 	}
 
 	if HpbConfigIns == nil {
-		HpbConfigIns := &HpbConfig{
+		HpbConfigIns = &HpbConfig{
 			Node: defaultNodeConfig(),
 			// Configuration of peer-to-peer networking.
 			Network: DefaultNetworkConfig(),
@@ -202,7 +202,7 @@ func GetHpbConfigInstance() *HpbConfig {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig)
 	}
-	HpbConfigIns := &HpbConfig{
+	HpbConfigIns = &HpbConfig{
 		Node: defaultNodeConfig(),
 		// Configuration of peer-to-peer networking.
 		Network: DefaultNetworkConfig(),

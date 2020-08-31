@@ -818,7 +818,7 @@ func NewPublicWeb3API(stack *Node) *PublicWeb3API {
 
 // ClientVersion returns the node name
 func (s *PublicWeb3API) ClientVersion() string {
-	return config.GetHpbConfigInstance().Network.Name
+	return config.HpbConfigIns.Node.Version
 }
 
 // Sha3 applies the hpb sha3 implementation on the input.
