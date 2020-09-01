@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -31,6 +32,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event"
+	"github.com/hpb-project/go-hpb/event/sub"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk
@@ -43,8 +45,9 @@ func init() {
 }
 
 type testBlockChain struct {
-	statedb  *state.StateDB
-	gasLimit *big.Int
+	statedb       *state.StateDB
+	gasLimit      *big.Int
+	chainHeadFeed *sub.Feed
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
@@ -61,6 +64,10 @@ func (bc *testBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
 	return bc.statedb, nil
 }
 
+func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription {
+	return bc.chainHeadFeed.Subscribe(ch)
+}
+
 func transaction(nonce uint64, gaslimit *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	return pricedTransaction(nonce, gaslimit, big.NewInt(1), key)
 }
@@ -75,7 +82,7 @@ func pricedTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.Pri
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 	db, _ := hpbdb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
-	blockchain := &testBlockChain{statedb, big.NewInt(1000000)}
+	blockchain := &testBlockChain{statedb, big.NewInt(1000000), new(sub.Feed)}
 
 	key, _ := crypto.GenerateKey()
 	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
@@ -87,26 +94,40 @@ func validateTxPoolInternals(pool *TxPool) error {
 	pool.smu.RLock()
 	defer pool.smu.RUnlock()
 
+	total := 0
+	pool.all.Range(func(k, v interface{}) bool {
+		list := v.(*txList)
+		total += list.Len()
+		return true
+	})
+
 	// Ensure the total transaction set is consistent with pending + queued
 	pending, queued := pool.Stats()
-	if total := len(pool.all); total != pending+queued {
+	if total != pending+queued {
 		return fmt.Errorf("total transaction count %d != %d pending + %d queued", total, pending, queued)
 	}
 
+	var err error
+
 	// Ensure the next nonce to assign is the correct one
-	for addr, txs := range pool.pending {
+	pool.pending.Range(func(k, v interface{}) bool {
+		addr := k.(common.Address)
+		txs := v.(*txList)
 		// Find the last transaction
 		var last uint64
-		for nonce, _ := range txs.txs.items {
+		for nonce := range txs.txs.items {
 			if last < nonce {
 				last = nonce
 			}
 		}
 		if nonce := pool.pendingState.GetNonce(addr); nonce != last+1 {
-			return fmt.Errorf("pending nonce mismatch: have %v, want %v", nonce, last+1)
+			err = fmt.Errorf("pending nonce mismatch: have %v, want %v", nonce, last+1)
+			return false
 		}
-	}
-	return nil
+		return true
+	})
+
+	return err
 }
 
 func deriveSender(tx *types.Transaction) (common.Address, error) {
@@ -149,7 +170,7 @@ func TestAddTx(t *testing.T) {
 
 	// setup pool with 2 transaction in it
 	//statedb.SetBalance(address, new(big.Int).SetUint64(10 * config.Ether))
-	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000)}, address, &trigger}
+	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000), new(sub.Feed)}, address, &trigger}
 
 	tx0 := transaction(0, big.NewInt(100000), key)
 	tx1 := transaction(1, big.NewInt(100000), key)
@@ -198,7 +219,7 @@ func TestStateChangeDuringPoolReset(t *testing.T) {
 
 	// setup pool with 2 transaction in it
 	statedb.SetBalance(address, new(big.Int).SetUint64(config.Hpber))
-	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000)}, address, &trigger}
+	blockchain := &testChain{&testBlockChain{statedb, big.NewInt(1000000000), new(sub.Feed)}, address, &trigger}
 
 	tx0 := transaction(0, big.NewInt(100000), key)
 	tx1 := transaction(1, big.NewInt(100000), key)
@@ -243,7 +264,10 @@ func TestInvalidTransactions(t *testing.T) {
 	defer pool.Stop()
 
 	tx := transaction(0, big.NewInt(5), key)
-	from, _ := deriveSender(tx)
+	from, err := deriveSender(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	pool.currentState.AddBalance(from, big.NewInt(1))
 	if err := pool.AddTx(tx); err != ErrInsufficientFunds {
@@ -330,7 +354,7 @@ func TestNegativeValue(t *testing.T) {
 	pool, key := setupTxPool()
 	defer pool.Stop()
 
-	tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(-1), big.NewInt(100), big.NewInt(1), nil), boeSigner, key)
+	tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(-1), big.NewInt(100), big.NewInt(1), nil, types.TxExdata{}), boeSigner, key)
 	from, _ := deriveSender(tx)
 	pool.currentState.AddBalance(from, big.NewInt(1))
 	if err := pool.AddTx(tx); err != ErrNegativeValue {

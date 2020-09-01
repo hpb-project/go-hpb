@@ -18,11 +18,12 @@
 package main
 
 import (
-	"github.com/hpb-project/go-hpb/common/log"
-	"gopkg.in/urfave/cli.v1"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/hpb-project/go-hpb/common/log"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func main() {

@@ -17,18 +17,17 @@
 package voting
 
 import (
+	"bytes"
+	"errors"
 	"math"
 
-	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	lru "github.com/hashicorp/golang-lru"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
-
-	"bytes"
-	"errors"
 )
 
 func GetCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus.ChainReader, number uint64, hash common.Hash) (*snapshots.CadNodeSnap, error) {

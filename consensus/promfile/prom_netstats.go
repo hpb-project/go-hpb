@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/olekukonko/tablewriter"
 )

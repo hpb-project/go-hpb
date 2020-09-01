@@ -21,7 +21,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	//"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/network/rpc"
 )

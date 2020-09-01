@@ -17,16 +17,16 @@
 package voting
 
 import (
-	"github.com/hpb-project/go-hpb/consensus/snapshots"
-	"math/big"
-
 	"bytes"
+	"math/big"
+	"math/rand"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"math/rand"
 )
 
 // get the best one

@@ -18,6 +18,12 @@ package prometheus
 import (
 	"bytes"
 	"errors"
+	"math"
+	"math/big"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -28,11 +34,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/p2p"
-	"math"
-	"math/big"
-	"sort"
-	"strings"
-	"time"
 )
 
 // Verify one header

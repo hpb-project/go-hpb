@@ -24,12 +24,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	//"strconv"
 	"strings"
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	//"golang.org/x/crypto/ssh/terminal"
 )
 
 type config struct {

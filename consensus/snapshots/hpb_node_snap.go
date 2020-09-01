@@ -19,19 +19,18 @@ package snapshots
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/hashicorp/golang-lru"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	"errors"
+	"math"
+	"math/big"
+
+	lru "github.com/hashicorp/golang-lru"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/config"
-	"math/big"
-	//"github.com/hpb-project/ghpb/common/log"
-	"github.com/hpb-project/go-hpb/consensus"
-	//"errors"
-	"errors"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	"math"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 )
 
 type Tally struct {
