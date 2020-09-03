@@ -22,11 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	"github.com/hpb-project/go-hpb/network/p2p/nat"
 	"math/big"
 	"math/rand"
 	"net"
@@ -38,6 +33,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
+	"github.com/hpb-project/go-hpb/network/p2p/nat"
 )
 
 var (
@@ -704,8 +705,6 @@ func (prm *PeerManager) startClientBW() {
 		log.Debug("Reset timeout to longer.")
 		timeout.Reset(time.Second * time.Duration(inteval*2+rand.Intn(inteval*2)))
 	}
-	log.Error("Test bandwidth loop stop.")
-	return
 }
 
 type bwTestRes struct {

@@ -257,6 +257,7 @@ func doTest(cmdline []string) {
 	packages = build.ExpandPackagesNoVendor(packages)
 
 	// Run analysis tools before the tests.
+	// TODO
 	build.MustRun(goTool("vet", packages...))
 	if *misspell {
 		// TODO(karalabe): Reenable after false detection is fixed: https://github.com/client9/misspell/issues/105

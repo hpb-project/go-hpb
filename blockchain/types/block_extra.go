@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -161,42 +162,39 @@ func (this *ExtraDetail) ToBytes() []byte {
 		}
 		copy(data[offset:offset+ExtraSealLength], this.Seal[:])
 		return data
-	} else {
-		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraSealLength
-		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum) * common.AddressLength
+	}
+	datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength + ExtraSealLength
+	if this.NodesNum > 0 {
+		datalen += int(this.NodesNum) * common.AddressLength
+	}
+	data := make([]byte, datalen)
+	offset := 0
+
+	data[offset] = this.Version
+	offset++
+	copy(data[offset:offset+ExtraVanityLength], this.Vanity[:])
+	offset += ExtraVanityLength
+
+	data[offset] = this.NodesNum
+	offset++
+
+	if this.NodesNum > 0 {
+		for i := 0; i < int(this.NodesNum); i++ {
+			copy(data[offset:offset+common.AddressLength], this.NodesAddr[i].Bytes())
+			offset += common.AddressLength
 		}
-		data := make([]byte, datalen)
-		offset := 0
-
-		data[offset] = this.Version
-		offset++
-		copy(data[offset:offset+ExtraVanityLength], this.Vanity[:])
-		offset += ExtraVanityLength
-
-		data[offset] = this.NodesNum
-		offset++
-
-		if this.NodesNum > 0 {
-			for i := 0; i < int(this.NodesNum); i++ {
-				copy(data[offset:offset+common.AddressLength], this.NodesAddr[i].Bytes())
-				offset += common.AddressLength
-			}
-		}
-
-		copy(data[offset:offset+ExtraRealRNDLength], this.RealRND[:])
-		offset += ExtraRealRNDLength
-
-		copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
-		offset += ExtraSignedLastRNDLength
-
-		copy(data[offset:offset+ExtraSealLength], this.Seal[:])
-		offset += ExtraSealLength
-
-		return data
 	}
 
-	return nil
+	copy(data[offset:offset+ExtraRealRNDLength], this.RealRND[:])
+	offset += ExtraRealRNDLength
+
+	copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
+	offset += ExtraSignedLastRNDLength
+
+	copy(data[offset:offset+ExtraSealLength], this.Seal[:])
+	offset += ExtraSealLength
+
+	return data
 }
 
 func (this *ExtraDetail) ExceptSealToBytes() []byte {
@@ -216,39 +214,37 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 			}
 		}
 		return data
-	} else {
-		datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength
-		if this.NodesNum > 0 {
-			datalen += int(this.NodesNum) * common.AddressLength
+	}
+	datalen := 1 + ExtraVanityLength + 1 + ExtraRealRNDLength + ExtraSignedLastRNDLength
+	if this.NodesNum > 0 {
+		datalen += int(this.NodesNum) * common.AddressLength
+	}
+	data := make([]byte, datalen)
+	offset := 0
+
+	data[offset] = this.Version
+	offset++
+	copy(data[offset:offset+ExtraVanityLength], this.Vanity[:])
+	offset += ExtraVanityLength
+
+	data[offset] = this.NodesNum
+	offset++
+
+	if this.NodesNum > 0 {
+		for i := 0; i < int(this.NodesNum); i++ {
+			copy(data[offset:offset+common.AddressLength], this.NodesAddr[i].Bytes())
+			offset += common.AddressLength
 		}
-		data := make([]byte, datalen)
-		offset := 0
-
-		data[offset] = this.Version
-		offset++
-		copy(data[offset:offset+ExtraVanityLength], this.Vanity[:])
-		offset += ExtraVanityLength
-
-		data[offset] = this.NodesNum
-		offset++
-
-		if this.NodesNum > 0 {
-			for i := 0; i < int(this.NodesNum); i++ {
-				copy(data[offset:offset+common.AddressLength], this.NodesAddr[i].Bytes())
-				offset += common.AddressLength
-			}
-		}
-
-		copy(data[offset:offset+ExtraRealRNDLength], this.RealRND[:])
-		offset += ExtraRealRNDLength
-
-		copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
-		offset += ExtraSignedLastRNDLength
-
-		return data
 	}
 
-	return nil
+	copy(data[offset:offset+ExtraRealRNDLength], this.RealRND[:])
+	offset += ExtraRealRNDLength
+
+	copy(data[offset:offset+ExtraSignedLastRNDLength], this.SignedLastRND[:])
+	offset += ExtraSignedLastRNDLength
+
+	return data
+
 }
 
 func (this *ExtraDetail) GetVanity() []byte {

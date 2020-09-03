@@ -112,6 +112,7 @@ func NewTxPool(config config.TxPoolConfiguration, chainConfig *config.ChainConfi
 	INSTANCE.Store(pool)
 	return pool
 }
+
 func (pool *TxPool) Start() {
 	pool.reset(nil, pool.chain.CurrentBlock().Header())
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
@@ -404,7 +405,7 @@ var (
 	normalQueueLen = uint64(200000) // nornal queue/pending account number
 )
 
-// addTxs attempts to queue a batch of transactions if they are valid.
+// AddTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	//concurrent validate tx before pool's lock.
 	if len(txs) == 0 {
@@ -485,7 +486,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction) error {
 	return nil
 }
 
-// addTxsLocked attempts to queue a batch of transactions if they are valid,
+// GoTxsAsynSender attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) GoTxsAsynSender(txs []*types.Transaction) error {
 	for _, tx := range txs {
@@ -1229,7 +1230,7 @@ func (a addresssByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 //For RPC
 
-// stats retrieves the current pool stats, namely the number of pending and the
+// Stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
 func (pool *TxPool) Stats() (int, int) {
 	pending := 0
@@ -1248,7 +1249,7 @@ func (pool *TxPool) Stats() (int, int) {
 	return pending, queued
 }
 
-// Get returns a transaction if it is contained in the pool
+// GetTxByHash Get returns a transaction if it is contained in the pool
 // and nil otherwise.
 func (pool *TxPool) GetTxByHash(hash common.Hash) *types.Transaction {
 	v, ok := pool.all.Load(hash)
@@ -1343,4 +1344,47 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 	defer pool.smu.Unlock()
 
 	pool.reset(oldHead, newHead)
+}
+
+func (pool *TxPool) pendingTxList(addr common.Address) *txList {
+	v, ok := pool.pending.Load(addr)
+	if !ok {
+		return nil
+	}
+	return v.(*txList)
+}
+
+func (pool *TxPool) queueTxList(addr common.Address) *txList {
+	v, ok := pool.queue.Load(addr)
+	if !ok {
+		return nil
+	}
+	return v.(*txList)
+}
+
+func (pool *TxPool) pendingLen() int {
+	var len int
+	pool.pending.Range(func(k, v interface{}) bool {
+		len++
+		return true
+	})
+	return len
+}
+
+func (pool *TxPool) queueLen() int {
+	var len int
+	pool.queue.Range(func(k, v interface{}) bool {
+		len++
+		return true
+	})
+	return len
+}
+
+func (pool *TxPool) allLen() int {
+	var len int
+	pool.all.Range(func(k, v interface{}) bool {
+		len++
+		return true
+	})
+	return len
 }
