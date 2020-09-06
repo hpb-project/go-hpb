@@ -5,7 +5,6 @@ import (
 )
 
 func TestClient(t *testing.T) {
-
 	//cmd := exec.Command("/bin/bash", "-c", "./iperf3 -s -p 5188")
 	//
 	//stdout, err := cmd.StdoutPipe()
@@ -34,6 +33,6 @@ func TestClient(t *testing.T) {
 	//t.Error("TestClient","out",out,"err",err)
 
 	//out :=StartTest("127.0.0.1","5188")
-	StartSever(5188)
+	// StartSever(5188)
 	//t.Error(out)
 }

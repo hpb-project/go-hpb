@@ -5,11 +5,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/hpb-project/go-hpb/common/log"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 func exec_shell(s string) (string, error) {
