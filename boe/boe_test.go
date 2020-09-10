@@ -78,9 +78,6 @@ func TestHWSign(t *testing.T) {
 }
 
 func TestNewEvent(t *testing.T) {
-	var ver, err = boe.GetVersion()
-	if err != nil {
-		t.Fatal(err)
-	}
+	var ver, _ = boe.GetVersion()
 	fmt.Printf("hwversion = %02x\n", ver)
 }
