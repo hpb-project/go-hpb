@@ -796,7 +796,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats.Store(addr, time.Now())
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
-	go pool.txFeed.Send(bc.TxPreEvent{tx})
+	go pool.txFeed.Send(bc.TxPreEvent{Tx: tx})
 	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
 }
 
@@ -956,6 +956,7 @@ func (pool *TxPool) keepFitSend() {
 		}
 	}
 }
+
 func (pool *TxPool) keepFit() {
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
