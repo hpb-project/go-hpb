@@ -98,13 +98,17 @@ func (e *G1) Neg(a *G1) *G1 {
 
 // Marshal converts n to a byte slice.
 func (n *G1) Marshal() []byte {
+	// Each value is a 256-bit number.
+	const numBytes = 256 / 8
+
+	if n.p.IsInfinity() {
+		return make([]byte, numBytes*2)
+	}
+
 	n.p.MakeAffine(nil)
 
 	xBytes := new(big.Int).Mod(n.p.x, P).Bytes()
 	yBytes := new(big.Int).Mod(n.p.y, P).Bytes()
-
-	// Each value is a 256-bit number.
-	const numBytes = 256 / 8
 
 	ret := make([]byte, numBytes*2)
 	copy(ret[1*numBytes-len(xBytes):], xBytes)

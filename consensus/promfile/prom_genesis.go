@@ -24,9 +24,8 @@ import (
 	"math/big"
 	"math/rand"
 	"time"
-	//"encoding/hex"
 
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"

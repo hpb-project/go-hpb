@@ -19,10 +19,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/hpb-project/go-hpb/common/log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // makeWizard creates and returns a new prometh prometh.

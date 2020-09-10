@@ -17,10 +17,10 @@ func send(url string, data string, client http.Client) {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.Info("Response ", "Body", bytes.NewBuffer(body).String())

@@ -19,9 +19,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
-	"io/ioutil"
 )
 
 type CadWinner struct {

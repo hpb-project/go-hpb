@@ -55,4 +55,3 @@ func (this *SenderCache) Delete(txhash common.Hash) {
 		this.cache.Remove(txhash)
 	}
 }
-

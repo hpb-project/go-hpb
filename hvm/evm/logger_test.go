@@ -48,7 +48,7 @@ type dummyStateDB struct {
 
 func TestStoreCapture(t *testing.T) {
 	var (
-		env      = NewEVM(Context{}, nil, config.MainnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env      = NewEVM(Context{BlockNumber: big.NewInt(0)}, nil, config.MainnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()
@@ -75,7 +75,7 @@ func TestStorageCapture(t *testing.T) {
 	var (
 		ref      = &dummyContractRef{}
 		contract = NewContract(ref, ref, new(big.Int), 0)
-		env      = NewEVM(Context{}, dummyStateDB{ref: ref}, config.MainnetChainConfig, Config{EnableJit: false, ForceJit: false})
+		env      = NewEVM(Context{BlockNumber: big.NewInt(0)}, dummyStateDB{ref: ref}, config.MainnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()

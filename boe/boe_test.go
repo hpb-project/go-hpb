@@ -68,16 +68,16 @@ func TestHWSign(t *testing.T) {
 		hash = "test"
 	)
 
-	result, err := boe.HWSign([]byte(hash))
+	result, err := boe.HW_Auth_Sign([]byte(hash))
 	if err == nil {
 		//fmt.Printf("len(x)=%d\n", len(x))
 		for i := 0; i < 32; i++ {
-			fmt.Printf("signval[%d]=%02x\n", i, result.r[i])
+			fmt.Printf("signval[%d]=%02x\n", i, result[i])
 		}
 	}
 }
 
 func TestNewEvent(t *testing.T) {
-	var ver = boe.GetHWVersion()
+	var ver, _ = boe.GetVersion()
 	fmt.Printf("hwversion = %02x\n", ver)
 }

@@ -731,4 +731,3 @@ func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
 
 	return ErrHashVerifyFailed
 }
-

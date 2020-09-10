@@ -20,12 +20,7 @@ go: 1.13
 
 matrix:
   include:
-    - os: linux   
+    - os: linux
       before_install:
         - make all
-#      script: travis_wait 30 make test
-
-#    - os: osx
-#      before_install:
-#        - make all
-#      script: travis_wait 30 make test
+      script: travis_wait 30 make test

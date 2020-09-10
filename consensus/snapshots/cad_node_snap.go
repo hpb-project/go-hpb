@@ -17,21 +17,14 @@
 package snapshots
 
 import (
-	//"bytes"
-	//"sort"
-	//"fmt"
 	"encoding/json"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	//"github.com/hpb-project/ghpb/common/constant"
-	//"github.com/hashicorp/golang-lru"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
-	//"strconv"
-	//"errors"
 )
 
 type CadNodeSnap struct {

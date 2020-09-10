@@ -167,7 +167,7 @@ func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 	// Sanity check the protocol version
 	if p.version < config.ProtocolV111 {
-		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
+		panic(fmt.Sprintf("body fetch [protocol version/%d+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.blockIdle, 0, 1) {
@@ -189,7 +189,7 @@ func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 	// Sanity check the protocol version
 	if p.version < config.ProtocolV111 {
-		panic(fmt.Sprintf("body fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
+		panic(fmt.Sprintf("body fetch [protocol version/%d+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.receiptIdle, 0, 1) {
@@ -211,7 +211,7 @@ func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 	// Sanity check the protocol version
 	if p.version < config.ProtocolV111 {
-		panic(fmt.Sprintf("node data fetch [protocol version/d%+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
+		panic(fmt.Sprintf("node data fetch [protocol version/%d+] requested on [protocol version/%d]", config.ProtocolV111, p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.stateIdle, 0, 1) {
