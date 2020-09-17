@@ -30,7 +30,6 @@ import (
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	params "github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -89,7 +88,7 @@ func (b *testBackend) SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscript
 }
 
 func (b *testBackend) BloomStatus() (uint64, uint64) {
-	return params.BloomBitsBlocks, b.sections
+	return config.BloomBitsBlocks, b.sections
 }
 
 func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
@@ -109,7 +108,7 @@ func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.Matc
 				task.Bitsets = make([][]byte, len(task.Sections))
 				for i, section := range task.Sections {
 					if rand.Int()%4 != 0 { // Handle occasional missing deliveries
-						head := bc.GetCanonicalHash(b.db, (section+1)*params.BloomBitsBlocks-1)
+						head := bc.GetCanonicalHash(b.db, (section+1)*config.BloomBitsBlocks-1)
 						task.Bitsets[i] = bc.GetBloomBits(b.db, task.Bit, section, head)
 					}
 				}
