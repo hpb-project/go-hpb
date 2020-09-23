@@ -20,24 +20,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"math/big"
 	"strings"
 	"time"
 
-	"github.com/hpb-project/go-hpb/account"
+	accounts "github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/p2p"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -45,7 +45,7 @@ import (
 
 const (
 	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+	defaultGasPrice = 50 * config.Shannon
 )
 
 // PublicHpbAPI provides an API to access Hpb related information.
@@ -639,10 +639,10 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr r
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*hexutil.Big, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo uint64 = params.TxGas - 1
+		lo uint64 = config.TxGas - 1
 		hi uint64
 	)
-	if (*big.Int)(&args.Gas).Uint64() >= params.TxGas {
+	if (*big.Int)(&args.Gas).Uint64() >= config.TxGas {
 		hi = (*big.Int)(&args.Gas).Uint64()
 	} else {
 		// Retrieve the latest block to act as the gas ceiling

@@ -13,9 +13,7 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
-	//"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
-	//TODO: shanlin "github.com/hpb-project/go-hpb/node/gasprice"
 )
 
 // SyncMode represents the synchronisation mode of the downloader.
@@ -402,7 +400,7 @@ func (c *Nodeconfig) instanceDir() string {
 	return filepath.Join(c.DataDir, c.name())
 }
 
-// resolvePath resolves path in the instance directory.
+// ResolvePath resolves path in the instance directory.
 func (c *Nodeconfig) ResolvePath(path string) string {
 	if filepath.IsAbs(path) {
 		return path

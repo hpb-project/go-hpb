@@ -28,13 +28,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hpb-project/go-hpb/account"
+	accounts "github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/metrics"
@@ -85,7 +84,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	app.Name = filepath.Base(os.Args[0])
 	app.Author = ""
 	app.Email = ""
-	app.Version = params.Version
+	app.Version = config.Version
 	if gitCommit != "" {
 		app.Version += "-" + gitCommit[:8]
 	}
@@ -249,7 +248,7 @@ var (
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
-		Value: params.GenesisGasLimit.Uint64(),
+		Value: config.GenesisGasLimit.Uint64(),
 	}
 	HpberbaseFlag = cli.StringFlag{
 		Name:  "hpberbase",
@@ -1006,7 +1005,7 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
-	params.TargetGasLimit = new(big.Int).SetUint64(ctx.GlobalUint64(TargetGasLimitFlag.Name))
+	config.TargetGasLimit = new(big.Int).SetUint64(ctx.GlobalUint64(TargetGasLimitFlag.Name))
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.

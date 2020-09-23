@@ -20,14 +20,11 @@ import (
 	"errors"
 	"math/big"
 
-	//"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	params "github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm/native"
@@ -69,32 +66,6 @@ type StateTransition struct {
 	header     *types.Header
 	author     *common.Address
 	evm        *evm.EVM
-}
-
-// IntrinsicGas computes the 'intrinsic gas' for a message
-// with the given data.
-func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
-	igas := new(big.Int)
-	if contractCreation {
-		igas.SetUint64(config.TxGasContractCreation)
-	} else {
-		igas.SetUint64(config.TxGas)
-	}
-	if len(data) > 0 {
-		var nz int64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		m := big.NewInt(nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataNonZeroGas))
-		igas.Add(igas, m)
-		m.SetInt64(int64(len(data)) - nz)
-		m.Mul(m, new(big.Int).SetUint64(params.TxDataZeroGas))
-		igas.Add(igas, m)
-	}
-	return igas
 }
 
 // NewStateTransition initialises and returns a new state transition object.
@@ -230,7 +201,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	from := st.msg.From()
 	to := st.to().Address()
 
-	intrinsicGas := IntrinsicGas(st.data, false)
+	intrinsicGas := types.IntrinsicGas(st.data, false)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
@@ -275,7 +246,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
-	intrinsicGas := IntrinsicGas(st.data, contractCreation)
+	intrinsicGas := types.IntrinsicGas(st.data, contractCreation)
 	if intrinsicGas.BitLen() > 64 {
 		return nil, nil, nil, false, hvm.ErrOutOfGas
 	}

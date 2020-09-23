@@ -35,7 +35,6 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
-	params "github.com/hpb-project/go-hpb/common/constant"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -214,7 +213,7 @@ func New(conf *config.HpbConfig) (*Node, error) {
 	}
 
 	hpbnode.ApiBackend.gpo = gasprice.NewOracle(hpbnode.ApiBackend, gpoParams)
-	hpbnode.bloomIndexer = NewBloomIndexer(hpbdatabase, params.BloomBitsBlocks)
+	hpbnode.bloomIndexer = NewBloomIndexer(hpbdatabase, config.BloomBitsBlocks)
 	return hpbnode, nil
 }
 func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {

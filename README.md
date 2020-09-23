@@ -21,10 +21,6 @@ Install latest distribution of [Go](https://golang.org/) if you don't have it al
 Currently supports the following operating systems for `sync node`:
 
 - Ubuntu 16.04 and higher
-- MacOS Darwin 10.12 and higher
-- CentOS 7 and higher
-
-Only `Ubuntu 16.04` supported for the node that installed BOE card.
 
 ### Build 
 
