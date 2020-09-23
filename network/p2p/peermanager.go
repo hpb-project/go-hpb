@@ -171,7 +171,7 @@ func (prm *PeerManager) Start(coinbase common.Address) error {
 	if prm.server.localType == discover.BootNode {
 		filename := filepath.Join(config.Node.DataDir, bindInfoFileName)
 		log.Debug("bootnode load bindings", "filename", filename)
-		prm.parseBindInfo(filename)
+		prm.ParseAndMonitorBinding(filename)
 	}
 
 	return nil
@@ -542,12 +542,13 @@ func (prm *PeerManager) SetHwInfo(pairs []HwPair) error {
 	return prm.server.updateHdtab(pairs, false)
 }
 
-func (prm *PeerManager) parseBindInfo(filename string) error {
+func (prm *PeerManager) parseBindInfo(filename string) ([]HwPair,error) {
 	// Load the nodes from the config file.
 	var binding []bindInfo
 	if err := common.LoadJSON(filename, &binding); err != nil {
 		log.Error(fmt.Sprintf("Can't load node file %s: %v", filename, err))
-		panic("Hardware Info Parse Error. Can't load node file.")
+		log.Error("Hardware Info Parse Error. Can't load node file.")
+		return nil, errors.New("parse file failed")
 	}
 	log.Debug("Boot node parse binding hardware table.", "binding", binding)
 	hdtab := make([]HwPair, 0, len(binding))
@@ -556,16 +557,72 @@ func (prm *PeerManager) parseBindInfo(filename string) error {
 		hid, herr := hex.DecodeString(b.HID)
 		if cerr != nil || herr != nil {
 			log.Error(fmt.Sprintf("Can't parse node file %s(index=%d)", filename, i))
-			panic("Hardware Info Parse Error.")
+			log.Error("Hardware Info Parse Error.")
+			return nil, errors.New("parse item failed")
 		}
 
 		hdtab = append(hdtab, HwPair{Adr: strings.ToLower(b.ADR), Cid: cid, Hid: hid})
 	}
 
 	log.Debug("Boot node parse binding hardware table.", "hdtab", hdtab)
-	prm.server.updateHdtab(hdtab, true)
 
-	return nil
+	return hdtab, nil
+}
+
+func (prm *PeerManager)checkShouldUpdate(old, news []HwPair) bool {
+	if len(news) == 0 {
+		return false
+	}
+	if len(old) != len(news) && len(news) > 0 {
+		return true
+	}
+
+	for _, n := range news {
+		change := true
+		for _, o := range old {
+			if n.Adr == o.Adr && bytes.Compare(n.Hid, o.Hid) == 0 && bytes.Compare(n.Cid, o.Cid) == 0 {
+				change = false
+			}
+		}
+		if change {
+			return true
+		}
+	}
+	return false
+}
+
+func (prm *PeerManager) ParseAndMonitorBinding(filename string) {
+	var oldhdtab []HwPair
+	hdtab, err := prm.parseBindInfo(filename)
+	if err == nil {
+		prm.server.updateHdtab(hdtab, true)
+	} else {
+		panic("parse bindinfo failed, err = " + err.Error())
+	}
+	oldhdtab = hdtab
+
+	go func(){
+		ticker := time.NewTicker(time.Second * 20)
+		defer ticker.Stop()
+		for {
+			select {
+			case _,ok := <-ticker.C:
+				if !ok {
+					return
+				}
+				if hdtab, err = prm.parseBindInfo(filename); err != nil {
+					log.Error("parseBindInfo failed","err", err)
+				} else {
+					if prm.checkShouldUpdate(oldhdtab, hdtab) {
+						prm.server.updateHdtab(hdtab, false)
+						oldhdtab = hdtab
+						log.Info("binding has been updated")
+					}
+				}
+			}
+		}
+	}()
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
