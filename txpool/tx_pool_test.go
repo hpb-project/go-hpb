@@ -111,6 +111,10 @@ func validateTxPoolInternals(pool *TxPool) error {
 		return fmt.Errorf("total transaction count %d != %d pending + %d queued", total, pending, queued)
 	}
 
+	if priced := pool.priced.items.Len() - pool.priced.stales; priced != pending+queued {
+		return fmt.Errorf("total priced transaction count %d != %d pending + %d queued", priced, pending, queued)
+	}
+
 	var err error
 
 	// Ensure the next nonce to assign is the correct one
@@ -766,9 +770,9 @@ func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 	})
 
 	// 256 > 191
-	// if queued > int(cfg.GlobalQueue) {
-	// 	t.Fatalf("total transactions overflow allowance: %d > %d", queued, cfg.GlobalQueue)
-	// }
+	if queued > int(cfg.GlobalQueue) {
+		t.Fatalf("total transactions overflow allowance: %d > %d", queued, cfg.GlobalQueue)
+	}
 }
 
 // Tests that if an account remains idle for a prolonged amount of time, any
