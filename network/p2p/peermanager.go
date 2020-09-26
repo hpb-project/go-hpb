@@ -542,7 +542,7 @@ func (prm *PeerManager) SetHwInfo(pairs []HwPair) error {
 	return prm.server.updateHdtab(pairs, false)
 }
 
-func (prm *PeerManager) parseBindInfo(filename string) ([]HwPair,error) {
+func (prm *PeerManager) parseBindInfo(filename string) ([]HwPair, error) {
 	// Load the nodes from the config file.
 	var binding []bindInfo
 	if err := common.LoadJSON(filename, &binding); err != nil {
@@ -569,7 +569,7 @@ func (prm *PeerManager) parseBindInfo(filename string) ([]HwPair,error) {
 	return hdtab, nil
 }
 
-func (prm *PeerManager)checkShouldUpdate(old, news []HwPair) bool {
+func (prm *PeerManager) checkShouldUpdate(old, news []HwPair) bool {
 	if len(news) == 0 {
 		return false
 	}
@@ -601,17 +601,17 @@ func (prm *PeerManager) ParseAndMonitorBinding(filename string) {
 	}
 	oldhdtab = hdtab
 
-	go func(){
+	go func() {
 		ticker := time.NewTicker(time.Second * 20)
 		defer ticker.Stop()
 		for {
 			select {
-			case _,ok := <-ticker.C:
+			case _, ok := <-ticker.C:
 				if !ok {
 					return
 				}
 				if hdtab, err = prm.parseBindInfo(filename); err != nil {
-					log.Error("parseBindInfo failed","err", err)
+					log.Error("parseBindInfo failed", "err", err)
 				} else {
 					if prm.checkShouldUpdate(oldhdtab, hdtab) {
 						prm.server.updateHdtab(hdtab, false)

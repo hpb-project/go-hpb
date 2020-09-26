@@ -169,8 +169,10 @@ func (c *testChain) State() (*state.StateDB, error) {
 
 func stopAndClean(pool *TxPool) {
 	pool.Stop()
+	allCnt = 0
 	INSTANCE = atomic.Value{}
 }
+
 func TestAddTx(t *testing.T) {
 	var (
 		db, _      = hpbdb.NewMemDatabase()
@@ -826,6 +828,9 @@ func TestTransactionQueueTimeLimiting(t *testing.T) {
 	if pending != 0 {
 		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 0)
 	}
+	if queued != 0 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
+	}
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
@@ -987,6 +992,187 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	}
 	// Import the batch and verify that limits have been enforced
 	pool.AddTxs(txs)
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+}
+
+// Tests that setting the transaction pool gas price to a higher value correctly
+// discards everything cheaper than that and moves any gapped transactions back
+// from the pending pool to the queue.
+func TestTransactionPoolRepricing(t *testing.T) {
+	// Create the pool to test the pricing enforcement with
+	db, _ := hpbdb.NewMemDatabase()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	blockchain := &testBlockChain{statedb, big.NewInt(1000000), new(sub.Feed)}
+
+	pool := NewTxPool(testTxPoolConfig, config.MainnetChainConfig, blockchain)
+	pool.Start()
+	defer stopAndClean(pool)
+
+	// Create a number of test accounts and fund them
+	keys := make([]*ecdsa.PrivateKey, 3)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+	}
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, big.NewInt(100000), big.NewInt(2), keys[0]))
+	txs = append(txs, pricedTransaction(1, big.NewInt(100000), big.NewInt(1), keys[0]))
+	txs = append(txs, pricedTransaction(2, big.NewInt(100000), big.NewInt(2), keys[0]))
+
+	txs = append(txs, pricedTransaction(1, big.NewInt(100000), big.NewInt(2), keys[1]))
+	txs = append(txs, pricedTransaction(2, big.NewInt(100000), big.NewInt(1), keys[1]))
+	txs = append(txs, pricedTransaction(3, big.NewInt(100000), big.NewInt(2), keys[1]))
+
+	txs = append(txs, pricedTransaction(0, big.NewInt(100000), big.NewInt(1), keys[2]))
+
+	// Import the batch and that both pending and queued transactions match up
+	pool.AddTxs(txs)
+
+	pending, queued := pool.Stats()
+	if pending != 4 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 4)
+	}
+	if queued != 3 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 3)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+
+	// Reprice the pool and check that underpriced transactions get dropped
+	pool.SetGasPrice(big.NewInt(2))
+
+	pending, queued = pool.Stats()
+	if pending != 1 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 1)
+	}
+	if queued != 3 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 3)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+	// Check that we can't add the old transactions back
+	if err := pool.AddTx(pricedTransaction(1, big.NewInt(100000), big.NewInt(1), keys[0])); err != ErrUnderpriced {
+		t.Fatalf("adding underpriced pending transaction error mismatch: have %v, want %v", err, ErrUnderpriced)
+	}
+	if err := pool.AddTx(pricedTransaction(2, big.NewInt(100000), big.NewInt(1), keys[1])); err != ErrUnderpriced {
+		t.Fatalf("adding underpriced queued transaction error mismatch: have %v, want %v", err, ErrUnderpriced)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+	// However we can add local underpriced transactions
+	tx := pricedTransaction(0, big.NewInt(100000), big.NewInt(2), keys[1])
+	if err := pool.AddTx(tx); err != nil {
+		t.Fatalf("failed to add underpriced local transaction: %v", err)
+	}
+	if pending, _ = pool.Stats(); pending != 3 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 3)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+}
+
+// Tests that when the pool reaches its global transaction limit, underpriced
+// transactions are gradually shifted out for more expensive ones and any gapped
+// pending transactions are moved into te queue.
+func TestTransactionPoolUnderpricing(t *testing.T) {
+	// Create the pool to test the pricing enforcement with
+	db, _ := hpbdb.NewMemDatabase()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	blockchain := &testBlockChain{statedb, big.NewInt(1000000), new(sub.Feed)}
+
+	cfg := testTxPoolConfig
+	cfg.GlobalSlots = 2
+	cfg.GlobalQueue = 2
+
+	pool := NewTxPool(cfg, config.MainnetChainConfig, blockchain)
+	pool.Start()
+	defer stopAndClean(pool)
+
+	// Create a number of test accounts and fund them
+	keys := make([]*ecdsa.PrivateKey, 3)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
+	}
+	// Generate and queue a batch of transactions, both pending and queued
+	txs := types.Transactions{}
+
+	txs = append(txs, pricedTransaction(0, big.NewInt(100000), big.NewInt(1), keys[0]))
+	txs = append(txs, pricedTransaction(1, big.NewInt(100000), big.NewInt(2), keys[0]))
+	txs = append(txs, pricedTransaction(1, big.NewInt(100000), big.NewInt(1), keys[1]))
+	txs = append(txs, pricedTransaction(0, big.NewInt(100000), big.NewInt(1), keys[2]))
+
+	// Import the batch and that both pending and queued transactions match up
+	pool.AddTxs(txs)
+
+	pending, queued := pool.Stats()
+	if pending != 3 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 3)
+	}
+	if queued != 1 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 1)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+	fmt.Println("--1-->")
+
+	// Ensure that adding an underpriced transaction on block limit fails
+	if err := pool.AddTx(pricedTransaction(0, big.NewInt(100000), big.NewInt(1), keys[1])); err != ErrUnderpriced {
+		t.Fatalf("adding underpriced pending transaction error mismatch: have %v, want %v", err, ErrUnderpriced)
+	}
+	fmt.Println("--2-->")
+
+	// Ensure that adding high priced transactions drops cheap ones, but not own
+	if err := pool.AddTx(pricedTransaction(0, big.NewInt(100000), big.NewInt(3), keys[1])); err != nil {
+		t.Fatalf("failed to add well priced transaction: %v", err)
+	}
+	fmt.Println("--3-->")
+
+	if err := pool.AddTx(pricedTransaction(2, big.NewInt(100000), big.NewInt(4), keys[1])); err != nil {
+		t.Fatalf("failed to add well priced transaction: %v", err)
+	}
+	fmt.Println("--4-->")
+
+	if err := pool.AddTx(pricedTransaction(3, big.NewInt(100000), big.NewInt(5), keys[1])); err != nil {
+		t.Fatalf("failed to add well priced transaction: %v", err)
+	}
+
+	pending, queued = pool.Stats()
+	if pending != 1 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 1)
+	}
+	if queued != 2 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 2)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+
+	pending, queued = pool.Stats()
+	fmt.Println("--[--", pending, queued)
+
+	// Ensure that adding local transactions can push out even higher priced ones
+	tx := pricedTransaction(0, big.NewInt(100000), big.NewInt(3), keys[2])
+	if err := pool.AddTx(tx); err != nil {
+		t.Fatalf("failed to add underpriced local transaction: %v", err)
+	}
+	pending, queued = pool.Stats()
+	fmt.Println("----", pending, queued)
+	if pending != 2 {
+		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 2)
+	}
+	if queued != 2 {
+		t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 2)
+	}
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}

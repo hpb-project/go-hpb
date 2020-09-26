@@ -55,9 +55,8 @@ type blockChain interface {
 
 	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
 }
-type Txchevent struct {
-	Tx *types.Transaction
-}
+
+// TxPool contains all currently known transactions.
 type TxPool struct {
 	wg           sync.WaitGroup
 	stopCh       chan struct{}
@@ -88,6 +87,7 @@ type TxPool struct {
 }
 
 const (
+	// TxpoolEventtype txpool event type.
 	TxpoolEventtype event.EventType = 0x01
 )
 
@@ -125,6 +125,7 @@ func (pool *TxPool) Start() {
 	go pool.loop()
 }
 
+// GetTxPool get txpool instance.
 func GetTxPool() *TxPool {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*TxPool)
@@ -174,25 +175,24 @@ func (pool *TxPool) loop() {
 			}
 		// Handle inactive account transaction eviction
 		case <-evict.C:
-
 			// Any old enough should be removed
 			pool.queue.Range(func(k, v interface{}) bool {
+				var tmpBeatsV time.Time
 				addr := k.(common.Address)
 				t, ok := pool.beats.Load(addr)
 				if ok {
-					tmpBeatsV := t.(time.Time)
-					if time.Since(tmpBeatsV) > pool.config.Lifetime {
-						if lv, ok := pool.queue.Load(addr); ok {
-							list := lv.(*txList)
-
-							ul, _ := pool.userlock.Load(addr)
-							userlk := ul.(*sync.RWMutex)
-							userlk.Lock()
-							for _, tx := range list.Flatten() {
-								pool.removeTxLocked(tx.Hash())
-							}
-							userlk.Unlock()
+					tmpBeatsV = t.(time.Time)
+				}
+				if time.Since(tmpBeatsV) > pool.config.Lifetime {
+					if lv, ok := pool.queue.Load(addr); ok {
+						list := lv.(*txList)
+						ul, _ := pool.userlock.Load(addr)
+						userlk := ul.(*sync.RWMutex)
+						userlk.Lock()
+						for _, tx := range list.Flatten() {
+							pool.removeTxLocked(tx.Hash())
 						}
+						userlk.Unlock()
 					}
 				}
 				return true
@@ -510,6 +510,7 @@ func (pool *TxPool) GoTxsAsynSender(txs []*types.Transaction) error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTxLocked(tx *types.Transaction) error {
+
 	// Try to inject the transaction and update any state
 	replace, err := pool.add(tx)
 	if err != nil {
@@ -613,10 +614,12 @@ func (pool *TxPool) enqueueTxLocked(hash common.Hash, tx *types.Transaction) (bo
 	if old != nil {
 		pool.all.Delete(old.Hash())
 		atomic.AddInt64(&allCnt, -1)
+		pool.priced.Removed(allCnt)
 	}
-	pool.all.Store(hash, tx)
-	atomic.AddInt64(&allCnt, 1)
-
+	if _, ok := pool.all.LoadOrStore(hash, tx); !ok {
+		atomic.AddInt64(&allCnt, 1)
+		pool.priced.Put(tx)
+	}
 	return old != nil, nil
 }
 
@@ -973,6 +976,7 @@ func (pool *TxPool) keepFit() {
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTxLocked(hash common.Hash) {
+
 	// Fetch the transaction we wish to delete
 	v, ok := pool.all.Load(hash)
 	if !ok {
@@ -1090,6 +1094,7 @@ func (pool *TxPool) State() *state.ManagedState {
 	return pool.pendingState
 }
 
+// Content returns txpool pending and queue content.
 func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	pending := make(map[common.Address]types.Transactions)
 	queued := make(map[common.Address]types.Transactions)
@@ -1120,6 +1125,7 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
+// SubscribeTxPreEvent ...
 func (pool *TxPool) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
@@ -1132,10 +1138,6 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 
 	pool.gasPrice = price
 	for _, tx := range pool.priced.Cap(price) {
-		// from, _ := types.Sender(pool.signer, tx)
-		// ulk, _ := pool.userlock.Load(from)
-		// userlk := ulk.(*sync.RWMutex)
-		// pool.removeTx(tx.Hash(), userlk)
 		pool.removeTxLocked(tx.Hash())
 	}
 	log.Info("Transaction pool price threshold updated", "price", price)
