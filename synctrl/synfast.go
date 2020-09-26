@@ -244,7 +244,7 @@ func (this *fastSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 			origin = 0
 		}
 	}
-	log.Debug("Fast syncing until pivot block", "pivot", pivot)
+	log.Info("Fast syncing until pivot block", "pivot", pivot)
 	this.syncer.sch.Prepare(origin+1, config.FastSync, pivot, latest)
 	if this.syncInitHook != nil {
 		this.syncInitHook(origin, height)
