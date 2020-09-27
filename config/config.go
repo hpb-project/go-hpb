@@ -19,14 +19,14 @@ package config
 import (
 	"bufio"
 	"errors"
+	"fmt"
+	"os"
 	"reflect"
+	"sync/atomic"
 	"unicode"
 
-	"fmt"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/naoina/toml"
-	"os"
-	"sync/atomic"
 )
 
 var HpbConfigIns *HpbConfig
@@ -108,14 +108,14 @@ const (
 	Douglas  = 1e42
 )
 
-// config instance
+// INSTANCE config instance
 var INSTANCE = atomic.Value{}
 
 type hpbStatsConfig struct {
 	URL string `toml:",omitempty"`
 }
 
-// Config represents a small collection of configuration values to fine tune the
+// HpbConfig represents a small collection of configuration values to fine tune the
 // P2P network layer of a protocol stack. These values can be further extended by
 // all registered services.
 type HpbConfig struct {
@@ -198,6 +198,7 @@ func New() *HpbConfig {
 	return HpbConfigIns
 
 }
+
 func GetHpbConfigInstance() *HpbConfig {
 	if INSTANCE.Load() != nil {
 		return INSTANCE.Load().(*HpbConfig)

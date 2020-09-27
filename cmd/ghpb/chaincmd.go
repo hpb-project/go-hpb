@@ -20,34 +20,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/synctrl"
-
 	"os"
 	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/cmd/utils"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/console"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/trie"
+	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/event/sub"
+	"github.com/hpb-project/go-hpb/node/db"
+	"github.com/hpb-project/go-hpb/synctrl"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
-
-	//"path/filepath"
-	//"io/ioutil"
-	bc "github.com/hpb-project/go-hpb/blockchain"
-	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
-	"github.com/hpb-project/go-hpb/boe"
-	"github.com/hpb-project/go-hpb/consensus/snapshots"
-	"github.com/hpb-project/go-hpb/node/db"
 )
 
 var (
