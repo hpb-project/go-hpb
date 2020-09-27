@@ -33,9 +33,9 @@ type TxPoolConfiguration struct {
 var DefaultTxPoolConfig = TxPoolConfiguration{
 	PriceLimit:   1,
 	PriceBump:    10,
-	AccountSlots: 600000,
-	GlobalSlots:  2000000,
-	AccountQueue: 600000,
-	GlobalQueue:  2000000,
-	Lifetime:     3 * time.Minute,
+	AccountSlots: 60000,
+	GlobalSlots:  1000000,
+	AccountQueue: 30000,
+	GlobalQueue:  1000000,
+	Lifetime:     30 * time.Minute,
 }
