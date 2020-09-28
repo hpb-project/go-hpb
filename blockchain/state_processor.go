@@ -18,11 +18,11 @@ package bc
 
 import (
 	"encoding/json"
-	"github.com/hpb-project/go-hpb/boe"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"

@@ -55,9 +55,6 @@ var (
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
 
-	// ErrTxPoolFull is returned if the pool is full.
-	ErrTxPoolFull = errors.New("txpool full")
-
 	//ErrAsynError AsynSinger boe
 	ErrAsynError = errors.New("ErrAsynError")
 )

@@ -42,7 +42,7 @@ const (
 )
 
 var (
-	// Git SHA1 commit hash of the release (set via linker flags)
+	// GitCommit SHA1 commit hash of the release (set via linker flags)
 	GitCommit = gitCommit
 	gitCommit = ""
 	// The app that holds all commands and flags.
@@ -58,9 +58,6 @@ var (
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
 		utils.NoUSBFlag,
-		utils.TxPoolNoLocalsFlag,
-		utils.TxPoolJournalFlag,
-		utils.TxPoolRejournalFlag,
 		utils.TxPoolPriceLimitFlag,
 		utils.TxPoolPriceBumpFlag,
 		utils.TxPoolAccountSlotsFlag,

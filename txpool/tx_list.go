@@ -21,8 +21,10 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"sync"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -357,4 +359,132 @@ func (l *txList) Empty() bool {
 // it's requested again before any modifications are made to the contents.
 func (l *txList) Flatten() types.Transactions {
 	return l.txs.Flatten()
+}
+
+// priceHeap is a heap.Interface implementation over transactions for retrieving
+// price-sorted transactions to discard when the pool fills up.
+type priceHeap []*types.Transaction
+
+func (h priceHeap) Len() int           { return len(h) }
+func (h priceHeap) Less(i, j int) bool { return h[i].GasPrice().Cmp(h[j].GasPrice()) < 0 }
+func (h priceHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *priceHeap) Push(x interface{}) {
+	*h = append(*h, x.(*types.Transaction))
+}
+
+func (h *priceHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+// txPricedList is a price-sorted heap to allow operating on transactions pool
+// contents in a price-incrementing way.
+type txPricedList struct {
+	all    *sync.Map  // Pointer to the map of all transactions
+	items  *priceHeap // Heap of prices of all the stored transactions
+	stales int        // Number of stale price points to (re-heap trigger)
+}
+
+// newTxPricedList creates a new price-sorted transaction heap.
+func newTxPricedList(all *sync.Map) *txPricedList {
+	return &txPricedList{
+		all:   all,
+		items: new(priceHeap),
+	}
+}
+
+// Put inserts a new transaction into the heap.
+func (l *txPricedList) Put(tx *types.Transaction) {
+	heap.Push(l.items, tx)
+}
+
+// Removed notifies the prices transaction list that an old transaction dropped
+// from the pool. The list will just keep a counter of stale objects and update
+// the heap if a large enough ratio of transactions go stale.
+func (l *txPricedList) Removed(allcnt int64) {
+	// Bump the stale counter, but exit if still too low (< 25%)
+	l.stales++
+	if l.stales <= len(*l.items)/4 {
+		return
+	}
+	// Seems we've reached a critical number of stale transactions, reheap
+	reheap := make(priceHeap, 0, allcnt)
+
+	l.stales, l.items = 0, &reheap
+
+	l.all.Range(func(k, v interface{}) bool {
+		tx := v.(*types.Transaction)
+		*l.items = append(*l.items, tx)
+		return true
+	})
+
+	heap.Init(l.items)
+}
+
+// Cap finds all the transactions below the given price threshold, drops them
+// from the priced list and returs them for further removal from the entire pool.
+func (l *txPricedList) Cap(threshold *big.Int) types.Transactions {
+	drop := make(types.Transactions, 0, 128) // Remote underpriced transactions to drop
+
+	for len(*l.items) > 0 {
+		// Discard stale transactions if found during cleanup
+		tx := heap.Pop(l.items).(*types.Transaction)
+		if _, ok := l.all.Load(tx.Hash()); !ok {
+			l.stales--
+			continue
+		}
+		// Stop the discards if we've reached the threshold
+		if tx.GasPrice().Cmp(threshold) >= 0 {
+			heap.Push(l.items, tx)
+			break
+		}
+		drop = append(drop, tx)
+	}
+
+	return drop
+}
+
+// Underpriced checks whether a transaction is cheaper than (or as cheap as) the
+// lowest priced transaction currently being tracked.
+func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
+	// Discard stale price points if found at the heap start
+	for len(*l.items) > 0 {
+		head := []*types.Transaction(*l.items)[0]
+		if _, ok := l.all.Load(head.Hash()); !ok {
+			l.stales--
+			heap.Pop(l.items)
+			continue
+		}
+		break
+	}
+	// Check if the transaction is underpriced or not
+	if len(*l.items) == 0 {
+		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
+		return false
+	}
+	cheapest := []*types.Transaction(*l.items)[0]
+	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
+}
+
+// Discard finds a number of most underpriced transactions, removes them from the
+// priced list and returns them for further removal from the entire pool.
+func (l *txPricedList) Discard(count int) types.Transactions {
+	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
+
+	for len(*l.items) > 0 && count > 0 {
+		// Discard stale transactions if found during cleanup
+		tx := heap.Pop(l.items).(*types.Transaction)
+		if _, ok := l.all.Load(tx.Hash()); !ok {
+			l.stales--
+			continue
+		}
+
+		drop = append(drop, tx)
+		count--
+	}
+	return drop
 }

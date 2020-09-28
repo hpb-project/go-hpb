@@ -153,14 +153,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/common/crypto"
-	"github.com/hpb-project/go-hpb/common/log"
 	"io/ioutil"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
 )
 
 // boe version struct
@@ -205,13 +206,13 @@ type BoeHandle struct {
 }
 
 var (
-	boeHandle  = &BoeHandle{boeInit: false, rpFunc: nil, maxThNum: 2}
-	soft_cnt   uint32       // metrics tx number recover pubkey with software
-	hard_cnt   uint32       // metrics tx number recover pubkey with hardware
-	async_call uint32       // metrics tx number recover pubkey with async api
-	sync_call  uint32       // metrics tx number recover pubkey with sync  api
-	boeversion atomic.Value // cache boeversion
-	boesleepduration         = time.Second * 600
+	boeHandle        = &BoeHandle{boeInit: false, rpFunc: nil, maxThNum: 2}
+	soft_cnt         uint32       // metrics tx number recover pubkey with software
+	hard_cnt         uint32       // metrics tx number recover pubkey with hardware
+	async_call       uint32       // metrics tx number recover pubkey with async api
+	sync_call        uint32       // metrics tx number recover pubkey with sync  api
+	boeversion       atomic.Value // cache boeversion
+	boesleepduration = time.Second * 600
 )
 
 func BoeGetInstance() *BoeHandle {
@@ -605,7 +606,7 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 
 func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
 	async_call = async_call + 1
-	if boe.sleep || ((async_call >= 100) && (async_call %2 == 0)) {
+	if boe.sleep || ((async_call >= 100) && (async_call%2 == 0)) {
 		rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
 		copy(rs.TxHash, txhash)
 		copy(rs.Hash, hash)
@@ -739,7 +740,7 @@ func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
 	return ErrHashVerifyFailed
 }
 
-// sleep boe.
+// Sleep boe.
 func (boe *BoeHandle) Sleep() {
 	if !boe.sleep {
 		boe.sleep = true
