@@ -165,6 +165,10 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
+func (tx *Transaction) ClearFromCache() {
+	tx.from = atomic.Value{}
+}
+
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
 func IntrinsicGas(data []byte, contractCreation bool) *big.Int {

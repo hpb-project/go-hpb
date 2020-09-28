@@ -99,6 +99,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 			if errs == ErrNonceTooHigh {
 				// maybe hardware mistake, retry with software.
 				types.Sendercache.Delete(tx.Hash())
+				tx.ClearFromCache()
 				boe.BoeGetInstance().Sleep()
 				continue
 			}
