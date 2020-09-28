@@ -79,34 +79,33 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	// Iterate over and process the individual transactions
 	author, _ := p.engine.Author(block.Header())
 	for i, tx := range block.Transactions() {
-		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		//the tx without contract
-		if bNewVersion {
-			if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
-				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+		for try := 2; try > 0; try-- { // try to run tx twice, using hardware once and software once.
+			statedb.Prepare(tx.Hash(), block.Hash(), i)
+			//the tx without contract
+			if bNewVersion {
+				if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(statedb.GetCode(*tx.To())) > 0) {
+					receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				} else {
+					receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				}
 			} else {
-				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-			}
-		} else {
-			if len(tx.Data()) > 0 {
-				receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-			} else {
-				receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
-			}
-		}
-
-		if errs != nil {
-			// clear sender cache when tx apply failed.
-			types.Sendercache.Delete(tx.Hash())
-			if errs == ErrNonceTooHigh {
-				// maybe boe recover pubkey failed, so sleep some time.
-				boe.BoeGetInstance().Sleep()
-				txs := block.Transactions()
-				for m := i; m < len(txs); m++ {
-					types.Sendercache.Delete(txs[m].Hash())
+				if len(tx.Data()) > 0 {
+					receipt, _, errs = ApplyTransactionNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
+				} else {
+					receipt, _, errs = ApplyTransactionNonContractNonFinallize(p.config, p.bc, &author, gp, statedb, header, tx, totalUsedGas)
 				}
 			}
-			return nil, nil, nil, errs
+
+			if errs == ErrNonceTooHigh {
+				// maybe hardware mistake, retry with software.
+				types.Sendercache.Delete(tx.Hash())
+				boe.BoeGetInstance().Sleep()
+				continue
+			}
+
+			if errs != nil {
+				return nil, nil, nil, errs
+			}
 		}
 
 		receipts = append(receipts, receipt)
