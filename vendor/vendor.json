@@ -3,6 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "-v",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "+mPwk+SSQv/UloCR0fPIwPvq/NA=",
 			"path": "github.com/AsynkronIT/protoactor-go/actor",
 			"revision": "3992780c0af683deb5ec3746f4ec5845139c6e42",
@@ -181,6 +185,12 @@
 			"path": "github.com/hashicorp/golang-lru/simplelru",
 			"revision": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6",
 			"revisionTime": "2016-08-13T22:13:03Z"
+		},
+		{
+			"checksumSHA1": "XicY9KzukMdyzyutMrPATHDEVZQ=",
+			"path": "github.com/holiman/uint256",
+			"revision": "3c4134ff99a6155c11159478278c3ab02e13d669",
+			"revisionTime": "2020-09-05T07:16:47Z"
 		},
 		{
 			"checksumSHA1": "f55gR+6YClh0i/FOhdy66SOUiwY=",
@@ -597,6 +607,10 @@
 			"revisionTime": "2017-04-25T18:31:00Z"
 		},
 		{
+			"path": "golang.org/x/crypto/sha3",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "8sVsMTphul+B0sI0qAv4TE1ZxUk=",
 			"path": "golang.org/x/crypto/ssh",
 			"revision": "c7af5bf2638a1164f2eb5467c39c6cffbd13a02e",
@@ -637,6 +651,10 @@
 			"path": "golang.org/x/net/websocket",
 			"revision": "b4690f45fa1cafc47b1c280c2e75116efe40cc13",
 			"revisionTime": "2017-02-15T08:41:58Z"
+		},
+		{
+			"path": "golang.org/x/sys/cpu",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "rTPzsn0jeqfgnQR0OsMKR8JRy5Y=",
