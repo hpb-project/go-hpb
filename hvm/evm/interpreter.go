@@ -18,13 +18,13 @@ package evm
 
 import (
 	"fmt"
-	"github.com/hpb-project/go-hpb/consensus"
 	"sync/atomic"
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/consensus"
 )
 
 // Config are the configuration options for the Interpreter
@@ -70,12 +70,17 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		if evm.BlockNumber.Uint64() > consensus.StageNumberRealRandom {
+		switch num := evm.BlockNumber.Uint64(); {
+		case num > consensus.StageNumberUpgradedEVM:
+			cfg.JumpTable = yoloV1InstructionSet
+			opCodeToString = opCodeToString_v2
+		case num > consensus.StageNumberRealRandom:
 			cfg.JumpTable = constantinopleInstructionSet
-		} else {
+			opCodeToString = opCodeToString_v1
+		default:
 			cfg.JumpTable = byzantiumInstructionSet
+			opCodeToString = opCodeToString_v1
 		}
-
 	}
 
 	return &Interpreter{
@@ -126,9 +131,10 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 	}
 
 	var (
-		op    OpCode        // current opcode
-		mem   = NewMemory() // bound memory
-		stack = newstack()  // local stack
+		op      OpCode             // current opcode
+		mem     = NewMemory()      // bound memory
+		stack   = newstack()       // local stack
+		returns = newReturnStack() // local returns stack
 		// For optimisation reason we're using uint64 as the program counter.
 		// It's theoretically possible to go above 2^64. The YP defines the PC
 		// to be uint256. Practically much less so feasible.
@@ -140,6 +146,14 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		gasCopy   uint64       // for Tracer to log gas remaining before execution
 		logged    bool         // deferred Tracer should ignore already logged steps
 	)
+	// Don't move this deferrred function, it's placed before the capturestate-deferred method,
+	// so that it get's executed _after_: the capturestate needs the stacks before
+	// they are returned to the pools
+	defer func() {
+		returnStack(stack)
+		returnRStack(returns)
+	}()
+
 	contract.Input = input
 
 	defer func() {
@@ -213,7 +227,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		}
 
 		// execute the operation
-		res, err := operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err := operation.execute(&pc, in.evm, contract, mem, stack, returns)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {
