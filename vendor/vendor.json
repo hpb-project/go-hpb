@@ -187,12 +187,6 @@
 			"revisionTime": "2016-08-13T22:13:03Z"
 		},
 		{
-			"checksumSHA1": "XicY9KzukMdyzyutMrPATHDEVZQ=",
-			"path": "github.com/holiman/uint256",
-			"revision": "3c4134ff99a6155c11159478278c3ab02e13d669",
-			"revisionTime": "2020-09-05T07:16:47Z"
-		},
-		{
 			"checksumSHA1": "f55gR+6YClh0i/FOhdy66SOUiwY=",
 			"path": "github.com/huin/goupnp",
 			"revision": "679507af18f3c7ba2bcc7905392ce23e148661c3",
@@ -607,12 +601,6 @@
 			"revisionTime": "2017-04-25T18:31:00Z"
 		},
 		{
-			"checksumSHA1": "VTIWCF/ksgr2F0tE6/wKTmOa6rM=",
-			"path": "golang.org/x/crypto/sha3",
-			"revision": "5c72a883971a4325f8c62bf07b6d38c20ea47a6a",
-			"revisionTime": "2020-08-19T18:45:41Z"
-		},
-		{
 			"checksumSHA1": "8sVsMTphul+B0sI0qAv4TE1ZxUk=",
 			"path": "golang.org/x/crypto/ssh",
 			"revision": "c7af5bf2638a1164f2eb5467c39c6cffbd13a02e",
@@ -653,12 +641,6 @@
 			"path": "golang.org/x/net/websocket",
 			"revision": "b4690f45fa1cafc47b1c280c2e75116efe40cc13",
 			"revisionTime": "2017-02-15T08:41:58Z"
-		},
-		{
-			"checksumSHA1": "vI1+D+okg5foNPHDrDgimoBmKFU=",
-			"path": "golang.org/x/sys/cpu",
-			"revision": "4d22bbb62b3c04fb12f5f29e0fbfb42d71d50e82",
-			"revisionTime": "2020-09-28T22:31:00Z"
 		},
 		{
 			"checksumSHA1": "rTPzsn0jeqfgnQR0OsMKR8JRy5Y=",
