@@ -209,6 +209,11 @@ const (
 	SWAP
 )
 
+// 0xE0 range HPB opcode
+const (
+	NEWRANDOM OpCode = 0xEF
+)
+
 // 0xf0 range - closures
 const (
 	CREATE OpCode = 0xf0 + iota
@@ -546,6 +551,9 @@ var opCodeToString_v2 = map[OpCode]string{
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
 
+	// 0xE0 range
+	NEWRANDOM: "NEWRANDOM",
+
 	// 0xf0 range.
 	CREATE:       "CREATE",
 	CALL:         "CALL",
@@ -716,6 +724,10 @@ var stringToOp = map[string]OpCode{
 	"CALLCODE":       CALLCODE,
 	"REVERT":         REVERT,
 	"SELFDESTRUCT":   SELFDESTRUCT,
+
+	// HPB
+	"RAMDOM":    RANDOM,
+	"NEWRAMDOM": NEWRANDOM,
 }
 
 // StringToOp finds the opcode whose name is stored in `str`.

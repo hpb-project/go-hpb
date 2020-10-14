@@ -573,11 +573,13 @@ func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 	stack.push(math.U256(new(big.Int).Set(evm.GasLimit)))
 	return nil, nil
 }
+
 func opRandom(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
 	log.Debug("opRandom", "random", common.ToHex(evm.Random), "len", len(evm.Random))
 	stack.push(new(big.Int).SetBytes(evm.Random))
 	return nil, nil
 }
+
 func opPop(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
 	evm.interpreter.intPool.put(stack.pop())
 	return nil, nil
