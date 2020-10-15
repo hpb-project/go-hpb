@@ -65,7 +65,7 @@ func newYoloV1InstructionSet() [256]operation {
 	enable2315(&instructionSet) // Subroutines - https://eips.ethereum.org/EIPS/eip-2315
 
 	// add new RANDOM
-	instructionSet[NEWRANDOM] = operation{
+	instructionSet[RANDOM] = operation{
 		execute:       opRandom,
 		gasCost:       constGasFunc(GasQuickStep),
 		validateStack: makeStackFunc(0, 1),
@@ -97,7 +97,7 @@ func NewConstantinopleInstructionSet() [256]operation {
 		validateStack: makeStackFunc(2, 1),
 		valid:         true,
 	}
-	instructionSet[RANDOM] = operation{
+	instructionSet[DRANDOM] = operation{
 		execute:       opRandom,
 		gasCost:       constGasFunc(GasQuickStep),
 		validateStack: makeStackFunc(0, 1),

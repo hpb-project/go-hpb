@@ -101,7 +101,7 @@ const (
 	NUMBER
 	DIFFICULTY
 	GASLIMIT
-	RANDOM
+	DRANDOM
 	CHAINID     OpCode = 0x46
 	SELFBALANCE OpCode = 0x47
 )
@@ -211,7 +211,7 @@ const (
 
 // 0xE0 range HPB opcode
 const (
-	NEWRANDOM OpCode = 0xEF
+	RANDOM OpCode = 0xEF
 )
 
 // 0xf0 range - closures
@@ -289,7 +289,7 @@ var opCodeToString_v1 = map[OpCode]string{
 	NUMBER:     "NUMBER",
 	DIFFICULTY: "DIFFICULTY",
 	GASLIMIT:   "GASLIMIT",
-	RANDOM:     "RANDOM",
+	DRANDOM:    "RANDOM",
 
 	// 0x50 range - 'storage' and execution
 	POP: "POP",
@@ -552,7 +552,7 @@ var opCodeToString_v2 = map[OpCode]string{
 	LOG4:   "LOG4",
 
 	// 0xE0 range
-	NEWRANDOM: "NEWRANDOM",
+	RANDOM: "RANDOM",
 
 	// 0xf0 range.
 	CREATE:       "CREATE",
@@ -631,7 +631,6 @@ var stringToOp = map[string]OpCode{
 	"NUMBER":         NUMBER,
 	"DIFFICULTY":     DIFFICULTY,
 	"GASLIMIT":       GASLIMIT,
-	"RANDOM":         RANDOM,
 	"SELFBALANCE":    SELFBALANCE,
 	"POP":            POP,
 	"MLOAD":          MLOAD,
@@ -726,8 +725,8 @@ var stringToOp = map[string]OpCode{
 	"SELFDESTRUCT":   SELFDESTRUCT,
 
 	// HPB
-	"RAMDOM":    RANDOM,
-	"NEWRAMDOM": NEWRANDOM,
+	"DRANDOM": DRANDOM,
+	"RANDOM":  RANDOM,
 }
 
 // StringToOp finds the opcode whose name is stored in `str`.
