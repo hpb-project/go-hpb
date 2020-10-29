@@ -378,6 +378,11 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'chainId',
+			call: 'hpb_chainId',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'getRandom',
 			call: 'hpb_getRandom',
 			params: 1,

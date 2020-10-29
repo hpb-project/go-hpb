@@ -1009,6 +1009,7 @@ func enable1884(jt *[256]operation) {
 		execute:       opSelfBalance,
 		gasCost:       constGasFunc(GasFastStep),
 		validateStack: makeStackFunc(0, 1),
+		valid:         true,
 	}
 }
 
@@ -1025,12 +1026,15 @@ func enable1344(jt *[256]operation) {
 		execute:       opChainID,
 		gasCost:       constGasFunc(GasQuickStep),
 		validateStack: makeStackFunc(0, 1),
+		valid:         true,
 	}
 }
 
 // opChainID implements CHAINID opcode
 func opChainID(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	stack.push(math.U256(interpreter.chainConfig.ChainId))
+	id := new(big.Int)
+	id.Set(interpreter.chainConfig.ChainId)
+	stack.push(math.U256(id))
 	return nil, nil
 }
 
