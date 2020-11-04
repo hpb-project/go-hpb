@@ -3,6 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "-v",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "+mPwk+SSQv/UloCR0fPIwPvq/NA=",
 			"path": "github.com/AsynkronIT/protoactor-go/actor",
 			"revision": "3992780c0af683deb5ec3746f4ec5845139c6e42",

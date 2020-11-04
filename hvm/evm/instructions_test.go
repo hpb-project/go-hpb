@@ -49,7 +49,7 @@ func TestByteOp(t *testing.T) {
 		th := new(big.Int).SetUint64(test.th)
 		stack.push(val)
 		stack.push(th)
-		opByte(&pc, env, nil, nil, stack)
+		opByte(&pc, env, nil, nil, stack, nil)
 		actual := stack.pop()
 		if actual.Cmp(test.expected) != 0 {
 			t.Fatalf("Expected  [%v] %v:th byte to be %v, was %v.", test.v, test.th, test.expected, actual)
@@ -57,7 +57,7 @@ func TestByteOp(t *testing.T) {
 	}
 }
 
-func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error), args ...string) {
+func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error), args ...string) {
 	var (
 		env   = NewEVM(Context{BlockNumber: big.NewInt(0)}, nil, config.MainnetChainConfig, Config{EnableJit: false, ForceJit: false})
 		stack = newstack()
@@ -74,7 +74,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			a := new(big.Int).SetBytes(arg)
 			stack.push(a)
 		}
-		op(&pc, env, nil, nil, stack)
+		op(&pc, env, nil, nil, stack, nil)
 		stack.pop()
 	}
 }

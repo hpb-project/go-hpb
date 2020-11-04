@@ -19,9 +19,16 @@ package evm
 import (
 	"fmt"
 	"math/big"
+	"sync"
 )
 
-// stack is an object for basic stack operations. Items popped to the stack are
+var stackPool = sync.Pool{
+	New: func() interface{} {
+		return &Stack{data: make([]*big.Int, 0, 16)}
+	},
+}
+
+// Stack is an object for basic stack operations. Items popped to the stack are
 // expected to be changed and modified. stack does not take care of adding newly
 // initialised objects.
 type Stack struct {
@@ -30,6 +37,11 @@ type Stack struct {
 
 func newstack() *Stack {
 	return &Stack{data: make([]*big.Int, 0, 1024)}
+}
+
+func returnStack(s *Stack) {
+	s.data = s.data[:0]
+	stackPool.Put(s)
 }
 
 func (st *Stack) Data() []*big.Int {
@@ -88,4 +100,35 @@ func (st *Stack) Print() {
 		fmt.Println("-- empty --")
 	}
 	fmt.Println("#############")
+}
+
+var rStackPool = sync.Pool{
+	New: func() interface{} {
+		return &ReturnStack{data: make([]uint32, 0, 10)}
+	},
+}
+
+// ReturnStack is an object for basic return stack operations.
+type ReturnStack struct {
+	data []uint32
+}
+
+func newReturnStack() *ReturnStack {
+	return rStackPool.Get().(*ReturnStack)
+}
+
+func returnRStack(rs *ReturnStack) {
+	rs.data = rs.data[:0]
+	rStackPool.Put(rs)
+}
+
+func (st *ReturnStack) push(d uint32) {
+	st.data = append(st.data, d)
+}
+
+// A uint32 is sufficient as for code below 4.2G
+func (st *ReturnStack) pop() (ret uint32) {
+	ret = st.data[len(st.data)-1]
+	st.data = st.data[:len(st.data)-1]
+	return
 }

@@ -20,11 +20,12 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 )
 
 type (
-	executionFunc       func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
+	executionFunc       func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error)
 	gasFunc             func(config.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	stackValidationFunc func(*Stack) error
 	memorySizeFunc      func(*Stack) *big.Int
@@ -55,7 +56,35 @@ var (
 	homesteadInstructionSet      = NewHomesteadInstructionSet()
 	byzantiumInstructionSet      = NewByzantiumInstructionSet()
 	constantinopleInstructionSet = NewConstantinopleInstructionSet()
+	istanbulInstructionSet       = newIstanbulInstructionSet()
+	yoloV1InstructionSet         = newYoloV1InstructionSet()
 )
+
+func newYoloV1InstructionSet() [256]operation {
+	instructionSet := newIstanbulInstructionSet()
+	enable2315(&instructionSet) // Subroutines - https://eips.ethereum.org/EIPS/eip-2315
+
+	// add new RANDOM
+	instructionSet[RANDOM] = operation{
+		execute:       opRandom,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(0, 1),
+		valid:         true,
+	}
+
+	return instructionSet
+}
+
+// newIstanbulInstructionSet returns the frontier, homestead
+// byzantium, contantinople and petersburg instructions.
+func newIstanbulInstructionSet() [256]operation {
+	instructionSet := NewConstantinopleInstructionSet()
+
+	enable1344(&instructionSet) // ChainID opcode - https://eips.ethereum.org/EIPS/eip-1344
+	enable1884(&instructionSet) // Reprice reader opcodes - https://eips.ethereum.org/EIPS/eip-1884
+
+	return instructionSet
+}
 
 // NewConstantinopleInstructionSet returns the frontier, homestead
 // byzantium and contantinople instructions.
@@ -68,7 +97,7 @@ func NewConstantinopleInstructionSet() [256]operation {
 		validateStack: makeStackFunc(2, 1),
 		valid:         true,
 	}
-	instructionSet[RANDOM] = operation{
+	instructionSet[DRANDOM] = operation{
 		execute:       opRandom,
 		gasCost:       constGasFunc(GasQuickStep),
 		validateStack: makeStackFunc(0, 1),
@@ -968,5 +997,68 @@ func NewFrontierInstructionSet() [256]operation {
 			valid:         true,
 			writes:        true,
 		},
+	}
+}
+
+// enable1884 applies EIP-1884 to the given jump table:
+// - Define SELFBALANCE, with cost GasFastStep (5)
+func enable1884(jt *[256]operation) {
+
+	// New opcode
+	jt[SELFBALANCE] = operation{
+		execute:       opSelfBalance,
+		gasCost:       constGasFunc(GasFastStep),
+		validateStack: makeStackFunc(0, 1),
+		valid:         true,
+	}
+}
+
+func opSelfBalance(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
+	stack.push(math.U256(interpreter.StateDB.GetBalance(contract.Address())))
+	return nil, nil
+}
+
+// enable1344 applies EIP-1344 (ChainID Opcode)
+// - Adds an opcode that returns the current chain’s EIP-155 unique identifier
+func enable1344(jt *[256]operation) {
+	// New opcode
+	jt[CHAINID] = operation{
+		execute:       opChainID,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(0, 1),
+		valid:         true,
+	}
+}
+
+// opChainID implements CHAINID opcode
+func opChainID(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
+	id := new(big.Int)
+	id.Set(interpreter.chainConfig.ChainId)
+	stack.push(math.U256(id))
+	return nil, nil
+}
+
+// enable2315 applies EIP-2315 (Simple Subroutines)
+// - Adds opcodes that jump to and return from subroutines
+func enable2315(jt *[256]operation) {
+	// New opcode
+	jt[BEGINSUB] = operation{
+		execute:       opBeginSub,
+		gasCost:       constGasFunc(GasQuickStep),
+		validateStack: makeStackFunc(0, 0),
+	}
+	// New opcode
+	jt[JUMPSUB] = operation{
+		execute:       opJumpSub,
+		gasCost:       constGasFunc(GasSlowStep),
+		validateStack: makeStackFunc(1, 0),
+		jumps:         true,
+	}
+	// New opcode
+	jt[RETURNSUB] = operation{
+		execute:       opReturnSub,
+		gasCost:       constGasFunc(GasFastStep),
+		validateStack: makeStackFunc(0, 0),
+		jumps:         true,
 	}
 }
