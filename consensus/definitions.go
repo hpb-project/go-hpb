@@ -74,7 +74,7 @@ var (
 	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
 	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
 
-	StageNumberUpgradedEVM uint64 = 5159000 // used to upgraded EVM .
+	StageNumberUpgradedEVM uint64 = 8685000 // used to upgraded EVM .
 
 	ContinuousGenBlkLimit uint64 = 2
 
