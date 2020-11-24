@@ -219,6 +219,16 @@ func (t *dialTask) Do(srv *Server) {
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warn("handle dial painc msg", "err", err)
+			if addr != nil {
+				log.Warn("dial addr info", "addr", addr.String())
+			} else {
+				log.Warn("dial dest info", "dest", dest.String())
+			}
+		}
+	}()
 
 	if len(dialHistroyAddr) > 30 || time.Now().Unix()-fronttime > int64(100) {
 		fronttime = time.Now().Unix()

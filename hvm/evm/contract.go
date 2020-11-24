@@ -49,7 +49,8 @@ type Contract struct {
 	caller        ContractRef
 	self          ContractRef
 
-	jumpdests destinations // result of JUMPDEST analysis.
+	jumpdests map[common.Hash]bitvec // result of JUMPDEST analysis.
+	analysis  bitvec
 
 	Code     []byte
 	CodeHash common.Hash
@@ -72,7 +73,7 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 		// Reuse JUMPDEST analysis from parent context if available.
 		c.jumpdests = parent.jumpdests
 	} else {
-		c.jumpdests = make(destinations)
+		c.jumpdests = make(map[common.Hash]bitvec)
 	}
 
 	// Gas should be a pointer so it can safely be reduced through the run
@@ -82,6 +83,52 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	c.value = value
 
 	return c
+}
+
+func (c *Contract) validJumpSubdest(udest uint64) bool {
+	// PC cannot go beyond len(code) and certainly can't be bigger than 63 bits.
+	// Don't bother checking for BEGINSUB in that case.
+	if int64(udest) < 0 || udest >= uint64(len(c.Code)) {
+		return false
+	}
+	// Only BEGINSUBs allowed for destinations
+	if OpCode(c.Code[udest]) != BEGINSUB {
+		return false
+	}
+	return c.isCode(udest)
+}
+
+// isCode returns true if the provided PC location is an actual opcode, as
+// opposed to a data-segment following a PUSHN operation.
+func (c *Contract) isCode(udest uint64) bool {
+	// Do we already have an analysis laying around?
+	if c.analysis != nil {
+		return c.analysis.codeSegment(udest)
+	}
+	// Do we have a contract hash already?
+	// If we do have a hash, that means it's a 'regular' contract. For regular
+	// contracts ( not temporary initcode), we store the analysis in a map
+	if c.CodeHash != (common.Hash{}) {
+		// Does parent context have the analysis?
+		analysis, exist := c.jumpdests[c.CodeHash]
+		if !exist {
+			// Do the analysis and save in parent context
+			// We do not need to store it in c.analysis
+			analysis = codeBitmap(c.Code)
+			c.jumpdests[c.CodeHash] = analysis
+		}
+		// Also stash it in current contract for faster access
+		c.analysis = analysis
+		return analysis.codeSegment(udest)
+	}
+	// We don't have the code hash, most likely a piece of initcode not already
+	// in state trie. In that case, we do an analysis, and save it locally, so
+	// we don't have to recalculate it for every JUMP instruction in the execution
+	// However, we don't save it within the parent context
+	if c.analysis == nil {
+		c.analysis = codeBitmap(c.Code)
+	}
+	return c.analysis.codeSegment(udest)
 }
 
 // AsDelegate sets the contract to be a delegate call and returns the current

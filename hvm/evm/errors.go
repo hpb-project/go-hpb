@@ -19,6 +19,7 @@ package evm
 import "errors"
 
 var (
+	ErrInvalidSubroutineEntry   = errors.New("invalid subroutine entry")
 	ErrOutOfGas                 = errors.New("out of gas")
 	ErrCodeStoreOutOfGas        = errors.New("contract creation code storage out of gas")
 	ErrDepth                    = errors.New("max call depth exceeded")
@@ -28,4 +29,8 @@ var (
 	// ErrGasLimitReached is returned by the gas pool if the amount of gas required
 	// by a transaction is higher than what's left in the block.
 	ErrGasLimitReached = errors.New("gas limit reached")
+
+	ErrInvalidJump         = errors.New("invalid jump destination")
+	ErrInvalidRetsub       = errors.New("invalid retsub")
+	ErrReturnStackExceeded = errors.New("return stack limit reached")
 )

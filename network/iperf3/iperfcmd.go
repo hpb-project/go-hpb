@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/hpb-project/go-hpb/common/log"
@@ -50,7 +51,7 @@ func IperfServer() string {
 
 func StartSever(port int) error {
 
-	cmd := exec.Command("./iperf3", " -s ", " -p "+string(port))
+	cmd := exec.Command("./iperf3", " -s ", " -p "+strconv.Itoa(port))
 	stdout, err := os.OpenFile("./iperf_server.log", os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Error("open iperf_server.log", "err", err)
