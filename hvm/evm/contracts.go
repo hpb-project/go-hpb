@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -512,7 +511,7 @@ const (
 
 func (c *zscverify) Run(input []byte) ([]byte, error) {
 
-	log.Error("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
+	log.Debug("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
 
 	if len(common.Bytes2Hex(input)) != 6080 && len(common.Bytes2Hex(input)) != 10432 {
 		return common.LeftPadBytes([]byte{0}, 32), nil
@@ -534,118 +533,48 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	}
 	//salt := int64(binary.BigEndian.Uint64(input[length:]))
 	salt := input[length : length+32]
-	log.Error("zscverify", "salt", common.Bytes2Hex(salt))
 	length = length + 64
 	for i := 0; i < hs_length; i++ {
-		//for j := 0; j < 32; j++ {
-		//hs[i].x[j] = input[length]
-		//length++
 		copy(hs[i].x[:], input[length:length+32])
 		length += 32
-		//log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(hs[i].x[:]))
-		// //}
-		// for k := 0; k < 32; k++ {
-		// 	hs[i].y[k] = input[length]
-		// 	length++
-		// }
 		copy(hs[i].y[:], input[length:length+32])
-		//log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(hs[i].y[:]))
 		length += 32
 	}
-	log.Error("zscverify", "length", length)
-	// for i := 0; i < 32; i++ {
-	// 	u.x[i] = input[length]
-	// 	length++
-	// }
-	// for i := 0; i < 32; i++ {
-	// 	u.y[i] = input[length]
-	// 	length++
-	// }
 	copy(u.x[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "u.x", common.Bytes2Hex(u.x[:]))
 
 	copy(u.y[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "u.y", common.Bytes2Hex(u.y[:]))
-
-	// for i := 0; i < 32; i++ {
-	// 	p.x[i] = input[length]
-	// 	length++
-	// }
-	// for i := 0; i < 32; i++ {
-	// 	p.y[i] = input[length]
-	// 	length++
-	// }
 	copy(p.x[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "p.x", common.Bytes2Hex(p.x[:]))
 
 	copy(p.y[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "p.y", common.Bytes2Hex(p.y[:]))
 	length += 32
 	for i := 0; i < rs_length; i++ {
-		// for j := 0; j < 32; j++ {
-		// 	ls[i].x[j] = input[length]
-		// 	length++
-		// }
-		// for k := 0; k < 32; k++ {
-		// 	ls[i].y[k] = input[length]
-		// 	length++
-		// }
 		copy(ls[i].x[:], input[length:length+32])
 		length += 32
-		//log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(ls[i].x[:]))
 		copy(ls[i].y[:], input[length:length+32])
-		//log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(ls[i].y[:]))
 		length += 32
 	}
 	for i := 0; i < rs_length; i++ {
-		// for j := 0; j < 32; j++ {
-		// 	rs[i].x[j] = input[length]
-		// 	length++
-		// }
-		// for k := 0; k < 32; k++ {
-		// 	rs[i].y[k] = input[length]
-		// 	length++
-		// }
 		copy(rs[i].x[:], input[length:length+32])
 		length += 32
-		//log.Error("zscverify", "rs i", i, "x", common.Bytes2Hex(rs[i].x[:]))
 		copy(rs[i].y[:], input[length:length+32])
-		//log.Error("zscverify", "rs i", i, "y", common.Bytes2Hex(rs[i].y[:]))
 		length += 32
 	}
-	log.Error("zscverify", "length", length)
-	// for i := 0; i < 32; i++ {
-	// 	a[i] = input[length]
-	// 	length++
-	// }
 	copy(a[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "a", common.Bytes2Hex(a[:]))
-	// for i := 0; i < 32; i++ {
-	// 	b[i] = input[length]
-	// 	length++
-	// }
 	copy(b[:], input[length:length+32])
 	length += 32
-	log.Error("zscverify", "b", common.Bytes2Hex(b[:]))
 	log_n := rs_length
 	n := 2 << (uint(log_n) - 1) //math.Pow(float64(2),float(log_n))
 	o := new(big.Int).SetBytes(salt[:])
 	var challenges [trans_length]*big.Int
-	log.Error("run", "log_n", log_n, "n", n, "o", o)
 
-	//hashdata := crypto.Keccak256([]byte("abcde"))
-	//log.Error("HASH", "hash(abcde)", hashdata)
-	//log.Error("HASH", "hash(abcde)", common.Bytes2Hex(hashdata))
 	g_order := common.Hex2Bytes(string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001"))
-	//f_order := common.Hex2Bytes(string("30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47"))
 
 	group_order := new(big.Int).SetBytes(g_order)
-	//field_order := new(big.Int).SetBytes(f_order)
 	for i := 0; i < log_n; i++ {
 		var input []byte
 		var init [32]byte
@@ -655,42 +584,30 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 		input = append(input, ls[i].y[:]...)
 		input = append(input, rs[i].x[:]...)
 		input = append(input, rs[i].y[:]...)
-		//fmt.Println("abi.encode:", common.Bytes2Hex(input))
-		//fmt.Println("abi.hash:", common.Bytes2Hex(crypto.Keccak256(input))) //ok
+
 		bigh := new(big.Int).SetBytes(crypto.Keccak256(input))
 		challenges[i] = new(big.Int).Mod(bigh, group_order)
 		o = challenges[i] //ok
-		//fmt.Println("o:", hexutil.EncodeBig(o))
-		//statement.P = statement.P.add(proof.ls[i].mul(ipAuxiliaries.o.exp(2)).add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
 		tmp1 := new(big.Int).Exp(o, new(big.Int).SetInt64(2), group_order)
-		//fmt.Println("tmp1:", hexutil.EncodeBig(tmp1))
-		//statement.P = statement.P.add(proof.ls[i].mul(tmp).add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
 		tmp2 := ls[i].mul(tmp1.Bytes())
-		//fmt.Println("tmp2.x:", common.Bytes2Hex(tmp2.x[:]))
-		//fmt.Println("tmp2,y:", common.Bytes2Hex(tmp2.y[:]))
-		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
-		//ipAuxiliaries.o.inv()
+
 		tmp3 := new(big.Int).Sub(group_order, new(big.Int).SetInt64(2))
 		tmp4 := new(big.Int).Exp(o, tmp3, group_order)
-		//fmt.Println("tmp4:", hexutil.EncodeBig(tmp4))
-		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(tmp4.exp(2))));
+
 		tmp5 := new(big.Int).Exp(tmp4, new(big.Int).SetInt64(2), group_order)
-		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(tmp5)));
+
 		tmp6 := rs[i].mul(tmp5.Bytes())
-		//statement.P = statement.P.add(tmp2.add(tmp6));
+
 		tmp7 := tmp2.add(tmp6)
 		p = p.add(tmp7)
-		//fmt.Println("p.x:", common.Bytes2Hex(p.x[:]))
-		//fmt.Println("p.y:", common.Bytes2Hex(p.y[:]))
+
 	}
-	log.Error("Step 1")
 	var otherExponents [64]*big.Int
 	otherExponents[0] = new(big.Int).SetInt64(1)
 	for i := 0; i < log_n; i++ {
 		tmp := new(big.Int).Mul(otherExponents[0], challenges[i])
 		otherExponents[0] = new(big.Int).Mod(tmp, group_order)
 	}
-	log.Error("Step 2")
 	var bitSet [64]bool
 	otherExponents[0] = new(big.Int).Exp(otherExponents[0], new(big.Int).Sub(group_order, new(big.Int).SetInt64(2)), group_order)
 
@@ -705,7 +622,6 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 			}
 		}
 	}
-	log.Error("Step 3")
 	var gTemp G1Point
 	var hTemp G1Point
 
@@ -714,13 +630,10 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 		gTemp = gTemp.add(gsi.mul(otherExponents[i].Bytes()))
 		hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(n-1)-i].Bytes()))
 	}
-	log.Error("Step 4")
-	//var a [32]byte
-	//var b [32]byte
+
 	ua := new(big.Int).SetBytes(a[:])
 	ub := new(big.Int).SetBytes(b[:])
 	t1 := hTemp.mul(b[:])
-	fmt.Println("t1.x:", common.Bytes2Hex(t1.x[:]), " t1.y:", common.Bytes2Hex(t1.y[:]))
 
 	t2 := new(big.Int).Mod(new(big.Int).Mul(ua, ub), group_order)
 	t3 := u.mul(t2.Bytes())
@@ -728,9 +641,8 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	t5 := t4.add(t1)
 	t6 := t5.add(t3)
 
-	log.Error("Step 5")
 	if t6.x == p.x && t6.y == p.y {
-		log.Error("zscverify res true")
+		log.Debug("zscverify res true")
 		return common.LeftPadBytes([]byte{1}, 32), nil
 	}
 	return common.LeftPadBytes([]byte{0}, 32), nil
