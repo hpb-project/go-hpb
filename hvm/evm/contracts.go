@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -65,11 +66,6 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 type G1Point struct {
 	x [32]byte
 	y [32]byte
-}
-
-type G1Pointb struct {
-	x []byte
-	y []byte
 }
 
 func gs(i uint64) G1Point {
@@ -489,7 +485,9 @@ func (g *G1Point) mul(a []byte) G1Point {
 	input = append(input, g.y[:]...)
 	var init [32]byte
 	input = append(input, init[:]...)
-	input = append(input[:32-len(a)], a...)
+	input = append(input[:len(input)-len(a)], a...)
+	//input = append(input, a...)
+	//fmt.Println("input:", common.Bytes2Hex(input[:]))
 	p, _ := new(bn256ScalarMul).Run(input)
 	copy(res.x[:], p[0:32])
 	copy(res.y[:], p[32:64])
@@ -504,46 +502,54 @@ func (c *zscverify) RequiredGas(input []byte) uint64 {
 }
 
 const (
-	hs_length   = 64
-	burn_length = 5
-	GROUP_ORDER = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
-	FIELD_ORDER = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+	burn_hs_length     = 32
+	transfer_hs_length = 64
+	burn_length        = 5
+	trans_length       = 6
+	GROUP_ORDER        = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+	FIELD_ORDER        = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
 )
 
 func (c *zscverify) Run(input []byte) ([]byte, error) {
 
-	log.Error("zscverify", "string run", string(input))
 	log.Error("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
 
-	if len(common.Bytes2Hex(input)) < 6080 {
-		return common.LeftPadBytes(input[0:1], 32), nil
+	if len(common.Bytes2Hex(input)) != 6080 && len(common.Bytes2Hex(input)) != 10432 {
+		return common.LeftPadBytes([]byte{0}, 32), nil
 	}
-	var hs [hs_length]G1Point
+
+	hs_length := burn_hs_length
+	rs_length := burn_length
+	var hs [transfer_hs_length]G1Point
 	var u G1Point
 	var p G1Point
-	var ls [hs_length]G1Point
-	var rs [hs_length]G1Point
+	var ls [trans_length]G1Point
+	var rs [trans_length]G1Point
 	var a [32]byte
 	var b [32]byte
 	length := 64
+	if len(common.Bytes2Hex(input)) > 10000 {
+		hs_length = transfer_hs_length
+		rs_length = trans_length
+	}
 	//salt := int64(binary.BigEndian.Uint64(input[length:]))
 	salt := input[length : length+32]
 	log.Error("zscverify", "salt", common.Bytes2Hex(salt))
 	length = length + 64
-	for i := 0; i < 32; i++ {
+	for i := 0; i < hs_length; i++ {
 		//for j := 0; j < 32; j++ {
 		//hs[i].x[j] = input[length]
 		//length++
 		copy(hs[i].x[:], input[length:length+32])
 		length += 32
-		log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(hs[i].x[:]))
+		//log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(hs[i].x[:]))
 		// //}
 		// for k := 0; k < 32; k++ {
 		// 	hs[i].y[k] = input[length]
 		// 	length++
 		// }
 		copy(hs[i].y[:], input[length:length+32])
-		log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(hs[i].y[:]))
+		//log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(hs[i].y[:]))
 		length += 32
 	}
 	log.Error("zscverify", "length", length)
@@ -579,7 +585,7 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	length += 32
 	log.Error("zscverify", "p.y", common.Bytes2Hex(p.y[:]))
 	length += 32
-	for i := 0; i < burn_length; i++ {
+	for i := 0; i < rs_length; i++ {
 		// for j := 0; j < 32; j++ {
 		// 	ls[i].x[j] = input[length]
 		// 	length++
@@ -590,12 +596,12 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 		// }
 		copy(ls[i].x[:], input[length:length+32])
 		length += 32
-		log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(ls[i].x[:]))
+		//log.Error("zscverify", "hs i", i, "x", common.Bytes2Hex(ls[i].x[:]))
 		copy(ls[i].y[:], input[length:length+32])
-		log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(ls[i].y[:]))
+		//log.Error("zscverify", "hs i", i, "y", common.Bytes2Hex(ls[i].y[:]))
 		length += 32
 	}
-	for i := 0; i < burn_length; i++ {
+	for i := 0; i < rs_length; i++ {
 		// for j := 0; j < 32; j++ {
 		// 	rs[i].x[j] = input[length]
 		// 	length++
@@ -606,9 +612,9 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 		// }
 		copy(rs[i].x[:], input[length:length+32])
 		length += 32
-		log.Error("zscverify", "rs i", i, "x", common.Bytes2Hex(rs[i].x[:]))
+		//log.Error("zscverify", "rs i", i, "x", common.Bytes2Hex(rs[i].x[:]))
 		copy(rs[i].y[:], input[length:length+32])
-		log.Error("zscverify", "rs i", i, "y", common.Bytes2Hex(rs[i].y[:]))
+		//log.Error("zscverify", "rs i", i, "y", common.Bytes2Hex(rs[i].y[:]))
 		length += 32
 	}
 	log.Error("zscverify", "length", length)
@@ -626,10 +632,10 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	copy(b[:], input[length:length+32])
 	length += 32
 	log.Error("zscverify", "b", common.Bytes2Hex(b[:]))
-	log_n := burn_length
+	log_n := rs_length
 	n := 2 << (uint(log_n) - 1) //math.Pow(float64(2),float(log_n))
 	o := new(big.Int).SetBytes(salt[:])
-	var challenges [burn_length]*big.Int
+	var challenges [trans_length]*big.Int
 	log.Error("run", "log_n", log_n, "n", n, "o", o)
 
 	//hashdata := crypto.Keccak256([]byte("abcde"))
@@ -649,19 +655,33 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 		input = append(input, ls[i].y[:]...)
 		input = append(input, rs[i].x[:]...)
 		input = append(input, rs[i].y[:]...)
+		//fmt.Println("abi.encode:", common.Bytes2Hex(input))
+		//fmt.Println("abi.hash:", common.Bytes2Hex(crypto.Keccak256(input))) //ok
 		bigh := new(big.Int).SetBytes(crypto.Keccak256(input))
 		challenges[i] = new(big.Int).Mod(bigh, group_order)
-		o = challenges[i]
+		o = challenges[i] //ok
+		//fmt.Println("o:", hexutil.EncodeBig(o))
 		//statement.P = statement.P.add(proof.ls[i].mul(ipAuxiliaries.o.exp(2)).add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
-		tmp := new(big.Int).Exp(o, new(big.Int).Sub(group_order, new(big.Int).SetInt64(2)), group_order)
-		tmp0 := new(big.Int).Exp(o, new(big.Int).SetInt64(2), group_order)
-		//statement.P = statement.P.add(proof.ls[i].mul(tmp0.Bytes()).add(proof.rs[i].mul(tmp.exp(2))));
-		tmp1 := new(big.Int).Exp(tmp, new(big.Int).SetInt64(2), group_order)
-		//statement.P = statement.P.add(proof.ls[i].mul(tmp0.Bytes()).add(proof.rs[i].mul(tmp1.Bytes())));
-		lsi := ls[i].mul(tmp0.Bytes())
-		rsi := rs[i].mul(tmp1.Bytes())
-		p = p.add(lsi.add(rsi))
-
+		tmp1 := new(big.Int).Exp(o, new(big.Int).SetInt64(2), group_order)
+		//fmt.Println("tmp1:", hexutil.EncodeBig(tmp1))
+		//statement.P = statement.P.add(proof.ls[i].mul(tmp).add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
+		tmp2 := ls[i].mul(tmp1.Bytes())
+		//fmt.Println("tmp2.x:", common.Bytes2Hex(tmp2.x[:]))
+		//fmt.Println("tmp2,y:", common.Bytes2Hex(tmp2.y[:]))
+		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(ipAuxiliaries.o.inv().exp(2))));
+		//ipAuxiliaries.o.inv()
+		tmp3 := new(big.Int).Sub(group_order, new(big.Int).SetInt64(2))
+		tmp4 := new(big.Int).Exp(o, tmp3, group_order)
+		//fmt.Println("tmp4:", hexutil.EncodeBig(tmp4))
+		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(tmp4.exp(2))));
+		tmp5 := new(big.Int).Exp(tmp4, new(big.Int).SetInt64(2), group_order)
+		//statement.P = statement.P.add(tmp2.add(proof.rs[i].mul(tmp5)));
+		tmp6 := rs[i].mul(tmp5.Bytes())
+		//statement.P = statement.P.add(tmp2.add(tmp6));
+		tmp7 := tmp2.add(tmp6)
+		p = p.add(tmp7)
+		//fmt.Println("p.x:", common.Bytes2Hex(p.x[:]))
+		//fmt.Println("p.y:", common.Bytes2Hex(p.y[:]))
 	}
 	log.Error("Step 1")
 	var otherExponents [64]*big.Int
@@ -674,11 +694,11 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	var bitSet [64]bool
 	otherExponents[0] = new(big.Int).Exp(otherExponents[0], new(big.Int).Sub(group_order, new(big.Int).SetInt64(2)), group_order)
 
-	for i := uint64(0); i < 32; i++ {
-		for j := uint64(0); (1<<j)+i < 32; j++ {
+	for i := 0; i < n/2; i++ {
+		for j := uint64(0); (1<<j)+i < n; j++ {
 			i1 := i + (1 << j)
 			if !bitSet[i1] {
-				temp := new(big.Int).Exp(challenges[burn_length-1-j], new(big.Int).SetInt64(2), group_order)
+				temp := new(big.Int).Exp(challenges[uint64(log_n)-1-j], new(big.Int).SetInt64(2), group_order)
 				tmp := new(big.Int).Mul(otherExponents[i], temp)
 				otherExponents[i1] = new(big.Int).Mod(tmp, group_order)
 				bitSet[i1] = true
@@ -689,31 +709,31 @@ func (c *zscverify) Run(input []byte) ([]byte, error) {
 	var gTemp G1Point
 	var hTemp G1Point
 
-	for i := uint64(0); i < uint64(64); i++ {
+	for i := uint64(0); i < uint64(n); i++ {
 		gsi := gs(i)
 		gTemp = gTemp.add(gsi.mul(otherExponents[i].Bytes()))
-		hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(64-1)-i].Bytes()))
+		hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(n-1)-i].Bytes()))
 	}
 	log.Error("Step 4")
 	//var a [32]byte
 	//var b [32]byte
 	ua := new(big.Int).SetBytes(a[:])
 	ub := new(big.Int).SetBytes(b[:])
-	uc := new(big.Int).Mul(ua, ub)
-	gtp := gTemp.mul(a[:])
-	htp := gtp.add(hTemp.mul(b[:]))
-	calp := htp.add(u.mul(uc.Bytes()))
+	t1 := hTemp.mul(b[:])
+	fmt.Println("t1.x:", common.Bytes2Hex(t1.x[:]), " t1.y:", common.Bytes2Hex(t1.y[:]))
+
+	t2 := new(big.Int).Mod(new(big.Int).Mul(ua, ub), group_order)
+	t3 := u.mul(t2.Bytes())
+	t4 := gTemp.mul(a[:])
+	t5 := t4.add(t1)
+	t6 := t5.add(t3)
 
 	log.Error("Step 5")
-	if calp.x == p.x && calp.y == p.y {
+	if t6.x == p.x && t6.y == p.y {
 		log.Error("zscverify res true")
-		return common.LeftPadBytes(input[0:1], 32), nil
+		return common.LeftPadBytes([]byte{1}, 32), nil
 	}
-
-	// the first byte of pubkey is bitcoin heritage
-	log.Error("zscverify", "res false", string(common.LeftPadBytes(input[0:1], 32)))
-
-	return common.LeftPadBytes(input[0:1], 32), nil
+	return common.LeftPadBytes([]byte{0}, 32), nil
 }
 
 // ECRECOVER implemented as a native contract.
@@ -952,21 +972,17 @@ func (c *bn256Add) RequiredGas(input []byte) uint64 {
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
-	log.Error("bn256Add", "run", common.Bytes2Hex(input))
 
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
-		log.Error("bn256Add", "err", err)
 		return nil, err
 	}
 	y, err := newCurvePoint(getData(input, 64, 64))
 	if err != nil {
-		log.Error("bn256Add", "err", err)
 		return nil, err
 	}
 	res := new(bn256.G1)
 	res.Add(x, y)
-	log.Error("bn256ScalarMul", "run", common.Bytes2Hex(res.Marshal()))
 
 	return res.Marshal(), nil
 }
@@ -980,14 +996,12 @@ func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
-	log.Error("bn256ScalarMul", "run", common.Bytes2Hex(input))
 	p, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
 	}
 	res := new(bn256.G1)
 	res.ScalarMult(p, new(big.Int).SetBytes(getData(input, 64, 32)))
-	log.Error("bn256ScalarMul", "run", common.Bytes2Hex(res.Marshal()))
 
 	return res.Marshal(), nil
 }
