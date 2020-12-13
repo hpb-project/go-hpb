@@ -121,6 +121,36 @@ func InstanceBlockChain() *BlockChain {
 	return bcInstance
 }
 
+func (bc *BlockChain) StartChainByBlockNubmer(num uint64) error {
+	block := bc.GetBlockByNumber(num)
+	// Make sure the state associated with the block is available
+	if _, err := state.New(block.Root(), bc.stateCache); err != nil {
+		// Dangling block without a state associated, init from scratch
+		log.Warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
+		if err := bc.repair(&block); err != nil {
+			return err
+		}
+	}
+
+	return bc.SetHead(block.NumberU64())
+}
+
+func (bc *BlockChain) repair(head **types.Block) error {
+	for {
+		// Abort if we've rewound to a head block that does have associated state
+		if _, err := state.New((*head).Root(), bc.stateCache); err == nil {
+			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
+			return nil
+		}
+		// Otherwise rewind one block and recheck state availability there
+		block := bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
+		if block == nil {
+			return fmt.Errorf("missing block %d [%x]", (*head).NumberU64()-1, (*head).ParentHash())
+		}
+		*head = block
+	}
+}
+
 func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, error) {
 	bc.engine = engine
 	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
