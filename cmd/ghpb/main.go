@@ -110,6 +110,7 @@ var (
 		utils.IgnRewardRetErrFlag,
 		utils.GenBlkSecsFlag,
 		utils.BNodeidsFlag,
+		utils.StartNumberFlag,
 	}
 
 	rpcFlags = []cli.Flag{

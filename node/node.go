@@ -199,6 +199,14 @@ func New(conf *config.HpbConfig) (*Node, error) {
 
 	hpbnode.Hpbbc = bc.InstanceBlockChain()
 
+	// Start chain with a specified block number
+	if hpbnode.Hpbconfig.Node.StartNumber != 0 &&
+		hpbnode.Hpbconfig.Node.StartNumber < bc.InstanceBlockChain().CurrentBlock().NumberU64() {
+		if err := hpbnode.Hpbbc.StartChainByBlockNubmer(hpbnode.Hpbconfig.Node.StartNumber); err != nil {
+			return nil, err
+		}
+	}
+
 	peermanager.RegChanStatus(hpbnode.Hpbbc.Status)
 
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
