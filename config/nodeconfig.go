@@ -165,8 +165,6 @@ type Nodeconfig struct {
 
 	DefaultAddress common.Address
 
-	StartNumber uint64
-
 	//1:testmode and don't nedd boe  0:standard mode and need boe
 	TestMode uint8
 

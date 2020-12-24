@@ -17,12 +17,11 @@
 package synctrl
 
 import (
-	"math/big"
-
-	bc "github.com/hpb-project/go-hpb/blockchain"
-	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
+	"github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"math/big"
 )
 
 // FakePeer is a mock syncer peer that operates on a local database instance

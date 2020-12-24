@@ -468,10 +468,6 @@ var (
 		Usage: "Run ghpb with boot nodes with nodeids, and remove default bootnodesids, just for testing",
 		Value: nil,
 	}
-	StartNumberFlag = cli.Uint64Flag{
-		Name:  "startnumber",
-		Usage: "start chain with a specified block number",
-	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -836,9 +832,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Node.SyncMode = config.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.Node.SyncMode = config.LightSync
-	}
-	if ctx.GlobalIsSet(StartNumberFlag.Name) {
-		cfg.Node.StartNumber = ctx.GlobalUint64(StartNumberFlag.Name)
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
