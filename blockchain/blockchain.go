@@ -122,15 +122,35 @@ func InstanceBlockChain() *BlockChain {
 }
 
 func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
+	// Restore the last known head block
+	head := GetHeadBlockHash(bc.chainDb)
+	if head == (common.Hash{}) {
+		log.Warn("Empty database")
+		return nil
+	}
+	currentBlock := bc.GetBlockByHash(head)
+	if currentBlock == nil {
+		log.Warn("Head block missing", "hash", head)
+		return nil
+	}
+	if num == 0 || num > currentBlock.NumberU64() {
+		if err := bc.loadLastState(); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	block := bc.GetBlockByNumber(num)
 	// Make sure the state associated with the block is available
 	if _, err := state.New(block.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		log.Warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
+		log.warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
 		if err := bc.repair(&block); err != nil {
 			return err
 		}
 	}
+	bc.currentBlock = block
+	bc.currentFastBlock = block
 
 	return bc.SetHead(block.NumberU64())
 }
@@ -167,13 +187,7 @@ func (bc *BlockChain) InitWithEngine(engine consensus.Engine, startNum uint64) (
 	}
 
 	// Start chain with a specified block number
-	if startNum != 0 && startNum < bc.CurrentBlock().NumberU64() {
-		if err := bc.startChainByBlockNubmer(startNum); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := bc.loadLastState(); err != nil {
+	if err := bc.startChainByBlockNubmer(startNum); err != nil {
 		return nil, err
 	}
 
