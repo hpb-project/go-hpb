@@ -144,7 +144,7 @@ func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
 	// Make sure the state associated with the block is available
 	if _, err := state.New(block.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		log.warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
+		log.Warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
 		if err := bc.repair(&block); err != nil {
 			return err
 		}
