@@ -199,14 +199,6 @@ func New(conf *config.HpbConfig) (*Node, error) {
 
 	hpbnode.Hpbbc = bc.InstanceBlockChain()
 
-	// Start chain with a specified block number
-	if hpbnode.Hpbconfig.Node.StartNumber != 0 &&
-		hpbnode.Hpbconfig.Node.StartNumber < bc.InstanceBlockChain().CurrentBlock().NumberU64() {
-		if err := hpbnode.Hpbbc.StartChainByBlockNubmer(hpbnode.Hpbconfig.Node.StartNumber); err != nil {
-			return nil, err
-		}
-	}
-
 	peermanager.RegChanStatus(hpbnode.Hpbbc.Status)
 
 	txpool.NewTxPool(conf.TxPool, &conf.BlockChain, hpbnode.Hpbbc)
@@ -224,6 +216,7 @@ func New(conf *config.HpbConfig) (*Node, error) {
 	hpbnode.bloomIndexer = NewBloomIndexer(hpbdatabase, config.BloomBitsBlocks)
 	return hpbnode, nil
 }
+
 func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 	stored := bc.GetCanonicalHash(hpbnode.HpbDb, 0)
 	if stored != (common.Hash{}) {
@@ -237,7 +230,7 @@ func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 		engine := prometheus.InstancePrometheus()
 		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
-		_, err := hpbnode.Hpbbc.InitWithEngine(engine)
+		_, err := hpbnode.Hpbbc.InitWithEngine(engine, conf.Node.StartNumber)
 		if err != nil {
 			log.Error("add engine to blockchain error")
 			return err
