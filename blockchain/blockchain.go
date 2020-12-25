@@ -121,7 +121,25 @@ func InstanceBlockChain() *BlockChain {
 	return bcInstance
 }
 
-func (bc *BlockChain) StartChainByBlockNubmer(num uint64) error {
+func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
+	// Restore the last known head block
+	head := GetHeadBlockHash(bc.chainDb)
+	if head == (common.Hash{}) {
+		log.Warn("Empty database")
+		return nil
+	}
+	currentBlock := bc.GetBlockByHash(head)
+	if currentBlock == nil {
+		log.Warn("Head block missing", "hash", head)
+		return nil
+	}
+	if num == 0 || num > currentBlock.NumberU64() {
+		if err := bc.loadLastState(); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	block := bc.GetBlockByNumber(num)
 	// Make sure the state associated with the block is available
 	if _, err := state.New(block.Root(), bc.stateCache); err != nil {
@@ -131,6 +149,8 @@ func (bc *BlockChain) StartChainByBlockNubmer(num uint64) error {
 			return err
 		}
 	}
+	bc.currentBlock = block
+	bc.currentFastBlock = block
 
 	return bc.SetHead(block.NumberU64())
 }
@@ -151,7 +171,7 @@ func (bc *BlockChain) repair(head **types.Block) error {
 	}
 }
 
-func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, error) {
+func (bc *BlockChain) InitWithEngine(engine consensus.Engine, startNum uint64) (*BlockChain, error) {
 	bc.engine = engine
 	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(bc.config, bc, engine))
@@ -165,7 +185,9 @@ func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, erro
 	if bc.genesisBlock == nil {
 		return nil, errNoGenesis
 	}
-	if err := bc.loadLastState(); err != nil {
+
+	// Start chain with a specified block number
+	if err := bc.startChainByBlockNubmer(startNum); err != nil {
 		return nil, err
 	}
 
