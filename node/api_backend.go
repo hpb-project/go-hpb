@@ -21,11 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/blockchain"
+	accounts "github.com/hpb-project/go-hpb/account"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
@@ -199,6 +199,10 @@ func (b *HpbApiBackend) EventMux() *sub.TypeMux {
 
 func (b *HpbApiBackend) AccountManager() *accounts.Manager {
 	return b.hpb.AccountManager()
+}
+
+func (b *HpbApiBackend) RPCGasCap() uint64 {
+	return b.hpb.Hpbconfig.Node.RPCGasCap
 }
 
 func (b *HpbApiBackend) BloomStatus() (uint64, uint64) {

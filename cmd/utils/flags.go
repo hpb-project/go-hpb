@@ -472,6 +472,11 @@ var (
 		Name:  "startnumber",
 		Usage: "start chain with a specified block number",
 	}
+	RPCGlobalGasCapFlag = cli.Uint64Flag{
+		Name:  "rpc.gascap",
+		Usage: "Sets a cap on gas that can be used in eth_call/estimateGas (0=infinite)",
+		Value: config.DefaultConfig.RPCGasCap,
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -836,6 +841,14 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		cfg.Node.SyncMode = config.FastSync
 	case ctx.GlobalBool(LightModeFlag.Name):
 		cfg.Node.SyncMode = config.LightSync
+	}
+	if ctx.GlobalIsSet(RPCGlobalGasCapFlag.Name) {
+		cfg.Node.RPCGasCap = ctx.GlobalUint64(RPCGlobalGasCapFlag.Name)
+	}
+	if cfg.Node.RPCGasCap != 0 {
+		log.Info("Set global gas cap", "cap", cfg.Node.RPCGasCap)
+	} else {
+		log.Info("Global gas cap disabled")
 	}
 	if ctx.GlobalIsSet(StartNumberFlag.Name) {
 		cfg.Node.StartNumber = ctx.GlobalUint64(StartNumberFlag.Name)
