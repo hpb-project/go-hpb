@@ -66,7 +66,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		totalUsedGas = big.NewInt(0)
 		header       = block.Header()
 		allLogs      []*types.Log
-		gp           = new(GasPool).AddGas(block.GasLimit())
+		gp           = new(GasPool).AddGas(block.GasLimit().Uint64())
 	)
 	bNewVersion := block.Number().Uint64() > consensus.NewContractVersion
 	synsigner := types.MakeSigner(p.config)
@@ -140,7 +140,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	// about the transaction and calling mechanisms.
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	result, err := ApplyMessage(vmenv, msg, gp)
 	statediff, errs := json.Marshal(vmenv.GetStateDiff())
 	log.Debug("evm json----", "jsons", string(statediff), "errs", errs)
 	if err != nil {
@@ -153,11 +153,12 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 
 	statedb.Finalise(true)
 
+	gas := new(big.Int).SetUint64(result.UsedGas)
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt := types.NewReceipt(root, result.Failed(), usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
 	// if the transaction created a contract, store the creation address in the receipt.
@@ -226,7 +227,7 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 	// about the transaction and calling mechanisms.
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
+	result, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {
 		log.Error("ApplyMessage err", "err", err)
 		return nil, nil, err
@@ -234,13 +235,14 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 
 	// Update the state with pending changes
 	var root []byte
+	gas := new(big.Int).SetUint64(result.UsedGas)
 
 	statedb.ClearRefund()
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt := types.NewReceipt(root, result.Failed(), usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(gas)
 	// if the transaction created a contract, store the creation address in the receipt.

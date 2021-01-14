@@ -313,6 +313,12 @@
 			"revisionTime": "2017-09-02T20:46:57Z"
 		},
 		{
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "5d4384ee4fb2527b0a1256a821ebfc92f91efefc",
+			"revisionTime": "2018-12-26T10:54:42Z"
+		},
+		{
 			"checksumSHA1": "I87tkF1e/hrl4d/XIKFfkPRq1ww=",
 			"path": "github.com/prometheus/client_golang/prometheus",
 			"revision": "d49167c4b9f3c4451707560c5c71471ff5291aaa",
@@ -449,6 +455,18 @@
 			"path": "github.com/rs/xhandler",
 			"revision": "ed27b6fd65218132ee50cd95f38474a3d8a2cd12",
 			"revisionTime": "2016-06-18T19:32:21Z"
+		},
+		{
+			"checksumSHA1": "6LxFYLH5Iq2kjiWJh4xHFeBRfko=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "acba37e5db06f0093b465a7d47822bf13644b66c",
+			"revisionTime": "2020-02-26T16:40:55Z"
+		},
+		{
+			"checksumSHA1": "yYoKMkETqa/Vho1S/Oy20A2zF4Q=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "acba37e5db06f0093b465a7d47822bf13644b66c",
+			"revisionTime": "2020-02-26T16:40:55Z"
 		},
 		{
 			"checksumSHA1": "yHbyLpI/Meh0DGrmi8x6FrDxxUY=",
@@ -929,6 +947,12 @@
 			"path": "gopkg.in/urfave/cli.v1",
 			"revision": "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
 			"revisionTime": "2017-08-11T01:42:03Z"
+		},
+		{
+			"checksumSHA1": "vEkKIA76kgBmAu5bwxJwi41Aup0=",
+			"path": "gopkg.in/yaml.v3",
+			"revision": "496545a6307b2a7d7a710fd516e5e16e8ab62dbc",
+			"revisionTime": "2021-01-07T19:29:22Z"
 		}
 	],
 	"rootPath": "github.com/hpb-project/go-hpb"

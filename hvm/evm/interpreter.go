@@ -99,7 +99,7 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 		// account to the others means the state is modified and should also
 		// return with an error.
 		if operation.writes || (op == CALL && stack.Back(2).BitLen() > 0) {
-			return errWriteProtection
+			return ErrWriteProtection
 		}
 	}
 	return nil
@@ -243,7 +243,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		case err != nil:
 			return nil, err
 		case operation.reverts:
-			return res, errExecutionReverted
+			return res, ErrExecutionReverted
 		case operation.halts:
 			return res, nil
 		case !operation.jumps:
