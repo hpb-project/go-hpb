@@ -36,4 +36,8 @@ var (
 	// ErrGasUintOverflow          = errors.New("gas uint64 overflow")
 	ErrInvalidRetsub       = errors.New("invalid retsub")
 	ErrReturnStackExceeded = errors.New("return stack limit reached")
+
+	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
+	// than required to start the invocation.
+	ErrIntrinsicGas = errors.New("intrinsic gas too low")
 )

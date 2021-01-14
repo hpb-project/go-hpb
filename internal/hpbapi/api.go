@@ -40,7 +40,6 @@ import (
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"github.com/hpb-project/go-hpb/txpool"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -816,7 +815,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 
 		result, err := DoCall(ctx, b, args, blockNrOrHash, nil, evm.Config{}, 0, gasCap)
 		if err != nil {
-			if errors.Is(err, txpool.ErrIntrinsicGas) {
+			if errors.Is(err, evm.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
 			}
 			return true, nil, err // Bail out

@@ -18,6 +18,7 @@ package bc
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -140,7 +141,7 @@ func (st *StateTransition) to() evm.AccountRef {
 
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		return evm.ErrOutOfGas
+		return fmt.Errorf("%w: have %d, want %d", evm.ErrIntrinsicGas, st.gas, amount)
 	}
 	st.gas -= amount
 
