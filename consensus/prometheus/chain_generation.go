@@ -1224,7 +1224,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		Hids      [][32]byte
 	}
 
-	err = fechABI.Unpack(&out, consensus.BootnodeInfoContractMethodName, resultaddr)
+	err = fechABI.UnpackIntoInterface(&out, consensus.BootnodeInfoContractMethodName, resultaddr)
 
 	n := len(out.Coinbases)
 	if len(out.Coinbases) == 0 || n != len(out.Cid1s) || n != len(out.Hids) || n != len(out.Cid2s) {
@@ -1342,7 +1342,7 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 		HolderAddrs []common.Address
 	}
 	fechABI, _ = abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
-	err = fechABI.Unpack(&out, consensus.NewfetchAllHolderAddrs, result)
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchAllHolderAddrs, result)
 
 	if len(out.Coinbases) == 0 || len(out.HolderAddrs) == 0 || len(out.Coinbases) != len(out.HolderAddrs) {
 		log.Error("return 4 parts do not match", "len(Coinbases)", len(out.Coinbases))
@@ -1411,7 +1411,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 		Nums           []*big.Int
 	}
 	fechABI, _ = abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
-	err = fechABI.Unpack(&result, consensus.NewfetchAllVoteResult, resultvote)
+	err = fechABI.UnpackIntoInterface(&result, consensus.NewfetchAllVoteResult, resultvote)
 	if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
 		log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
 		return nil, nil
@@ -1495,7 +1495,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 		Hids      [][32]byte
 	}
 	fechABI, _ = abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
-	err = fechABI.Unpack(&out, consensus.NewgetAllHpbNodes, resultaddr)
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewgetAllHpbNodes, resultaddr)
 
 	n := len(out.Coinbases)
 	if len(out.Coinbases) == 0 || n != len(out.Cid1s) || n != len(out.Hids) || n != len(out.Cid2s) {

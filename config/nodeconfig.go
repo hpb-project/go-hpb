@@ -79,6 +79,7 @@ var DefaultConfig = Nodeconfig{
 	GasPrice:        big.NewInt(18 * Shannon),
 	IPCPath:         "ghpb.ipc",
 	MaxTrieCacheGen: uint16(120),
+	RPCGasCap:       25000000,
 }
 
 type GpoConfig struct {
@@ -175,6 +176,9 @@ type Nodeconfig struct {
 
 	//consensus config file name
 	FNameConsensusCfg string
+
+	// RPCGasCap is the global gas cap for eth-call variants.
+	RPCGasCap uint64 `toml:",omitempty"`
 }
 
 // NodeDB returns the path to the discovery node database.

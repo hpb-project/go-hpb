@@ -21,11 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/blockchain"
+	accounts "github.com/hpb-project/go-hpb/account"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
 	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
@@ -70,6 +70,10 @@ func (b *HpbApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNum
 	return b.hpb.Hpbbc.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
+func (b *HpbApiBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return b.hpb.BlockChain().GetHeaderByHash(hash), nil
+}
+
 func (b *HpbApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -81,6 +85,31 @@ func (b *HpbApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumb
 		return b.hpb.Hpbbc.CurrentBlock(), nil
 	}
 	return b.hpb.Hpbbc.GetBlockByNumber(uint64(blockNr)), nil
+}
+
+func (b *HpbApiBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	return b.hpb.BlockChain().GetBlockByHash(hash), nil
+}
+
+func (b *HpbApiBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.BlockByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.hpb.BlockChain().GetHeaderByHash(hash)
+		if header == nil {
+			return nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.hpb.BlockChain().GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, errors.New("hash is not currently canonical")
+		}
+		block := b.hpb.BlockChain().GetBlock(hash, header.Number.Uint64())
+		if block == nil {
+			return nil, errors.New("header found, but block body is missing")
+		}
+		return block, nil
+	}
+	return nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
@@ -99,6 +128,27 @@ func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.
 	}
 	stateDb, err := b.hpb.BlockChain().StateAt(header.Root)
 	return stateDb, header, err
+}
+
+func (b *HpbApiBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.StateAndHeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header, err := b.HeaderByHash(ctx, hash)
+		if err != nil {
+			return nil, nil, err
+		}
+		if header == nil {
+			return nil, nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.hpb.BlockChain().GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, nil, errors.New("hash is not currently canonical")
+		}
+		stateDb, err := b.hpb.BlockChain().StateAt(header.Root)
+		return stateDb, header, err
+	}
+	return nil, nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
 func (b *HpbApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error) {
@@ -199,6 +249,10 @@ func (b *HpbApiBackend) EventMux() *sub.TypeMux {
 
 func (b *HpbApiBackend) AccountManager() *accounts.Manager {
 	return b.hpb.AccountManager()
+}
+
+func (b *HpbApiBackend) RPCGasCap() uint64 {
+	return b.hpb.Hpbconfig.Node.RPCGasCap
 }
 
 func (b *HpbApiBackend) BloomStatus() (uint64, uint64) {

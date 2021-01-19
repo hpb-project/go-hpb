@@ -152,7 +152,7 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 	}
 
 	var (
-		gp            = new(bc.GasPool).AddGas(block.GasLimit())
+		gp            = new(bc.GasPool).AddGas(block.GasLimit().Uint64())
 		header        = block.Header()
 		totalUsedGas  = big.NewInt(0)
 		allAddress    = make(map[common.Address]*big.Int)
@@ -220,7 +220,7 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 	}
 
 	var (
-		gp            = new(bc.GasPool).AddGas(block.GasLimit())
+		gp            = new(bc.GasPool).AddGas(block.GasLimit().Uint64())
 		header        = block.Header()
 		totalUsedGas  = big.NewInt(0)
 		allAddress    = make(map[common.Address]*big.Int)
