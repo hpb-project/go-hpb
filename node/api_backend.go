@@ -60,12 +60,13 @@ func (b *HpbApiBackend) SetHead(number uint64) {
 func (b *HpbApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.hpb.miner.PendingBlock()
-		return block.Header(), nil
+		// block := b.hpb.miner.PendingBlock()
+		// return block.Header(), nil
+		return b.hpb.Hpbbc.CurrentHeader(), nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
-		return b.hpb.Hpbbc.CurrentBlock().Header(), nil
+		return b.hpb.Hpbbc.CurrentHeader(), nil
 	}
 	return b.hpb.Hpbbc.GetHeaderByNumber(uint64(blockNr)), nil
 }
@@ -77,8 +78,10 @@ func (b *HpbApiBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*ty
 func (b *HpbApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.hpb.miner.PendingBlock()
-		return block, nil
+		//	block := b.hpb.miner.PendingBlock()
+		//	return block, nil
+		return b.hpb.Hpbbc.CurrentBlock(), nil
+
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -114,13 +117,13 @@ func (b *HpbApiBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash r
 
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
-	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.hpb.miner.Pending()
-		if block == nil {
-			return state, nil, errors.New("no pending")
-		}
-		return state, block.Header(), nil
-	}
+	// if blockNr == rpc.PendingBlockNumber {
+	// 	block, state := b.hpb.miner.Pending()
+	// 	if block == nil {
+	// 		return state, nil, errors.New("no pending")
+	// 	}
+	// 	return state, block.Header(), nil
+	// }
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {
