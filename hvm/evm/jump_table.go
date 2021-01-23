@@ -121,15 +121,15 @@ func NewConstantinopleInstructionSet() [256]operation {
 		validateStack: makeStackFunc(1, 1),
 		valid:         true,
 	}
-	/*instructionSet[CREATE2] = operation{
+	instructionSet[CREATE2] = operation{
 		execute:       opCreate2,
-		gasCost:       constGasFunc(GasQuickStep),
+		gasCost:       gasCreate2,
 		validateStack: makeStackFunc(4, 1),
 		memorySize:    memoryCreate2,
 		valid:         true,
 		writes:        true,
 		returns:       true,
-	}*/
+	}
 	return instructionSet
 }
 
