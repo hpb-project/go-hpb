@@ -26,8 +26,8 @@ typedef struct BoeErr{
     unsigned char bfree;
 }BoeErr;
 
-BoeErr *BOE_OK;
-BoeErr *BOE_HASH_TIME_LIMIT;
+extern BoeErr *BOE_OK;
+extern BoeErr *BOE_HASH_TIME_LIMIT;
 
 typedef int (*BoeUpgradeCallback)(int,char*);
 typedef int (*BoeValidSignCallback)(unsigned char *pub, unsigned char *sig, void *param, int param_len);
