@@ -27,12 +27,15 @@ typedef struct BoeErr{
 }BoeErr;
 
 BoeErr *BOE_OK;
+BoeErr *BOE_HASH_TIME_LIMIT;
+
 typedef int (*BoeUpgradeCallback)(int,char*);
 typedef int (*BoeValidSignCallback)(unsigned char *pub, unsigned char *sig, void *param, int param_len);
 
 void boe_err_free(BoeErr *e);
 
 BoeErr* boe_init(void);
+BoeErr* boe_test_init(char *ethname);
 BoeErr* boe_release(void);
 BoeErr* boe_reg_update_callback(BoeUpgradeCallback func);
 BoeErr* boe_get_hw_version(unsigned char *H);
@@ -123,5 +126,17 @@ BoeErr* boe_check_random(unsigned char *hash, unsigned char *nexthash);
 BoeErr* boe_valid_sign(unsigned char *sig, unsigned char *pub);
 BoeErr* boe_valid_sign_recover_pub_async(unsigned char *sig, unsigned char *param, int paramlen);
 BoeErr* boe_valid_sign_callback(BoeValidSignCallback func);
+
+BoeErr* boe_genkey(unsigned char *pubkey);
+BoeErr* boe_get_pubkey(unsigned char *pubkey);
+BoeErr* boe_lock_pk(void);
+BoeErr* boe_hw_verify(unsigned char *hash, unsigned char *signature, unsigned char *pubkey);
+BoeErr* boe_set_mac(unsigned char *mac);
+BoeErr* boe_get_mac(unsigned char *mac);
+BoeErr* boe_phy_read(unsigned int reg, unsigned int *val);
+BoeErr* boe_phy_shd_read(unsigned int reg, unsigned int shadow, unsigned int *val);
+BoeErr* boe_reg_read(unsigned int reg, unsigned int *val);
+BoeErr* boe_reg_write(unsigned int reg, unsigned int val);
+BoeErr* boe_reg_random_read(unsigned char *string);
 
 #endif  /*BOE_H*/
