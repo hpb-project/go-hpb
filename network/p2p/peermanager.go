@@ -722,6 +722,7 @@ func (prm *PeerManager) startClientBW() {
 
 		pzlist := make([]*Peer, 0, len(prm.peers))
 		palist := make([]*Peer, 0, len(prm.peers))
+		prm.lock.RLock()
 		for _, p := range prm.peers {
 			//bandwidth
 			if p.remoteType == discover.BootNode || p.remoteType == discover.SynNode {
@@ -733,6 +734,7 @@ func (prm *PeerManager) startClientBW() {
 				pzlist = append(pzlist, p)
 			}
 		}
+		prm.lock.RUnlock()
 
 		if len(palist) == 0 {
 			log.Warn("There is no hpnode or prenode peer to start bandwidth testing.")
