@@ -16,7 +16,7 @@ To download all of the code:
 
 ### Setting up a build/development environment
 
-Install latest distribution of [Go](https://golang.org/) if you don't have it already. (go version >= go1.10 )
+Install latest distribution of [Go](https://golang.org/) if you don't have it already. (go version >= go1.14 )
 
 Currently supports the following operating systems for `sync node`:
 

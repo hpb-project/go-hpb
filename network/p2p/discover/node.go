@@ -171,7 +171,10 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:hnode://)?([0-9a-f]+)$")
+var (
+	incompleteNodeURL = regexp.MustCompile("(?i)^(?:hnode://)?([0-9a-f]+)$")
+	lookupIPFunc      = net.LookupIP
+)
 
 // ParseNode parses a node designator.
 //
@@ -228,19 +231,21 @@ func parseComplete(rawurl string) (*Node, error) {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
 	// Parse the IP address.
-	host, port, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		return nil, fmt.Errorf("invalid host: %v", err)
+	ip = net.ParseIP(u.Hostname())
+	if ip == nil {
+		ips, err := lookupIPFunc(u.Hostname())
+		if err != nil {
+			return nil, err
+		}
+		ip = ips[0]
 	}
-	if ip = net.ParseIP(host); ip == nil {
-		return nil, errors.New("invalid IP address")
-	}
+
 	// Ensure the IP is 4 bytes long for IPv4 addresses.
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
 	// Parse the port numbers.
-	if tcpPort, err = strconv.ParseUint(port, 10, 16); err != nil {
+	if tcpPort, err = strconv.ParseUint(u.Port(), 10, 16); err != nil {
 		return nil, errors.New("invalid port")
 	}
 	udpPort = tcpPort

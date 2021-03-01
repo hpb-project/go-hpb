@@ -26,7 +26,7 @@ typedef struct BoeErr{
     unsigned char bfree;
 }BoeErr;
 
-BoeErr *BOE_OK;
+extern BoeErr *BOE_OK;
 typedef int (*BoeUpgradeCallback)(int,char*);
 typedef int (*BoeValidSignCallback)(unsigned char *pub, unsigned char *sig, void *param, int param_len);
 
