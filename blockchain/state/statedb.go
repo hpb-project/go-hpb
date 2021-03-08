@@ -329,6 +329,15 @@ func (self *StateDB) SetState(addr common.Address, key common.Hash, value common
 	}
 }
 
+// SetStorage replaces the entire storage for the specified account with given
+// storage. This function should only be used for debugging.
+func (s *StateDB) SetStorage(addr common.Address, storage map[common.Hash]common.Hash) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetStorage(storage)
+	}
+}
+
 // Suicide marks the given account as suicided.
 // This clears the account balance.
 //

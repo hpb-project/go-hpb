@@ -378,8 +378,10 @@ func (hc *HeaderChain) GetHeaderByNumber(number uint64) *types.Header {
 	return hc.GetHeader(hash, number)
 }
 
-// GetHeaderByNumber retrieves a block header from the database by number,
-// caching it (associated with its hash) if found.
+func (hc *HeaderChain) GetCanonicalHash(number uint64) common.Hash {
+	return GetCanonicalHash(hc.chainDb, number)
+}
+
 func (hc *HeaderChain) GetRandom() string {
 	rand := GetRandom(hc.chainDb)
 	return rand

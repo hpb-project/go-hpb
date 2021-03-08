@@ -497,7 +497,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 }
 
 func (env *Work) commitTransactions(mux *sub.TypeMux, txs *types.TransactionsByPriceAndNonce, coinbase common.Address, maxTxs int) {
-	gp := new(bc.GasPool).AddGas(env.header.GasLimit)
+	gp := new(bc.GasPool).AddGas(env.header.GasLimit.Uint64())
 
 	var coalescedLogs []*types.Log
 	var capTxs int

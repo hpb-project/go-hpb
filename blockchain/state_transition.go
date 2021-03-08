@@ -18,12 +18,12 @@ package bc
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
@@ -58,7 +58,7 @@ type StateTransition struct {
 	msg        hvm.Message
 	gas        uint64
 	gasPrice   *big.Int
-	initialGas *big.Int
+	initialGas uint64
 	value      *big.Int
 	data       []byte
 	state      evm.StateDB
@@ -71,31 +71,29 @@ type StateTransition struct {
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		evm:        evm,
-		gp:         gp,
-		msg:        msg,
-		gasPrice:   msg.GasPrice(),
-		initialGas: new(big.Int),
-		value:      msg.Value(),
-		data:       msg.Data(),
-		state:      evm.StateDB,
+		evm:      evm,
+		gp:       gp,
+		msg:      msg,
+		gasPrice: msg.GasPrice(),
+		value:    msg.Value(),
+		data:     msg.Data(),
+		state:    evm.StateDB,
 	}
 }
 func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
 	return &StateTransition{
-		gp:         gp,
-		msg:        msg,
-		gasPrice:   msg.GasPrice(),
-		initialGas: new(big.Int),
-		value:      msg.Value(),
-		data:       msg.Data(),
-		header:     header,
-		state:      statedb,
-		author:     author,
+		gp:       gp,
+		msg:      msg,
+		gasPrice: msg.GasPrice(),
+		value:    msg.Value(),
+		data:     msg.Data(),
+		header:   header,
+		state:    statedb,
+		author:   author,
 	}
 }
 
-// ApplyMessage returns the bytes returned by any EVM execution (if it took place),
+// ApplyMessageNonContract returns the bytes returned by any EVM execution (if it took place),
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
@@ -106,19 +104,17 @@ func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Add
 	return ret, gasUsed, failed, err
 }
 
-//  computes the new state by applying the given message
+// ApplyMessage computes the new state by applying the given message
 // against the old state within the environment.
 //
 // ApplyMessage returns the bytes returned by any EVM execution (if it took place),
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool) ([]byte, *big.Int, bool, error) {
-	st := NewStateTransition(evm, msg, gp)
-
-	ret, _, gasUsed, failed, err := st.TransitionDb()
-	return ret, gasUsed, failed, err
+func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool) (*ExecutionResult, error) {
+	return NewStateTransition(evm, msg, gp).TransitionDb()
 }
+
 func (st *StateTransition) from() evm.AccountRef {
 	f := st.msg.From()
 	if !st.state.Exist(f) {
@@ -145,7 +141,7 @@ func (st *StateTransition) to() evm.AccountRef {
 
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		return evm.ErrOutOfGas
+		return fmt.Errorf("%w: have %d, want %d", evm.ErrIntrinsicGas, st.gas, amount)
 	}
 	st.gas -= amount
 
@@ -153,12 +149,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgas := st.msg.Gas()
-	if mgas.BitLen() > 64 {
-		return evm.ErrOutOfGas
-	}
-
-	mgval := new(big.Int).Mul(mgas, st.gasPrice)
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
 	var (
 		state  = st.state
@@ -167,11 +158,11 @@ func (st *StateTransition) buyGas() error {
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
-	if err := st.gp.SubGas(mgas); err != nil {
+	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
 		return err
 	}
-	st.gas += mgas.Uint64()
-	st.initialGas.Set(mgas)
+	st.gas += st.msg.Gas()
+	st.initialGas = st.msg.Gas()
 	state.SubBalance(sender.Address(), mgval)
 	return nil
 }
@@ -236,9 +227,9 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
-	if err = st.preCheck(); err != nil {
-		return
+func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
+	if err := st.preCheck(); err != nil {
+		return nil, err
 	}
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
@@ -248,13 +239,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	// Pay intrinsic gas
 	intrinsicGas := types.IntrinsicGas(st.data, contractCreation)
 	if intrinsicGas.BitLen() > 64 {
-		return nil, nil, nil, false, hvm.ErrOutOfGas
+		return nil, hvm.ErrOutOfGas
 	}
-	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, false, err
+	if err := st.useGas(intrinsicGas.Uint64()); err != nil {
+		return nil, err
 	}
 	var (
 		evm = st.evm
+		ret []byte
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error.
@@ -267,21 +259,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
-	if vmerr != nil {
-		log.Debug("VM returned with error", "err", vmerr)
-		// The only possible consensus-error would be if there wasn't
-		// sufficient balance to make the transfer happen. The first
-		// balance transfer may never fail.
-		if vmerr == hvm.ErrInsufficientBalance {
-			return nil, nil, nil, false, vmerr
-		}
-	}
-	requiredGas = new(big.Int).Set(st.gasUsed())
 
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
-	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
+	return &ExecutionResult{
+		UsedGas:    st.gasUsed().Uint64(),
+		Err:        vmerr,
+		ReturnData: ret,
+	}, nil
+
 }
 func (st *StateTransition) refundGas() {
 	// Return eth for remaining gas to the sender account,
@@ -299,9 +286,45 @@ func (st *StateTransition) refundGas() {
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
-	st.gp.AddGas(new(big.Int).SetUint64(st.gas))
+	st.gp.AddGas(st.gas)
+
 }
 
 func (st *StateTransition) gasUsed() *big.Int {
-	return new(big.Int).Sub(st.initialGas, new(big.Int).SetUint64(st.gas))
+	return new(big.Int).SetUint64(st.initialGas - st.gas)
+}
+
+// ExecutionResult includes all output after executing given evm
+// message no matter the execution itself is successful or not.
+type ExecutionResult struct {
+	UsedGas    uint64 // Total used gas but include the refunded gas
+	Err        error  // Any error encountered during the execution(listed in core/vm/errors.go)
+	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
+}
+
+// Unwrap returns the internal evm error which allows us for further
+// analysis outside.
+func (result *ExecutionResult) Unwrap() error {
+	return result.Err
+}
+
+// Failed returns the indicator whether the execution is successful or not
+func (result *ExecutionResult) Failed() bool { return result.Err != nil }
+
+// Return is a helper function to help caller distinguish between revert reason
+// and function return. Return returns the data after execution if no error occurs.
+func (result *ExecutionResult) Return() []byte {
+	if result.Err != nil {
+		return nil
+	}
+	return common.CopyBytes(result.ReturnData)
+}
+
+// Revert returns the concrete revert reason if the execution is aborted by `REVERT`
+// opcode. Note the reason can be nil if no data supplied with revert opcode.
+func (result *ExecutionResult) Revert() []byte {
+	if result.Err != evm.ErrExecutionReverted {
+		return nil
+	}
+	return common.CopyBytes(result.ReturnData)
 }

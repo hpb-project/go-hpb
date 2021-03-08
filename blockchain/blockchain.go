@@ -121,7 +121,57 @@ func InstanceBlockChain() *BlockChain {
 	return bcInstance
 }
 
-func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, error) {
+func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
+	// Restore the last known head block
+	head := GetHeadBlockHash(bc.chainDb)
+	if head == (common.Hash{}) {
+		log.Warn("Empty database")
+		return nil
+	}
+	currentBlock := bc.GetBlockByHash(head)
+	if currentBlock == nil {
+		log.Warn("Head block missing", "hash", head)
+		return nil
+	}
+	if num == 0 || num > currentBlock.NumberU64() {
+		if err := bc.loadLastState(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	block := bc.GetBlockByNumber(num)
+	// Make sure the state associated with the block is available
+	if _, err := state.New(block.Root(), bc.stateCache); err != nil {
+		// Dangling block without a state associated, init from scratch
+		log.Warn("Head state missing, repairing chain", "number", block.Number(), "hash", block.Hash())
+		if err := bc.repair(&block); err != nil {
+			return err
+		}
+	}
+	bc.currentBlock = block
+	bc.currentFastBlock = block
+
+	return bc.SetHead(block.NumberU64())
+}
+
+func (bc *BlockChain) repair(head **types.Block) error {
+	for {
+		// Abort if we've rewound to a head block that does have associated state
+		if _, err := state.New((*head).Root(), bc.stateCache); err == nil {
+			log.Info("Rewound blockchain to past state", "number", (*head).Number(), "hash", (*head).Hash())
+			return nil
+		}
+		// Otherwise rewind one block and recheck state availability there
+		block := bc.GetBlock((*head).ParentHash(), (*head).NumberU64()-1)
+		if block == nil {
+			return fmt.Errorf("missing block %d [%x]", (*head).NumberU64()-1, (*head).ParentHash())
+		}
+		*head = block
+	}
+}
+
+func (bc *BlockChain) InitWithEngine(engine consensus.Engine, startNum uint64) (*BlockChain, error) {
 	bc.engine = engine
 	bc.SetValidator(NewBlockValidator(bc.config, bc, engine))
 	bc.SetProcessor(NewStateProcessor(bc.config, bc, engine))
@@ -135,7 +185,9 @@ func (bc *BlockChain) InitWithEngine(engine consensus.Engine) (*BlockChain, erro
 	if bc.genesisBlock == nil {
 		return nil, errNoGenesis
 	}
-	if err := bc.loadLastState(); err != nil {
+
+	// Start chain with a specified block number
+	if err := bc.startChainByBlockNubmer(startNum); err != nil {
 		return nil, err
 	}
 
@@ -1431,6 +1483,11 @@ func (bc *BlockChain) GetHeaderByHash(hash common.Hash) *types.Header {
 // it if present.
 func (bc *BlockChain) HasHeader(hash common.Hash, number uint64) bool {
 	return bc.hc.HasHeader(hash, number)
+}
+
+// GetCanonicalHash returns the canonical hash for a given block number
+func (bc *BlockChain) GetCanonicalHash(number uint64) common.Hash {
+	return bc.hc.GetCanonicalHash(number)
 }
 
 // GetBlockHashesFromHash retrieves a number of block hashes starting at a given
