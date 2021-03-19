@@ -100,6 +100,11 @@ func (s *Node) APIs() []rpc.API {
 				Service: synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
 				Public:  true,
 			},
+			{Namespace: "eth",
+				Version: "1.0",
+				Service: synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
+				Public:  true,
+			},
 		}...)
 
 	}
