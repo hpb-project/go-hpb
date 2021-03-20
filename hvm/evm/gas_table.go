@@ -291,6 +291,18 @@ func gasCreate(gt config.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	return gas, nil
 }
 
+func gasCreate2(gt config.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	var overflow bool
+	gas, err := memoryGasCost(mem, memorySize)
+	if err != nil {
+		return 0, err
+	}
+	if gas, overflow = math.SafeAdd(gas, config.Create2Gas); overflow {
+		return 0, errGasUintOverflow
+	}
+	return gas, nil
+}
+
 func gasBalance(gt config.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return gt.Balance, nil
 }
