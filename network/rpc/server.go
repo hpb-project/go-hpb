@@ -108,7 +108,6 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 		}
 		return nil
 	}
-
 	svc.name = name
 	svc.callbacks, svc.subscriptions = methods, subscriptions
 
@@ -389,6 +388,10 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			requests[i] = &serverRequest{id: r.id, err: r.err}
 			continue
 		}
+		log.Debug("rpc method","method",r.method,"service",r.service)
+		if r.service == "eth"{
+			r.service = "hpb"
+		}
 
 		if r.isPubSub && strings.HasSuffix(r.method, unsubscribeMethodSuffix) {
 			requests[i] = &serverRequest{id: r.id, isUnsubscribe: true}
@@ -400,7 +403,6 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			}
 			continue
 		}
-
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue
