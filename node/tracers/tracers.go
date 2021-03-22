@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/hpb-project/go-hpb/node/tracers"
+	"github.com/hpb-project/go-hpb/node/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

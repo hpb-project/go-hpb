@@ -48,15 +48,15 @@ type dummyStatedb struct {
 	state.StateDB
 }
 
-func (*dummyStatedb) GetRefund() uint64 { return 1337 }
+func (*dummyStatedb) GetRefund() *big.Int { return big.NewInt(1337) }
 
 func runTrace(tracer *Tracer) (json.RawMessage, error) {
-	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, params.TestChainConfig, vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, &params.DefaultBlockChainConfig, vm.Config{Debug: true, Tracer: tracer})
 
 	contract := vm.NewContract(account{}, account{}, big.NewInt(0), 10000)
 	contract.Code = []byte{byte(vm.PUSH1), 0x1, byte(vm.PUSH1), 0x1, 0x0}
 
-	_, err := env.Interpreter().Run(contract, []byte{}, false)
+	_, err := env.Interpreter().Run(0, contract, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func TestHaltBetweenSteps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, params.TestChainConfig, vm.Config{Debug: true, Tracer: tracer})
+	env := vm.NewEVM(vm.Context{BlockNumber: big.NewInt(1)}, &dummyStatedb{}, &params.DefaultBlockChainConfig, vm.Config{Debug: true, Tracer: tracer})
 	contract := vm.NewContract(&account{}, &account{}, big.NewInt(0), 0)
 
 	tracer.CaptureState(env, 0, 0, 0, 0, nil, nil, contract, 0, nil)
