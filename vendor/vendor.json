@@ -187,6 +187,12 @@
 			"revisionTime": "2016-08-13T22:13:03Z"
 		},
 		{
+			"checksumSHA1": "XicY9KzukMdyzyutMrPATHDEVZQ=",
+			"path": "github.com/holiman/uint256",
+			"revision": "3c4134ff99a6155c11159478278c3ab02e13d669",
+			"revisionTime": "2020-09-05T07:16:47Z"
+		},
+		{
 			"checksumSHA1": "f55gR+6YClh0i/FOhdy66SOUiwY=",
 			"path": "github.com/huin/goupnp",
 			"revision": "679507af18f3c7ba2bcc7905392ce23e148661c3",
