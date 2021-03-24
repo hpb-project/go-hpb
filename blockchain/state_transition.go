@@ -241,6 +241,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if intrinsicGas.BitLen() > 64 {
 		return nil, hvm.ErrOutOfGas
 	}
+
 	if err := st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, err
 	}

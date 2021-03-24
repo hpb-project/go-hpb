@@ -482,10 +482,20 @@ func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hex
 	return db.Get(hash.Bytes())
 }
 
-// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
-// and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]bc.BadBlockArgs, error) {
-	return api.hpb.BlockChain().BadBlocks()
+// BadBlockArgs represents the entries in the list returned when bad blocks are queried.
+type BadBlockArgs struct {
+	Hash   common.Hash   `json:"hash"`
+	Header *types.Header `json:"header"`
+}
+
+// BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
+func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]BadBlockArgs, error) {
+	badblocks := api.hpb.BlockChain().BadBlocks()
+	headers := make([]BadBlockArgs, len(badblocks))
+	for index, block := range badblocks {
+		headers[index] = BadBlockArgs{Hash: block.Hash(), Header: block.Header()}
+	}
+	return headers, nil
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.

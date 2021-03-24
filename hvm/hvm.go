@@ -34,6 +34,34 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 }
 
+// NewEVMContextWithoutMessage creates a new context without message for use in the EVM.
+func NewEVMContextWithoutMessage(header *types.Header, chain ChainContext, author *common.Address) evm.Context {
+	// If we don't have an explicit author (i.e. not mining), extract from the header
+	var beneficiary common.Address
+	if author == nil {
+		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
+	} else {
+		beneficiary = *author
+	}
+	extra, _ := types.BytesToExtraDetail(header.Extra)
+	return evm.Context{
+		CanTransfer: CanTransfer,
+		Transfer:    Transfer,
+		GetHash:     GetHashFn(header, chain),
+		Coinbase:    beneficiary,
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		Random:      extra.GetSignedLastRND()[:32],
+	}
+}
+func NewEVMContextWithMessage(context evm.Context, msg Message) evm.Context {
+	context.Origin = msg.From()
+	context.GasPrice = new(big.Int).Set(msg.GasPrice())
+	return context
+}
+
 // NewEVMContext creates a new context for use in the EVM.
 func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) evm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header

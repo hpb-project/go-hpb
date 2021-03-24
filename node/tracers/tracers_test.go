@@ -37,7 +37,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	params "github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/hvm"
 	vm "github.com/hpb-project/go-hpb/hvm/evm"
 )
 
@@ -145,15 +144,15 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	*/
 	origin, _ := signer.Sender(tx)
 	context := vm.Context{
-		CanTransfer: hvm.CanTransfer,
-		Transfer:    hvm.Transfer,
 		Origin:      origin,
+		GasPrice:    big.NewInt(1),
+		CanTransfer: vm.CanTransfer,
+		Transfer:    vm.Transfer,
 		Coinbase:    common.Address{},
 		BlockNumber: new(big.Int).SetUint64(8000000),
 		Time:        new(big.Int).SetUint64(5),
 		Difficulty:  big.NewInt(0x30000),
 		GasLimit:    big.NewInt(6000000),
-		GasPrice:    big.NewInt(1),
 	}
 	alloc := core.GenesisAlloc{}
 
@@ -232,18 +231,18 @@ func TestCallTracer(t *testing.T) {
 			}
 			signer := types.MakeSigner(test.Genesis.Config)
 			origin, _ := signer.Sender(tx)
+
 			context := vm.Context{
-				CanTransfer: hvm.CanTransfer,
-				Transfer:    hvm.Transfer,
-				Coinbase:    test.Context.Miner,
 				Origin:      origin,
 				GasPrice:    tx.GasPrice(),
+				CanTransfer: vm.CanTransfer,
+				Transfer:    vm.Transfer,
+				Coinbase:    test.Context.Miner,
 				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
 				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
 				Difficulty:  (*big.Int)(test.Context.Difficulty),
 				GasLimit:    new(big.Int).SetUint64(uint64(test.Context.GasLimit)),
 			}
-
 			memDB, _ := hpbdb.NewMemDatabase()
 			statedb := MakePreState(memDB, test.Genesis.Alloc)
 
@@ -274,10 +273,10 @@ func TestCallTracer(t *testing.T) {
 
 			if !jsonEqual(ret, test.Result) {
 				// uncomment this for easier debugging
-				//have, _ := json.MarshalIndent(ret, "", " ")
-				//want, _ := json.MarshalIndent(test.Result, "", " ")
-				//t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
-				t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", ret, test.Result)
+				have, _ := json.MarshalIndent(ret, "", " ")
+				want, _ := json.MarshalIndent(test.Result, "", " ")
+				t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", string(have), string(want))
+				//t.Fatalf("trace mismatch: \nhave %+v\nwant %+v", ret, test.Result)
 			}
 		})
 	}
