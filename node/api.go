@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -346,6 +347,24 @@ type PrivateAdminAPI struct {
 // admin methods of the Hpb service.
 func NewPrivateAdminAPI(hpb *Node) *PrivateAdminAPI {
 	return &PrivateAdminAPI{hpb: hpb}
+}
+
+func (api *PrivateAdminAPI) AddPeer(url string) error {
+	node, err := discover.ParseNode(url)
+	if err != nil {
+		return err
+	}
+	api.hpb.Hpbpeermanager.P2pSvr().AddPeer(node)
+	return nil
+}
+
+func (api *PrivateAdminAPI) RemovePeer(url string) error {
+	node, err := discover.ParseNode(url)
+	if err != nil {
+		return err
+	}
+	api.hpb.Hpbpeermanager.P2pSvr().RemovePeer(node)
+	return nil
 }
 
 // ExportChain exports the current blockchain into a local file.
