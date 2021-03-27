@@ -339,6 +339,7 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 
 	// Check gasPrice.
 	if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+		log.Debug("tx validate", "pool gasprice", pool.gasPrice.Text(10), "tx price", tx.GasPrice().Text(10))
 		log.Trace("ErrUnderpriced", "ErrUnderpriced", ErrUnderpriced)
 		return ErrUnderpriced
 	}
@@ -437,8 +438,8 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	for _, tx := range txs {
 		// If the transaction fails basic validation, discard it
 		if err := pool.softvalidateTx(tx); err != nil {
-			log.Trace("Discarding invalid transaction", "hash", tx.Hash(), "err", err)
-			return err
+			log.Debug("Discarding invalid transaction", "hash", tx.Hash(), "err", err)
+			continue
 		}
 	}
 
