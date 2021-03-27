@@ -412,11 +412,17 @@ var poolTxsCh chan *types.Transaction
 
 func TxsPoolLoop() {
 	duration := time.Millisecond * 500
-	timer := time.NewTimer(duration)
+	if poolTxsCh != nil {
+		return 
+	}
+	timer := time.NewTicker(duration)
 
 	txCap := 2000
 	txs := make([]*types.Transaction, 0, txCap)
 	poolTxsCh = make(chan *types.Transaction, 2000)
+	defer func() {
+		poolTxsCh = nil
+	}()
 
 	for {
 		select {
@@ -437,7 +443,6 @@ func TxsPoolLoop() {
 			}
 
 		}
-		timer.Reset(duration)
 	}
 }
 
@@ -446,6 +451,7 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	// Don't change this code if you don't understand it
 	if atomic.LoadUint32(&InstanceSynCtrl().AcceptTxs) == 0 {
+		log.Debug("handleTxMsg node don't acceptTxs")
 		return nil
 	}
 
@@ -461,14 +467,15 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 		if tx == nil {
 			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
 		}
-		p.KnownTxsAdd(tx.Hash())
 
-		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) {
+		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) || p.KnownTxsHas(tx.Hash()){
+			log.Debug("handleTxMsg tx has known or in txpool", "tx", tx.Hash())
 			continue
 		} else {
-			go func() {
-				poolTxsCh <- tx
-			}()
+			p.KnownTxsAdd(tx.Hash())
+			go func(t *types.Transaction) {
+				poolTxsCh <- t
+			}(tx)
 		}
 	}
 

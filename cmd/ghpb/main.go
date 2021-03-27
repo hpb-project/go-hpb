@@ -278,6 +278,7 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) && (conf.Network.RoleType == "") {
 		// Set the gas price to the limits from the CLI and start mining
 		stack.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		log.Debug("set default gasprice ", "price",utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := stack.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
