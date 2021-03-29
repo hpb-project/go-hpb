@@ -387,6 +387,7 @@ type txPricedList struct {
 	all    *sync.Map  // Pointer to the map of all transactions
 	items  *priceHeap // Heap of prices of all the stored transactions
 	stales int        // Number of stale price points to (re-heap trigger)
+	sync.Mutex
 }
 
 // newTxPricedList creates a new price-sorted transaction heap.
@@ -399,6 +400,8 @@ func newTxPricedList(all *sync.Map) *txPricedList {
 
 // Put inserts a new transaction into the heap.
 func (l *txPricedList) Put(tx *types.Transaction) {
+	l.Lock()
+	defer l.Unlock()
 	heap.Push(l.items, tx)
 }
 
@@ -411,9 +414,11 @@ func (l *txPricedList) Removed(allcnt int64) {
 	if l.stales <= len(*l.items)/4 {
 		return
 	}
+
 	// Seems we've reached a critical number of stale transactions, reheap
 	reheap := make(priceHeap, 0, allcnt)
-
+	l.Lock()
+	defer l.Unlock()
 	l.stales, l.items = 0, &reheap
 
 	l.all.Range(func(k, v interface{}) bool {
@@ -429,7 +434,8 @@ func (l *txPricedList) Removed(allcnt int64) {
 // from the priced list and returs them for further removal from the entire pool.
 func (l *txPricedList) Cap(threshold *big.Int) types.Transactions {
 	drop := make(types.Transactions, 0, 128) // Remote underpriced transactions to drop
-
+	l.Lock()
+	defer l.Unlock()
 	for len(*l.items) > 0 {
 		// Discard stale transactions if found during cleanup
 		tx := heap.Pop(l.items).(*types.Transaction)
@@ -451,6 +457,8 @@ func (l *txPricedList) Cap(threshold *big.Int) types.Transactions {
 // Underpriced checks whether a transaction is cheaper than (or as cheap as) the
 // lowest priced transaction currently being tracked.
 func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
+	l.Lock()
+	defer l.Unlock()
 	// Discard stale price points if found at the heap start
 	for len(*l.items) > 0 {
 		head := []*types.Transaction(*l.items)[0]
@@ -474,7 +482,8 @@ func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
 // priced list and returns them for further removal from the entire pool.
 func (l *txPricedList) Discard(count int) types.Transactions {
 	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
-
+	l.Lock()
+	defer l.Unlock()
 	for len(*l.items) > 0 && count > 0 {
 		// Discard stale transactions if found during cleanup
 		tx := heap.Pop(l.items).(*types.Transaction)
