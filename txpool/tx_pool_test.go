@@ -169,7 +169,6 @@ func (c *testChain) State() (*state.StateDB, error) {
 
 func stopAndClean(pool *TxPool) {
 	pool.Stop()
-	allCnt = 0
 	INSTANCE = atomic.Value{}
 }
 
@@ -866,8 +865,10 @@ func TestTransactionPendingLimiting(t *testing.T) {
 
 // Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
-func TestTransactionQueueLimitingEquivalency(t *testing.T)   { testTransactionLimitingEquivalency(t, 1) }
-func TestTransactionPendingLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 0) }
+func TestTransactionQueueLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 1) }
+func TestTransactionPendingLimitingEquivalency(t *testing.T) {
+	testTransactionLimitingEquivalency(t, 0)
+}
 
 func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	// Add a batch of transactions to a pool one by one
@@ -1123,24 +1124,20 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
-	fmt.Println("--1-->")
 
 	// Ensure that adding an underpriced transaction on block limit fails
 	if err := pool.AddTx(pricedTransaction(0, big.NewInt(100000), big.NewInt(1), keys[1])); err != ErrUnderpriced {
 		t.Fatalf("adding underpriced pending transaction error mismatch: have %v, want %v", err, ErrUnderpriced)
 	}
-	fmt.Println("--2-->")
 
 	// Ensure that adding high priced transactions drops cheap ones, but not own
 	if err := pool.AddTx(pricedTransaction(0, big.NewInt(100000), big.NewInt(3), keys[1])); err != nil {
 		t.Fatalf("failed to add well priced transaction: %v", err)
 	}
-	fmt.Println("--3-->")
 
 	if err := pool.AddTx(pricedTransaction(2, big.NewInt(100000), big.NewInt(4), keys[1])); err != nil {
 		t.Fatalf("failed to add well priced transaction: %v", err)
 	}
-	fmt.Println("--4-->")
 
 	if err := pool.AddTx(pricedTransaction(3, big.NewInt(100000), big.NewInt(5), keys[1])); err != nil {
 		t.Fatalf("failed to add well priced transaction: %v", err)
@@ -1158,7 +1155,6 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 	}
 
 	pending, queued = pool.Stats()
-	fmt.Println("--[--", pending, queued)
 
 	// Ensure that adding local transactions can push out even higher priced ones
 	tx := pricedTransaction(0, big.NewInt(100000), big.NewInt(3), keys[2])
@@ -1166,7 +1162,6 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 		t.Fatalf("failed to add underpriced local transaction: %v", err)
 	}
 	pending, queued = pool.Stats()
-	fmt.Println("----", pending, queued)
 	if pending != 2 {
 		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 2)
 	}
@@ -1365,7 +1360,7 @@ func BenchmarkPoolInsert(b *testing.B) {
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
 	for _, tx := range txs {
-		b.Log(pool.AddTx(tx))
+		pool.AddTx(tx)
 	}
 }
 

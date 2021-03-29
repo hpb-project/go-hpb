@@ -21,9 +21,9 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"sync"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
 )
 
@@ -384,13 +384,13 @@ func (h *priceHeap) Pop() interface{} {
 // txPricedList is a price-sorted heap to allow operating on transactions pool
 // contents in a price-incrementing way.
 type txPricedList struct {
-	all    *sync.Map  // Pointer to the map of all transactions
+	all    *txLookup  // Pointer to the map of all transactions
 	items  *priceHeap // Heap of prices of all the stored transactions
 	stales int        // Number of stale price points to (re-heap trigger)
 }
 
 // newTxPricedList creates a new price-sorted transaction heap.
-func newTxPricedList(all *sync.Map) *txPricedList {
+func newTxPricedList(all *txLookup) *txPricedList {
 	return &txPricedList{
 		all:   all,
 		items: new(priceHeap),
@@ -405,19 +405,17 @@ func (l *txPricedList) Put(tx *types.Transaction) {
 // Removed notifies the prices transaction list that an old transaction dropped
 // from the pool. The list will just keep a counter of stale objects and update
 // the heap if a large enough ratio of transactions go stale.
-func (l *txPricedList) Removed(allcnt int64) {
+func (l *txPricedList) Removed(count int) {
 	// Bump the stale counter, but exit if still too low (< 25%)
-	l.stales++
+	l.stales += count
 	if l.stales <= len(*l.items)/4 {
 		return
 	}
 	// Seems we've reached a critical number of stale transactions, reheap
-	reheap := make(priceHeap, 0, allcnt)
+	reheap := make(priceHeap, 0, l.all.Count())
 
 	l.stales, l.items = 0, &reheap
-
-	l.all.Range(func(k, v interface{}) bool {
-		tx := v.(*types.Transaction)
+	l.all.Range(func(hash common.Hash, tx *types.Transaction) bool {
 		*l.items = append(*l.items, tx)
 		return true
 	})
@@ -433,7 +431,7 @@ func (l *txPricedList) Cap(threshold *big.Int) types.Transactions {
 	for len(*l.items) > 0 {
 		// Discard stale transactions if found during cleanup
 		tx := heap.Pop(l.items).(*types.Transaction)
-		if _, ok := l.all.Load(tx.Hash()); !ok {
+		if l.all.Get(tx.Hash()) == nil {
 			l.stales--
 			continue
 		}
@@ -454,7 +452,7 @@ func (l *txPricedList) Underpriced(tx *types.Transaction) bool {
 	// Discard stale price points if found at the heap start
 	for len(*l.items) > 0 {
 		head := []*types.Transaction(*l.items)[0]
-		if _, ok := l.all.Load(head.Hash()); !ok {
+		if l.all.Get(head.Hash()) == nil {
 			l.stales--
 			heap.Pop(l.items)
 			continue
@@ -478,7 +476,7 @@ func (l *txPricedList) Discard(count int) types.Transactions {
 	for len(*l.items) > 0 && count > 0 {
 		// Discard stale transactions if found during cleanup
 		tx := heap.Pop(l.items).(*types.Transaction)
-		if _, ok := l.all.Load(tx.Hash()); !ok {
+		if l.all.Get(tx.Hash()) == nil {
 			l.stales--
 			continue
 		}
