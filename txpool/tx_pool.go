@@ -175,7 +175,7 @@ func (pool *TxPool) loop() {
 			}
 		// Handle inactive account transaction eviction
 		case <-evict.C:
-			log.Error("luxq- txpool eviction timer got", "tx lifetime ", pool.config.Lifetime)
+			log.Info("luxq- txpool eviction timer got", "tx lifetime ", pool.config.Lifetime)
 			// Any old enough should be removed
 			pool.queue.Range(func(k, v interface{}) bool {
 				var tmpBeatsV time.Time
@@ -183,9 +183,12 @@ func (pool *TxPool) loop() {
 				t, ok := pool.beats.Load(addr)
 				if ok {
 					tmpBeatsV = t.(time.Time)
+
+				} else {
+					log.Info("get user beats not ok")
 				}
 				since := time.Since(tmpBeatsV)
-				log.Error("user beattime ", "t", tmpBeatsV, "since", since)
+				log.Info("user beattime ", "t", tmpBeatsV, "since", since)
 
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					if lv, ok := pool.queue.Load(addr); ok {
@@ -800,6 +803,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats.Store(addr, time.Now())
+	log.Info("luxq-set txpool beats ", "addr", addr.String(), "beats ", time.Now())
 	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
 	go pool.txFeed.Send(bc.TxPreEvent{Tx: tx})
 	log.Trace("send txpre event-------", "tx.once", tx.Nonce(), "acc-addr", addr, "hash", hash)
