@@ -661,6 +661,10 @@
 			"revisionTime": "2017-02-15T08:41:58Z"
 		},
 		{
+			"path": "golang.org/x/sys/cpu",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "rTPzsn0jeqfgnQR0OsMKR8JRy5Y=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "e24f485414aeafb646f6fca458b0bf869c0880a1",
