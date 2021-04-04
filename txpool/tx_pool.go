@@ -590,6 +590,9 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if _, ok := pool.beats.Load(from); !ok {
+		pool.beats.Store(from, time.Now())
+	}
 	log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
 	return replace, nil
 }
