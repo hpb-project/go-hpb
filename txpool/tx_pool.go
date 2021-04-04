@@ -175,6 +175,7 @@ func (pool *TxPool) loop() {
 			}
 		// Handle inactive account transaction eviction
 		case <-evict.C:
+			log.Error("luxq- txpool eviction timer got", "tx lifetime ", pool.config.Lifetime)
 			// Any old enough should be removed
 			pool.queue.Range(func(k, v interface{}) bool {
 				var tmpBeatsV time.Time
@@ -183,6 +184,9 @@ func (pool *TxPool) loop() {
 				if ok {
 					tmpBeatsV = t.(time.Time)
 				}
+				since := time.Since(tmpBeatsV)
+				log.Error("user beattime ", "t", tmpBeatsV, "since", since)
+
 				if time.Since(tmpBeatsV) > pool.config.Lifetime {
 					if lv, ok := pool.queue.Load(addr); ok {
 						list := lv.(*txList)
@@ -197,6 +201,7 @@ func (pool *TxPool) loop() {
 				}
 				return true
 			})
+			log.Error("luxq- txpool eviction timer end")
 
 			// Handle stats reporting ticks
 		case <-report.C:
