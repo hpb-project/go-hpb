@@ -135,6 +135,8 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 	}
 	synctrl.puller = NewPuller(bc.InstanceBlockChain().GetBlockByHash, validator, routBlock, heighter, inserter, synctrl.removePeer)
 
+	go TxsPoolLoop()
+
 	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockHeadersMsg, HandleGetBlockHeadersMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.GetBlockBodiesMsg, HandleGetBlockBodiesMsg)
 	p2p.PeerMgrInst().RegMsgProcess(p2p.BlockHeadersMsg, HandleBlockHeadersMsg)
@@ -151,8 +153,6 @@ func newSynCtrl(cfg *config.ChainConfig, mode config.SyncMode, txpoolins *txpool
 
 	p2p.PeerMgrInst().RegOnAddPeer(synctrl.RegisterNetPeer)
 	p2p.PeerMgrInst().RegOnDropPeer(synctrl.UnregisterNetPeer)
-
-	go TxsPoolLoop()
 	return synctrl, nil
 }
 

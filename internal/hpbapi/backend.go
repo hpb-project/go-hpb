@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// Package ethapi implements the general Hpb API functions.
+// Package hpbapi implements the general Hpb API functions.
 package hpbapi
 
 import (
@@ -44,7 +44,7 @@ type Backend interface {
 	ChainDb() hpbdb.Database
 	EventMux() *sub.TypeMux
 	AccountManager() *accounts.Manager
-	RPCGasCap() uint64 // global gas cap for eth_call over rpc: DoS protection
+	RPCGasCap() uint64 // global gas cap for hpb_call over rpc: DoS protection
 
 	// BlockChain API
 	SetHead(number uint64)
@@ -84,16 +84,34 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPublicHpbAPI(apiBackend),
 			Public:    true,
 		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicHpbAPI(apiBackend),
+			Public:    true,
+		},
+		{
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   NewPublicBlockChainAPI(apiBackend),
 			Public:    true,
 		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicBlockChainAPI(apiBackend),
+			Public:    true,
+		},
+		{
 			Namespace: "hpb",
 			Version:   "1.0",
 			Service:   NewPublicTransactionPoolAPI(apiBackend, nonceLock),
 			Public:    true,
 		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicTransactionPoolAPI(apiBackend, nonceLock),
+			Public:    true,
+		},
+		{
 			Namespace: "txpool",
 			Version:   "1.0",
 			Service:   NewPublicTxPoolAPI(apiBackend),
@@ -109,6 +127,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPrivateDebugAPI(apiBackend),
 		}, {
 			Namespace: "hpb",
+			Version:   "1.0",
+			Service:   NewPublicAccountAPI(apiBackend.AccountManager()),
+			Public:    true,
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicAccountAPI(apiBackend.AccountManager()),
 			Public:    true,

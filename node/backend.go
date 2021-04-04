@@ -18,9 +18,9 @@
 package node
 
 import (
-	"github.com/hpb-project/go-hpb/account"
-	"github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	accounts "github.com/hpb-project/go-hpb/account"
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -50,12 +50,23 @@ func (s *Node) APIs() []rpc.API {
 			Service:   NewPublicHpbAPI(s),
 			Public:    true,
 		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicHpbAPI(s),
+			Public:    true,
+		},
+		{
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
 		}, {
 			Namespace: "hpb",
+			Version:   "1.0",
+			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
+			Public:    true,
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,
@@ -85,6 +96,11 @@ func (s *Node) APIs() []rpc.API {
 		apis = append(apis, s.Hpbengine.APIs(s.BlockChain())...)
 		apis = append(apis, []rpc.API{
 			{Namespace: "hpb",
+				Version: "1.0",
+				Service: synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
+				Public:  true,
+			},
+			{Namespace: "eth",
 				Version: "1.0",
 				Service: synctrl.NewPublicSyncerAPI(s.Hpbsyncctr.Syncer(), s.newBlockMux),
 				Public:  true,

@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	minRoutBlockpeers = 10
-	routPeerParameter = 3
+	minRoutBlockpeers    = 10
+	routPeerParameter    = 3
+	maxRouteTxPrenodeCnt = 15
 )
 
 // routingBlock will either propagate a block to a subset of it's peers, or
@@ -151,6 +152,7 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 	if len(peers) == 0 {
 		return
 	}
+	var toPreCount = 0
 
 	switch p2p.PeerMgrInst().GetLocalType() {
 	case discover.HpNode:
@@ -167,20 +169,11 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 			switch peer.RemoteType() {
 			case discover.HpNode:
 				sendTransactions(peer, types.Transactions{tx})
-				break
-			}
-		}
-
-		toPreCount := 0
-		for _, peer := range peers {
-			switch peer.RemoteType() {
 			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				toPreCount += 1
-				break
-			}
-			if toPreCount >= 1 {
-				break
+				if toPreCount < maxRouteTxPrenodeCnt {
+					sendTransactions(peer, types.Transactions{tx})
+					toPreCount += 1
+				}
 			}
 		}
 
@@ -190,24 +183,13 @@ func routNativeTx(hash common.Hash, tx *types.Transaction) {
 			switch peer.RemoteType() {
 			case discover.HpNode:
 				sendTransactions(peer, types.Transactions{tx})
-				break
-			}
-		}
-
-		toPreCount := 0
-		for _, peer := range peers {
-			switch peer.RemoteType() {
 			case discover.PreNode:
-				sendTransactions(peer, types.Transactions{tx})
-				toPreCount += 1
-				break
-			}
-
-			if toPreCount >= 1 {
-				break
+				if toPreCount < maxRouteTxPrenodeCnt {
+					sendTransactions(peer, types.Transactions{tx})
+					toPreCount += 1
+				}
 			}
 		}
-		break
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
@@ -218,15 +200,32 @@ func routForwardTx(hash common.Hash, tx *types.Transaction) {
 		return
 	}
 
+	var toPreCount = 0
+
 	switch p2p.PeerMgrInst().GetLocalType() {
 	case discover.HpNode:
+		for _, peer := range peers {
+			switch peer.RemoteType() {
+			case discover.HpNode:
+				sendTransactions(peer, types.Transactions{tx})
+			case discover.PreNode:
+				if toPreCount < maxRouteTxPrenodeCnt {
+					sendTransactions(peer, types.Transactions{tx})
+					toPreCount++
+				}
+			}
+		}
 		break
 	case discover.PreNode:
 		for _, peer := range peers {
 			switch peer.RemoteType() {
 			case discover.HpNode:
 				sendTransactions(peer, types.Transactions{tx})
-				break
+			case discover.PreNode:
+				if toPreCount < maxRouteTxPrenodeCnt {
+					sendTransactions(peer, types.Transactions{tx})
+					toPreCount++
+				}
 			}
 		}
 		break
@@ -240,6 +239,8 @@ func routForwardTx(hash common.Hash, tx *types.Transaction) {
 func sendTransactions(peer *p2p.Peer, txs types.Transactions) error {
 	for _, tx := range txs {
 		peer.KnownTxsAdd(tx.Hash())
+		log.Debug("route tx ", "hash", tx.Hash().String(), " to peer", peer.Address())
 	}
+
 	return p2p.SendData(peer, p2p.TxMsg, txs)
 }

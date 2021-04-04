@@ -79,7 +79,6 @@ const (
 
 	// Precompiled contract gas prices
 
-	ZSCverifyGas            uint64 = 10000  // zscverify
 	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
 	Sha256BaseGas           uint64 = 60     // Base price for a SHA256 operation
 	Sha256PerWordGas        uint64 = 12     // Per-word price for a SHA256 operation

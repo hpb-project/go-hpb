@@ -392,7 +392,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 }
 
 // EcRecover returns the address for the account that was used to create the signature.
-// Note, this function is compatible with eth_sign and personal_sign. As such it recovers
+// Note, this function is compatible with hpb_sign and personal_sign. As such it recovers
 // the address of:
 // hash = keccak256("\x19Hpb Signed Message:\n"${message length}${message})
 // addr = ecrecover(hash, signature)
@@ -753,7 +753,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo  uint64 = config.TxGas - 1
+		lo  uint64 = 21000 - 1
 		hi  uint64
 		cap uint64
 	)
@@ -862,7 +862,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
 	}
@@ -943,7 +943,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"voteIndex":        (*hexutil.Big)(head.VoteIndex),
 		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
-		"extraData":        head.ExtraDetail().String(),
+		"extraData":        hexutil.Bytes(head.ExtraDetail().GetVanity()),
 		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
 		"gasLimit":         (*hexutil.Big)(head.GasLimit),
 		"gasUsed":          (*hexutil.Big)(head.GasUsed),

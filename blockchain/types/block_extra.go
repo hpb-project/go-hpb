@@ -248,7 +248,15 @@ func (this *ExtraDetail) ExceptSealToBytes() []byte {
 }
 
 func (this *ExtraDetail) GetVanity() []byte {
-	return this.Vanity[:]
+	var tmps = make([]byte, 0)
+	for _, b := range this.Vanity {
+		if b != 0x0 {
+			tmps = append(tmps, b)
+		} else {
+			break
+		}
+	}
+	return tmps
 }
 
 func (this *ExtraDetail) SetVanity(vanity []byte) error {

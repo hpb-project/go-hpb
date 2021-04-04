@@ -76,7 +76,7 @@ var DefaultConfig = Nodeconfig{
 	NetworkId:       1,
 	LightPeers:      20,
 	DatabaseCache:   128,
-	GasPrice:        big.NewInt(18 * Shannon),
+	GasPrice:        big.NewInt(1 * Shannon),
 	IPCPath:         "ghpb.ipc",
 	MaxTrieCacheGen: uint16(120),
 	RPCGasCap:       25000000,
