@@ -31,20 +31,19 @@ import (
         "github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm/native"
+	"github.com/hpb-project/go-hpb/consensus"
 )
 
 var (
 	Big0                         = big.NewInt(0)
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	ErrInsufficientBalance       = errors.New("insufficient balance")
-        gasAddr                      = common.HexToAddress("0x59f81b2ccd7b4cf0bdb789c56d9ecb77a0ad1da8")
+    gasDiscountContractAddr      = common.HexToAddress("0x59f81b2ccd7b4cf0bdb789c56d9ecb77a0ad1da8")
 	gasABI                       = "[{\"constant\":true,\"inputs\":[{\"name\":\"dappaddr\",\"type\":\"address\"}],\"name\":\"getratebyaddr\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\": \"\",\"type\": \"uint256\"}],\"payable\": false,\"stateMutability\": \"view\",\"type\": \"function\"}]"
 	gasFunname                   = "getratebyaddr"
-	gasCacheContractAddr         = common.HexToAddress("0x08c8da545b1105dfcabaeb155f8078af07209277")
 	gasCacheAddrs                = map[common.Address]bool{}
 	gasCacheFunname              = "getaddrs"
-	gasCacheFunABI               = "[{\"constant\":false,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"gasaddr\",\"type\":\"address\"}],\"name\":\"addgasaddr\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
-
+	gasCacheFunABI               = "[{\"constant\":false,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 )
 
 /*
@@ -287,13 +286,15 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 			return nil, nil, nil, false, vmerr
 		}
 	}
-
-	if *msg.To() == gasCacheContractAddr  || len(gasCacheAddrs) == 0 {
-		st.gasCacheCall(msg.To())
+	if st.evm.Context.BlockNumber.Uint64() > consensus.StageNumberVIII{
+		if *msg.To() == gasDiscountContractAddr  || len(gasCacheAddrs) == 0 {
+			st.gasCacheCall()
+		}
+		if gasCacheAddrs[*msg.To()] {
+			st.gasCall(msg.To())
+		}
 	}
-	if gasCacheAddrs[*msg.To()] {
-		st.gasCall(msg.To())
-	}
+	
 	requiredGas = new(big.Int).Set(st.gasUsed())
 	
 	st.refundGas()
@@ -329,8 +330,8 @@ func (st *StateTransition) gasCall(to *common.Address) {
 		CanTransfer: evm.CanTransfer,
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return st.header.ParentHash },
-		Origin:      gasAddr,
-		Coinbase:    gasAddr,
+		Origin:      gasDiscountContractAddr,
+		Coinbase:    gasDiscountContractAddr,
 		BlockNumber: new(big.Int).Set(big.NewInt(0)),
 		Time:        new(big.Int).Set(big.NewInt(0)),
 		Difficulty:  new(big.Int).Set(big.NewInt(0)),
@@ -342,7 +343,7 @@ func (st *StateTransition) gasCall(to *common.Address) {
 	fechABI, _ := abi.JSON(strings.NewReader(gasABI))
 	//get contract addr
 	packres, err := fechABI.Pack(gasFunname, to)
-	result, err := vmenv.InnerCall(evm.AccountRef(gasAddr), gasAddr, packres)
+	result, err := vmenv.InnerCall(evm.AccountRef(gasDiscountContractAddr), gasDiscountContractAddr, packres)
 	if err == nil {
 		voted := new(big.Int).SetBytes(result[0:32]).Uint64()
 		rate := new(big.Int).SetBytes(result[32:64]).Uint64()
@@ -360,13 +361,13 @@ func (st *StateTransition) gasCall(to *common.Address) {
 	}
 }
 
-func (st *StateTransition) gasCacheCall(to *common.Address) {
+func (st *StateTransition) gasCacheCall() {
 	context := evm.Context{
 		CanTransfer: evm.CanTransfer,
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return st.header.ParentHash },
-		Origin:      gasCacheContractAddr,
-		Coinbase:    gasCacheContractAddr,
+		Origin:      gasDiscountContractAddr,
+		Coinbase:    gasDiscountContractAddr,
 		BlockNumber: new(big.Int).Set(big.NewInt(0)),
 		Time:        new(big.Int).Set(big.NewInt(0)),
 		Difficulty:  new(big.Int).Set(big.NewInt(0)),
@@ -377,7 +378,7 @@ func (st *StateTransition) gasCacheCall(to *common.Address) {
 	vmenv := evm.NewEVM(context, st.state, &config.GetHpbConfigInstance().BlockChain, cfg)
 	fechABI, _ := abi.JSON(strings.NewReader(gasCacheFunABI))
 	packres, err := fechABI.Pack(gasCacheFunname)
-	result, err := vmenv.InnerCall(evm.AccountRef(gasCacheContractAddr), gasCacheContractAddr, packres)
+	result, err := vmenv.InnerCall(evm.AccountRef(gasDiscountContractAddr), gasDiscountContractAddr, packres)
 	if err == nil {
 		addrslength := new(big.Int).SetBytes(result[32 : 32+32])
 		for i := 0; i < int(addrslength.Int64()); i++ {
