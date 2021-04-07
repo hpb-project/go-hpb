@@ -41,10 +41,19 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+func (evm *EVM) ActivePrecompiles() map[common.Address]PrecompiledContract {
+	switch num := evm.BlockNumber.Uint64(); {
+	case num > consensus.StageNumberNewPrecompiledContract:
+		return PrecompiledContractsIstanbul
+	default:
+		return PrecompiledContractsByzantium
+	}
+}
+
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			return RunPrecompiledContract(p, input, contract)
 		}
@@ -212,7 +221,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if precompiles[addr] == nil && value.Sign() == 0 {
 			return nil, gas, nil
 		}
@@ -266,7 +275,7 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if precompiles[addr] == nil {
 			return nil, nil
 		}
