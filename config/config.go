@@ -45,7 +45,7 @@ const (
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
-	TxGas                 uint64 = 10    // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
+	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. //for testnet
 	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
 	TxDataZeroGas         uint64 = 1     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. //for testnet
 	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
@@ -79,14 +79,15 @@ const (
 
 	// Precompiled contract gas prices
 
-	EcrecoverGas        uint64 = 3000 // Elliptic curve sender recovery gas price
-	Sha256BaseGas       uint64 = 60   // Base price for a SHA256 operation
-	Sha256PerWordGas    uint64 = 12   // Per-word price for a SHA256 operation
-	Ripemd160BaseGas    uint64 = 600  // Base price for a RIPEMD160 operation
-	Ripemd160PerWordGas uint64 = 120  // Per-word price for a RIPEMD160 operation
-	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
-	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
-	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
+	ZSCverifyGas        uint64 = 10000 // zscverify
+	EcrecoverGas        uint64 = 3000  // Elliptic curve sender recovery gas price
+	Sha256BaseGas       uint64 = 60    // Base price for a SHA256 operation
+	Sha256PerWordGas    uint64 = 12    // Per-word price for a SHA256 operation
+	Ripemd160BaseGas    uint64 = 600   // Base price for a RIPEMD160 operation
+	Ripemd160PerWordGas uint64 = 120   // Per-word price for a RIPEMD160 operation
+	IdentityBaseGas     uint64 = 15    // Base price for a data copy operation
+	IdentityPerWordGas  uint64 = 3     // Per-work price for a data copy operation
+	ModExpQuadCoeffDiv  uint64 = 20    // Divisor for the quadratic particle of the big int modular exponentiation
 
 	Bn256AddGasByzantium             uint64 = 500    // Byzantium gas needed for an elliptic curve addition
 	Bn256AddGasIstanbul              uint64 = 150    // Gas needed for an elliptic curve addition
@@ -97,6 +98,7 @@ const (
 	Bn256PairingPerPointGasByzantium uint64 = 80000  // Byzantium per-point price for an elliptic curve pairing check
 	Bn256PairingPerPointGasIstanbul  uint64 = 34000  // Per-point price for an elliptic curve pairing check
 )
+
 const (
 	// These are the multipliers for hpber denominations.
 	// Example: To get the wei value of an amount in 'douglas', use

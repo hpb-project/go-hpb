@@ -49,6 +49,12 @@ const (
 	defaultGasPrice = 50 * config.Shannon
 )
 
+func init() {
+	if defaultGas < config.TxGas {
+		panic("wrong defaultgas setting")
+	}
+}
+
 // PublicHpbAPI provides an API to access Hpb related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicHpbAPI struct {
