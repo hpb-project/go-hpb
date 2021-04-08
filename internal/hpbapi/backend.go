@@ -44,7 +44,7 @@ type Backend interface {
 	ChainDb() hpbdb.Database
 	EventMux() *sub.TypeMux
 	AccountManager() *accounts.Manager
-	RPCGasCap() uint64 // global gas cap for eth_call over rpc: DoS protection
+	RPCGasCap() uint64 // global gas cap for hpb_call over rpc: DoS protection
 
 	// BlockChain API
 	SetHead(number uint64)

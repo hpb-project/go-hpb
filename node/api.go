@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -30,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"

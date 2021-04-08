@@ -419,7 +419,7 @@ func (g *G1Point) add(a G1Point) G1Point {
 	input = append(input, g.y[:]...)
 	input = append(input, a.x[:]...)
 	input = append(input, a.y[:]...)
-	p, _ := new(bn256Add).Run(input)
+	p, _ := new(bn256AddIstanbul).Run(input)
 	copy(res.x[:], p[0:32])
 	copy(res.y[:], p[32:64])
 	return res
@@ -434,7 +434,7 @@ func (g *G1Point) mul(a []byte) G1Point {
 	input = append(input[:len(input)-len(a)], a...)
 	//input = append(input, a...)
 	//fmt.Println("input:", common.Bytes2Hex(input[:]))
-	p, _ := new(bn256ScalarMul).Run(input)
+	p, _ := new(bn256ScalarMulIstanbul).Run(input)
 	copy(res.x[:], p[0:32])
 	copy(res.y[:], p[32:64])
 	return res

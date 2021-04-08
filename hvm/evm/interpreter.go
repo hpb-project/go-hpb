@@ -71,6 +71,9 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
 		switch num := evm.BlockNumber.Uint64(); {
+		case num > consensus.StageNumberNewPrecompiledContract:
+			cfg.JumpTable = yoloV1InstructionSetddCreate2
+			opCodeToString = opCodeToString_v2
 		case num > consensus.StageNumberUpgradedEVM:
 			cfg.JumpTable = yoloV1InstructionSet
 			opCodeToString = opCodeToString_v2
