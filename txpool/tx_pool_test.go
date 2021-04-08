@@ -866,8 +866,10 @@ func TestTransactionPendingLimiting(t *testing.T) {
 
 // Tests that the transaction limits are enforced the same way irrelevant whether
 // the transactions are added one by one or in batches.
-func TestTransactionQueueLimitingEquivalency(t *testing.T)   { testTransactionLimitingEquivalency(t, 1) }
-func TestTransactionPendingLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 0) }
+func TestTransactionQueueLimitingEquivalency(t *testing.T) { testTransactionLimitingEquivalency(t, 1) }
+func TestTransactionPendingLimitingEquivalency(t *testing.T) {
+	testTransactionLimitingEquivalency(t, 0)
+}
 
 func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 	// Add a batch of transactions to a pool one by one
@@ -1393,7 +1395,17 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	}
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
-	for _, batch := range batches {
-		pool.AddTxs(batch)
+
+	var wg sync.WaitGroup
+
+	for index, batch := range batches {
+		wg.Add(1)
+		b.Log(index)
+		go func(index int, txs types.Transactions) {
+			pool.AddTxs(txs)
+			wg.Done()
+			b.Log("done", index)
+		}(index, batch)
 	}
+	wg.Wait()
 }

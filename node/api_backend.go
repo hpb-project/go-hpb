@@ -117,13 +117,13 @@ func (b *HpbApiBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash r
 
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
-	// if blockNr == rpc.PendingBlockNumber {
-	// 	block, state := b.hpb.miner.Pending()
-	// 	if block == nil {
-	// 		return state, nil, errors.New("no pending")
-	// 	}
-	// 	return state, block.Header(), nil
-	// }
+	if blockNr == rpc.PendingBlockNumber {
+		block, state := b.hpb.miner.Pending()
+		if block == nil {
+			return nil, nil, errors.New("no pending")
+		}
+		return state, block.Header(), nil
+	}
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {

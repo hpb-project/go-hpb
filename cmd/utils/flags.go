@@ -474,7 +474,7 @@ var (
 	}
 	RPCGlobalGasCapFlag = cli.Uint64Flag{
 		Name:  "rpc.gascap",
-		Usage: "Sets a cap on gas that can be used in eth_call/estimateGas (0=infinite)",
+		Usage: "Sets a cap on gas that can be used in hpb_call/estimateGas (0=infinite)",
 		Value: config.DefaultConfig.RPCGasCap,
 	}
 )
