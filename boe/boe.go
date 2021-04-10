@@ -576,11 +576,37 @@ func (boe *BoeHandle) HW_Auth_Sign(random []byte) ([]byte, error) {
 }
 
 // verify if signature is signed with current boe board.
-func (boe *BoeHandle) HW_Auth_Verify(random []byte, hid []byte, cid []byte, signature []byte) bool {
+func (boe *BoeHandle) HW_Auth_Verify(random []byte, cid []byte, signature []byte) bool {
+	if len(random) != 32 || len(cid) != 64 || len(signature) != 64 {
+		return false
+	}
+	var ret = C.boe_p256_verify((*C.uchar)(unsafe.Pointer(&random[0])),
+		(*C.uchar)(unsafe.Pointer(&cid[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
+	if ret == C.BOE_OK {
+		return true
+	}
+	return false
+}
+
+// sign the data with specific private every boe board.
+func (boe *BoeHandle) HW_Auth_Sign_With_Hid(random []byte) ([]byte, error) {
+	var signature = make([]byte, 64)
+	if len(random) != 32 {
+		return nil, ErrHWSignFailed
+	}
+	var ret = C.boe_hw_sign((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
+	if ret == C.BOE_OK {
+		return signature, nil
+	}
+	return nil, ErrHWSignFailed
+}
+
+// verify if signature is signed with current boe board.
+func (boe *BoeHandle) HW_Auth_Verify_With_Hid(random []byte, hid []byte, cid []byte, signature []byte) bool {
 	if len(random) != 32 || len(hid) != 32 || len(cid) != 64 || len(signature) != 64 {
 		return false
 	}
-	var ret = C.boe_p256_verify((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&hid[0])),
+	var ret = C.boe_p256_verify_with_hid((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&hid[0])),
 		(*C.uchar)(unsafe.Pointer(&cid[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
 	if ret == C.BOE_OK {
 		return true
