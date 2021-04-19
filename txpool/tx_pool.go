@@ -354,7 +354,7 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 		log.Trace("ErrInsufficientFunds", "ErrInsufficientFunds", ErrInsufficientFunds)
 		return ErrInsufficientFunds
 	}
-	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
+	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil, true)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
 		return ErrIntrinsicGas
@@ -412,7 +412,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		log.Trace("ErrInsufficientFunds", "ErrInsufficientFunds", ErrInsufficientFunds)
 		return ErrInsufficientFunds
 	}
-	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil)
+	intrGas := types.IntrinsicGas(tx.Data(), tx.To() == nil, true)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		log.Trace("ErrIntrinsicGas", "ErrIntrinsicGas", ErrIntrinsicGas)
 		return ErrIntrinsicGas
