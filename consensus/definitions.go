@@ -76,6 +76,8 @@ var (
 
 	StageNumberUpgradedEVM uint64 = 8685000 // used to upgraded EVM .
 
+	StageNumberNewPrecompiledContract uint64 = 100000000
+
 	ContinuousGenBlkLimit uint64 = 2
 
 	NewContractVersion        uint64 = 3788000

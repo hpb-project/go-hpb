@@ -49,6 +49,12 @@ const (
 	defaultGasPrice = 50 * config.Shannon
 )
 
+func init() {
+	if defaultGas < config.TxGas {
+		panic("wrong defaultgas setting")
+	}
+}
+
 // PublicHpbAPI provides an API to access Hpb related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicHpbAPI struct {
@@ -753,7 +759,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo  uint64 = config.TxGas - 1
+		lo  uint64 = 21000 - 1
 		hi  uint64
 		cap uint64
 	)
@@ -862,7 +868,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
 	}

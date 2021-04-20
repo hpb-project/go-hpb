@@ -769,6 +769,7 @@ func opCreate2(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 	}
 	return nil, nil
 }
+
 func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
 	gas := stack.pop().Uint64()
 	// pop gas and value of the stack.

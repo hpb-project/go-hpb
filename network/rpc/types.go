@@ -146,7 +146,7 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 		*bn = LatestBlockNumber
 		return nil
 	case "pending":
-		*bn = PendingBlockNumber
+		*bn = LatestBlockNumber
 		return nil
 	}
 
@@ -200,7 +200,7 @@ func (bnh *BlockNumberOrHash) UnmarshalJSON(data []byte) error {
 		bnh.BlockNumber = &bn
 		return nil
 	case "pending":
-		bn := PendingBlockNumber
+		bn := LatestBlockNumber
 		bnh.BlockNumber = &bn
 		return nil
 	default:

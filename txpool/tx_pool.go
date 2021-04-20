@@ -339,6 +339,7 @@ func (pool *TxPool) softvalidateTx(tx *types.Transaction) error {
 
 	// Check gasPrice.
 	if pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+		log.Debug("tx validate", "pool gasprice", pool.gasPrice.Text(10), "tx price", tx.GasPrice().Text(10))
 		log.Trace("ErrUnderpriced", "ErrUnderpriced", ErrUnderpriced)
 		return ErrUnderpriced
 	}
@@ -434,15 +435,16 @@ func (pool *TxPool) AddTxs(txs []*types.Transaction) error {
 	pool.smu.RLock()
 	defer pool.smu.RUnlock()
 
+	addTxs := []*types.Transaction{}
 	for _, tx := range txs {
 		// If the transaction fails basic validation, discard it
 		if err := pool.softvalidateTx(tx); err != nil {
-			log.Trace("Discarding invalid transaction", "hash", tx.Hash(), "err", err)
-			return err
+			log.Debug("Discarding invalid transaction", "hash", tx.Hash(), "err", err)
+			continue
 		}
+		addTxs = append(addTxs, tx)
 	}
-
-	return pool.addTxsLocked(txs)
+	return pool.addTxsLocked(addTxs)
 }
 
 // AddTx attempts to queue a transactions if valid.
@@ -587,6 +589,9 @@ func (pool *TxPool) add(tx *types.Transaction) (bool, error) {
 	replace, err := pool.enqueueTxLocked(hash, tx)
 	if err != nil {
 		return false, err
+	}
+	if _, ok := pool.beats.Load(from); !ok {
+		pool.beats.Store(from, time.Now())
 	}
 	log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
 	return replace, nil
