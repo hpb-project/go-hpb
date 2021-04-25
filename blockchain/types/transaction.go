@@ -172,12 +172,16 @@ func (tx *Transaction) ClearFromCache() {
 
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
-func IntrinsicGas(data []byte, contractCreation bool) *big.Int {
+func IntrinsicGas(data []byte, contractCreation bool, isStageNumberNewPrecompiledContract bool) *big.Int {
 	igas := new(big.Int)
 	if contractCreation {
 		igas.SetUint64(config.TxGasContractCreation)
 	} else {
-		igas.SetUint64(config.TxGas)
+		if isStageNumberNewPrecompiledContract {
+			igas.SetUint64(config.TxGas)
+		} else {
+			igas.SetUint64(config.BeforeTxGas)
+		}
 	}
 	if len(data) > 0 {
 		var nz int64
