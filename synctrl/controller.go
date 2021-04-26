@@ -310,10 +310,16 @@ func (this *SynCtrl) Stop() {
 	log.Info("Hpb data sync stopped")
 }
 
-func (this *SynCtrl) removePeer(id string) {
+func (this *SynCtrl) removePeer(id string, err error) {
 	// Short circuit if the peer was already removed
 	peer := p2p.PeerMgrInst().Peer(id)
 	if peer == nil {
+		return
+	}
+
+	switch err {
+	case consensus.Errboehwcheck, errInvalidChain:
+		log.Debug("Maybe somethine wrong will recover, not drop peer.")
 		return
 	}
 	log.Debug("Removing Hpb peer", "peer", id)

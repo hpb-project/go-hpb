@@ -65,7 +65,7 @@ type chainHeightFn func() uint64
 type chainInsertFn func(types.Blocks) (int, error)
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.
-type peerDropFn func(id string)
+type peerDropFn func(id string, err error)
 
 // announce is the hash notification of the availability of a new block in the
 // network.
@@ -448,7 +448,7 @@ func (this *Puller) loop() {
 					// If the delivered header does not match the promised number, drop the announcer
 					if header.Number.Uint64() != announce.number {
 						log.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
-						this.dropPeer(announce.origin)
+						this.dropPeer(announce.origin, errCancelHeaderFetch)
 						this.forgetHash(hash)
 						continue
 					}
@@ -661,7 +661,7 @@ func (this *Puller) insert(peer string, block *types.Block) {
 		default:
 			// Something went very wrong, drop the peer
 			log.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
-			this.dropPeer(peer)
+			this.dropPeer(peer, err)
 			return
 		}
 		// Run the actual import and log any issues

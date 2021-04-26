@@ -596,7 +596,7 @@ func (this *fastSync) fetchHeaders(p *peerConnection, from uint64) error {
 			// Header retrieval timed out, consider the peer bad and drop
 			p.log.Debug("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
-			this.syncer.dropPeer(p.id)
+			this.syncer.dropPeer(p.id, errTimeout)
 
 			// Finish the sync gracefully instead of dumping the gathered data though
 			for _, ch := range []chan bool{this.bodyWakeCh, this.receiptWakeCh} {
@@ -811,7 +811,7 @@ func (this *fastSync) fetchParts(errCancel error, deliveryCh chan dataPack, deli
 						setIdle(peer, 0)
 					} else {
 						peer.log.Debug("Stalling delivery, dropping", "type", kind)
-						this.syncer.dropPeer(pid)
+						this.syncer.dropPeer(pid, errStallingPeer)
 					}
 				}
 			}
