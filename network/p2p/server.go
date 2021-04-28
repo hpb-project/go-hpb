@@ -737,10 +737,12 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our.RandNonce = ourRand
 
 	if c.our.Version < config.HandShakeNoHIDVersion {
+		clog.Debug("Handshake sign with hid.")
 		if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign_With_Hid(theirRand); err != nil {
 			clog.Debug("Do hardware sign  error.", "err", err)
 		}
 	} else {
+		clog.Debug("Handshake sign with no hid.")
 		if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err != nil {
 			clog.Debug("Do hardware sign without hid error.", "err", err)
 		}
@@ -786,6 +788,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 			if hw.Adr == remoteCoinbase {
 				clog.Trace("Input to boe paras", "rand", hex.EncodeToString(c.our.RandNonce), "hid", hex.EncodeToString(hw.Hid), "cid", hex.EncodeToString(hw.Cid), "sign", hex.EncodeToString(c.their.Sign))
 				c.isboe = boe.BoeGetInstance().HW_Auth_Verify_With_Hid(c.our.RandNonce, hw.Hid, hw.Cid, c.their.Sign)
+				clog.Debug("their p2p version is ", "v", c.their.Version)
 				if !c.isboe && c.their.Version >= config.HandShakeNoHIDVersion {
 					c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce, hw.Cid, c.their.Sign)
 				}

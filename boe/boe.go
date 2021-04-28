@@ -594,7 +594,7 @@ func (boe *BoeHandle) HW_Auth_Sign_With_Hid(random []byte) ([]byte, error) {
 	if len(random) != 32 {
 		return nil, ErrHWSignFailed
 	}
-	var ret = C.boe_hw_sign((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
+	var ret = C.boe_hw_sign_with_hid((*C.uchar)(unsafe.Pointer(&random[0])), (*C.uchar)(unsafe.Pointer(&signature[0])))
 	if ret == C.BOE_OK {
 		return signature, nil
 	}
