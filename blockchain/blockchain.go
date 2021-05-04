@@ -1377,7 +1377,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	for _, receipt := range receipts {
 		receiptString += fmt.Sprintf("\t%v\n", receipt)
 	}
-	log.Error("BAD BLOCK", "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty)
+	log.Error("BAD BLOCK", "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty, "parent hash", block.Header().ParentHash)
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
