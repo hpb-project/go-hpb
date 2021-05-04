@@ -212,6 +212,7 @@ func (this *fullSync) syncWithPeer(id string, p *peerConnection, hash common.Has
 	if err != nil {
 		return err
 	}
+	log.Info("sync with peer", "peer", p.id, "ancestor", origin, "remote height ", latest.Number, "difficult", latest.Difficulty, "coinbase ", latest.Coinbase)
 	this.syncer.syncStatsLock.Lock()
 	if this.syncer.syncStatsChainHeight <= origin || this.syncer.syncStatsChainOrigin > origin {
 		this.syncer.syncStatsChainOrigin = origin
