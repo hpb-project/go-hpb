@@ -998,6 +998,7 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 		blocks := make([]*types.Block, items)
 		for i, result := range results[:items] {
 			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+			log.Info("import block results", "block.number", blocks[i].NumberU64(), "block.hash", blocks[i].Hash(), "block.coinbase", blocks[i].Coinbase())
 		}
 		if index, err := bc.InstanceBlockChain().InsertChain(blocks); err != nil {
 			log.Debug("synced item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
@@ -1006,6 +1007,8 @@ func (this *fullSync) importBlockResults(results []*fetchResult) error {
 			}
 			log.Error("invalid hash chain(full->importBlockResults)", "err", err)
 			return errInvalidChain
+		} else {
+			log.Debug("synced iterm ")
 		}
 		// Shift the results to the next batch
 		results = results[items:]

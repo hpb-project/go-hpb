@@ -1042,6 +1042,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	} else {
 		mode = config.FastSync
 	}
+	log.Info("before verify headers", "sync mode ", mode)
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals, mode)
 
 	defer close(abort)
@@ -1060,6 +1061,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		err := <-results
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
+			log.Info("after verify block body", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
 		}
 		if err != nil {
 			if err == ErrKnownBlock {
@@ -1377,7 +1379,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	for _, receipt := range receipts {
 		receiptString += fmt.Sprintf("\t%v\n", receipt)
 	}
-	log.Error("BAD BLOCK", "header", block.Header().Number.Uint64(), "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty, "parent hash", block.Header().ParentHash)
+	log.Error("BAD BLOCK", "header", block.Header().Number.Uint64(), "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty, "parent hash", block.Header().ParentHash, "local header number", bc.currentBlock.NumberU64(), "local header hash", bc.currentBlock.Hash())
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
