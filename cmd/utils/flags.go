@@ -863,12 +863,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(StartNumberFlag.Name) {
 		cfg.Node.StartNumber = ctx.GlobalUint64(StartNumberFlag.Name)
 	}
-	if ctx.GlobalIsSet(CriticalFlag.Name) {
-		cfg.Node.CriticalFlag = ctx.GlobalUint64(CriticalFlag.Name)
-	}
-	if ctx.GlobalIsSet(CriticalBackBlockFlag.Name) {
-		cfg.Node.CriticalBackNumber = ctx.GlobalUint64(CriticalBackBlockFlag.Name)
-	}
+	cfg.Node.CriticalFlag = ctx.GlobalUint64(CriticalFlag.Name)
+	cfg.Node.CriticalBackNumber = ctx.GlobalUint64(CriticalBackBlockFlag.Name)
+
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
 	}
