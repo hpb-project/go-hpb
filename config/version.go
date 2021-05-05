@@ -28,7 +28,8 @@ const (
 /*
 !!!every change of version should sub VersionID one number!!!
 */
-const VersionID uint64 = 0x0002
+const DAOVersion uint64 = 0x0005 // use a version to seperate network. 2021/5/5
+const VersionID uint64 = 0x0005  //
 const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release
