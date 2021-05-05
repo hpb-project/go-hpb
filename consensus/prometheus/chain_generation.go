@@ -311,9 +311,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					signersgenblks = append(signersgenblks, *oldHeader)
 				}
 			}
-			if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
-				return errors.New("Not in turn")
-			}
+			// open the case
+			//if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
+			//	return errors.New("Not in turn")
+			//}
 		} else {
 			// should mine backup block.
 		}
