@@ -18,6 +18,7 @@ package bc
 
 import (
 	"fmt"
+	"github.com/hpb-project/go-hpb/common/log"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -53,7 +54,7 @@ func NewBlockValidator(config *config.ChainConfig, blockchain *BlockChain, engin
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Check whether the block's known, and if not, that it's linkable
 	if v.bc.HasBlockAndState(block.Hash()) {
-		return ErrKnownBlock
+		//return ErrKnownBlock
 	}
 	if !v.bc.HasBlockAndState(block.ParentHash()) {
 		return consensus.ErrUnknownAncestor
@@ -78,6 +79,8 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // otherwise nil and an error is returned.
 func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	header := block.Header()
+	log.Info("validate state ", "current block ", block.NumberU64(), "block.hash", block.Hash(),
+		"block.parentHash", block.ParentHash(), "parentHash", parent.Hash(), "parentNum", parent.NumberU64())
 	if usedGas == nil || block.GasUsed().Cmp(usedGas) != 0 {
 		return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
 	}
