@@ -81,6 +81,10 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	header := block.Header()
 	log.Info("validate state ", "current block ", block.NumberU64(), "block.hash", block.Hash(),
 		"block.parentHash", block.ParentHash(), "parentHash", parent.Hash(), "parentNum", parent.NumberU64())
+
+	for _, tx := range block.Transactions() {
+		log.Info("contain tx ", "hash", tx.Hash())
+	}
 	if usedGas == nil || block.GasUsed().Cmp(usedGas) != 0 {
 		return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
 	}
