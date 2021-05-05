@@ -230,6 +230,12 @@ func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 		engine := prometheus.InstancePrometheus()
 		hpbnode.Hpbengine = engine
 		//add consensus engine to blockchain
+
+		// used to critical return block to the block.
+		if conf.Node.CriticalFlag == 1 {
+			conf.Node.StartNumber = conf.Node.CriticalBackNumber
+		}
+
 		_, err := hpbnode.Hpbbc.InitWithEngine(engine, conf.Node.StartNumber)
 		if err != nil {
 			log.Error("add engine to blockchain error")
