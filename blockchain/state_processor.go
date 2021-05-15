@@ -140,7 +140,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	// about the transaction and calling mechanisms.
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	result, err := ApplyMessage(vmenv, msg, gp)
+	result, err := ApplyMessage(vmenv, msg, gp, header)
 	statediff, errs := json.Marshal(vmenv.GetStateDiff())
 	log.Debug("evm json----", "jsons", string(statediff), "errs", errs)
 	if err != nil {
@@ -227,7 +227,7 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 	// about the transaction and calling mechanisms.
 	vmenv := evm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	result, err := ApplyMessage(vmenv, msg, gp)
+	result, err := ApplyMessage(vmenv, msg, gp, header)
 	if err != nil {
 		log.Error("ApplyMessage err", "err", err)
 		return nil, nil, err

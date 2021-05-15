@@ -25,10 +25,10 @@ const (
 	ProtocolV111 uint = 100 // match up protocol versions and messages versions
 )
 
-/*
-!!!every change of version should sub VersionID one number!!!
-*/
-const VersionID uint64 = 0x0002
+const HandShakeNoHIDVersion uint64 = 0x0003 // prepare for handshake not check hid.
+
+const HandShakeVersion uint64 = 0x0002 // current handshake proto version.
+
 const (
 	VersionMajor = 1     // Major version component of the current release
 	VersionHardv = 0     // Hardware version component of the current release

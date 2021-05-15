@@ -158,13 +158,14 @@ func (p *PeerBase) ID() discover.NodeID {
 }
 
 func (p *PeerBase) Version() string {
-	if len(p.Caps()) >= 3 {
-		return p.Caps()[1].String() + "&" + p.Caps()[2].String()
-	}
-
 	switch p.rw.their.Version {
 	case 0x0001:
 		return "[1.0.3.1 or before]&[N.A/0]"
+	default:
+		cps := len(p.Caps())
+		if cps >= 3 {
+			return p.Caps()[cps-2].String() + "&" + p.Caps()[cps-1].String()
+		}
 	}
 
 	return "UnknownNode"
