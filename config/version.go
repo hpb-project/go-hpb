@@ -33,15 +33,13 @@ const VersionID uint64 = 0x0005  //
 
 const HandShakeVersion uint64 = DAOVersion // current handshake proto version.
 
-const HandShakeNoHIDVersion uint64 = 0x0003 // prepare for handshake not check hid.
-
-
+const HandShakeNoHIDVersion uint64 = 0x0006 // prepare for handshake not check hid.
 
 const (
-	VersionMajor = 1        // Major version component of the current release
-	VersionHardv = 0        // Hardware version component of the current release
-	VersionMinor = 8        // Minor version component of the current release
-	VersionPatch = 0        // Patch version component of the current release
+	VersionMajor = 1     // Major version component of the current release
+	VersionHardv = 0     // Hardware version component of the current release
+	VersionMinor = 8     // Minor version component of the current release
+	VersionPatch = 0     // Patch version component of the current release
 	VersionMeta  = "dev" // Version metadata to append to the version string
 )
 
