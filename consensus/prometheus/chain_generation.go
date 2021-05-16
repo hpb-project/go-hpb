@@ -311,9 +311,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 					signersgenblks = append(signersgenblks, *oldHeader)
 				}
 			}
-			if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
-				return errors.New("Not in turn")
-			}
+			// open the case
+			//if !snap.CalculateBackupMiner(header.Number.Uint64(), c.GetSinger(), signersgenblks) {
+			//	return errors.New("Not in turn")
+			//}
 		} else {
 			// should mine backup block.
 		}
@@ -409,7 +410,6 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now())
 	if delay < 0 {
 		delay = 0
-		header.Time = big.NewInt(time.Now().Unix())
 	}
 	// set delay time for out-turn hpb nodes
 	if header.Difficulty.Cmp(diffNoTurn) == 0 {
