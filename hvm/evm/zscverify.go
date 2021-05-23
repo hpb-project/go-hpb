@@ -2,6 +2,7 @@ package evm
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/common"
@@ -472,6 +473,10 @@ func verify(input []byte) ([]byte, error) {
 		rs_length = trans_length
 	}
 	//salt := int64(binary.BigEndian.Uint64(input[length:]))
+	// 0-64: 不需要
+	// 64 - 64+32 :salt
+	// 64+32 - 64 + 64 : 不需要
+	// hs_length * 64 : hs.x hs.y
 	salt := input[length : length+32]
 	length = length + 64
 	for i := 0; i < hs_length; i++ {
@@ -480,36 +485,80 @@ func verify(input []byte) ([]byte, error) {
 		copy(hs[i].y[:], input[length:length+32])
 		length += 32
 	}
+	// 64 : u.x u.y
 	copy(u.x[:], input[length:length+32])
 	length += 32
-
 	copy(u.y[:], input[length:length+32])
 	length += 32
+
+	// 64 : p.x p.y
 	copy(p.x[:], input[length:length+32])
 	length += 32
-
 	copy(p.y[:], input[length:length+32])
 	length += 32
+
+	// 32 : 不需要
+
 	length += 32
+
+	// rs_length * 64 : ls.x ls.y
 	for i := 0; i < rs_length; i++ {
 		copy(ls[i].x[:], input[length:length+32])
 		length += 32
 		copy(ls[i].y[:], input[length:length+32])
 		length += 32
 	}
+
+	// rs_length * 64 : rs.x rs.y
 	for i := 0; i < rs_length; i++ {
 		copy(rs[i].x[:], input[length:length+32])
 		length += 32
 		copy(rs[i].y[:], input[length:length+32])
 		length += 32
 	}
+
+	// 32 : a
 	copy(a[:], input[length:length+32])
 	length += 32
+
+	// 32 : b
 	copy(b[:], input[length:length+32])
+
+	// 32 : 不需要
 	length += 32
+
+	// salt, hs, u, p, ls, rs, a, b
+	fmt.Println("parameter detail start.")
+	fmt.Printf("salt : %s\n", common.Bytes2Hex(salt))
+	for i, h := range hs {
+		fmt.Printf("hs[%d].x = %s\n", i, common.Bytes2Hex(h.x[:]))
+		fmt.Printf("hs[%d].y = %s\n", i, common.Bytes2Hex(h.y[:]))
+	}
+	fmt.Printf("u.x = %s\n", common.Bytes2Hex(u.x[:]))
+	fmt.Printf("u.y = %s\n", common.Bytes2Hex(u.y[:]))
+	fmt.Printf("p.x = %s\n", common.Bytes2Hex(p.x[:]))
+	fmt.Printf("p.y = %s\n", common.Bytes2Hex(p.y[:]))
+
+	for i, l := range ls {
+		fmt.Printf("ls[%d].x = %s\n", i, common.Bytes2Hex(l.x[:]))
+		fmt.Printf("ls[%d].y = %s\n", i, common.Bytes2Hex(l.y[:]))
+	}
+
+	for i, r := range rs {
+		fmt.Printf("rs[%d].x = %s\n", i, common.Bytes2Hex(r.x[:]))
+		fmt.Printf("rs[%d].y = %s\n", i, common.Bytes2Hex(r.y[:]))
+	}
+
+	fmt.Printf("a = %s\n", common.Bytes2Hex(a[:]))
+	fmt.Printf("b = %s\n", common.Bytes2Hex(b[:]))
+	fmt.Println("parameter detail end.")
+
 	log_n := rs_length
 	n := 2 << (uint(log_n) - 1) //math.Pow(float64(2),float(log_n))
+	fmt.Printf("log_n = %d, n = %d\n", log_n, n)
 	o := new(big.Int).SetBytes(salt[:])
+	fmt.Printf("o = 0x%s\n", o.Text(16))
+
 	var challenges [trans_length]*big.Int
 
 	g_order := common.Hex2Bytes(string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001"))
@@ -524,40 +573,65 @@ func verify(input []byte) ([]byte, error) {
 		input = append(input, ls[i].y[:]...)
 		input = append(input, rs[i].x[:]...)
 		input = append(input, rs[i].y[:]...)
+		fmt.Printf("i = %d, o = 0x%s\n", i, o.Text(16))
 
-		bigh := new(big.Int).SetBytes(crypto.Keccak256(input))
+		fmt.Printf("i = %d, input = %s\n", i, common.Bytes2Hex(input))
+		keccakInput := crypto.Keccak256(input)
+		fmt.Printf("i = %d, keccak256(input) = %s\n", i, common.Bytes2Hex(keccakInput))
+		bigh := new(big.Int).SetBytes(keccakInput)
+		fmt.Printf("i = %d, bigh = 0x%s\n", i, bigh.Text(16))
 		challenges[i] = new(big.Int).Mod(bigh, group_order)
+		fmt.Printf("challenges[%d]=0x%s\n", i, challenges[i].Text(16))
 		o = challenges[i] //ok
+		fmt.Printf("i = %d, o = %s\n", i, o.Text(16))
 		tmp1 := new(big.Int).Exp(o, new(big.Int).SetInt64(2), group_order)
+		fmt.Printf("i = %d, tmp1 = %s\n", i, tmp1.Text(16))
+
 		tmp2 := ls[i].mul(tmp1.Bytes())
+		fmt.Printf("i = %d, tmp2.x = %s, tmp2.y = %s\n", i, common.Bytes2Hex(tmp2.x[:]), common.Bytes2Hex(tmp2.y[:]))
 
 		tmp3 := new(big.Int).Sub(group_order, new(big.Int).SetInt64(2))
+		fmt.Printf("i = %d, tmp3 = %s\n", i, tmp3.Text(16))
 		tmp4 := new(big.Int).Exp(o, tmp3, group_order)
+		fmt.Printf("i = %d, tmp4 = %s\n", i, tmp4.Text(16))
 
 		tmp5 := new(big.Int).Exp(tmp4, new(big.Int).SetInt64(2), group_order)
+		fmt.Printf("i = %d, tmp5 = %s\n", i, tmp5.Text(16))
 
 		tmp6 := rs[i].mul(tmp5.Bytes())
+		fmt.Printf("i = %d, tmp6.x = %s, tmp6.y = %s\n", i, common.Bytes2Hex(tmp6.x[:]), common.Bytes2Hex(tmp6.y[:]))
 
 		tmp7 := tmp2.add(tmp6)
-		p = p.add(tmp7)
+		fmt.Printf("i = %d, tmp7.x = %s, tmp7.y = %s\n", i, common.Bytes2Hex(tmp7.x[:]), common.Bytes2Hex(tmp7.y[:]))
 
+		p = p.add(tmp7)
+		fmt.Printf("i = %d, p.x = %s, p.y = %s\n", i, common.Bytes2Hex(p.x[:]), common.Bytes2Hex(p.y[:]))
 	}
+
 	var otherExponents [64]*big.Int
 	otherExponents[0] = new(big.Int).SetInt64(1)
 	for i := 0; i < log_n; i++ {
+		fmt.Printf("i = %d, chanllenges[%d] = %s\n", i, i, challenges[i].Text(16))
 		tmp := new(big.Int).Mul(otherExponents[0], challenges[i])
+		fmt.Printf("i = %d, tmp = %s\n", i, tmp.Text(16))
 		otherExponents[0] = new(big.Int).Mod(tmp, group_order)
+		fmt.Printf("i = %d, otherExponents[0] = %s\n", i, otherExponents[0].Text(16))
 	}
 	var bitSet [64]bool
 	otherExponents[0] = new(big.Int).Exp(otherExponents[0], new(big.Int).Sub(group_order, new(big.Int).SetInt64(2)), group_order)
+	fmt.Printf("otherExponents[0] = %s\n", otherExponents[0].Text(16))
 
 	for i := 0; i < n/2; i++ {
 		for j := uint64(0); (1<<j)+i < n; j++ {
 			i1 := i + (1 << j)
+			fmt.Printf("i = %d, j = %d, i1 = %d\n", i, j, i1)
 			if !bitSet[i1] {
 				temp := new(big.Int).Exp(challenges[uint64(log_n)-1-j], new(big.Int).SetInt64(2), group_order)
+				fmt.Printf("i = %d, j = %d, temp = %s\n", i, j, temp.Text(16))
 				tmp := new(big.Int).Mul(otherExponents[i], temp)
+				fmt.Printf("i = %d, j = %d, tmp = %s\n", i, j, tmp.Text(16))
 				otherExponents[i1] = new(big.Int).Mod(tmp, group_order)
+				fmt.Printf("i = %d, j = %d, i1 = %d, otherExponents[i1] = %s\n", i, j, i1, otherExponents[i1].Text(16))
 				bitSet[i1] = true
 			}
 		}
@@ -567,19 +641,35 @@ func verify(input []byte) ([]byte, error) {
 
 	for i := uint64(0); i < uint64(n); i++ {
 		gsi := gs(i)
+		fmt.Printf("i = %d, gsi.x = %s, gsi.y = %s\n", i, common.Bytes2Hex(gsi.x[:]), common.Bytes2Hex(gsi.y[:]))
 		gTemp = gTemp.add(gsi.mul(otherExponents[i].Bytes()))
+		fmt.Printf("i = %d, after add gTemp.x = %s, gTemp.y = %s\n", i, common.Bytes2Hex(gTemp.x[:]),
+			common.Bytes2Hex(gTemp.y[:]))
 		hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(n-1)-i].Bytes()))
+		fmt.Printf("i = %d, after add hTemp.x = %s, hTemp.y = %s\n", i, common.Bytes2Hex(hTemp.x[:]),
+			common.Bytes2Hex(hTemp.y[:]))
 	}
 
 	ua := new(big.Int).SetBytes(a[:])
+	fmt.Printf("ua = %s\n", ua.Text(16))
 	ub := new(big.Int).SetBytes(b[:])
+	fmt.Printf("ub = %s\n", ub.Text(16))
 	t1 := hTemp.mul(b[:])
+	fmt.Printf("t1.x = %s, t1.y = %s\n", common.Bytes2Hex(t1.x[:]), common.Bytes2Hex(t1.y[:]))
 
 	t2 := new(big.Int).Mod(new(big.Int).Mul(ua, ub), group_order)
+	fmt.Printf("t2 = %s\n", t2.Text(16))
 	t3 := u.mul(t2.Bytes())
+	fmt.Printf("t3.x = %s, t3.y = %s\n", common.Bytes2Hex(t3.x[:]), common.Bytes2Hex(t3.y[:]))
+
 	t4 := gTemp.mul(a[:])
+	fmt.Printf("t4.x = %s, t4.y = %s\n", common.Bytes2Hex(t4.x[:]), common.Bytes2Hex(t4.y[:]))
+
 	t5 := t4.add(t1)
+	fmt.Printf("t5.x = %s, t5.y = %s\n", common.Bytes2Hex(t5.x[:]), common.Bytes2Hex(t5.y[:]))
+
 	t6 := t5.add(t3)
+	fmt.Printf("t6.x = %s, t6.y = %s\n", common.Bytes2Hex(t6.x[:]), common.Bytes2Hex(t6.y[:]))
 
 	if t6.x == p.x && t6.y == p.y {
 		log.Debug("zscverify res true")
