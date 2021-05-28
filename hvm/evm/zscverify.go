@@ -452,8 +452,8 @@ const (
 
 func verify(input []byte) ([]byte, error) {
 
-	log.Debug("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
-
+	//log.Debug("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
+	log.Debug("zscverify run", "input is 0x", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
 	if len(common.Bytes2Hex(input)) != 6080 && len(common.Bytes2Hex(input)) != 10432 {
 		return common.LeftPadBytes([]byte{0}, 32), nil
 	}
