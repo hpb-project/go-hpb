@@ -182,6 +182,7 @@ type Nodeconfig struct {
 
 	CriticalFlag       uint64
 	CriticalBackNumber uint64
+	ArchiveMode        bool
 }
 
 // NodeDB returns the path to the discovery node database.
