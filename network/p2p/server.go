@@ -58,7 +58,10 @@ const (
 	frameWriteTimeout = 20 * time.Second
 )
 
-var errServerStopped = errors.New("server stopped")
+var (
+	errServerStopped   = errors.New("server stopped")
+	errUnderDAOVersion = errors.New("p2p protocol under daoversion")
+)
 
 // Config holds Server options.
 type Config struct {
@@ -755,6 +758,13 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		c.close(err)
 		return
 	}
+
+	if their.Version < config.DAOVersion {
+		clog.Debug("drop old version peer")
+		c.close(errUnderDAOVersion)
+		return
+	}
+
 	if their.ID != c.id {
 		clog.Error("Wrong devp2p handshake identity", "err", their.ID)
 		c.close(DiscUnexpectedIdentity)

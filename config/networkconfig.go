@@ -60,12 +60,20 @@ var DefaultNTConfig = NetworkConfig{
 	WsEndpoint:       DefaultWSEndpoint(),
 }
 
-var MainnetBootnodes = []string{
+var MainnetBootnodes_v1 = []string{ // old version used.
 	"hnode://73c8ac9dddc8f094d28f42e1ec5c3e8000cad25be152c147fceacc27953d58e64bfe9f555145d93f9f6b995bab984411941751fef3bd460f74c0151eb0432b56@bootnode1.hpb.io:30303",
 	"hnode://1c129009d0e9c56e79b6f4157497d8ac2810ea83fc1f6ed4b6244406597d821f52bb0d210157854d861d2f6099fa948bc5a03d2f4f1bcae70dc6e9c535e586f9@bootnode2.hpb.io:30303",
 	"hnode://f3282847f29cfea1dd741246cc17b9a0dcdd8b0b9dfce2a985d2358497458135e81942ae7155cfd2fe23e1da30f18fc1fa2c56d3675aba51e7c67f83681fded5@bootnode3.hpb.io:30303",
 	"hnode://dd2fd6ea314041c0e20aed4ee4159ab172a4ddb944459d147bdb28461937841ee069c44fe0915be9f74d929562968fb9720362937a898e2ec3a598fa3fe1f33b@bootnode4.hpb.io:30303",
 	"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@bootnode5.hpb.io:30303",
+}
+
+var MainnetBootnodes = []string{
+	"hnode://fdfbe84bf5e2836bcca2ec10462f9e94008b89823a3114aa759a709622532a7d16390456adb05efd6d2f7e6760571eed128cee4a052cdbb621031a61db8f0f37@bootnode1.hpb.io:30305",
+	"hnode://a7d22e7e23f2d66d84bf3a02e8e085ea003329ef7cd76df851c0d62ecf9c5492411d46d979ce0ca2fc17264fe30acc53051970952178993a9627a7064e7530ff@bootnode2.hpb.io:30305",
+	"hnode://71ec147e30eec314aaf6d388e1d0a62abc525b585534211dcc19d2d0bd3a168208c346761b6abdc06f7e18264b22626a5e418fff64ddbd6d1887e09c25733376@bootnode3.hpb.io:30305",
+	"hnode://a6aef2f8460ff328c748a9a519c9a1d9a0096e61beb47c6389425155cc018233058f45d6ce994f0ca8f328cc8ea5e8cef8920373e9dd5544cc1589a0be7634d3@bootnode4.hpb.io:30305",
+	"hnode://c5133467ea929c7d71f349bfb6dee1ab23ad3c05e95178e3711d1f64b6d9cd82a2a65f177de3ef175f532573d194048fed8d2c9a5602a7ab9ef05c672eb17db0@bootnode5.hpb.io:30305",
 }
 
 // TestnetBootnodes are the hnode URLs of the P2P bootstrap nodes running on the

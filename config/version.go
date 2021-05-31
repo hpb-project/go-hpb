@@ -25,9 +25,15 @@ const (
 	ProtocolV111 uint = 100 // match up protocol versions and messages versions
 )
 
-const HandShakeNoHIDVersion uint64 = 0x0003 // prepare for handshake not check hid.
+/*
+!!!every change of version should sub VersionID one number!!!
+*/
+const DAOVersion uint64 = 0x0005 // use a version to seperate network. 2021/5/5
+const VersionID uint64 = 0x0005  //
 
-const HandShakeVersion uint64 = 0x0002 // current handshake proto version.
+const HandShakeVersion uint64 = DAOVersion // current handshake proto version.
+
+const HandShakeNoHIDVersion uint64 = 0x0006 // prepare for handshake not check hid.
 
 const (
 	VersionMajor = 1     // Major version component of the current release
