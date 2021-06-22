@@ -159,8 +159,8 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 		state_diff := StateDiff{txhash: tx.Hash()}
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-			log.Debug("evmdiff", "evmstatediff", evmstatediff)
+			evmstatediff, _, _, err := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff, "err", err)
 			state_diff.evmdiff = evmstatediff
 		} else {
 			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
@@ -227,8 +227,8 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 		state_diff := StateDiff{txhash: tx.Hash()}
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-			log.Debug("evmdiff", "evmstatediff", evmstatediff)
+			evmstatediff, _, _, err := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff, "err", err)
 			state_diff.evmdiff = evmstatediff
 		} else {
 			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
