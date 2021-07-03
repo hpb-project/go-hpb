@@ -342,7 +342,7 @@ func (prm *PeerManager) BestPeer() *Peer {
 	)
 	for _, p := range prm.peers {
 		if p.remoteType == discover.SynNode {
-			continue
+			//continue
 		}
 
 		if p.msgLooping == false {

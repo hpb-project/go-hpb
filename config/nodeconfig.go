@@ -179,6 +179,10 @@ type Nodeconfig struct {
 
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap uint64 `toml:",omitempty"`
+
+	CriticalFlag       uint64
+	CriticalBackNumber uint64
+	ArchiveMode        bool
 }
 
 // NodeDB returns the path to the discovery node database.

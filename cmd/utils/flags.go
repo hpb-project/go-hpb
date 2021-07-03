@@ -477,6 +477,20 @@ var (
 		Usage: "Sets a cap on gas that can be used in hpb_call/estimateGas (0=infinite)",
 		Value: config.DefaultConfig.RPCGasCap,
 	}
+	CriticalFlag = cli.Uint64Flag{
+		Name:  "critical.flag",
+		Usage: "Used for critical deal issue in mainnet",
+		Value: 0,
+	}
+	CriticalBackBlockFlag = cli.Uint64Flag{
+		Name:  "critical.block",
+		Usage: "return the node height to block number",
+		Value: 1000000000000,
+	}
+	ArchiveModeFalg = cli.BoolFlag{
+		Name:  "archived",
+		Usage: "unSupport get block detail info by rpc with the blockNumber little than (latest - 250)",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -853,6 +867,12 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	if ctx.GlobalIsSet(StartNumberFlag.Name) {
 		cfg.Node.StartNumber = ctx.GlobalUint64(StartNumberFlag.Name)
 	}
+	cfg.Node.CriticalFlag = ctx.GlobalUint64(CriticalFlag.Name)
+	cfg.Node.CriticalBackNumber = ctx.GlobalUint64(CriticalBackBlockFlag.Name)
+	cfg.Node.ArchiveMode = ctx.GlobalBool(ArchiveModeFalg.Name)
+
+	log.Info("Start Node with", "ArchivedMode", cfg.Node.ArchiveMode)
+
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
 	}
