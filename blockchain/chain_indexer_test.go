@@ -1,4 +1,4 @@
-// Copyright 2018 The go-hpb Authors
+// Copyright 2020 The go-hpb Authors
 // Modified based on go-ethereum, which Copyright (C) 2014 The go-ethereum Authors.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 package bc
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -25,6 +27,7 @@ import (
 
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
+	"github.com/hpb-project/go-hpb/common"
 )
 
 // Runs multiple tests with randomized parameters.
@@ -201,19 +204,20 @@ func (b *testChainIndexBackend) assertBlocks(headNum, failNum uint64) (uint64, b
 }
 
 func (b *testChainIndexBackend) reorg(headNum uint64) uint64 {
-	firstChanged := headNum / b.indexer.sectionSize
+	firstChanged := (headNum + 1) / b.indexer.sectionSize
 	if firstChanged < b.stored {
 		b.stored = firstChanged
 	}
 	return b.stored * b.indexer.sectionSize
 }
 
-func (b *testChainIndexBackend) Reset(section uint64) {
+func (b *testChainIndexBackend) Reset(ctx context.Context, section uint64, prevHead common.Hash) error {
 	b.section = section
 	b.headerCnt = 0
+	return nil
 }
 
-func (b *testChainIndexBackend) Process(header *types.Header) {
+func (b *testChainIndexBackend) Process(ctx context.Context, header *types.Header) error {
 	b.headerCnt++
 	if b.headerCnt > b.indexer.sectionSize {
 		b.t.Error("Processing too many headers")
@@ -221,14 +225,22 @@ func (b *testChainIndexBackend) Process(header *types.Header) {
 	//t.processCh <- header.Number.Uint64()
 	select {
 	case <-time.After(10 * time.Second):
-		b.t.Fatal("Unexpected call to Process")
+		b.t.Error("Unexpected call to Process")
+		// Can't use Fatal since this is not the test's goroutine.
+		// Returning error stops the chainIndexer's updateLoop
+		return errors.New("Unexpected call to Process")
 	case b.processCh <- header.Number.Uint64():
 	}
+	return nil
 }
 
 func (b *testChainIndexBackend) Commit() error {
 	if b.headerCnt != b.indexer.sectionSize {
 		b.t.Error("Not enough headers processed")
 	}
+	return nil
+}
+
+func (b *testChainIndexBackend) Prune(threshold uint64) error {
 	return nil
 }
