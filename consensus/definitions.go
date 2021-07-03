@@ -59,6 +59,8 @@ const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 const HPBMainNetWorkId = 100
 
+const ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
+
 var (
 	HpbNodenumber = 31    //hpb nodes number
 	NumberPrehp   = 20    //nodes num from 151 nodes select
@@ -82,6 +84,8 @@ var (
 
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
+
+	StageNumberElection uint64 = 20000
 )
 
 var (
