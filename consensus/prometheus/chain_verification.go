@@ -369,6 +369,10 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	var err error
 	var bootnodeinfp []p2p.HwPair
 	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
+	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
+		consensus.StageNumberElection = electionNumber
+	}
+
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		err, bootnodeinfp = c.GetNodeinfoFromElectContract(chain, header, state)
 	} else if header.Number.Uint64() > consensus.NewContractVersion {
@@ -424,6 +428,9 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 
 	//get all votes
 	var voteres map[common.Address]big.Int
+	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
+		consensus.StageNumberElection = electionNumber
+	}
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		err, voteres = c.GetVoteResFromElectionContract(chain, header, state)
 	} else if header.Number.Uint64() > consensus.NewContractVersion {
@@ -444,6 +451,9 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
 	//get all balances
 	var allbalances map[common.Address]big.Int
+	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
+		consensus.StageNumberElection = electionNumber
+	}
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		errs, hpblist, coinaddresslist := c.GetCoinAddressFromElectionContract(chain, header, state)
 		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {

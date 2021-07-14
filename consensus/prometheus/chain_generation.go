@@ -1769,3 +1769,38 @@ func (c *Prometheus) GetCoinAddressFromElectionContract(chain consensus.ChainRea
 
 	return nil, out.Coinbases, out.HolderAddrs
 }
+
+/*
+ *  GetBlockNumberFromBlockSetContract
+ *
+ *  This function will get a block number from contract with given key.
+ */
+func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB, key string) (error, uint64) {
+
+	contractAddr := common.HexToAddress(consensus.BlockSetContractAddr)
+	var maxBlock uint64 = consensus.MaxBlockForever
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.BlockSetContractABI))
+
+	packres, err := fechABI.Pack(consensus.BlockSetGetValue, key)
+	blockbytes, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), contractAddr, packres)
+	if err != nil {
+		log.Error("GetCoinAddressFromElectionContract fail", "err", err)
+		return err, maxBlock
+	} else {
+		return nil, new(big.Int).SetBytes(blockbytes).Uint64()
+	}
+}
