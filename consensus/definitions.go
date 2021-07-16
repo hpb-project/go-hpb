@@ -61,8 +61,13 @@ const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 const HPBMainNetWorkId = 100
 const MaxBlockForever = 999999999999999999 // ()
 
-const ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
-const BlockSetContractAddr = "0xdC47D01f032a6b295a43e05baCbFc5D8E8D36Fc0"
+const (
+	ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
+
+	BlockSetContractTestnet = "0x713cf4852b703955f01af8086926fac0cc6a1b98"
+	BlockSetContractMainnet = "0x1C478D99dA808290f7734A588C5187D8ccaE2D10"
+)
+const BlockSetContractAddr = BlockSetContractTestnet
 
 var (
 	HpbNodenumber = 31    //hpb nodes number
@@ -88,7 +93,7 @@ var (
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
 
-	StageElectionKey           = "Election"
+	StageElectionKey           = "ElectionBlock"
 	StageNumberElection uint64 = MaxBlockForever // got from contract, otherwise forever not used.
 )
 
