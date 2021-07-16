@@ -1794,6 +1794,9 @@ func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainRea
 	cfg := evm.Config{}
 	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
 	fechABI, _ := abi.JSON(strings.NewReader(consensus.BlockSetContractABI))
+	if !vmenv.StateDB.Exist(contractAddr) {
+		return errors.New("contract not exist"), maxBlock
+	}
 
 	packres, err := fechABI.Pack(consensus.BlockSetGetValue, key)
 	blockbytes, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), contractAddr, packres)

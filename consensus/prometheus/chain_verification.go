@@ -498,5 +498,7 @@ func (c *Prometheus) updateConsensusBlock(chain consensus.ChainReader, header *t
 	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
 		log.Debug("getBlockNumber from contract", "key=", consensus.StageElectionKey, "value = ", electionNumber)
 		consensus.StageNumberElection = electionNumber
+	} else {
+		log.Debug("getBlockNumber from contract failed", "err", err.Error())
 	}
 }
