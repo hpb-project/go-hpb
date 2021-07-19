@@ -49,7 +49,8 @@ const NewfetchAllVoteResult = "fetchAllVoteResult"
 const NewgetAllHpbNodes = "getAllHpbNodes"
 
 const NewContractInterfaceABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllVoteResult\",\"outputs\":[{\"name\":\"candidateAddrs\",\"type\":\"address[]\"},{\"name\":\"nums\",\"type\":\"uint256[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"fetchAllHolderAddrs\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"_holderAddrs\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getAllHpbNodes\",\"outputs\":[{\"name\":\"coinbases\",\"type\":\"address[]\"},{\"name\":\"cid1s\",\"type\":\"bytes32[]\"},{\"name\":\"cid2s\",\"type\":\"bytes32[]\"},{\"name\":\"hids\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
-
+const BlockSetContractABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnerSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setValue\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"getValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const BlockSetGetValue = "getValue"
 const InvokeIndexOne = 1
 const InvokeIndexTwo = 2
 const InvokeIndexThree = 3
@@ -58,6 +59,15 @@ const Hpcalclookbackround = 3
 const BandwithLimit = 200       //200M
 const NumberBackBandwith = 1100 //bandwith statistic block num + 100
 const HPBMainNetWorkId = 100
+const MaxBlockForever = 999999999999999999 // ()
+
+const (
+	ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
+
+	BlockSetContractTestnet = "0x713cf4852b703955f01af8086926fac0cc6a1b98"
+	BlockSetContractMainnet = "0x1C478D99dA808290f7734A588C5187D8ccaE2D10"
+)
+const BlockSetContractAddr = BlockSetContractMainnet
 
 var (
 	HpbNodenumber = 31    //hpb nodes number
@@ -82,6 +92,9 @@ var (
 
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
+
+	StageElectionKey           = "ElectionBlock"
+	StageNumberElection uint64 = MaxBlockForever // got from contract, otherwise forever not used.
 )
 
 var (

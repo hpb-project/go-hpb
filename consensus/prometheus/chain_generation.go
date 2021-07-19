@@ -1585,3 +1585,225 @@ func (c *Prometheus) rewardvotepercentcadByNewContrac(chain consensus.ChainReade
 
 	return nil
 }
+
+/*
+ *  GetNodeinfoFromElectContract
+ *
+ *  This function will get all boenodes by contract.
+ */
+func (c *Prometheus) GetNodeinfoFromElectContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, []p2p.HwPair) {
+	fechaddr := common.HexToAddress(consensus.ElectionContractAddr)
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
+
+	//get bootnode info "addr,cid,hid"
+	packres, _ := fechABI.Pack(consensus.NewgetAllHpbNodes)
+	log.Warn("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	result, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	if err != nil {
+		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		return err, nil
+	} else {
+		if result == nil || len(result) == 0 {
+			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			return errors.New("return bootnode info result is nil or length is 0"), nil
+		}
+	}
+	log.Warn("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	var out struct {
+		Coinbases []common.Address
+		Cid1s     [][32]byte
+		Cid2s     [][32]byte
+		Hids      [][32]byte
+	}
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewgetAllHpbNodes, result)
+
+	n := len(out.Coinbases)
+	if len(out.Coinbases) == 0 || n != len(out.Cid1s) || n != len(out.Hids) || n != len(out.Cid2s) {
+		log.Error("return 4 parts do not match", "Coinbases", n, "Cid1s", len(out.Cid1s), "Cid2s", len(out.Cid2s), "Hids", len(out.Hids))
+		return errors.New("contract return 4 parts length do not match"), nil
+	}
+
+	res := make([]p2p.HwPair, 0, 151)
+	for i := 0; i < n; i++ {
+		if bytes.Compare(out.Coinbases[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Cid1s[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Cid2s[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		if bytes.Compare(out.Hids[i][:], common.Hex2Bytes("0000000000000000000000000000000000000000")) == 0 {
+			continue
+		}
+		buff := new(bytes.Buffer)
+		_, err1 := buff.Write(out.Cid1s[i][:])
+		_, err2 := buff.Write(out.Cid2s[i][:])
+		if err1 != nil || err2 != nil {
+			log.Error("construct cid fail", "err1", err1, "err2", err2)
+			return errors.New("construct cid fail"), nil
+		}
+		res = append(res, p2p.HwPair{Adr: "0x" + common.Bytes2Hex(out.Coinbases[i][:]), Cid: buff.Bytes(), Hid: out.Hids[i][:]})
+	}
+
+	return nil, res
+}
+
+/*
+ *  GetVoteResFromElectionContract
+ *
+ *  This function will get voteresult by contract.
+ */
+func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, map[common.Address]big.Int) {
+
+	fechaddr := common.HexToAddress(consensus.ElectionContractAddr)
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
+
+	//get contract addr
+	packres, err := fechABI.Pack(consensus.NewfetchAllVoteResult)
+	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	if err != nil {
+		log.Error("GetVoteResFromElectionContract InnerCall fail", "err", err)
+		return err, nil
+	} else {
+		if resultvote == nil || len(resultvote) == 0 {
+			return errors.New("return resultaddr is nil or length is 0"), nil
+		}
+	}
+	log.Warn("resultvote", "resultvote", common.ToHex(resultvote))
+	var result struct {
+		CandidateAddrs []common.Address
+		Nums           []*big.Int
+	}
+	err = fechABI.UnpackIntoInterface(&result, consensus.NewfetchAllVoteResult, resultvote)
+	if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
+		log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
+		return nil, nil
+	}
+	voteres := make(map[common.Address]big.Int)
+	for i := 0; i < len(result.CandidateAddrs); i++ {
+		log.Warn("vote key", "address", result.CandidateAddrs[i], "num", result.Nums[i].Uint64())
+		voteres[result.CandidateAddrs[i]] = *result.Nums[i]
+	}
+
+	log.Trace(">>>>>>>>>>>>>>GetVoteResFromElectionContract get vote result<<<<<<<<<<<<<<<<<", "value", voteres)
+
+	return nil, voteres
+}
+
+/*
+ *  GetCoinAddressFromElectionContract
+ *
+ *  This function will get all coinbase addresses and holdercoin addresses.
+ *  coinbase address and holdercoin address correspond by index
+ */
+func (c *Prometheus) GetCoinAddressFromElectionContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (error, []common.Address, []common.Address) {
+
+	fechaddr := common.HexToAddress(consensus.ElectionContractAddr)
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
+
+	packres, err := fechABI.Pack(consensus.NewfetchAllHolderAddrs)
+	resultcoin, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	if err != nil {
+		log.Error("GetCoinAddressFromElectionContract fail", "err", err)
+		return err, nil, nil
+	} else {
+		if resultcoin == nil || len(resultcoin) == 0 {
+			return errors.New("return resultcoin is nil or length is 0"), nil, nil
+		}
+	}
+	log.Warn("GetCoinAddressFromElectionContract", "resultcoin", common.ToHex(resultcoin))
+	var out struct {
+		Coinbases   []common.Address
+		HolderAddrs []common.Address
+	}
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchAllHolderAddrs, resultcoin)
+
+	if len(out.Coinbases) == 0 || len(out.HolderAddrs) == 0 || len(out.Coinbases) != len(out.HolderAddrs) {
+		log.Error("return 4 parts do not match", "len(Coinbases)", len(out.Coinbases))
+		return errors.New("contract return 4 parts length do not match"), nil, nil
+	}
+
+	return nil, out.Coinbases, out.HolderAddrs
+}
+
+/*
+ *  GetBlockNumberFromBlockSetContract
+ *
+ *  This function will get a block number from contract with given key.
+ */
+func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB, key string) (error, uint64) {
+
+	contractAddr := common.HexToAddress(consensus.BlockSetContractAddr)
+	var maxBlock uint64 = consensus.MaxBlockForever
+	context := evm.Context{
+		CanTransfer: evm.CanTransfer,
+		Transfer:    evm.Transfer,
+		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
+		Origin:      c.GetSinger(),
+		Coinbase:    c.GetSinger(),
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).Set(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		GasLimit:    new(big.Int).Set(header.GasLimit),
+		GasPrice:    new(big.Int).Set(big.NewInt(1000)),
+	}
+	cfg := evm.Config{}
+	vmenv := evm.NewEVM(context, state, &config.GetHpbConfigInstance().BlockChain, cfg)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.BlockSetContractABI))
+	if !vmenv.StateDB.Exist(contractAddr) {
+		return errors.New("contract not exist"), maxBlock
+	}
+
+	packres, err := fechABI.Pack(consensus.BlockSetGetValue, key)
+	blockbytes, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), contractAddr, packres)
+	if err != nil {
+		log.Error("GetCoinAddressFromElectionContract fail", "err", err)
+		return err, maxBlock
+	} else {
+		return nil, new(big.Int).SetBytes(blockbytes).Uint64()
+	}
+}
