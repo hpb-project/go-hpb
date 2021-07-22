@@ -464,7 +464,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 	latest := s.b.CurrentBlock()
 	if latest != nil {
 		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
-		if int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock) {
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
 			return nil, errors.New("node in archive mode not support to get old block")
 		}
 	}
@@ -492,7 +492,7 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 	if latest != nil {
 		blockNr := block.NumberU64()
 		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
-		if int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock) {
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
 			return nil, errors.New("node in archive mode not support to get old block")
 		}
 	}
