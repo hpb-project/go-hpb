@@ -64,8 +64,8 @@ const MaxBlockForever = 999999999999999999 // ()
 const (
 	ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
 
-	BlockSetContractTestnet = "0x713cf4852b703955f01af8086926fac0cc6a1b98"
-	BlockSetContractMainnet = "0x1C478D99dA808290f7734A588C5187D8ccaE2D10"
+	BlockSetContractTestnet = "0x893d61c1Ba41b8dD2F9aF12CcD2CDADe8651F5Ff"
+	BlockSetContractMainnet = "0xe1E6C5C5B29E529b0294A45364aB8b0A3E8c0301"
 )
 const BlockSetContractAddr = BlockSetContractMainnet
 
