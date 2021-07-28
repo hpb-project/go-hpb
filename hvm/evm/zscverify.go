@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -450,6 +451,29 @@ const (
 	FIELD_ORDER        = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
 )
 
+const (
+	burn_proof_mode     = 0
+	transfer_proof_mode = 1
+)
+
+func bytesCombine(pBytes ...[]byte) []byte {
+	return bytes.Join(pBytes, []byte(""))
+}
+
+func makeHWVerifyData(salt, a, b []byte, u, p G1Point, ls, rs, hs []G1Point, mode int) []byte {
+	data := bytesCombine(salt, a, b, u.x[:], u.y[:], p.x[:], p.y[:])
+	for _, lsi := range ls {
+		data = bytesCombine(data, lsi.x[:], lsi.y[:])
+	}
+	for _, rsi := range rs {
+		data = bytesCombine(data, rsi.x[:], rsi.y[:])
+	}
+	for _, hsi := range hs {
+		data = bytesCombine(data, hsi.x[:], hsi.y[:])
+	}
+	return data
+}
+
 func verify(input []byte) ([]byte, error) {
 
 	//log.Debug("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
@@ -457,6 +481,7 @@ func verify(input []byte) ([]byte, error) {
 	if len(common.Bytes2Hex(input)) != 6080 && len(common.Bytes2Hex(input)) != 10432 {
 		return common.LeftPadBytes([]byte{0}, 32), nil
 	}
+	var mode = burn_proof_mode
 
 	hs_length := burn_hs_length
 	rs_length := burn_length
@@ -471,6 +496,8 @@ func verify(input []byte) ([]byte, error) {
 	if len(common.Bytes2Hex(input)) > 10000 {
 		hs_length = transfer_hs_length
 		rs_length = trans_length
+
+		mode = transfer_proof_mode
 	}
 	//salt := int64(binary.BigEndian.Uint64(input[length:]))
 	// 0-64: 不需要
@@ -526,6 +553,10 @@ func verify(input []byte) ([]byte, error) {
 
 	// 32 : 不需要
 	length += 32
+
+	verifydata := makeHWVerifyData(salt, a[:], b[:], u, p, ls[:rs_length], rs[:rs_length], hs[:hs_length], mode)
+	fmt.Printf("mode %d verifydata length = %d\n", mode, len(verifydata))
+	fmt.Printf("mode %d verifydata = %s\n", mode, common.Bytes2Hex(verifydata))
 
 	// salt, hs, u, p, ls, rs, a, b
 	fmt.Println("parameter detail start.")
