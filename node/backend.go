@@ -88,6 +88,11 @@ func (s *Node) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   hpbapi.NewPublicNetAPI(p2p.PeerMgrInst().P2pSvr(), s.networkId), //s.netRPCService,
 			Public:    true,
+		}, {
+			Namespace: "graphql",
+			Version:   "1.0",
+			Service:   NewPublicHpbAPI(s),
+			Public:    true,
 		},
 	}...)
 

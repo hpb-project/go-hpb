@@ -24,6 +24,7 @@ import (
 	"reflect"
 
 	"bytes"
+
 	"github.com/hpb-project/go-hpb/common/crypto/sha3"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 )
@@ -108,6 +109,21 @@ func (h *Hash) Set(other Hash) {
 	for i, v := range other {
 		h[i] = v
 	}
+}
+
+// ImplementsGraphQLType returns true if Hash implements the specified GraphQL type.
+func (Hash) ImplementsGraphQLType(name string) bool { return name == "Bytes32" }
+
+// UnmarshalGraphQL unmarshals the provided GraphQL query data.
+func (h *Hash) UnmarshalGraphQL(input interface{}) error {
+	var err error
+	switch input := input.(type) {
+	case string:
+		err = h.UnmarshalText([]byte(input))
+	default:
+		err = fmt.Errorf("unexpected type %T for Hash", input)
+	}
+	return err
 }
 
 // Generate implements testing/quick.Generator.
@@ -232,6 +248,21 @@ func (a *Address) UnmarshalText(input []byte) error {
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
+}
+
+// ImplementsGraphQLType returns true if Hash implements the specified GraphQL type.
+func (a Address) ImplementsGraphQLType(name string) bool { return name == "Address" }
+
+// UnmarshalGraphQL unmarshals the provided GraphQL query data.
+func (a *Address) UnmarshalGraphQL(input interface{}) error {
+	var err error
+	switch input := input.(type) {
+	case string:
+		err = a.UnmarshalText([]byte(input))
+	default:
+		err = fmt.Errorf("unexpected type %T for Address", input)
+	}
+	return err
 }
 
 // UnprefixedHash allows marshaling an Address without 0x prefix.

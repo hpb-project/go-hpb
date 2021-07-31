@@ -821,6 +821,7 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	cfg.Network.WsEndpoint = cfg.Network.WSEndpoint()
 	cfg.Network.IpcEndpoint = cfg.Node.IPCEndpoint()
 	cfg.Network.HttpEndpoint = cfg.Network.HTTPEndpoint()
+	cfg.Network.GraphQLEndPoint = cfg.Network.GraphQLEndpoint()
 
 }
 

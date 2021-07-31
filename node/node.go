@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,6 +39,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/rlp"
+	"github.com/hpb-project/go-hpb/graphql"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/synctrl"
@@ -338,7 +341,7 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 	hpbnode.SetNodeAPI()
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	hpbnode.Hpbtxpool.Start()
-
+	hpbnode.startgraphql()
 	return nil
 
 }
@@ -619,4 +622,46 @@ func (n *Node) SetNodeAPI() error {
 	n.RpcAPIs = n.APIs()
 	n.RpcAPIs = append(n.RpcAPIs, n.Nodeapis()...)
 	return nil
+}
+
+func (n *Node) startgraphql() {
+	config := config.GetHpbConfigInstance()
+	n.startGraphqlHTTP(config.Network.GraphQLEndPoint, n.ApiBackend, config.Network.HTTPCors, config.Network.HTTPVirtualHosts, config.Network.HTTPTimeouts)
+}
+
+// startHTTP initializes and starts the HTTP RPC endpoint.
+func (n *Node) startGraphqlHTTP(endpoint string, backend *HpbApiBackend, cors []string, vhosts []string, timeouts config.HTTPTimeouts) error {
+	// Short circuit if the HTTP endpoint isn't being exposed
+	if endpoint == "" {
+		log.Error("HTTP endpoint is null")
+		return nil
+	}
+	_, _, err := StartGraphqlHTTPEndpoint(endpoint, backend, cors, vhosts, timeouts)
+	if err != nil {
+		log.Error("StartGraphqlHTTPEndpoint ", "err", err, "endpoint", endpoint)
+		return err
+	}
+	log.Info("Graphql endpoint opened", "url", fmt.Sprintf("http://%s", endpoint), "cors", strings.Join(cors, ","), "vhosts", strings.Join(vhosts, ","))
+
+	return nil
+}
+
+// StartGraphqlHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
+func StartGraphqlHTTPEndpoint(endpoint string, backend *HpbApiBackend, cors []string, vhosts []string, timeouts config.HTTPTimeouts) (net.Listener, http.Handler, error) {
+	//start the HTTP listener
+	var (
+		listener net.Listener
+		err      error
+	)
+	config := config.GetHpbConfigInstance()
+
+	handler, err := graphql.New(backend, config.Network.HTTPCors, config.Network.HTTPVirtualHosts)
+	if err != nil {
+		return nil, nil, err
+	}
+	if listener, err = net.Listen("tcp", endpoint); err != nil {
+		return nil, nil, err
+	}
+	go rpc.NewHTTPServer(cors, vhosts, timeouts, handler).Serve(listener)
+	return listener, handler, err
 }

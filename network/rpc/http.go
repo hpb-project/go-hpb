@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -164,10 +165,11 @@ func (t *httpReadWriteNopCloser) Close() error {
 // NewHTTPServer creates a new HTTP RPC server around an API provider.
 //
 // Deprecated: Server implements http.Handler
-func NewHTTPServer(cors []string, vhosts []string, timeouts config.HTTPTimeouts, srv *Server) *http.Server {
+func NewHTTPServer(cors []string, vhosts []string, timeouts config.HTTPTimeouts, srv http.Handler) *http.Server {
 	// Wrap the CORS-handler within a host-handler
-	handler := newCorsHandler(srv, cors)
-	handler = newVHostHandler(vhosts, handler)
+	handler := NewCorsHandler(srv, cors)
+	handler = NewVHostHandler(vhosts, handler)
+	handler = NewGzipHandler(handler)
 
 	// Make sure timeout values are meaningful
 	if timeouts.ReadTimeout < time.Second {
@@ -235,7 +237,7 @@ func validateRequest(r *http.Request) (int, error) {
 	return 0, nil
 }
 
-func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
+func NewCorsHandler(srv http.Handler, allowedOrigins []string) http.Handler {
 	// disable CORS support if user has not specified a custom CORS configuration
 	if len(allowedOrigins) == 0 {
 		return srv
@@ -261,6 +263,7 @@ type virtualHostHandler struct {
 // ServeHTTP serves JSON-RPC requests over HTTP, implements http.Handler
 func (h *virtualHostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if r.Host is not set, we can continue serving since a browser would set the Host header
+
 	if r.Host == "" {
 		h.next.ServeHTTP(w, r)
 		return
@@ -288,10 +291,50 @@ func (h *virtualHostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "invalid host specified", http.StatusForbidden)
 }
 
-func newVHostHandler(vhosts []string, next http.Handler) http.Handler {
+func NewVHostHandler(vhosts []string, next http.Handler) http.Handler {
 	vhostMap := make(map[string]struct{})
 	for _, allowedHost := range vhosts {
 		vhostMap[strings.ToLower(allowedHost)] = struct{}{}
 	}
 	return &virtualHostHandler{vhostMap, next}
+}
+
+var gzPool = sync.Pool{
+	New: func() interface{} {
+		w := gzip.NewWriter(ioutil.Discard)
+		return w
+	},
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w *gzipResponseWriter) WriteHeader(status int) {
+	w.Header().Del("Content-Length")
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func NewGzipHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Encoding", "gzip")
+
+		gz := gzPool.Get().(*gzip.Writer)
+		defer gzPool.Put(gz)
+
+		gz.Reset(w)
+		defer gz.Close()
+
+		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gz}, r)
+	})
 }
