@@ -1801,7 +1801,7 @@ func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainRea
 	packres, err := fechABI.Pack(consensus.BlockSetGetValue, key)
 	blockbytes, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), contractAddr, packres)
 	if err != nil {
-		log.Error("GetCoinAddressFromElectionContract fail", "err", err)
+		log.Debug("GetBlockNumberFromContract fail", "contract addr ", contractAddr, "key", key, "err", err)
 		return err, maxBlock
 	} else {
 		return nil, new(big.Int).SetBytes(blockbytes).Uint64()
