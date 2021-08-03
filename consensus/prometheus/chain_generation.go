@@ -1711,7 +1711,7 @@ func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader,
 	}
 	voteres := make(map[common.Address]big.Int)
 	for i := 0; i < len(result.CandidateAddrs); i++ {
-		log.Warn("vote key", "address", result.CandidateAddrs[i], "num", result.Nums[i].Uint64())
+		log.Warn("vote key", "address", result.CandidateAddrs[i], "num", result.Nums[i].Text(10))
 		voteres[result.CandidateAddrs[i]] = *result.Nums[i]
 	}
 
