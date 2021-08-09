@@ -675,6 +675,17 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				}
 				return errreward
 			}
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number > consensus.StageNumberElection {
+				var errreward error
+				loopcount := 3
+				for i := 0; i < loopcount; i++ {
+					errreward = c.rewardvotepercentcadByElectionContract(chain, header, state, bigA13, ether2weisfloat, csnap, hpsnap)
+					if errreward == nil {
+						break
+					}
+				}
+				return errreward
+			}
 		}
 	} else {
 		return err
@@ -1539,6 +1550,62 @@ func (c *Prometheus) rewardvotepercentcadByNewContrac(chain consensus.ChainReade
 		return errors.New("input param hpsnap is nil")
 	}
 	err, voteres := c.GetVoteResFromNewContract(chain, header, state)
+	if err != nil {
+		return err
+	}
+	VotePercents := make(map[common.Address]int64)
+	for _, v := range csnap.CanAddresses {
+		VotePercents[v] = 1
+	}
+
+	for addr := range voteres {
+		_, ok1 := VotePercents[addr]
+		_, ok2 := hpsnap.Signers[addr]
+		if !ok1 && !ok2 {
+			delete(voteres, addr)
+		}
+	}
+
+	// get all the voting result
+	votecounts := new(big.Int)
+	for _, votes := range voteres {
+		votecounts.Add(votecounts, &votes)
+	}
+
+	if votecounts.Cmp(big.NewInt(0)) == 0 {
+		return nil
+	}
+	votecountsfloat := new(big.Float)
+	votecountsfloat.SetInt(votecounts)
+
+	bigA13.Quo(bigA13, big.NewFloat(2))
+	bigA13.Mul(bigA13, ether2weisfloat)
+	bigA13.Mul(bigA13, big.NewFloat(float64(consensus.HpbNodeCheckpointInterval))) //mul interval number
+	log.Trace("Reward vote", "totalvote", votecountsfloat, "total reawrd", bigA13)
+	for addr, votes := range voteres {
+		tempaddrvotefloat := new(big.Float)
+		tempreward := new(big.Int)
+		tempaddrvotefloat.SetInt(&votes)
+		tempaddrvotefloat.Quo(tempaddrvotefloat, votecountsfloat)
+		log.Trace("Reward percent", "votes", votes, "percent", tempaddrvotefloat)
+		tempaddrvotefloat.Mul(tempaddrvotefloat, bigA13)
+		tempaddrvotefloat.Int(tempreward)
+		state.AddBalance(addr, tempreward) //reward every cad node by vote percent
+		log.Trace("++++++++++reward node with the vote contract++++++++++++", "addr", addr, "reward float", tempaddrvotefloat, "reward value", tempreward)
+	}
+
+	return nil
+}
+
+func (c *Prometheus) rewardvotepercentcadByElectionContract(chain consensus.ChainReader, header *types.Header, state *state.StateDB, bigA13 *big.Float, ether2weisfloat *big.Float, csnap *snapshots.CadNodeSnap, hpsnap *snapshots.HpbNodeSnap) error {
+
+	if csnap == nil {
+		return errors.New("input param csnap is nil")
+	}
+	if hpsnap == nil {
+		return errors.New("input param hpsnap is nil")
+	}
+	err, voteres := c.GetVoteResFromElectionContract(chain, header, state)
 	if err != nil {
 		return err
 	}
