@@ -664,7 +664,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				}
 				return errreward
 			}
-			if number%consensus.HpbNodeCheckpointInterval == 0 && number > consensus.NewContractVersion {
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number > consensus.NewContractVersion && number <= consensus.StageNumberElection {
 				var errreward error
 				loopcount := 3
 				for i := 0; i < loopcount; i++ {
