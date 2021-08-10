@@ -140,6 +140,10 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if parentheader == nil {
 		return errors.New("-----PrepareBlockHeader parentheader------ is nil")
 	}
+	// update consensus stage block number before mine new block.
+	{
+		c.updateConsensusBlock(chain, parentheader, state)
+	}
 	if len(parentheader.HardwareRandom) == 0 {
 		return errors.New("---------- PrepareBlockHeader parentheader.HardwareRandom----------------- is nil")
 	}

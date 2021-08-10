@@ -80,6 +80,14 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 		return consensus.ErrUnknownBlock
 	}
 	number := header.Number.Uint64()
+	// update consensus stage blocknumber before verify.
+	{
+		lastheader := chain.GetHeader(header.ParentHash, number-1)
+		if lastheader != nil {
+			state, _ := chain.StateAt(lastheader.Root)
+			c.updateConsensusBlock(chain, header, state)
+		}
+	}
 
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(c.config.Period))) > 0 {
