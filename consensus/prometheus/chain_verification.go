@@ -82,10 +82,16 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 	number := header.Number.Uint64()
 	// update consensus stage blocknumber before verify.
 	{
-		lastheader := chain.GetHeader(header.ParentHash, number-1)
-		if lastheader != nil {
-			state, _ := chain.StateAt(lastheader.Root)
-			c.updateConsensusBlock(chain, header, state)
+		var parent *types.Header
+		if len(parents) > 0 {
+			parent = parents[len(parents)-1]
+		} else {
+			parent = chain.GetHeader(header.ParentHash, number-1)
+		}
+		if parent != nil {
+			if state, err := chain.StateAt(parent.Root); err == nil {
+				c.updateConsensusBlock(chain, header, state)
+			}
 		}
 	}
 
@@ -162,9 +168,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	}
 
 	if number > consensus.StageNumberIII && mode == config.FullSync {
-
-		lastheader := chain.GetHeader(header.ParentHash, number-1)
-		state, _ := chain.StateAt(lastheader.Root)
+		state, _ := chain.StateAt(parent.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
 				log.Error("BAD COIN BASE", "miner", header.Coinbase.String(), "local", cadWinner[0].Address[:], "header", header.CandAddress[:])
