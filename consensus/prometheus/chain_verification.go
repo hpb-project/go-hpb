@@ -89,7 +89,7 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 			parent = chain.GetHeader(header.ParentHash, number-1)
 		}
 		if parent != nil {
-			if state, err := chain.StateAt(parent.Root); err == nil {
+			if state, err := chain.StateAt(parent.Root); err == nil && state != nil {
 				c.updateConsensusBlock(chain, header, state)
 			}
 		}
@@ -382,8 +382,6 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	var bootnodeinfp []p2p.HwPair
 	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
 
-	c.updateConsensusBlock(chain, header, state)
-
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		err, bootnodeinfp = c.GetNodeinfoFromElectContract(chain, header, state)
 	} else if header.Number.Uint64() > consensus.NewContractVersion {
@@ -440,8 +438,6 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get all votes
 	var voteres map[common.Address]big.Int
 
-	c.updateConsensusBlock(chain, header, state)
-
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		err, voteres = c.GetVoteResFromElectionContract(chain, header, state)
 	} else if header.Number.Uint64() > consensus.NewContractVersion {
@@ -463,7 +459,6 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get all balances
 	var allbalances map[common.Address]big.Int
 
-	c.updateConsensusBlock(chain, header, state)
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		errs, hpblist, coinaddresslist := c.GetCoinAddressFromElectionContract(chain, header, state)
 		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
