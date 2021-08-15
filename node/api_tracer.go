@@ -681,9 +681,10 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 			log.Info("Regenerating historical state", "block", block.NumberU64()+1, "target", origin, "remaining", origin-block.NumberU64()-1, "elapsed", time.Since(start))
 			logged = time.Now()
 		}
+		number := block.NumberU64()
 		// Retrieve the next block to regenerate and process it
-		if block = api.hpb.BlockChain().GetBlockByNumber(block.NumberU64() + 1); block == nil {
-			return nil, fmt.Errorf("block #%d not found", block.NumberU64()+1)
+		if block = api.hpb.BlockChain().GetBlockByNumber(number + 1); block == nil {
+			return nil, fmt.Errorf("block #%d not found", number+1)
 		}
 		_, _, _, err := api.hpb.BlockChain().Processor().Process(block, statedb)
 		if err != nil {

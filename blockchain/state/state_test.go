@@ -18,7 +18,9 @@ package state
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
@@ -228,5 +230,173 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 	}
 	if so0.deleted != so1.deleted {
 		t.Fatalf("Deleted mismatch: have %v, want %v", so0.deleted, so1.deleted)
+	}
+}
+
+func TestCopy(t *testing.T) {
+	db, _ := hpbdb.NewMemDatabase()
+	// Create a random state test to copy and modify "independently"
+	orig, _ := New(common.Hash{}, NewDatabase(db))
+
+	for i := byte(0); i < 255; i++ {
+		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		obj.AddBalance(big.NewInt(int64(i)))
+		orig.updateStateObject(obj)
+	}
+	orig.Finalise(false)
+
+	// Copy the state
+	copy := orig.Copy()
+
+	// Copy the copy state
+	ccopy := copy.Copy()
+
+	// modify all in memory
+	for i := byte(0); i < 255; i++ {
+		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+
+		origObj.AddBalance(big.NewInt(2 * int64(i)))
+		copyObj.AddBalance(big.NewInt(3 * int64(i)))
+		ccopyObj.AddBalance(big.NewInt(4 * int64(i)))
+
+		orig.updateStateObject(origObj)
+		copy.updateStateObject(copyObj)
+		ccopy.updateStateObject(copyObj)
+	}
+
+	// Finalise the changes on all concurrently
+	finalise := func(wg *sync.WaitGroup, db *StateDB) {
+		defer wg.Done()
+		db.Finalise(true)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go finalise(&wg, orig)
+	go finalise(&wg, copy)
+	go finalise(&wg, ccopy)
+	wg.Wait()
+
+	// Verify that the three states have been updated independently
+	for i := byte(0); i < 255; i++ {
+		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+
+		if want := big.NewInt(3 * int64(i)); origObj.Balance().Cmp(want) != 0 {
+			t.Errorf("orig obj %d: balance mismatch: have %v, want %v", i, origObj.Balance(), want)
+		}
+		if want := big.NewInt(4 * int64(i)); copyObj.Balance().Cmp(want) != 0 {
+			t.Errorf("copy obj %d: balance mismatch: have %v, want %v", i, copyObj.Balance(), want)
+		}
+		if want := big.NewInt(5 * int64(i)); ccopyObj.Balance().Cmp(want) != 0 {
+			t.Errorf("copy obj %d: balance mismatch: have %v, want %v", i, ccopyObj.Balance(), want)
+		}
+	}
+}
+
+func TestCopy1(t *testing.T) {
+	db, _ := hpbdb.NewMemDatabase()
+	state, _ := New(common.Hash{}, NewDatabase(db))
+	addr := common.HexToAddress("aaaa")
+	state.SetNonce(addr, 290083)
+
+	fmt.Println("---state->", state)
+
+	state.Finalise(false)
+
+	delete(state.stateObjects, addr)
+	delete(state.stateObjectsDirty, addr)
+
+	state1 := state.Copy()
+
+	fmt.Println("---state->", state1)
+
+	copy := state1.Copy()
+
+	state1.SetNonce(addr, 290084)
+
+	state1.Finalise(false)
+
+	if got := copy.GetNonce(addr); got != 290083 {
+		t.Fatalf("2nd copy fail, expected 290083, got %v", got)
+	}
+	fmt.Println("---copy->", copy)
+
+}
+
+func TestCopyOfCopy(t *testing.T) {
+	db, _ := hpbdb.NewMemDatabase()
+	state, _ := New(common.Hash{}, NewDatabase(db))
+	addr := common.HexToAddress("aaaa")
+	state.SetBalance(addr, big.NewInt(42))
+
+	if got := state.Copy().GetBalance(addr).Uint64(); got != 42 {
+		t.Fatalf("1st copy fail, expected 42, got %v", got)
+	}
+	if got := state.Copy().Copy().GetBalance(addr).Uint64(); got != 42 {
+		t.Fatalf("2nd copy fail, expected 42, got %v", got)
+	}
+}
+
+func TestCopyCommitCopy(t *testing.T) {
+	db, _ := hpbdb.NewMemDatabase()
+
+	state, _ := New(common.Hash{}, NewDatabase(db))
+
+	// Create an account and check if the retrieved balance is correct
+	addr := common.HexToAddress("0xaffeaffeaffeaffeaffeaffeaffeaffeaffeaffe")
+	skey := common.HexToHash("aaa")
+	sval := common.HexToHash("bbb")
+
+	state.SetBalance(addr, big.NewInt(42)) // Change the account trie
+	state.SetCode(addr, []byte("hello"))   // Change an external metadata
+	state.SetState(addr, skey, sval)       // Change the storage trie
+
+	if balance := state.GetBalance(addr); balance.Cmp(big.NewInt(42)) != 0 {
+		t.Fatalf("initial balance mismatch: have %v, want %v", balance, 42)
+	}
+	if code := state.GetCode(addr); !bytes.Equal(code, []byte("hello")) {
+		t.Fatalf("initial code mismatch: have %x, want %x", code, []byte("hello"))
+	}
+	if val := state.GetState(addr, skey); val != sval {
+		t.Fatalf("initial non-committed storage slot mismatch: have %x, want %x", val, sval)
+	}
+
+	// Copy the non-committed state database and check pre/post commit balance
+	copyOne := state.Copy()
+	if balance := copyOne.GetBalance(addr); balance.Cmp(big.NewInt(42)) != 0 {
+		t.Fatalf("first copy pre-commit balance mismatch: have %v, want %v", balance, 42)
+	}
+	if code := copyOne.GetCode(addr); !bytes.Equal(code, []byte("hello")) {
+		t.Fatalf("first copy pre-commit code mismatch: have %x, want %x", code, []byte("hello"))
+	}
+	if val := copyOne.GetState(addr, skey); val != sval {
+		t.Fatalf("first copy pre-commit non-committed storage slot mismatch: have %x, want %x", val, sval)
+	}
+
+	copyOne.CommitTo(db, false)
+	if balance := copyOne.GetBalance(addr); balance.Cmp(big.NewInt(42)) != 0 {
+		t.Fatalf("first copy post-commit balance mismatch: have %v, want %v", balance, 42)
+	}
+	if code := copyOne.GetCode(addr); !bytes.Equal(code, []byte("hello")) {
+		t.Fatalf("first copy post-commit code mismatch: have %x, want %x", code, []byte("hello"))
+	}
+	if val := copyOne.GetState(addr, skey); val != sval {
+		t.Fatalf("first copy post-commit non-committed storage slot mismatch: have %x, want %x", val, sval)
+	}
+
+	// Copy the copy and check the balance once more
+	copyTwo := copyOne.Copy()
+	if balance := copyTwo.GetBalance(addr); balance.Cmp(big.NewInt(42)) != 0 {
+		t.Fatalf("second copy balance mismatch: have %v, want %v", balance, 42)
+	}
+	if code := copyTwo.GetCode(addr); !bytes.Equal(code, []byte("hello")) {
+		t.Fatalf("second copy code mismatch: have %x, want %x", code, []byte("hello"))
+	}
+	if val := copyTwo.GetState(addr, skey); val != sval {
+		t.Fatalf("second copy non-committed storage slot mismatch: have %x, want %x", val, sval)
 	}
 }
