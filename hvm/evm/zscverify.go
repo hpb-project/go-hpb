@@ -673,12 +673,31 @@ func verify(input []byte) ([]byte, error) {
 	for i := uint64(0); i < uint64(n); i++ {
 		gsi := gs(i)
 		fmt.Printf("i = %d, gsi.x = %s, gsi.y = %s\n", i, common.Bytes2Hex(gsi.x[:]), common.Bytes2Hex(gsi.y[:]))
-		gTemp = gTemp.add(gsi.mul(otherExponents[i].Bytes()))
-		fmt.Printf("i = %d, after add gTemp.x = %s, gTemp.y = %s\n", i, common.Bytes2Hex(gTemp.x[:]),
-			common.Bytes2Hex(gTemp.y[:]))
-		hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(n-1)-i].Bytes()))
-		fmt.Printf("i = %d, after add hTemp.x = %s, hTemp.y = %s\n", i, common.Bytes2Hex(hTemp.x[:]),
-			common.Bytes2Hex(hTemp.y[:]))
+
+		//gTemp = gTemp.add(gsi.mul(otherExponents[i].Bytes()))
+		{
+			gismul := gsi.mul(otherExponents[i].Bytes())
+			fmt.Printf("i = %d, after mul gismul.x = %s, gismul.y = %s\n", i, common.Bytes2Hex(gismul.x[:]), common.Bytes2Hex(gismul.y[:]))
+
+			fmt.Printf("i = %d, before add gTemp.x = %s, gTemp.y = %s\n", i, common.Bytes2Hex(gTemp.x[:]),
+				common.Bytes2Hex(gTemp.y[:]))
+			gTemp = gTemp.add(gismul)
+
+			fmt.Printf("i = %d, after add gTemp.x = %s, gTemp.y = %s\n", i, common.Bytes2Hex(gTemp.x[:]),
+				common.Bytes2Hex(gTemp.y[:]))
+		}
+		//hTemp = hTemp.add(hs[i].mul(otherExponents[uint64(n-1)-i].Bytes()))
+		{
+			hsmul := hs[i].mul(otherExponents[uint64(n-1)-i].Bytes())
+			fmt.Printf("i = %d, after mul hsmul.x = %s, hsmul.y = %s\n", i, common.Bytes2Hex(hsmul.x[:]), common.Bytes2Hex(hsmul.y[:]))
+
+			fmt.Printf("i = %d, before add hTemp.x = %s, hTemp.y = %s\n", i, common.Bytes2Hex(hTemp.x[:]),
+				common.Bytes2Hex(hTemp.y[:]))
+			hTemp = hTemp.add(hsmul)
+
+			fmt.Printf("i = %d, after add hTemp.x = %s, hTemp.y = %s\n", i, common.Bytes2Hex(hTemp.x[:]),
+				common.Bytes2Hex(hTemp.y[:]))
+		}
 	}
 
 	ua := new(big.Int).SetBytes(a[:])
