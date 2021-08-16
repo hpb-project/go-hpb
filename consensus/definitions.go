@@ -62,10 +62,10 @@ const HPBMainNetWorkId = 100
 const MaxBlockForever = 999999999999999999 // ()
 
 const (
-	ElectionContractAddr = "0xff01085975c1bfdcb9614abbe4076a35469858b6"
+	ElectionContractAddr = "0xbc98351fd96d02b19a9f127e261da8c073d8b4cf"
 
 	BlockSetProxyTestnet = "0x35ceE08F55E4946876cE18850207A29Dd79EbBB6"
-	BlockSetProxyMainnet = "0xA83b0Ff8075EE46795f0a100fBdba1DA6F01c04d"
+	BlockSetProxyMainnet = "0xF3bCFEB2538c4D00cdD9c54d7AB00c00856ffADE"
 )
 const BlockSetContractAddr = BlockSetProxyMainnet
 
