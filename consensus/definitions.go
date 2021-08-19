@@ -63,7 +63,7 @@ const MaxBlockForever = 999999999999999999 // ()
 
 const (
 	ElectionContractMainnet = "0x60a3698bE1493da2065E6F84B2E77B5b5D201D5D"
-	ElectionContractTestnet = ""
+	ElectionContractTestnet = "0x2B21E06f11eFd1272691B62428E31513bF3B6F31"
 
 	ElectionContractAddr = ElectionContractMainnet
 
@@ -89,7 +89,7 @@ var (
 
 	StageNumberUpgradedEVM uint64 = 8685000 // used to upgraded EVM .
 
-	StageNumberNewPrecompiledContract uint64 = 1000000000
+	StageNumberNewPrecompiledContract uint64 = 11850000
 
 	ContinuousGenBlkLimit uint64 = 2
 
