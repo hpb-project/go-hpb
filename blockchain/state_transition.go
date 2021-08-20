@@ -25,6 +25,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/hvm/native"
@@ -69,7 +70,7 @@ type StateTransition struct {
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransition {
+func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool, header *types.Header) *StateTransition {
 	return &StateTransition{
 		evm:      evm,
 		gp:       gp,
@@ -78,6 +79,7 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool) *StateTransi
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
+		header:   header,
 	}
 }
 func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
@@ -111,8 +113,8 @@ func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Add
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool) (*ExecutionResult, error) {
-	return NewStateTransition(evm, msg, gp).TransitionDb()
+func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool, header *types.Header) (*ExecutionResult, error) {
+	return NewStateTransition(evm, msg, gp, header).TransitionDb()
 }
 
 func (st *StateTransition) from() evm.AccountRef {
@@ -192,7 +194,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	from := st.msg.From()
 	to := st.to().Address()
 
-	intrinsicGas := types.IntrinsicGas(st.data, false)
+	intrinsicGas := types.IntrinsicGas(st.data, false, st.header.Number.Uint64() > consensus.StageNumberNewPrecompiledContract)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
@@ -237,10 +239,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
-	intrinsicGas := types.IntrinsicGas(st.data, contractCreation)
+	intrinsicGas := types.IntrinsicGas(st.data, contractCreation, st.header.Number.Uint64() > consensus.StageNumberNewPrecompiledContract)
 	if intrinsicGas.BitLen() > 64 {
 		return nil, hvm.ErrOutOfGas
 	}
+
 	if err := st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, err
 	}

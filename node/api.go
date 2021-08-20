@@ -17,19 +17,17 @@
 package node
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hpb-project/go-hpb/network/p2p/discover"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
 	"strings"
-	"time"
+
+	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -41,13 +39,10 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/common/trie"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/p2p"
 	"github.com/hpb-project/go-hpb/network/rpc"
 )
 
-const defaultTraceTimeout = 5 * time.Second
 const defaultHashlen = 66
 
 type AccountDiff struct {
@@ -164,8 +159,8 @@ func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) stri
 		state_diff := StateDiff{txhash: tx.Hash()}
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-			log.Debug("evmdiff", "evmstatediff", evmstatediff)
+			evmstatediff, _, _, err := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff, "err", err)
 			state_diff.evmdiff = evmstatediff
 		} else {
 			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
@@ -232,8 +227,8 @@ func (api *PublicHpbAPI) GetStatediffbyblock(data string) string {
 		state_diff := StateDiff{txhash: tx.Hash()}
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		if (tx.To() == nil || len(statedb.GetCode(*tx.To())) > 0) && len(tx.Data()) > 0 {
-			evmstatediff, _, _, _ := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
-			log.Debug("evmdiff", "evmstatediff", evmstatediff)
+			evmstatediff, _, _, err := bc.ApplyTransaction(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
+			log.Debug("evmdiff", "evmstatediff", evmstatediff, "err", err)
 			state_diff.evmdiff = evmstatediff
 		} else {
 			bc.ApplyTransactionNonContract(blockchain.Config(), blockchain, nil, gp, statedb, header, tx, totalUsedGas)
@@ -501,246 +496,26 @@ func NewPrivateDebugAPI(config *config.ChainConfig, hpb *Node) *PrivateDebugAPI 
 	return &PrivateDebugAPI{config: config, hpb: hpb}
 }
 
-// BlockTraceResult is the returned value when replaying a block to check for
-// consensus results and full VM trace logs for all included transactions.
-type BlockTraceResult struct {
-	Validated  bool                  `json:"validated"`
-	StructLogs []hpbapi.StructLogRes `json:"structLogs"`
-	Error      string                `json:"error"`
-}
-
-// TraceArgs holds extra parameters to trace functions
-type TraceArgs struct {
-	*evm.LogConfig
-	Tracer  *string
-	Timeout *string
-}
-
-// TraceBlock processes the given block'api RLP but does not import the block in to
-// the chain.
-func (api *PrivateDebugAPI) TraceBlock(blockRlp []byte, config *evm.LogConfig) BlockTraceResult {
-	var block types.Block
-	err := rlp.Decode(bytes.NewReader(blockRlp), &block)
-	if err != nil {
-		return BlockTraceResult{Error: fmt.Sprintf("could not decode block: %v", err)}
-	}
-
-	validated, logs, err := api.traceBlock(&block, config)
-	return BlockTraceResult{
-		Validated:  validated,
-		StructLogs: hpbapi.FormatLogs(logs),
-		Error:      formatError(err),
-	}
-}
-
-// TraceBlockFromFile loads the block'api RLP from the given file name and attempts to
-// process it but does not import the block in to the chain.
-func (api *PrivateDebugAPI) TraceBlockFromFile(file string, config *evm.LogConfig) BlockTraceResult {
-	blockRlp, err := ioutil.ReadFile(file)
-	if err != nil {
-		return BlockTraceResult{Error: fmt.Sprintf("could not read file: %v", err)}
-	}
-	return api.TraceBlock(blockRlp, config)
-}
-
-// TraceBlockByNumber processes the block by canonical block number.
-func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *evm.LogConfig) BlockTraceResult {
-	// Fetch the block that we aim to reprocess
-	var block *types.Block
-	switch blockNr {
-	case rpc.PendingBlockNumber:
-		// Pending block is only known by the miner
-		block = api.hpb.miner.PendingBlock()
-	case rpc.LatestBlockNumber:
-		block = api.hpb.Hpbbc.CurrentBlock()
-	default:
-		block = api.hpb.Hpbbc.GetBlockByNumber(uint64(blockNr))
-	}
-
-	if block == nil {
-		return BlockTraceResult{Error: fmt.Sprintf("block #%d not found", blockNr)}
-	}
-
-	validated, logs, err := api.traceBlock(block, config)
-	return BlockTraceResult{
-		Validated:  validated,
-		StructLogs: hpbapi.FormatLogs(logs),
-		Error:      formatError(err),
-	}
-}
-
-// TraceBlockByHash processes the block by hash.
-func (api *PrivateDebugAPI) TraceBlockByHash(hash common.Hash, config *evm.LogConfig) BlockTraceResult {
-	// Fetch the block that we aim to reprocess
-	block := api.hpb.BlockChain().GetBlockByHash(hash)
-	if block == nil {
-		return BlockTraceResult{Error: fmt.Sprintf("block #%x not found", hash)}
-	}
-
-	validated, logs, err := api.traceBlock(block, config)
-	return BlockTraceResult{
-		Validated:  validated,
-		StructLogs: hpbapi.FormatLogs(logs),
-		Error:      formatError(err),
-	}
-}
-
-// traceBlock processes the given block but does not save the state.
-func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *evm.LogConfig) (bool, []evm.StructLog, error) {
-	// Validate and reprocess the block
-	var (
-		blockchain = api.hpb.BlockChain()
-		validator  = blockchain.Validator()
-		processor  = blockchain.Processor()
-	)
-
-	structLogger := evm.NewStructLogger(logConfig)
-
-	if err := api.hpb.Hpbengine.VerifyHeader(blockchain, block.Header(), true, config.FastSync); err != nil {
-		return false, structLogger.StructLogs(), err
-	}
-	statedb, err := blockchain.StateAt(blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1).Root())
-	if err != nil {
-		return false, structLogger.StructLogs(), err
-	}
-
-	receipts, _, usedGas, err := processor.Process(block, statedb)
-	if err != nil {
-		return false, structLogger.StructLogs(), err
-	}
-	if err := validator.ValidateState(block, blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1), statedb, receipts, usedGas); err != nil {
-		return false, structLogger.StructLogs(), err
-	}
-	return true, structLogger.StructLogs(), nil
-}
-
-// formatError formats a Go error into either an empty string or the data content
-// of the error itself.
-func formatError(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
-}
-
-type timeoutError struct{}
-
-func (t *timeoutError) Error() string {
-	return "Execution time exceeded"
-}
-
-/*// TraceTransaction returns the structured logs created during the execution of EVM
-// and returns them as a JSON object.
-func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.Hash, config *TraceArgs) (interface{}, error) {
-	var tracer evm.Tracer
-	if config != nil && config.Tracer != nil {
-		timeout := defaultTraceTimeout
-		if config.Timeout != nil {
-			var err error
-			if timeout, err = time.ParseDuration(*config.Timeout); err != nil {
-				return nil, err
-			}
-		}
-
-		var err error
-		if tracer, err = hpbapi.NewJavascriptTracer(*config.Tracer); err != nil {
-			return nil, err
-		}
-
-		// Handle timeouts and RPC cancellations
-		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
-		go func() {
-			<-deadlineCtx.Done()
-			tracer.(*hpbapi.JavascriptTracer).Stop(&timeoutError{})
-		}()
-		defer cancel()
-	} else if config == nil {
-		tracer = evm.NewStructLogger(nil)
-	} else {
-		tracer = evm.NewStructLogger(config.LogConfig)
-	}
-
-	// Retrieve the tx from the chain and the containing block
-	tx, blockHash, _, txIndex := bc.GetTransaction(api.hpb.ChainDb(), txHash)
-	if tx == nil {
-		return nil, fmt.Errorf("transaction %x not found", txHash)
-	}
-	msg, context, statedb, err := api.computeTxEnv(blockHash, int(txIndex))
-	if err != nil {
-		return nil, err
-	}
-
-	// Run the transaction with tracing enabled.
-	vmenv := evm.NewEVM(context, statedb, api.config, evm.Config{Debug: true, Tracer: tracer})
-
-	block := bc.InstanceBlockChain()
-	ret, gas, failed, err := bc.ApplyMessage(block, nil, nil, nil, msg , nil)
-	if err != nil {
-		return nil, fmt.Errorf("tracing failed: %v", err)
-	}
-	switch tracer := tracer.(type) {
-	case *evm.StructLogger:
-		return &hpbapi.ExecutionResult{
-			Gas:         gas,
-			Failed:      failed,
-			ReturnValue: fmt.Sprintf("%x", ret),
-			StructLogs:  hpbapi.FormatLogs(tracer.StructLogs()),
-		}, nil
-	case *hpbapi.JavascriptTracer:
-		return tracer.GetResult()
-	default:
-		panic(fmt.Sprintf("bad tracer type %T", tracer))
-	}
-}*/
-/*
-// computeTxEnv returns the execution environment of a certain transaction.
-func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (bc.Message, evm.Context, *state.StateDB, error) {
-	// Create the parent state.
-	block := api.hpb.BlockChain().GetBlockByHash(blockHash)
-	if block == nil {
-		return nil, evm.Context{}, nil, fmt.Errorf("block %x not found", blockHash)
-	}
-	parent := api.hpb.BlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1)
-	if parent == nil {
-		return nil, evm.Context{}, nil, fmt.Errorf("block parent %x not found", block.ParentHash())
-	}
-	statedb, err := api.hpb.BlockChain().StateAt(parent.Root())
-	if err != nil {
-		return nil, evm.Context{}, nil, err
-	}
-	txs := block.Transactions()
-
-	// Recompute transactions up to the target index.
-	signer := types.MakeSigner(api.config, block.Number())
-	for idx, tx := range txs {
-		// Assemble the transaction call message
-		msg, _ := tx.AsMessage(signer)
-		context := hvm.NewEVMContext(msg, block.Header(), api.hpb.BlockChain(), nil)
-		if idx == txIndex {
-			return msg, context, statedb, nil
-		}
-
-		vmenv := evm.NewEVM(context, statedb, api.config, evm.Config{})
-		gp := new(bc.GasPool).AddGas(tx.Gas())
-		_, _, _, err := bc.ApplyMessage(vmenv, msg, gp)
-		if err != nil {
-			return nil, evm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
-		}
-		statedb.DeleteSuicides()
-	}
-	return nil, evm.Context{}, nil, fmt.Errorf("tx index %d out of range for block %x", txIndex, blockHash)
-}
-*/
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	db := bc.PreimageTable(api.hpb.ChainDb())
 	return db.Get(hash.Bytes())
 }
 
-// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
-// and returns them as a JSON list of block-hashes
-func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]bc.BadBlockArgs, error) {
-	return api.hpb.BlockChain().BadBlocks()
+// BadBlockArgs represents the entries in the list returned when bad blocks are queried.
+type BadBlockArgs struct {
+	Hash   common.Hash   `json:"hash"`
+	Header *types.Header `json:"header"`
+}
+
+// BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
+func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]BadBlockArgs, error) {
+	badblocks := api.hpb.BlockChain().BadBlocks()
+	headers := make([]BadBlockArgs, len(badblocks))
+	for index, block := range badblocks {
+		headers[index] = BadBlockArgs{Hash: block.Hash(), Header: block.Header()}
+	}
+	return headers, nil
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.
@@ -756,20 +531,6 @@ type storageEntry struct {
 	Value common.Hash  `json:"value"`
 }
 
-/*
-// StorageRangeAt returns the storage at the given block height and transaction index.
-func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
-	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex)
-	if err != nil {
-		return StorageRangeResult{}, err
-	}
-	st := statedb.StorageTrie(contractAddress)
-	if st == nil {
-		return StorageRangeResult{}, fmt.Errorf("account %x doesn't exist", contractAddress)
-	}
-	return storageRangeAt(st, keyStart, maxResult), nil
-}
-*/
 func storageRangeAt(st state.Trie, start []byte, maxResult int) StorageRangeResult {
 	it := trie.NewIterator(st.NodeIterator(start))
 	result := StorageRangeResult{Storage: storageMap{}}

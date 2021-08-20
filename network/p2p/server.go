@@ -351,12 +351,14 @@ func (srv *Server) Start() (err error) {
 	srv.ntab = ntab
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: config.VersionID, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End: ourend}
+	srv.ourHandshake = &protoHandshake{Version: config.HandShakeVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), End: ourend}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
+	// append ghpb version to Caps.
 	srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, Cap{config.Version, 0})
 	v, err := boe.BoeGetInstance().GetVersion()
+	// append boe version to Caps.
 	if err == nil {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, Cap{v.VersionString(), 0})
 	} else {
@@ -737,8 +739,16 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	c.our = *srv.ourHandshake
 	c.our.RandNonce = ourRand
 
-	if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err != nil {
-		clog.Debug("Do hardware sign  error.", "err", err)
+	if c.our.Version < config.HandShakeNoHIDVersion {
+		clog.Debug("Handshake sign with hid.")
+		if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign_With_Hid(theirRand); err != nil {
+			clog.Debug("Do hardware sign  error.", "err", err)
+		}
+	} else {
+		clog.Debug("Handshake sign with no hid.")
+		if c.our.Sign, err = boe.BoeGetInstance().HW_Auth_Sign(theirRand); err != nil {
+			clog.Debug("Do hardware sign without hid error.", "err", err)
+		}
 	}
 	clog.Debug("Hardware has signed remote rand.", "rand", hex.EncodeToString(theirRand), "sign", hex.EncodeToString(c.our.Sign))
 
@@ -787,7 +797,11 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		for _, hw := range hdtab {
 			if hw.Adr == remoteCoinbase {
 				clog.Trace("Input to boe paras", "rand", hex.EncodeToString(c.our.RandNonce), "hid", hex.EncodeToString(hw.Hid), "cid", hex.EncodeToString(hw.Cid), "sign", hex.EncodeToString(c.their.Sign))
-				c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce, hw.Hid, hw.Cid, c.their.Sign)
+				c.isboe = boe.BoeGetInstance().HW_Auth_Verify_With_Hid(c.our.RandNonce, hw.Hid, hw.Cid, c.their.Sign)
+				clog.Debug("their p2p version is ", "v", c.their.Version)
+				if !c.isboe && c.their.Version >= config.HandShakeNoHIDVersion {
+					c.isboe = boe.BoeGetInstance().HW_Auth_Verify(c.our.RandNonce, hw.Cid, c.their.Sign)
+				}
 				clog.Info("Boe verify the remote.", "id", c.id.TerminalString(), "result", c.isboe)
 			}
 		}

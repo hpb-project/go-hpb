@@ -148,6 +148,10 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 	for offset < len(chooseSigners) && chooseSigners[offset] != signer {
 		offset++
 	}
+	if len(chooseSigners) == 0 {
+		log.Error("empty choose signers in calculateCurrentMiner")
+		return common.Address{}, false
+	}
 	index := number % uint64(len(chooseSigners))
 	return chooseSigners[index], index == uint64(offset)
 }

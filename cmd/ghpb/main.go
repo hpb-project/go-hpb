@@ -113,7 +113,7 @@ var (
 		utils.StartNumberFlag,
 		utils.CriticalFlag,
 		utils.CriticalBackBlockFlag,
-		utils.ArchiveModeFalg,
+		utils.ArchivedBlockFalg,
 	}
 
 	rpcFlags = []cli.Flag{

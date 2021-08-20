@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"sync/atomic"
+	"time"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -41,10 +42,19 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+func (evm *EVM) ActivePrecompiles() map[common.Address]PrecompiledContract {
+	switch num := evm.BlockNumber.Uint64(); {
+	case num > consensus.StageNumberNewPrecompiledContract:
+		return PrecompiledContractsIstanbul
+	default:
+		return PrecompiledContractsByzantium
+	}
+}
+
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, snapshot int, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			return RunPrecompiledContract(p, input, contract)
 		}
@@ -212,13 +222,26 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if precompiles[addr] == nil && value.Sign() == 0 {
+			// Calling a non existing account, don't do anything, but ping the tracer
+			if evm.vmConfig.Debug && evm.depth == 0 {
+				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+			}
 			return nil, gas, nil
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+
+	// Capture the tracer start/end events in debug mode
+	if evm.vmConfig.Debug && evm.depth == 0 {
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+		defer func(startGas uint64, startTime time.Time) { // Lazy evaluation of the parameters
+			evm.vmConfig.Tracer.CaptureEnd(ret, startGas-gas, time.Since(startTime), err)
+		}(gas, time.Now())
+	}
 
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped environment for this execution context
@@ -248,6 +271,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.depthid[evm.depth]++
 		evm.StateDiff = append(evm.StateDiff, statediff)
 	}
+	gas = contract.Gas
 	return ret, contract.Gas, err
 }
 
@@ -266,7 +290,7 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsByzantium
+		precompiles := evm.ActivePrecompiles()
 		if precompiles[addr] == nil {
 			return nil, nil
 		}
@@ -438,6 +462,12 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil
 	}
+	if evm.vmConfig.Debug && evm.depth == 0 {
+		evm.vmConfig.Tracer.CaptureStart(caller.Address(), contractAddr, true, code, gas, value)
+	}
+
+	start := time.Now()
+
 	ret, err = run(evm, snapshot, contract, nil)
 
 	// check whether the max code size has been exceeded
@@ -468,8 +498,12 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	if maxCodeSizeExceeded && err == nil {
 		err = ErrMaxCodeSizeExceeded
 	}
+	if evm.vmConfig.Debug && evm.depth == 0 {
+		evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+	}
 	return ret, contractAddr, contract.Gas, err
 }
+
 func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, value *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 
 	if evm.depth > int(config.CallCreateDepth) {

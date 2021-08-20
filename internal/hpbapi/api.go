@@ -49,6 +49,12 @@ const (
 	defaultGasPrice = 50 * config.Shannon
 )
 
+func init() {
+	if defaultGas < config.TxGas {
+		panic("wrong defaultgas setting")
+	}
+}
+
 // PublicHpbAPI provides an API to access Hpb related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicHpbAPI struct {
@@ -462,9 +468,9 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	//log.Info("-----get block by number")
 	latest := s.b.CurrentBlock()
-	if latest != nil {
-		if blockNr > 0 && int64(blockNr) < (latest.Number().Int64()-250) && fullTx &&
-			config.GetHpbConfigInstance().Node.ArchiveMode {
+	if latest != nil && blockNr > 0 {
+		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
 			return nil, errors.New("node in archive mode not support to get old block")
 		}
 	}
@@ -491,8 +497,8 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 	latest := s.b.CurrentBlock()
 	if latest != nil {
 		blockNr := block.NumberU64()
-		if blockNr > 0 && int64(blockNr) < (latest.Number().Int64()-250) && fullTx &&
-			config.GetHpbConfigInstance().Node.ArchiveMode {
+		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
 			return nil, errors.New("node in archive mode not support to get old block")
 		}
 	}
@@ -701,7 +707,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(bc.GasPool).AddGas(math.MaxUint64)
-	result, err := bc.ApplyMessage(evm, msg, gp)
+	result, err := bc.ApplyMessage(evm, msg, gp, header)
 	if err := vmError(); err != nil {
 		return nil, err
 	}
@@ -770,7 +776,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo  uint64 = 21000 - 1
+		lo  uint64 = config.TxGas - 1
 		hi  uint64
 		cap uint64
 	)

@@ -52,13 +52,25 @@ type operation struct {
 }
 
 var (
-	frontierInstructionSet       = NewFrontierInstructionSet()
-	homesteadInstructionSet      = NewHomesteadInstructionSet()
-	byzantiumInstructionSet      = NewByzantiumInstructionSet()
-	constantinopleInstructionSet = NewConstantinopleInstructionSet()
-	istanbulInstructionSet       = newIstanbulInstructionSet()
-	yoloV1InstructionSet         = newYoloV1InstructionSet()
+	byzantiumInstructionSet       = NewByzantiumInstructionSet()
+	constantinopleInstructionSet  = NewConstantinopleInstructionSet()
+	yoloV1InstructionSet          = newYoloV1InstructionSet()
+	yoloV1InstructionSetddCreate2 = newYoloV1InstructionSetAddCreate2()
 )
+
+func newYoloV1InstructionSetAddCreate2() [256]operation {
+	instructionSet := newYoloV1InstructionSet()
+	instructionSet[CREATE2] = operation{
+		execute:       opCreate2,
+		gasCost:       gasCreate2,
+		validateStack: makeStackFunc(4, 1),
+		memorySize:    memoryCreate2,
+		valid:         true,
+		writes:        true,
+		returns:       true,
+	}
+	return instructionSet
+}
 
 func newYoloV1InstructionSet() [256]operation {
 	instructionSet := newIstanbulInstructionSet()
@@ -71,7 +83,6 @@ func newYoloV1InstructionSet() [256]operation {
 		validateStack: makeStackFunc(0, 1),
 		valid:         true,
 	}
-
 	return instructionSet
 }
 
@@ -121,15 +132,6 @@ func NewConstantinopleInstructionSet() [256]operation {
 		validateStack: makeStackFunc(1, 1),
 		valid:         true,
 	}
-	/*instructionSet[CREATE2] = operation{
-		execute:       opCreate2,
-		gasCost:       constGasFunc(GasQuickStep),
-		validateStack: makeStackFunc(4, 1),
-		memorySize:    memoryCreate2,
-		valid:         true,
-		writes:        true,
-		returns:       true,
-	}*/
 	return instructionSet
 }
 

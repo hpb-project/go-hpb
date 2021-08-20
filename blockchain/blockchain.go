@@ -130,8 +130,16 @@ func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
 	}
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
-		log.Warn("Head block missing", "hash", head)
-		return nil
+		log.Warn("Head block missing", "hash", head.Hex())
+		if num > 0 {
+			log.Warn("Find head block retry", "number", num)
+			currentBlock = bc.GetBlockByNumber(num)
+			if currentBlock == nil {
+				panic(fmt.Sprintf("head block missing with hash(%s) and number(%d)", head, num))
+			}
+		} else {
+			panic(fmt.Sprintf("head block missing with hash(%s)", head.Hex()))
+		}
 	}
 	if num == 0 || num > currentBlock.NumberU64() {
 		if err := bc.loadLastState(); err != nil {
@@ -1346,27 +1354,21 @@ func (bc *BlockChain) update() {
 	}
 }
 
-// BadBlockArgs represents the entries in the list returned when bad blocks are queried.
-type BadBlockArgs struct {
-	Hash   common.Hash   `json:"hash"`
-	Header *types.Header `json:"header"`
-}
-
 // BadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
-func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
-	headers := make([]BadBlockArgs, 0, bc.badBlocks.Len())
+func (bc *BlockChain) BadBlocks() []*types.Block {
+	blocks := make([]*types.Block, 0, bc.badBlocks.Len())
 	for _, hash := range bc.badBlocks.Keys() {
-		if hdr, exist := bc.badBlocks.Peek(hash); exist {
-			header := hdr.(*types.Header)
-			headers = append(headers, BadBlockArgs{header.Hash(), header})
+		if blk, exist := bc.badBlocks.Peek(hash); exist {
+			block := blk.(*types.Block)
+			blocks = append(blocks, block)
 		}
 	}
-	return headers, nil
+	return blocks
 }
 
 // addBadBlock adds a bad block to the bad-block LRU cache
 func (bc *BlockChain) addBadBlock(block *types.Block) {
-	bc.badBlocks.Add(block.Header().Hash(), block.Header())
+	bc.badBlocks.Add(block.Hash(), block)
 }
 
 // reportBlock logs a bad block error.
@@ -1377,7 +1379,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	for _, receipt := range receipts {
 		receiptString += fmt.Sprintf("\t%v\n", receipt)
 	}
-	log.Error("BAD BLOCK", "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty)
+	log.Error("BAD BLOCK", "blocknumber", block.NumberU64(), "miner", block.Header().Coinbase, "difficult", block.Header().Difficulty)
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v

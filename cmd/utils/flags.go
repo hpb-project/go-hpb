@@ -487,9 +487,10 @@ var (
 		Usage: "return the node height to block number",
 		Value: 1000000000000,
 	}
-	ArchiveModeFalg = cli.BoolFlag{
+	ArchivedBlockFalg = cli.Int64Flag{
 		Name:  "archived",
-		Usage: "unSupport get block detail info by rpc with the blockNumber little than (latest - 250)",
+		Usage: "unSupport get block detail info by rpc with the blockNumber little than param",
+		Value: -1,
 	}
 )
 
@@ -869,9 +870,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	}
 	cfg.Node.CriticalFlag = ctx.GlobalUint64(CriticalFlag.Name)
 	cfg.Node.CriticalBackNumber = ctx.GlobalUint64(CriticalBackBlockFlag.Name)
-	cfg.Node.ArchiveMode = ctx.GlobalBool(ArchiveModeFalg.Name)
+	cfg.Node.ArchivedBlock = ctx.GlobalInt64(ArchivedBlockFalg.Name)
 
-	log.Info("Start Node with", "ArchivedMode", cfg.Node.ArchiveMode)
+	log.Info("Start Node with", "Archived block ", cfg.Node.ArchivedBlock)
 
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)
