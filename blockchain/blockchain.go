@@ -130,8 +130,16 @@ func (bc *BlockChain) startChainByBlockNubmer(num uint64) error {
 	}
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
-		log.Warn("Head block missing", "hash", head)
-		return nil
+		log.Warn("Head block missing", "hash", head.Hex())
+		if num > 0 {
+			log.Warn("Find head block retry", "number", num)
+			currentBlock = bc.GetBlockByNumber(num)
+			if currentBlock == nil {
+				panic(fmt.Sprintf("head block missing with hash(%s) and number(%d)", head, num))
+			}
+		} else {
+			panic(fmt.Sprintf("head block missing with hash(%s)", head.Hex()))
+		}
 	}
 	if num == 0 || num > currentBlock.NumberU64() {
 		if err := bc.loadLastState(); err != nil {
