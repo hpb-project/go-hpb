@@ -983,7 +983,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	mapaddrbandwithres := make(map[common.Address]*BandWithStatics)
 	for i := number - consensus.NumberBackBandwith; i < number-100; i++ {
 		if nil == chain.GetHeaderByNumber(i) {
-			log.Warn("GetBandwithRes GetHeaderByNumber fail", "nmuber", i)
+			log.Warn("GetBandwithRes GetHeaderByNumber fail", "number", i)
 			return nil, errors.New("GetBandwithRes GetHeaderByNumber fail")
 		}
 		//statistics prehp node bandwith
@@ -1682,7 +1682,7 @@ func (c *Prometheus) GetNodeinfoFromElectContract(chain consensus.ChainReader, h
 
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewgetAllHpbNodes)
-	log.Warn("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
 	result, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
@@ -1693,7 +1693,7 @@ func (c *Prometheus) GetNodeinfoFromElectContract(chain consensus.ChainReader, h
 			return errors.New("return bootnode info result is nil or length is 0"), nil
 		}
 	}
-	log.Warn("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
 	var out struct {
 		Coinbases []common.Address
 		Cid1s     [][32]byte
@@ -1770,7 +1770,7 @@ func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader,
 			return errors.New("return resultaddr is nil or length is 0"), nil
 		}
 	}
-	log.Warn("resultvote", "resultvote", common.ToHex(resultvote))
+	log.Trace("resultvote", "resultvote", common.ToHex(resultvote))
 	var result struct {
 		CandidateAddrs []common.Address
 		Nums           []*big.Int
@@ -1782,7 +1782,7 @@ func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader,
 	}
 	voteres := make(map[common.Address]big.Int)
 	for i := 0; i < len(result.CandidateAddrs); i++ {
-		log.Warn("vote key", "address", result.CandidateAddrs[i], "num", result.Nums[i].Text(10))
+		log.Trace("vote key", "address", result.CandidateAddrs[i], "num", result.Nums[i].Text(10))
 		voteres[result.CandidateAddrs[i]] = *result.Nums[i]
 	}
 
@@ -1826,7 +1826,7 @@ func (c *Prometheus) GetCoinAddressFromElectionContract(chain consensus.ChainRea
 			return errors.New("return resultcoin is nil or length is 0"), nil, nil
 		}
 	}
-	log.Warn("GetCoinAddressFromElectionContract", "resultcoin", common.ToHex(resultcoin))
+	log.Trace("GetCoinAddressFromElectionContract", "resultcoin", common.ToHex(resultcoin))
 	var out struct {
 		Coinbases   []common.Address
 		HolderAddrs []common.Address
