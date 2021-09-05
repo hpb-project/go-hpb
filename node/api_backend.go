@@ -52,6 +52,10 @@ func (b *HpbApiBackend) CurrentBlock() *types.Block {
 	return b.hpb.Hpbbc.CurrentBlock()
 }
 
+func (b *HpbApiBackend) CurrentHeader() *types.Header {
+	return b.hpb.Hpbbc.CurrentHeader()
+}
+
 func (b *HpbApiBackend) SetHead(number uint64) {
 	b.hpb.Hpbsyncctr.Syncer().Cancel()
 	b.hpb.Hpbbc.SetHead(number)
@@ -115,6 +119,27 @@ func (b *HpbApiBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash r
 	return nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
+func (b *HpbApiBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.HeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.hpb.BlockChain().GetHeaderByHash(hash)
+		if header == nil {
+			return nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.hpb.BlockChain().GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, errors.New("hash is not currently canonical")
+		}
+		header = b.hpb.BlockChain().GetHeader(hash, header.Number.Uint64())
+		if header == nil {
+			return nil, errors.New("header found, but block body is missing")
+		}
+		return header, nil
+	}
+	return nil, errors.New("invalid arguments; neither block nor hash specified")
+}
+
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -156,6 +181,10 @@ func (b *HpbApiBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockN
 
 func (b *HpbApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error) {
 	return b.hpb.Hpbbc.GetBlockByHash(blockHash), nil
+}
+
+func (b *HpbApiBackend) GetTransaction(ctx context.Context, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return bc.GetTransaction(b.hpb.HpbDb, hash)
 }
 
 func (b *HpbApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
