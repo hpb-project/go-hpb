@@ -18,12 +18,13 @@ package filters
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/big"
-	"time"
 
-	"github.com/hpb-project/go-hpb/blockchain"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
-	"github.com/hpb-project/go-hpb/blockchain/storage"
+	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/event/sub"
@@ -115,6 +116,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 		err  error
 	)
 	size, sections := f.backend.BloomStatus()
+	fmt.Println("--size, sections--->", size, sections, sections*size, f.begin, end)
 	if indexed := sections * size; indexed > uint64(f.begin) {
 		if indexed > end {
 			logs, err = f.indexedLogs(ctx, end)
@@ -126,6 +128,12 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 		}
 	}
 	rest, err := f.unindexedLogs(ctx, end)
+
+	restS, _ := json.Marshal(rest)
+	fmt.Println("----rest---", string(restS))
+
+	logss, _ := json.Marshal(logs)
+	fmt.Println("----logss---", string(logss))
 	logs = append(logs, rest...)
 	return logs, err
 }
@@ -136,11 +144,11 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 	// Create a matcher session and request servicing from the backend
 	matches := make(chan uint64, 64)
 
-	session, err := f.matcher.Start(uint64(f.begin), end, matches)
+	session, err := f.matcher.Start(ctx, uint64(f.begin), end, matches)
 	if err != nil {
 		return nil, err
 	}
-	defer session.Close(time.Second)
+	defer session.Close()
 
 	f.backend.ServiceFilter(ctx, session)
 
