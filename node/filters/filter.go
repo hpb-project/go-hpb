@@ -18,8 +18,6 @@ package filters
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"math/big"
 
 	bc "github.com/hpb-project/go-hpb/blockchain"
@@ -116,7 +114,6 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 		err  error
 	)
 	size, sections := f.backend.BloomStatus()
-	fmt.Println("--size, sections--->", size, sections, sections*size, f.begin, end)
 	if indexed := sections * size; indexed > uint64(f.begin) {
 		if indexed > end {
 			logs, err = f.indexedLogs(ctx, end)
@@ -129,11 +126,6 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 	}
 	rest, err := f.unindexedLogs(ctx, end)
 
-	restS, _ := json.Marshal(rest)
-	fmt.Println("----rest---", string(restS))
-
-	logss, _ := json.Marshal(logs)
-	fmt.Println("----logss---", string(logss))
 	logs = append(logs, rest...)
 	return logs, err
 }
