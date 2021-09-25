@@ -18,7 +18,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -306,11 +305,6 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		arguments = append(arguments, req.args...)
 	}
 
-	for _, v := range req.args {
-		fmt.Println("----req---", req.callb.method.Name, v)
-
-	}
-
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
 	if len(reply) == 0 {
@@ -335,9 +329,6 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	} else {
 		response, callback = s.handle(ctx, codec, req)
 	}
-
-	res, _ := json.Marshal(response)
-	fmt.Println("----respon--", string(res))
 
 	if err := codec.Write(response); err != nil {
 		log.Error(fmt.Sprintf("%v\n", err))
