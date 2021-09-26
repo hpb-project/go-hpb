@@ -79,7 +79,7 @@ var DefaultConfig = Nodeconfig{
 	GasPrice:        big.NewInt(1 * Shannon),
 	IPCPath:         "ghpb.ipc",
 	MaxTrieCacheGen: uint16(120),
-	RPCGasCap:       25000000,
+	RPCGasCap:       50000000,
 }
 
 type GpoConfig struct {
