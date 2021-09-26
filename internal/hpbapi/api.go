@@ -1580,11 +1580,12 @@ func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
 type PublicNetAPI struct {
 	net            *p2p.Server
 	networkVersion uint64
+	chainid        *big.Int
 }
 
 // NewPublicNetAPI creates a new net API instance.
-func NewPublicNetAPI(net *p2p.Server, networkVersion uint64) *PublicNetAPI {
-	return &PublicNetAPI{net, networkVersion}
+func NewPublicNetAPI(net *p2p.Server, networkVersion uint64, chainid *big.Int) *PublicNetAPI {
+	return &PublicNetAPI{net, networkVersion, chainid}
 }
 
 // Listening returns an indication if the node is listening for network connections.
@@ -1599,5 +1600,5 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 
 // Version returns the current hpb protocol version.
 func (s *PublicNetAPI) Version() string {
-	return fmt.Sprintf("%d", s.networkVersion)
+	return fmt.Sprintf("%d", s.chainid.Uint64())
 }
