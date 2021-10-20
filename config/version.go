@@ -28,10 +28,12 @@ const (
 /*
 !!!every change of version should sub VersionID one number!!!
 */
-const DAOVersion uint64 = 0x0005 // use a version to seperate network. 2021/5/5
-const VersionID uint64 = 0x0005  //
+const DAOVersion uint64 = 0x0005  // use a version to seperate network. 2021/5/5
+const DAOVersion2 uint64 = 0x0007 // use a version to seperate network. 2021/10/21
 
-const HandShakeVersion uint64 = DAOVersion // current handshake proto version.
+const VersionID uint64 = 0x0006 // not used.
+
+const HandShakeVersion uint64 = DAOVersion2 // current handshake proto version.
 
 const HandShakeNoHIDVersion uint64 = 0x0006 // prepare for handshake not check hid.
 
