@@ -795,6 +795,7 @@ func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 		stack.push(big.NewInt(1))
 	}
 	if err == nil || err == ErrExecutionReverted {
+		ret = common.CopyBytes(ret)
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	contract.Gas += returnGas
@@ -829,6 +830,7 @@ func opCallCode(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 		stack.push(big.NewInt(1))
 	}
 	if err == nil || err == ErrExecutionReverted {
+		ret = common.CopyBytes(ret)
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	contract.Gas += returnGas
@@ -850,6 +852,7 @@ func opDelegateCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, st
 		stack.push(big.NewInt(1))
 	}
 	if err == nil || err == ErrExecutionReverted {
+		ret = common.CopyBytes(ret)
 		memory.Set(outOffset.Uint64(), outSize.Uint64(), ret)
 	}
 	contract.Gas += returnGas
@@ -880,6 +883,7 @@ func opStaticCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 		stack.push(big.NewInt(1))
 	}
 	if err == nil || err == ErrExecutionReverted {
+		ret = common.CopyBytes(ret)
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 	contract.Gas += returnGas
