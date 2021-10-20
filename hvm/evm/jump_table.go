@@ -1016,7 +1016,9 @@ func enable1884(jt *[256]operation) {
 }
 
 func opSelfBalance(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	stack.push(math.U256(interpreter.StateDB.GetBalance(contract.Address())))
+	addr := contract.Address()
+	balance := interpreter.StateDB.GetBalance(addr)
+	stack.push(new(big.Int).Set(balance))
 	return nil, nil
 }
 
