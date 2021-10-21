@@ -56,7 +56,257 @@ var (
 	constantinopleInstructionSet  = NewConstantinopleInstructionSet()
 	yoloV1InstructionSet          = newYoloV1InstructionSet()
 	yoloV1InstructionSetddCreate2 = newYoloV1InstructionSetAddCreate2()
+	yoloV1InstructionSetAddCreate2AndEvmPatch = newYoloV1InstructionSetAddCreate2AndEvmPatch()
 )
+
+func newYoloV1InstructionSetAddCreate2AndEvmPatch() [256]operation {
+	instructionSet := newYoloV1InstructionSetAddCreate2()
+	// update selfBalance
+	instructionSet[SELFBALANCE] = operation{
+		execute:       opSelfBalance,
+		gasCost:       constGasFunc(GasFastStep),
+		validateStack: makeStackFunc(0, 1),
+		valid:         true,
+	}
+	{
+		// update makePush
+		instructionSet[PUSH1] = operation {
+			execute:       makePush(1, 1),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH2] = operation {
+			execute:       makePush(2, 2),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH3] = operation {
+			execute:       makePush(3, 3),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH4] = operation {
+			execute:       makePush(4, 4),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH5] = operation {
+			execute:       makePush(5, 5),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH6] = operation {
+			execute:       makePush(6, 6),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH7] = operation {
+			execute:       makePush(7, 7),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH8] = operation {
+			execute:       makePush(8, 8),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH9] = operation {
+			execute:       makePush(9, 9),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH10] = operation {
+			execute:       makePush(10, 10),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH11] = operation {
+			execute:       makePush(11, 11),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH12] = operation {
+			execute:       makePush(12, 12),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH13] = operation {
+			execute:       makePush(13, 13),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH14] = operation {
+			execute:       makePush(14, 14),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH15] = operation {
+			execute:       makePush(15, 15),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH16] = operation {
+			execute:       makePush(16, 16),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH17] = operation {
+			execute:       makePush(17, 17),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH18] = operation {
+			execute:       makePush(18, 18),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH19] = operation {
+			execute:       makePush(19, 19),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH20] = operation {
+			execute:       makePush(20, 20),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH21] = operation {
+			execute:       makePush(21, 21),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH22] = operation {
+			execute:       makePush(22, 22),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH23] = operation {
+			execute:       makePush(23, 23),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH24] = operation {
+			execute:       makePush(24, 24),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH25] = operation {
+			execute:       makePush(25, 25),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH26] = operation {
+			execute:       makePush(26, 26),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH27] = operation {
+			execute:       makePush(27, 27),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH28] = operation {
+			execute:       makePush(28, 28),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH29] = operation {
+			execute:       makePush(29, 29),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH30] = operation {
+			execute:       makePush(30, 30),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH31] = operation {
+			execute:       makePush(31, 31),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+		instructionSet[PUSH32] = operation {
+			execute:       makePush(32, 32),
+			gasCost:       gasPush,
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		}
+
+	}
+
+	// update opCall
+	instructionSet[CALL] = operation {
+		execute:       opCall,
+		gasCost:       gasCall,
+		validateStack: makeStackFunc(7, 1),
+		memorySize:    memoryCall,
+		valid:         true,
+		returns:       true,
+	}
+
+	// update opCallCode
+	instructionSet[CALLCODE] = operation {
+		execute:       opCallCode,
+		gasCost:       gasCallCode,
+		validateStack: makeStackFunc(7, 1),
+		memorySize:    memoryCall,
+		valid:         true,
+		returns:       true,
+	}
+
+	// update opDelegateCall
+	instructionSet[DELEGATECALL] = operation{
+		execute:       opDelegateCall,
+		gasCost:       gasDelegateCall,
+		validateStack: makeStackFunc(6, 1),
+		memorySize:    memoryDelegateCall,
+		valid:         true,
+		returns:       true,
+	}
+
+	// update opStaticCall
+	instructionSet[STATICCALL] = operation{
+		execute:       opStaticCall,
+		gasCost:       gasStaticCall,
+		validateStack: makeStackFunc(6, 1),
+		memorySize:    memoryStaticCall,
+		valid:         true,
+		returns:       true,
+	}
+
+	return instructionSet
+}
 
 func newYoloV1InstructionSetAddCreate2() [256]operation {
 	instructionSet := newYoloV1InstructionSet()
@@ -141,7 +391,7 @@ func NewByzantiumInstructionSet() [256]operation {
 	// instructions that can be executed during the homestead phase.
 	instructionSet := NewHomesteadInstructionSet()
 	instructionSet[STATICCALL] = operation{
-		execute:       opStaticCall,
+		execute:       opStaticCall_old,
 		gasCost:       gasStaticCall,
 		validateStack: makeStackFunc(6, 1),
 		memorySize:    memoryStaticCall,
@@ -178,7 +428,7 @@ func NewByzantiumInstructionSet() [256]operation {
 func NewHomesteadInstructionSet() [256]operation {
 	instructionSet := NewFrontierInstructionSet()
 	instructionSet[DELEGATECALL] = operation{
-		execute:       opDelegateCall,
+		execute:       opDelegateCall_old,
 		gasCost:       gasDelegateCall,
 		validateStack: makeStackFunc(6, 1),
 		memorySize:    memoryDelegateCall,
@@ -535,193 +785,193 @@ func NewFrontierInstructionSet() [256]operation {
 			valid:         true,
 		},
 		PUSH1: {
-			execute:       makePush(1, 1),
+			execute:       makePush_old(1, 1),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH2: {
-			execute:       makePush(2, 2),
+			execute:       makePush_old(2, 2),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH3: {
-			execute:       makePush(3, 3),
+			execute:       makePush_old(3, 3),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH4: {
-			execute:       makePush(4, 4),
+			execute:       makePush_old(4, 4),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH5: {
-			execute:       makePush(5, 5),
+			execute:       makePush_old(5, 5),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH6: {
-			execute:       makePush(6, 6),
+			execute:       makePush_old(6, 6),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH7: {
-			execute:       makePush(7, 7),
+			execute:       makePush_old(7, 7),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH8: {
-			execute:       makePush(8, 8),
+			execute:       makePush_old(8, 8),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH9: {
-			execute:       makePush(9, 9),
+			execute:       makePush_old(9, 9),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH10: {
-			execute:       makePush(10, 10),
+			execute:       makePush_old(10, 10),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH11: {
-			execute:       makePush(11, 11),
+			execute:       makePush_old(11, 11),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH12: {
-			execute:       makePush(12, 12),
+			execute:       makePush_old(12, 12),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH13: {
-			execute:       makePush(13, 13),
+			execute:       makePush_old(13, 13),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH14: {
-			execute:       makePush(14, 14),
+			execute:       makePush_old(14, 14),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH15: {
-			execute:       makePush(15, 15),
+			execute:       makePush_old(15, 15),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH16: {
-			execute:       makePush(16, 16),
+			execute:       makePush_old(16, 16),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH17: {
-			execute:       makePush(17, 17),
+			execute:       makePush_old(17, 17),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH18: {
-			execute:       makePush(18, 18),
+			execute:       makePush_old(18, 18),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH19: {
-			execute:       makePush(19, 19),
+			execute:       makePush_old(19, 19),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH20: {
-			execute:       makePush(20, 20),
+			execute:       makePush_old(20, 20),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH21: {
-			execute:       makePush(21, 21),
+			execute:       makePush_old(21, 21),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH22: {
-			execute:       makePush(22, 22),
+			execute:       makePush_old(22, 22),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH23: {
-			execute:       makePush(23, 23),
+			execute:       makePush_old(23, 23),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH24: {
-			execute:       makePush(24, 24),
+			execute:       makePush_old(24, 24),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH25: {
-			execute:       makePush(25, 25),
+			execute:       makePush_old(25, 25),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH26: {
-			execute:       makePush(26, 26),
+			execute:       makePush_old(26, 26),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH27: {
-			execute:       makePush(27, 27),
+			execute:       makePush_old(27, 27),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH28: {
-			execute:       makePush(28, 28),
+			execute:       makePush_old(28, 28),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH29: {
-			execute:       makePush(29, 29),
+			execute:       makePush_old(29, 29),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH30: {
-			execute:       makePush(30, 30),
+			execute:       makePush_old(30, 30),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH31: {
-			execute:       makePush(31, 31),
+			execute:       makePush_old(31, 31),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		PUSH32: {
-			execute:       makePush(32, 32),
+			execute:       makePush_old(32, 32),
 			gasCost:       gasPush,
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
@@ -968,7 +1218,7 @@ func NewFrontierInstructionSet() [256]operation {
 			returns:       true,
 		},
 		CALL: {
-			execute:       opCall,
+			execute:       opCall_old,
 			gasCost:       gasCall,
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
@@ -976,7 +1226,7 @@ func NewFrontierInstructionSet() [256]operation {
 			returns:       true,
 		},
 		CALLCODE: {
-			execute:       opCallCode,
+			execute:       opCallCode_old,
 			gasCost:       gasCallCode,
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
@@ -1008,11 +1258,16 @@ func enable1884(jt *[256]operation) {
 
 	// New opcode
 	jt[SELFBALANCE] = operation{
-		execute:       opSelfBalance,
+		execute:       opSelfBalance_old,
 		gasCost:       constGasFunc(GasFastStep),
 		validateStack: makeStackFunc(0, 1),
 		valid:         true,
 	}
+}
+
+func opSelfBalance_old(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
+	stack.push(math.U256(interpreter.StateDB.GetBalance(contract.Address())))
+	return nil, nil
 }
 
 func opSelfBalance(pc *uint64, interpreter *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {

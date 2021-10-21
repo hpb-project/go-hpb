@@ -98,6 +98,7 @@ var (
 
 	StageElectionKey           = "ElectionBlock"
 	StageNumberElection uint64 = MaxBlockForever // got from contract, otherwise forever not used.
+	StageNumberEvmBugFork uint64 = 12414000 	// fix contract bug for unlimited generate HPB coin happend at 2021-10-20
 )
 
 var (
