@@ -485,7 +485,7 @@ var (
 	CriticalBackBlockFlag = cli.Uint64Flag{
 		Name:  "critical.block",
 		Usage: "return the node height to block number",
-		Value: 12414720,
+		Value: 12414000,
 	}
 	ArchivedBlockFalg = cli.Int64Flag{
 		Name:  "archived",
