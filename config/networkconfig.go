@@ -68,7 +68,15 @@ var MainnetBootnodes_v1 = []string{ // old version used.
 	"hnode://a6ef92a46adb69f94f2d48ff20f7800fb057d6aba7945e5af062ef27be5598072c5ce083ec5a2c89f80d112401c261b9ba9dacbd53aeb7c8243685d537edadb9@bootnode5.hpb.io:30303",
 }
 
-var MainnetBootnodes = []string{
+var MainnetBootnodes = []string{ // old version used.
+	"hnode://0a4ee79961f00dcf3601ae662cf010760c8166a22eac5bfddf28ab16513b497f72a1d6ebc6eb7afdfec391fa2b8997b4a74b33e7f3af5c81205f5ebb167658df@bootnode1.hpb.io:30306",
+	"hnode://f31f58a70cd4880f506c8f1038be2c48823bb6f43529b16e82d67f5d74ff3c02e339f6b9ccb61c69c32f798ace3d8c8ac49014e9fefb58d9774c60e6f80c512e@bootnode2.hpb.io:30306",
+	"hnode://230af50ef9f6209129be4879e5e0ce53fdce2de1b48a18388bfb15009998a4985eb864459c3c013f999d1ba44748b10a746e20e02da159f10b104025cb7f932a@bootnode3.hpb.io:30306",
+	"hnode://283d1de984ee071e322a96e3a2e98cfba1adb4dee23e4af5846f72e23b364c11ab5280d1a8511394e03cb4dc6b3b6d86cf862d87afcbd2f324deb220390bbbae@bootnode4.hpb.io:30306",
+	"hnode://33c5b55d6dc4aaf6bcb4502d69bf4ca8db7550e7b01cae1c53fca9ce8b60b440102d4c4dcd578136d64c8934fc90f0ad96bcf828bc611a9bbb7ea33369bc1aa0@bootnode5.hpb.io:30306",
+}
+
+var MainnetBootnodes_v2 = []string{ // old version used.
 	"hnode://fdfbe84bf5e2836bcca2ec10462f9e94008b89823a3114aa759a709622532a7d16390456adb05efd6d2f7e6760571eed128cee4a052cdbb621031a61db8f0f37@bootnode1.hpb.io:30305",
 	"hnode://a7d22e7e23f2d66d84bf3a02e8e085ea003329ef7cd76df851c0d62ecf9c5492411d46d979ce0ca2fc17264fe30acc53051970952178993a9627a7064e7530ff@bootnode2.hpb.io:30305",
 	"hnode://71ec147e30eec314aaf6d388e1d0a62abc525b585534211dcc19d2d0bd3a168208c346761b6abdc06f7e18264b22626a5e418fff64ddbd6d1887e09c25733376@bootnode3.hpb.io:30305",
