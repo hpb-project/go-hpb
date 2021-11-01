@@ -1,5 +1,5 @@
-// Copyright 2018 The go-hpb Authors
-// Modified based on go-ethereum, which Copyright (C) 2014 The go-ethereum Authors.
+// Copyright 2020 The go-hpb Authors
+// Modified based on go-ethereum, which Copyright (C) 2016 The go-ethereum Authors.
 //
 // The go-hpb is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -14,41 +14,52 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-hpb. If not, see <http://www.gnu.org/licenses/>.
 
-// +build freebsd
+// +build linux netbsd openbsd solaris
 
-package utils
+package fdlimit
 
 import "syscall"
 
-// This file is largely identical to fdlimit_unix.go,
-// but Rlimit fields have type int64 on FreeBSD so it needs
-// an extra conversion.
-
-// raiseFdLimit tries to maximize the file descriptor allowance of this process
+// Raise tries to maximize the file descriptor allowance of this process
 // to the maximum hard-limit allowed by the OS.
-func raiseFdLimit(max uint64) error {
+// Returns the size it was set to (may differ from the desired 'max')
+func Raise(max uint64) (uint64, error) {
 	// Get the current limit
 	var limit syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return err
+		return 0, err
 	}
 	// Try to update the limit to the max allowance
 	limit.Cur = limit.Max
-	if limit.Cur > int64(max) {
-		limit.Cur = int64(max)
+	if limit.Cur > max {
+		limit.Cur = max
 	}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	// MacOS can silently apply further caps, so retrieve the actually set limit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return 0, err
+	}
+	return limit.Cur, nil
 }
 
-// getFdLimit retrieves the number of file descriptors allowed to be opened by this
+// Current retrieves the number of file descriptors allowed to be opened by this
 // process.
-func getFdLimit() (int, error) {
+func Current() (int, error) {
 	var limit syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
 		return 0, err
 	}
 	return int(limit.Cur), nil
+}
+
+// Maximum retrieves the maximum number of file descriptors this process is
+// allowed to request for itself.
+func Maximum() (int, error) {
+	var limit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return 0, err
+	}
+	return int(limit.Max), nil
 }
