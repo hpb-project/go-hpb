@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
@@ -477,7 +478,7 @@ func makeHWVerifyData(salt, a, b []byte, u, p G1Point, ls, rs, hs []G1Point, mod
 func verify(input []byte) ([]byte, error) {
 
 	//log.Debug("zscverify", "bytes2hex run", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
-	log.Debug("zscverify run", "input is 0x", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
+	//log.Debug("zscverify run", "input is 0x", common.Bytes2Hex(input), "len", len(common.Bytes2Hex(input)))
 	if len(common.Bytes2Hex(input)) != 6080 && len(common.Bytes2Hex(input)) != 10432 {
 		return common.LeftPadBytes([]byte{0}, 32), nil
 	}
@@ -556,44 +557,50 @@ func verify(input []byte) ([]byte, error) {
 
 	verifydata := makeHWVerifyData(salt, a[:], b[:], u, p, ls[:rs_length], rs[:rs_length], hs[:hs_length], mode)
 	fmt.Printf("mode %d verifydata length = %d\n", mode, len(verifydata))
-	fmt.Printf("mode %d verifydata = %s\n", mode, common.Bytes2Hex(verifydata))
+	//fmt.Printf("mode %d verifydata = %s\n", mode, common.Bytes2Hex(verifydata))
 
 	// salt, hs, u, p, ls, rs, a, b
-	fmt.Println("parameter detail start.")
-	fmt.Printf("salt : %s\n", common.Bytes2Hex(salt))
-	for i, h := range hs {
-		fmt.Printf("hs[%d].x = %s\n", i, common.Bytes2Hex(h.x[:]))
-		fmt.Printf("hs[%d].y = %s\n", i, common.Bytes2Hex(h.y[:]))
-	}
-	fmt.Printf("u.x = %s\n", common.Bytes2Hex(u.x[:]))
-	fmt.Printf("u.y = %s\n", common.Bytes2Hex(u.y[:]))
-	fmt.Printf("p.x = %s\n", common.Bytes2Hex(p.x[:]))
-	fmt.Printf("p.y = %s\n", common.Bytes2Hex(p.y[:]))
+	//fmt.Println("parameter detail start.")
+	//fmt.Printf("salt : %s\n", common.Bytes2Hex(salt))
+	//for i, h := range hs {
+	//	fmt.Printf("hs[%d].x = %s\n", i, common.Bytes2Hex(h.x[:]))
+	//	fmt.Printf("hs[%d].y = %s\n", i, common.Bytes2Hex(h.y[:]))
+	//}
+	//fmt.Printf("u.x = %s\n", common.Bytes2Hex(u.x[:]))
+	//fmt.Printf("u.y = %s\n", common.Bytes2Hex(u.y[:]))
+	//fmt.Printf("p.x = %s\n", common.Bytes2Hex(p.x[:]))
+	//fmt.Printf("p.y = %s\n", common.Bytes2Hex(p.y[:]))
+	//
+	//for i, l := range ls {
+	//	fmt.Printf("ls[%d].x = %s\n", i, common.Bytes2Hex(l.x[:]))
+	//	fmt.Printf("ls[%d].y = %s\n", i, common.Bytes2Hex(l.y[:]))
+	//}
 
-	for i, l := range ls {
-		fmt.Printf("ls[%d].x = %s\n", i, common.Bytes2Hex(l.x[:]))
-		fmt.Printf("ls[%d].y = %s\n", i, common.Bytes2Hex(l.y[:]))
-	}
-
-	for i, r := range rs {
-		fmt.Printf("rs[%d].x = %s\n", i, common.Bytes2Hex(r.x[:]))
-		fmt.Printf("rs[%d].y = %s\n", i, common.Bytes2Hex(r.y[:]))
-	}
-
-	fmt.Printf("a = %s\n", common.Bytes2Hex(a[:]))
-	fmt.Printf("b = %s\n", common.Bytes2Hex(b[:]))
-	fmt.Println("parameter detail end.")
+	//for i, r := range rs {
+	//	fmt.Printf("rs[%d].x = %s\n", i, common.Bytes2Hex(r.x[:]))
+	//	fmt.Printf("rs[%d].y = %s\n", i, common.Bytes2Hex(r.y[:]))
+	//}
+	//
+	//fmt.Printf("a = %s\n", common.Bytes2Hex(a[:]))
+	//fmt.Printf("b = %s\n", common.Bytes2Hex(b[:]))
+	//fmt.Println("parameter detail end.")
 
 	log_n := rs_length
 	n := 2 << (uint(log_n) - 1) //math.Pow(float64(2),float(log_n))
-	fmt.Printf("log_n = %d, n = %d\n", log_n, n)
+	//fmt.Printf("log_n = %d, n = %d\n", log_n, n)
 	o := new(big.Int).SetBytes(salt[:])
-	fmt.Printf("o = 0x%s\n", o.Text(16))
+	//fmt.Printf("o = 0x%s\n", o.Text(16))
+
+	var tm_before_keccak, tm_after_keccak time.Time
+	var tm_before_exp, tm_after_exp time.Time
+	var tm_before_big_mul, tm_after_big_mul time.Time
+	var tm_before_point_mul, tm_after_point_mul time.Time
+	var tm_before_point_add, tm_after_point_add time.Time
+	var tmcount = 5
 
 	var challenges [trans_length]*big.Int
 
 	g_order := common.Hex2Bytes(string("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001"))
-
 	group_order := new(big.Int).SetBytes(g_order)
 	for i := 0; i < log_n; i++ {
 		var input []byte
@@ -604,65 +611,104 @@ func verify(input []byte) ([]byte, error) {
 		input = append(input, ls[i].y[:]...)
 		input = append(input, rs[i].x[:]...)
 		input = append(input, rs[i].y[:]...)
-		fmt.Printf("i = %d, o = 0x%s\n", i, o.Text(16))
-
-		fmt.Printf("i = %d, input = %s\n", i, common.Bytes2Hex(input))
+		//fmt.Printf("i = %d, o = 0x%s\n", i, o.Text(16))
+		//
+		//fmt.Printf("i = %d, input = %s\n", i, common.Bytes2Hex(input))
+		if i < tmcount {
+			tm_before_keccak = time.Now()
+		}
 		keccakInput := crypto.Keccak256(input)
-		fmt.Printf("i = %d, keccak256(input) = %s\n", i, common.Bytes2Hex(keccakInput))
+		if i < tmcount {
+			tm_after_keccak = time.Now()
+			ns := tm_after_keccak.UnixNano() - tm_before_keccak.UnixNano()
+			fmt.Printf("keccak256 cost %dus\n", ns/1000)
+		}
+
+		//fmt.Printf("i = %d, keccak256(input) = %s\n", i, common.Bytes2Hex(keccakInput))
 		bigh := new(big.Int).SetBytes(keccakInput)
-		fmt.Printf("i = %d, bigh = 0x%s\n", i, bigh.Text(16))
+		//fmt.Printf("i = %d, bigh = 0x%s\n", i, bigh.Text(16))
 		challenges[i] = new(big.Int).Mod(bigh, group_order)
-		fmt.Printf("challenges[%d]=0x%s\n", i, challenges[i].Text(16))
+		//fmt.Printf("challenges[%d]=0x%s\n", i, challenges[i].Text(16))
 		o = challenges[i] //ok
-		fmt.Printf("i = %d, o = %s\n", i, o.Text(16))
+		//fmt.Printf("i = %d, o = %s\n", i, o.Text(16))
 		tmp1 := new(big.Int).Exp(o, new(big.Int).SetInt64(2), group_order)
-		fmt.Printf("i = %d, tmp1 = %s\n", i, tmp1.Text(16))
+		//fmt.Printf("i = %d, tmp1 = %s\n", i, tmp1.Text(16))
 
 		tmp2 := ls[i].mul(tmp1.Bytes())
-		fmt.Printf("i = %d, tmp2.x = %s, tmp2.y = %s\n", i, common.Bytes2Hex(tmp2.x[:]), common.Bytes2Hex(tmp2.y[:]))
+		//fmt.Printf("i = %d, tmp2.x = %s, tmp2.y = %s\n", i, common.Bytes2Hex(tmp2.x[:]), common.Bytes2Hex(tmp2.y[:]))
 
 		tmp3 := new(big.Int).Sub(group_order, new(big.Int).SetInt64(2))
-		fmt.Printf("i = %d, tmp3 = %s\n", i, tmp3.Text(16))
+		//fmt.Printf("i = %d, tmp3 = %s\n", i, tmp3.Text(16))
+		if i < tmcount {
+			tm_before_exp = time.Now()
+		}
 		tmp4 := new(big.Int).Exp(o, tmp3, group_order)
-		fmt.Printf("i = %d, tmp4 = %s\n", i, tmp4.Text(16))
+		if i < tmcount {
+			tm_after_exp = time.Now()
+			ns := tm_after_exp.UnixNano() - tm_before_exp.UnixNano()
+			fmt.Printf("big int exp (%d) cost %dus\n", tmp3.Int64(), ns/1000)
+		}
+		//fmt.Printf("i = %d, tmp4 = %s\n", i, tmp4.Text(16))
 
 		tmp5 := new(big.Int).Exp(tmp4, new(big.Int).SetInt64(2), group_order)
-		fmt.Printf("i = %d, tmp5 = %s\n", i, tmp5.Text(16))
-
+		//fmt.Printf("i = %d, tmp5 = %s\n", i, tmp5.Text(16))
+		if i < tmcount {
+			tm_before_point_mul = time.Now()
+		}
 		tmp6 := rs[i].mul(tmp5.Bytes())
-		fmt.Printf("i = %d, tmp6.x = %s, tmp6.y = %s\n", i, common.Bytes2Hex(tmp6.x[:]), common.Bytes2Hex(tmp6.y[:]))
-
+		if i < tmcount {
+			tm_after_point_mul = time.Now()
+			ns := tm_after_point_mul.UnixNano() - tm_before_point_mul.UnixNano()
+			fmt.Printf("point mul cost %dus\n", ns/1000)
+		}
+		//fmt.Printf("i = %d, tmp6.x = %s, tmp6.y = %s\n", i, common.Bytes2Hex(tmp6.x[:]), common.Bytes2Hex(tmp6.y[:]))
+		if i < tmcount {
+			tm_before_point_add = time.Now()
+		}
 		tmp7 := tmp2.add(tmp6)
-		fmt.Printf("i = %d, tmp7.x = %s, tmp7.y = %s\n", i, common.Bytes2Hex(tmp7.x[:]), common.Bytes2Hex(tmp7.y[:]))
+		if i < tmcount {
+			tm_after_point_add = time.Now()
+			ns := tm_after_point_add.UnixNano() - tm_before_point_add.UnixNano()
+			fmt.Printf("point add cost %dus\n", ns/1000)
+		}
+		//fmt.Printf("i = %d, tmp7.x = %s, tmp7.y = %s\n", i, common.Bytes2Hex(tmp7.x[:]), common.Bytes2Hex(tmp7.y[:]))
 
 		p = p.add(tmp7)
-		fmt.Printf("i = %d, p.x = %s, p.y = %s\n", i, common.Bytes2Hex(p.x[:]), common.Bytes2Hex(p.y[:]))
+		//fmt.Printf("i = %d, p.x = %s, p.y = %s\n", i, common.Bytes2Hex(p.x[:]), common.Bytes2Hex(p.y[:]))
 	}
 
 	var otherExponents [64]*big.Int
 	otherExponents[0] = new(big.Int).SetInt64(1)
 	for i := 0; i < log_n; i++ {
-		fmt.Printf("i = %d, chanllenges[%d] = %s\n", i, i, challenges[i].Text(16))
+		//fmt.Printf("i = %d, chanllenges[%d] = %s\n", i, i, challenges[i].Text(16))
+		if i < tmcount {
+			tm_before_big_mul = time.Now()
+		}
 		tmp := new(big.Int).Mul(otherExponents[0], challenges[i])
-		fmt.Printf("i = %d, tmp = %s\n", i, tmp.Text(16))
+		if i < tmcount {
+			tm_after_big_mul = time.Now()
+			ns := tm_after_big_mul.UnixNano() - tm_before_big_mul.UnixNano()
+			fmt.Printf("big int mul cost %dus.\n", ns/1000)
+		}
+		//fmt.Printf("i = %d, tmp = %s\n", i, tmp.Text(16))
 		otherExponents[0] = new(big.Int).Mod(tmp, group_order)
-		fmt.Printf("i = %d, otherExponents[0] = %s\n", i, otherExponents[0].Text(16))
+		//fmt.Printf("i = %d, otherExponents[0] = %s\n", i, otherExponents[0].Text(16))
 	}
 	var bitSet [64]bool
 	otherExponents[0] = new(big.Int).Exp(otherExponents[0], new(big.Int).Sub(group_order, new(big.Int).SetInt64(2)), group_order)
-	fmt.Printf("otherExponents[0] = %s\n", otherExponents[0].Text(16))
+	//fmt.Printf("otherExponents[0] = %s\n", otherExponents[0].Text(16))
 
 	for i := 0; i < n/2; i++ {
 		for j := uint64(0); (1<<j)+i < n; j++ {
 			i1 := i + (1 << j)
-			fmt.Printf("i = %d, j = %d, i1 = %d\n", i, j, i1)
+			//fmt.Printf("i = %d, j = %d, i1 = %d\n", i, j, i1)
 			if !bitSet[i1] {
 				temp := new(big.Int).Exp(challenges[uint64(log_n)-1-j], new(big.Int).SetInt64(2), group_order)
-				fmt.Printf("i = %d, j = %d, temp = %s\n", i, j, temp.Text(16))
+				//fmt.Printf("i = %d, j = %d, temp = %s\n", i, j, temp.Text(16))
 				tmp := new(big.Int).Mul(otherExponents[i], temp)
-				fmt.Printf("i = %d, j = %d, tmp = %s\n", i, j, tmp.Text(16))
+				//fmt.Printf("i = %d, j = %d, tmp = %s\n", i, j, tmp.Text(16))
 				otherExponents[i1] = new(big.Int).Mod(tmp, group_order)
-				fmt.Printf("i = %d, j = %d, i1 = %d, otherExponents[i1] = %s\n", i, j, i1, otherExponents[i1].Text(16))
+				//fmt.Printf("i = %d, j = %d, i1 = %d, otherExponents[i1] = %s\n", i, j, i1, otherExponents[i1].Text(16))
 				bitSet[i1] = true
 			}
 		}
@@ -701,25 +747,25 @@ func verify(input []byte) ([]byte, error) {
 	}
 
 	ua := new(big.Int).SetBytes(a[:])
-	fmt.Printf("ua = %s\n", ua.Text(16))
+	//fmt.Printf("ua = %s\n", ua.Text(16))
 	ub := new(big.Int).SetBytes(b[:])
-	fmt.Printf("ub = %s\n", ub.Text(16))
+	//fmt.Printf("ub = %s\n", ub.Text(16))
 	t1 := hTemp.mul(b[:])
-	fmt.Printf("t1.x = %s, t1.y = %s\n", common.Bytes2Hex(t1.x[:]), common.Bytes2Hex(t1.y[:]))
+	//fmt.Printf("t1.x = %s, t1.y = %s\n", common.Bytes2Hex(t1.x[:]), common.Bytes2Hex(t1.y[:]))
 
 	t2 := new(big.Int).Mod(new(big.Int).Mul(ua, ub), group_order)
-	fmt.Printf("t2 = %s\n", t2.Text(16))
+	//fmt.Printf("t2 = %s\n", t2.Text(16))
 	t3 := u.mul(t2.Bytes())
-	fmt.Printf("t3.x = %s, t3.y = %s\n", common.Bytes2Hex(t3.x[:]), common.Bytes2Hex(t3.y[:]))
+	//fmt.Printf("t3.x = %s, t3.y = %s\n", common.Bytes2Hex(t3.x[:]), common.Bytes2Hex(t3.y[:]))
 
 	t4 := gTemp.mul(a[:])
-	fmt.Printf("t4.x = %s, t4.y = %s\n", common.Bytes2Hex(t4.x[:]), common.Bytes2Hex(t4.y[:]))
+	//fmt.Printf("t4.x = %s, t4.y = %s\n", common.Bytes2Hex(t4.x[:]), common.Bytes2Hex(t4.y[:]))
 
 	t5 := t4.add(t1)
-	fmt.Printf("t5.x = %s, t5.y = %s\n", common.Bytes2Hex(t5.x[:]), common.Bytes2Hex(t5.y[:]))
+	//fmt.Printf("t5.x = %s, t5.y = %s\n", common.Bytes2Hex(t5.x[:]), common.Bytes2Hex(t5.y[:]))
 
 	t6 := t5.add(t3)
-	fmt.Printf("t6.x = %s, t6.y = %s\n", common.Bytes2Hex(t6.x[:]), common.Bytes2Hex(t6.y[:]))
+	//fmt.Printf("t6.x = %s, t6.y = %s\n", common.Bytes2Hex(t6.x[:]), common.Bytes2Hex(t6.y[:]))
 
 	if t6.x == p.x && t6.y == p.y {
 		log.Debug("zscverify res true")
