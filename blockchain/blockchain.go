@@ -1044,12 +1044,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		seals[i] = true
 	}
 
-	var mode config.SyncMode
-	if len(headers) == 1 {
-		mode = config.FullSync
-	} else {
-		mode = config.FastSync
-	}
+	var mode config.SyncMode = config.FullSync
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals, mode)
 
 	defer close(abort)
