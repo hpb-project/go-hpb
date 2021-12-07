@@ -83,6 +83,7 @@ var (
 	StageNumberV   uint64 = 999999000000 // unused forever
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
+	StageDiffculty uint64 = 11850000
 
 	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
 	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
@@ -96,9 +97,9 @@ var (
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
 
-	StageElectionKey           = "ElectionBlock"
-	StageNumberElection uint64 = MaxBlockForever // got from contract, otherwise forever not used.
-	StageNumberEvmBugFork uint64 = 12414000 	// fix contract bug for unlimited generate HPB coin happend at 2021-10-20
+	StageElectionKey             = "ElectionBlock"
+	StageNumberElection   uint64 = MaxBlockForever // got from contract, otherwise forever not used.
+	StageNumberEvmBugFork uint64 = 12414000        // fix contract bug for unlimited generate HPB coin happend at 2021-10-20
 )
 
 var (
