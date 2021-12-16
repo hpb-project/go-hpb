@@ -29,6 +29,27 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
 
+// Used to set special node to hpnode snap.
+//func GetSpecialNodesnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+//	s,err := GetHpbNodeSnap(db, recents, signatures, config, chain, number, hash, parents)
+//	if err != nil {
+//		return s, err
+//	}
+//	s.Signers = make(map[common.Address]struct{})
+//	addrs := []string{
+//		"0x99eb823055355d3dfad87351cc2116072582ecea",
+//		"0x57e94a9487927b6162d9b0c230c1fb0f129cd412",
+//		"0x8f9580334438f30c74dc85ddbb092ac2f94f7264",
+//		"0xa5a1968abd6367dd1fcf088d7b3f247b38a461dd",
+//		"0xde4a814b39f20b8b80d4e48c8a30a6d99e932244",
+//	}
+//	for _, addr := range addrs {
+//		d := common.HexToAddress(addr)
+//		s.Signers[d] = struct{}{}
+//	}
+//	return s, nil
+//}
+
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	if number == 0 {
