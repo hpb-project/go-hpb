@@ -37,10 +37,11 @@ import (
 )
 
 var (
-	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
-	statsReportInterval = 5 * time.Second // Time interval to report transaction pool stats
-	maxTransactionSize  = common.StorageSize(32 * 1024)
-	chanHeadBuffer      = 10
+	evictionInterval      = time.Minute     // Time interval to check for evictable transactions
+	statsReportInterval   = 5 * time.Second // Time interval to report transaction pool stats
+	txSlotTransactionSize = common.StorageSize(32 * 1024)
+	maxTransactionSize    = 4 * txSlotTransactionSize
+	chanHeadBuffer        = 10
 )
 
 var INSTANCE = atomic.Value{}

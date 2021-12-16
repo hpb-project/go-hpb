@@ -80,6 +80,20 @@ func (c *Prometheus) verifyHeader(chain consensus.ChainReader, header *types.Hea
 		return consensus.ErrUnknownBlock
 	}
 	number := header.Number.Uint64()
+	// update consensus stage blocknumber before verify.
+	{
+		var parent *types.Header
+		if len(parents) > 0 {
+			parent = parents[len(parents)-1]
+		} else {
+			parent = chain.GetHeader(header.ParentHash, number-1)
+		}
+		if parent != nil {
+			if state, err := chain.StateAt(parent.Root); err == nil && state != nil {
+				c.updateConsensusBlock(chain, header, state)
+			}
+		}
+	}
 
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(c.config.Period))) > 0 {
@@ -154,9 +168,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 	}
 
 	if number > consensus.StageNumberIII && mode == config.FullSync {
-
-		lastheader := chain.GetHeader(header.ParentHash, number-1)
-		state, _ := chain.StateAt(lastheader.Root)
+		state, _ := chain.StateAt(parent.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
 				log.Error("BAD COIN BASE", "miner", header.Coinbase.String(), "local", cadWinner[0].Address[:], "header", header.CandAddress[:])
@@ -369,7 +381,10 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	var err error
 	var bootnodeinfp []p2p.HwPair
 	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
-	if header.Number.Uint64() > consensus.NewContractVersion {
+
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		err, bootnodeinfp = c.GetNodeinfoFromElectContract(chain, header, state)
+	} else if header.Number.Uint64() > consensus.NewContractVersion {
 		err, bootnodeinfp = c.GetNodeinfoFromNewContract(chain, header, state)
 	} else {
 		err, bootnodeinfp = c.GetNodeinfoFromContract(chain, header, state)
@@ -422,7 +437,10 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 
 	//get all votes
 	var voteres map[common.Address]big.Int
-	if header.Number.Uint64() > consensus.NewContractVersion {
+
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		err, voteres = c.GetVoteResFromElectionContract(chain, header, state)
+	} else if header.Number.Uint64() > consensus.NewContractVersion {
 		err, voteres = c.GetVoteResFromNewContract(chain, header, state)
 	} else {
 		err, _, voteres = c.GetVoteRes(chain, header, state)
@@ -440,7 +458,15 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	bandrank, errbandwith := c.GetBandwithRes(addrlist, chain, number-1)
 	//get all balances
 	var allbalances map[common.Address]big.Int
-	if header.Number.Uint64() > consensus.NewContractVersion {
+
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		errs, hpblist, coinaddresslist := c.GetCoinAddressFromElectionContract(chain, header, state)
+		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
+			log.Error("CoinAddress ERR", "errs", errs)
+		}
+		log.Debug("GetCoinAddressFromElectionContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
+		allbalances, err = c.GetAllBalancesByCoin(hpblist, coinaddresslist, state)
+	} else if header.Number.Uint64() > consensus.NewContractVersion {
 		errs, hpblist, coinaddresslist := c.GetCoinAddressFromNewContract(chain, header, state)
 		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
 			log.Error("CoinAddress ERR", "errs", errs)
@@ -471,5 +497,15 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 		return cadWinner, nonce, nil
 	} else {
 		return nil, nil, err
+	}
+}
+
+func (c *Prometheus) updateConsensusBlock(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+	// update dynamic election block
+	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
+		log.Debug("getBlockNumber from contract", "key=", consensus.StageElectionKey, "value = ", electionNumber)
+		consensus.StageNumberElection = electionNumber
+	} else {
+		log.Debug("getBlockNumber from contract failed", "err", err.Error())
 	}
 }

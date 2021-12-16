@@ -35,6 +35,7 @@ import (
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/fdlimit"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/metrics"
 	"github.com/hpb-project/go-hpb/config"
@@ -480,12 +481,17 @@ var (
 	CriticalFlag = cli.Uint64Flag{
 		Name:  "critical.flag",
 		Usage: "Used for critical deal issue in mainnet",
-		Value: 0,
+		Value: 1,
 	}
 	CriticalBackBlockFlag = cli.Uint64Flag{
 		Name:  "critical.block",
 		Usage: "return the node height to block number",
-		Value: 1000000000000,
+		Value: 12414000,
+	}
+	ArchivedBlockFalg = cli.Int64Flag{
+		Name:  "archived",
+		Usage: "unSupport get block detail info by rpc with the blockNumber little than param",
+		Value: -1,
 	}
 )
 
@@ -650,19 +656,17 @@ func setIPC(ctx *cli.Context, cfg *config.Nodeconfig) {
 }
 
 // makeDatabaseHandles raises out the number of allowed file handles per process
-// for Ghpb and returns half of the allowance to assign to the database.
+// for Geth and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
-	}
-	limit, err := getFdLimit()
+	limit, err := fdlimit.Maximum()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		Fatalf("Failed to raise file descriptor allowance: %v", err)
 	}
-	return limit / 2 // Leave half for networking and other stuff
+	return int(raised / 2) // Leave half for networking and other stuff
 }
 
 // MakeAddress converts an account specified directly as a hex encoded string or
@@ -865,6 +869,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	}
 	cfg.Node.CriticalFlag = ctx.GlobalUint64(CriticalFlag.Name)
 	cfg.Node.CriticalBackNumber = ctx.GlobalUint64(CriticalBackBlockFlag.Name)
+	cfg.Node.ArchivedBlock = ctx.GlobalInt64(ArchivedBlockFalg.Name)
+
+	log.Info("Start Node with", "Archived block ", cfg.Node.ArchivedBlock)
 
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.Node.LightServ = ctx.GlobalInt(LightServFlag.Name)

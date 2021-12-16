@@ -220,7 +220,6 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
 func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec, options CodecOption) {
-	log.Info("ServeSingleRequest")
 	s.serveRequest(ctx, codec, true, options)
 }
 

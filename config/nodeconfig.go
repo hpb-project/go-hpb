@@ -79,7 +79,7 @@ var DefaultConfig = Nodeconfig{
 	GasPrice:        big.NewInt(1 * Shannon),
 	IPCPath:         "ghpb.ipc",
 	MaxTrieCacheGen: uint16(120),
-	RPCGasCap:       25000000,
+	RPCGasCap:       50000000,
 }
 
 type GpoConfig struct {
@@ -182,6 +182,7 @@ type Nodeconfig struct {
 
 	CriticalFlag       uint64
 	CriticalBackNumber uint64
+	ArchivedBlock      int64
 }
 
 // NodeDB returns the path to the discovery node database.

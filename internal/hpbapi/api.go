@@ -467,6 +467,14 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	//log.Info("-----get block by number")
+	latest := s.b.CurrentBlock()
+	if latest != nil && blockNr > 0 {
+		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
+			return nil, errors.New("node in archive mode not support to get old block")
+		}
+	}
+
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		response, err := s.rpcOutputBlock(block, true, fullTx)
@@ -485,6 +493,15 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 // detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.GetBlock(ctx, blockHash)
+
+	latest := s.b.CurrentBlock()
+	if latest != nil {
+		blockNr := block.NumberU64()
+		archivedBlock := config.GetHpbConfigInstance().Node.ArchivedBlock
+		if archivedBlock > 0 && (int64(blockNr) < (int64(latest.NumberU64()) - archivedBlock)) {
+			return nil, errors.New("node in archive mode not support to get old block")
+		}
+	}
 	if block != nil {
 		return s.rpcOutputBlock(block, true, fullTx)
 	}
@@ -962,13 +979,14 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	}
 
 	if inclTx {
-		formatTx := func(tx *types.Transaction) (interface{}, error) {
+		formatTx := func(b *types.Block, tx *types.Transaction, index uint64) (interface{}, error) {
 			return tx.Hash(), nil
 		}
 
 		if fullTx {
-			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newRPCTransactionFromBlockHash(b, tx.Hash()), nil
+			formatTx = func(b *types.Block, tx *types.Transaction, index uint64) (interface{}, error) {
+				return newRPCTransaction(tx, b.Hash(), b.NumberU64(), index), nil
+				//return newRPCTransactionFromBlockHash(b, tx.Hash()), nil
 			}
 		}
 
@@ -976,7 +994,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		transactions := make([]interface{}, len(txs))
 		var err error
 		for i, tx := range b.Transactions() {
-			if transactions[i], err = formatTx(tx); err != nil {
+			if transactions[i], err = formatTx(b, tx, uint64(i)); err != nil {
 				return nil, err
 			}
 		}
@@ -1562,11 +1580,12 @@ func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
 type PublicNetAPI struct {
 	net            *p2p.Server
 	networkVersion uint64
+	chainid        *big.Int
 }
 
 // NewPublicNetAPI creates a new net API instance.
-func NewPublicNetAPI(net *p2p.Server, networkVersion uint64) *PublicNetAPI {
-	return &PublicNetAPI{net, networkVersion}
+func NewPublicNetAPI(net *p2p.Server, networkVersion uint64, chainid *big.Int) *PublicNetAPI {
+	return &PublicNetAPI{net, networkVersion, chainid}
 }
 
 // Listening returns an indication if the node is listening for network connections.
@@ -1581,5 +1600,5 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 
 // Version returns the current hpb protocol version.
 func (s *PublicNetAPI) Version() string {
-	return fmt.Sprintf("%d", s.networkVersion)
+	return fmt.Sprintf("%d", s.chainid.Uint64())
 }

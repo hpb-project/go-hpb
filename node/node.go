@@ -245,7 +245,7 @@ func (hpbnode *Node) WorkerInit(conf *config.HpbConfig) error {
 		hpbnode.newBlockMux = hpbnode.Hpbsyncctr.NewBlockMux()
 
 		hpbnode.miner = worker.New(&conf.BlockChain, hpbnode.NewBlockMux(), hpbnode.Hpbengine, hpbnode.hpberbase)
-		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc.CurrentHeader(), hpbnode.Hpbbc.SubscribeChainEvent)
+		hpbnode.bloomIndexer.Start(hpbnode.Hpbbc)
 
 	} else {
 		return errors.New(`The genesis block is not inited`)
@@ -415,6 +415,7 @@ func (n *Node) Stop() error {
 
 	n.Hpbrpcmanager.Stop()
 	n.HpbDb.Close()
+	n.bloomIndexer.Close()
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {

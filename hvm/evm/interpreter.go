@@ -71,6 +71,9 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
 		switch num := evm.BlockNumber.Uint64(); {
+		case num > consensus.StageNumberEvmBugFork:
+			cfg.JumpTable = yoloV1InstructionSetAddCreate2AndEvmPatch
+			opCodeToString = opCodeToString_v2
 		case num > consensus.StageNumberNewPrecompiledContract:
 			cfg.JumpTable = yoloV1InstructionSetddCreate2
 			opCodeToString = opCodeToString_v2
@@ -159,11 +162,17 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 
 	contract.Input = input
 
-	defer func() {
-		if err != nil && !logged && in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stackCopy, contract, in.evm.depth, err)
-		}
-	}()
+	if in.cfg.Debug {
+		defer func() {
+			if err != nil {
+				if !logged {
+					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stackCopy, returns, in.returnData, contract, in.evm.depth, err)
+				} else {
+					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, mem, stackCopy, returns, contract, in.evm.depth, err)
+				}
+			}
+		}()
+	}
 
 	// The Interpreter main run loop (contextual). This loop runs until either an
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
@@ -182,7 +191,6 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 				stackCopy.push(val)
 			}
 		}
-
 		// Get the operation from the jump table matching the opcode and validate the
 		// stack and make sure there enough stack items available to perform the operation
 		operation := in.cfg.JumpTable[op]
@@ -225,7 +233,7 @@ func (in *Interpreter) Run(snapshot int, contract *Contract, input []byte) (ret 
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stackCopy, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stackCopy, returns, in.returnData, contract, in.evm.depth, err)
 			logged = true
 		}
 
