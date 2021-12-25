@@ -31,15 +31,13 @@ func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
 	if newMemSize == 0 {
 		return 0, nil
 	}
-	// The maximum that will fit in a uint64 is max_word_count - 1
-	// anything above that will result in an overflow.
-	// Additionally, a newMemSize which results in a
-	// newMemSizeWords larger than 0x7ffffffff will cause the square operation
-	// to overflow.
-	// The constant 0xffffffffe0 is the highest number that can be used without
-	// overflowing the gas calculation
-	if newMemSize > 0xffffffffe0 {
-		return 0, errGasUintOverflow
+	// The maximum that will fit in a uint64 is max_word_count - 1. Anything above
+	// that will result in an overflow. Additionally, a newMemSize which results in
+	// a newMemSizeWords larger than 0xFFFFFFFF will cause the square operation to
+	// overflow. The constant 0x1FFFFFFFE0 is the highest number that can be used
+	// without overflowing the gas calculation.
+	if newMemSize > 0x1FFFFFFFE0 {
+		return 0, ErrGasUintOverflow
 	}
 
 	newMemSizeWords := toWordSize(newMemSize)
@@ -152,43 +150,37 @@ func makeGasLog(n uint64) gasFunc {
 		}
 
 		if gas, overflow = math.SafeAdd(gas, config.LogGas); overflow {
-			return 0, errGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		if gas, overflow = math.SafeAdd(gas, n*config.LogTopicGas); overflow {
-			return 0, errGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 
 		var memorySizeGas uint64
 		if memorySizeGas, overflow = math.SafeMul(requestedSize, config.LogDataGas); overflow {
-			return 0, errGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		if gas, overflow = math.SafeAdd(gas, memorySizeGas); overflow {
-			return 0, errGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		return gas, nil
 	}
 }
 
-func gasSha3(gt config.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-	var overflow bool
+func gasKeccak256(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
 		return 0, err
 	}
-
-	if gas, overflow = math.SafeAdd(gas, config.Sha3Gas); overflow {
-		return 0, errGasUintOverflow
-	}
-
-	wordGas, overflow := bigUint64(stack.Back(1))
+	wordGas, overflow := stack.Back(1).Uint64WithOverflow()
 	if overflow {
-		return 0, errGasUintOverflow
+		return 0, ErrGasUintOverflow
 	}
-	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), config.Sha3WordGas); overflow {
-		return 0, errGasUintOverflow
+	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.Keccak256WordGas); overflow {
+		return 0, ErrGasUintOverflow
 	}
 	if gas, overflow = math.SafeAdd(gas, wordGas); overflow {
-		return 0, errGasUintOverflow
+		return 0, ErrGasUintOverflow
 	}
 	return gas, nil
 }
@@ -475,10 +467,10 @@ func gasStaticCall(gt config.GasTable, evm *EVM, contract *Contract, stack *Stac
 	// (availableGas - gas) * 63 / 64
 	// We replace the stack item so that it's available when the opCall instruction is
 	// called.
-	stack.data[stack.len()-1] = new(big.Int).SetUint64(cg)
+	// stack.data[stack.len()-1] = new(big.Int).SetUint64(cg)
 
 	if gas, overflow = math.SafeAdd(gas, cg); overflow {
-		return 0, errGasUintOverflow
+		return 0, ErrGasUintOverflow
 	}
 	return gas, nil
 }
