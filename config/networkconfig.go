@@ -203,6 +203,7 @@ type NetworkConfig struct {
 	IpcEndpoint  string // IPC endpoint to listen at (empty = IPC disabled)
 	HttpEndpoint string // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
 	WsEndpoint   string // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	GraphQLEndPoint string
 
 	BootstrapNodes []*discover.Node
 }
@@ -258,6 +259,13 @@ func (c *NetworkConfig) HTTPEndpoint() string {
 		return ""
 	}
 	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
+}
+
+func (c *NetworkConfig) GraphQLEndpoint() string {
+	if c.HTTPHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort+1)
 }
 
 // DefaultHTTPEndpoint returns the HTTP endpoint used by default.
