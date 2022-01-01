@@ -17,6 +17,8 @@
 package config
 
 const (
+	MaxGasLimit uint64 = 0x7fffffffffffffff // Maximum the gas limit (2^63-1).
+
 	Keccak256Gas     uint64 = 30 // Once per KECCAK256 operation.
 	Keccak256WordGas uint64 = 6  // Once per word of the KECCAK256 operation's data.
 
@@ -43,6 +45,8 @@ const (
 	// In EIP-3529: SSTORE_CLEARS_SCHEDULE is defined as SSTORE_RESET_GAS + ACCESS_LIST_STORAGE_KEY_COST
 	// Which becomes: 5000 - 2100 + 1900 = 4800
 	SstoreClearsScheduleRefundEIP3529 uint64 = SstoreResetGasEIP2200 - ColdSloadCostEIP2929 + TxAccessListStorageKeyGas
+
+	SelfdestructRefundGas uint64 = 24000 // Refunded following a selfdestruct operation.
 
 	TxDataNonZeroGasFrontier  uint64 = 68   // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 	TxDataNonZeroGasEIP2028   uint64 = 16   // Per byte of non zero data attached to a transaction after EIP 2028 (part in Istanbul)
@@ -81,8 +85,6 @@ const (
 
 	BaseFeeChangeDenominator = 8 // Bounds the amount the base fee can change between blocks.
 	ElasticityMultiplier     = 2 // Bounds the maximum gas limit an EIP-1559 block may have.
-
-	// Precompiled contract gas prices
 
 	Bls12381G1AddGas          uint64 = 600    // Price for BLS12-381 elliptic curve G1 point addition
 	Bls12381G1MulGas          uint64 = 12000  // Price for BLS12-381 elliptic curve G1 point scalar multiplication

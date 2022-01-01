@@ -17,6 +17,7 @@
 package vm
 
 import (
+	params "github.com/hpb-project/go-hpb/config"
 )
 
 func minSwapStack(n int) int {

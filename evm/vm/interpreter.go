@@ -20,8 +20,8 @@ import (
 	"hash"
 
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/log"
 )
 
 // Config are the configuration options for the Interpreter

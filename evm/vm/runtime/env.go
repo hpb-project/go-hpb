@@ -17,8 +17,8 @@
 package runtime
 
 import (
-	core "github.com/hpb-project/go-hpb/vm"
-	"github.com/hpb-project/go-hpb/vm/vm"
+	core "github.com/hpb-project/go-hpb/evm"
+	"github.com/hpb-project/go-hpb/evm/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
@@ -35,7 +35,6 @@ func NewEnv(cfg *Config) *vm.EVM {
 		Time:        cfg.Time,
 		Difficulty:  cfg.Difficulty,
 		GasLimit:    cfg.GasLimit,
-		BaseFee:     cfg.BaseFee,
 	}
 
 	return vm.NewEVM(blockContext, txContext, cfg.State, cfg.ChainConfig, cfg.EVMConfig)

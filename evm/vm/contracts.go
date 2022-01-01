@@ -130,16 +130,7 @@ func init() {
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 func ActivePrecompiles(rules params.Rules) []common.Address {
-	switch {
-	case rules.IsBerlin:
-		return PrecompiledAddressesBerlin
-	case rules.IsIstanbul:
-		return PrecompiledAddressesIstanbul
-	case rules.IsByzantium:
-		return PrecompiledAddressesByzantium
-	default:
-		return PrecompiledAddressesHomestead
-	}
+	return PrecompiledAddressesBerlin
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -394,8 +385,8 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 // returning it, or an error if the point is invalid.
 func newCurvePoint(blob []byte) (*bn256.G1, error) {
 	p := new(bn256.G1)
-	if _, err := p.Unmarshal(blob); err != nil {
-		return nil, err
+	if _, err := p.Unmarshal(blob); !err {
+		return nil, errors.New("point not on elliptic curve")
 	}
 	return p, nil
 }
@@ -404,8 +395,8 @@ func newCurvePoint(blob []byte) (*bn256.G1, error) {
 // returning it, or an error if the point is invalid.
 func newTwistPoint(blob []byte) (*bn256.G2, error) {
 	p := new(bn256.G2)
-	if _, err := p.Unmarshal(blob); err != nil {
-		return nil, err
+	if _, err := p.Unmarshal(blob); !err {
+		return nil, errors.New("pointtwist not on elliptic curve")
 	}
 	return p, nil
 }

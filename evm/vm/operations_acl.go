@@ -21,6 +21,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
+	params "github.com/hpb-project/go-hpb/config"
 )
 
 func makeGasSStoreFunc(clearingRefund uint64) gasFunc {

@@ -1,5 +1,7 @@
 package config
 
+import "math/big"
+
 type GasTable struct {
 	ExtcodeSize uint64
 	ExtcodeCopy uint64
@@ -31,3 +33,10 @@ var (
 		CreateBySuicide: 25000,
 	}
 )
+
+type Rules struct {
+	ChainID                                                 *big.Int
+	IsHomestead, IsEIP150, IsEIP155, IsEIP158               bool
+	IsByzantium, IsConstantinople, IsPetersburg, IsIstanbul bool
+	IsBerlin, IsLondon                                      bool
+}

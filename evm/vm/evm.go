@@ -24,6 +24,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	params "github.com/hpb-project/go-hpb/config"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -73,6 +74,8 @@ type BlockContext struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	BaseFee     *big.Int       // Provides information for BASEFEE
+
 }
 
 // TxContext provides the EVM with information about a transaction.

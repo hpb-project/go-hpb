@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/holiman/uint256"
+	params "github.com/hpb-project/go-hpb/config"
 )
 
 var activators = map[int]func(*JumpTable){
@@ -97,7 +98,7 @@ func enable1344(jt *JumpTable) {
 
 // opChainID implements CHAINID opcode
 func opChainID(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	chainId, _ := uint256.FromBig(interpreter.evm.chainConfig.ChainID)
+	chainId, _ := uint256.FromBig(interpreter.evm.chainConfig.ChainId)
 	scope.Stack.push(chainId)
 	return nil, nil
 }

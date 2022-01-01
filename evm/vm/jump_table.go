@@ -18,6 +18,8 @@ package vm
 
 import (
 	"fmt"
+
+	params "github.com/hpb-project/go-hpb/config"
 )
 
 type (
@@ -1020,7 +1022,6 @@ func newFrontierInstructionSet() JumpTable {
 			maxStack:   maxStack(1, 0),
 		},
 	}
-	
 
 	// Fill all unassigned slots with opUndefined.
 	for i, entry := range tbl {
