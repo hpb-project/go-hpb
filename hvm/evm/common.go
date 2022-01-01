@@ -17,36 +17,19 @@
 package evm
 
 import (
-	"github.com/holiman/uint256"
+	"math/big"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
 )
 
-// calcMemSize64 calculates the required memory size, and returns
-// the size and whether the result overflowed uint64
-func calcMemSize64(off, l *uint256.Int) (uint64, bool) {
-	if !l.IsUint64() {
-		return 0, true
+// calculates the memory size required for a step
+func calcMemSize(off, l *big.Int) *big.Int {
+	if l.Sign() == 0 {
+		return common.Big0
 	}
-	return calcMemSize64WithUint(off, l.Uint64())
-}
 
-// calcMemSize64WithUint calculates the required memory size, and returns
-// the size and whether the result overflowed uint64
-// Identical to calcMemSize64, but length is a uint64
-func calcMemSize64WithUint(off *uint256.Int, length64 uint64) (uint64, bool) {
-	// if length is zero, memsize is always zero, regardless of offset
-	if length64 == 0 {
-		return 0, false
-	}
-	// Check that offset doesn't overflow
-	offset64, overflow := off.Uint64WithOverflow()
-	if overflow {
-		return 0, true
-	}
-	val := offset64 + length64
-	// if value < either of it's parts, then it overflowed
-	return val, val < offset64
+	return new(big.Int).Add(off, l)
 }
 
 // getData returns a slice from the data based on the start and size and pads
@@ -63,6 +46,22 @@ func getData(data []byte, start uint64, size uint64) []byte {
 	return common.RightPadBytes(data[start:end], int(size))
 }
 
+// getDataBig returns a slice from the data based on the start and size and pads
+// up to size with zero's. This function is overflow safe.
+func getDataBig(data []byte, start *big.Int, size *big.Int) []byte {
+	dlen := big.NewInt(int64(len(data)))
+
+	s := math.BigMin(start, dlen)
+	e := math.BigMin(new(big.Int).Add(s, size), dlen)
+	return common.RightPadBytes(data[s.Uint64():e.Uint64()], int(size.Uint64()))
+}
+
+// bigUint64 returns the integer casted to a uint64 and returns whether it
+// overflowed in the process.
+func bigUint64(v *big.Int) (uint64, bool) {
+	return v.Uint64(), v.BitLen() > 64
+}
+
 // toWordSize returns the ceiled word size required for memory expansion.
 func toWordSize(size uint64) uint64 {
 	if size > math.MaxUint64-31 {
@@ -73,8 +72,8 @@ func toWordSize(size uint64) uint64 {
 }
 
 func allZero(b []byte) bool {
-	for _, byte := range b {
-		if byte != 0 {
+	for _, val := range b {
+		if val != 0 {
 			return false
 		}
 	}

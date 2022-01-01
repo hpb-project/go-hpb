@@ -19,7 +19,6 @@ package evm
 import (
 	"math/big"
 
-	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/common"
 )
 
@@ -86,15 +85,14 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 	return c
 }
 
-func (c *Contract) validJumpdest(dest *uint256.Int) bool {
-	udest, overflow := dest.Uint64WithOverflow()
-	// PC cannot go beyond len(code) and certainly can't be bigger than 63bits.
-	// Don't bother checking for JUMPDEST in that case.
-	if overflow || udest >= uint64(len(c.Code)) {
+func (c *Contract) validJumpSubdest(udest uint64) bool {
+	// PC cannot go beyond len(code) and certainly can't be bigger than 63 bits.
+	// Don't bother checking for BEGINSUB in that case.
+	if int64(udest) < 0 || udest >= uint64(len(c.Code)) {
 		return false
 	}
-	// Only JUMPDESTs allowed for destinations
-	if OpCode(c.Code[udest]) != JUMPDEST {
+	// Only BEGINSUBs allowed for destinations
+	if OpCode(c.Code[udest]) != BEGINSUB {
 		return false
 	}
 	return c.isCode(udest)
@@ -148,11 +146,16 @@ func (c *Contract) AsDelegate() *Contract {
 
 // GetOp returns the n'th element in the contract's byte array
 func (c *Contract) GetOp(n uint64) OpCode {
+	return OpCode(c.GetByte(n))
+}
+
+// GetByte returns the n'th byte in the contract's byte array
+func (c *Contract) GetByte(n uint64) byte {
 	if n < uint64(len(c.Code)) {
-		return OpCode(c.Code[n])
+		return c.Code[n]
 	}
 
-	return STOP
+	return 0
 }
 
 // Caller returns the caller of the contract.
@@ -177,9 +180,15 @@ func (c *Contract) Address() common.Address {
 	return c.self.Address()
 }
 
-// Value returns the contract's value (sent to it from it's caller)
+// Value returns the contracts value (sent to it from it's caller)
 func (c *Contract) Value() *big.Int {
 	return c.value
+}
+
+// SetCode sets the code to the contract
+func (c *Contract) SetCode(hash common.Hash, code []byte) {
+	c.Code = code
+	c.CodeHash = hash
 }
 
 // SetCallCode sets the code of the contract and address of the backing data
@@ -187,13 +196,5 @@ func (c *Contract) Value() *big.Int {
 func (c *Contract) SetCallCode(addr *common.Address, hash common.Hash, code []byte) {
 	c.Code = code
 	c.CodeHash = hash
-	c.CodeAddr = addr
-}
-
-// SetCodeOptionalHash can be used to provide code, but it's optional to provide hash.
-// In case hash is not provided, the jumpdest analysis will not be saved to the parent context
-func (c *Contract) SetCodeOptionalHash(addr *common.Address, codeAndHash *codeAndHash) {
-	c.Code = codeAndHash.code
-	c.CodeHash = codeAndHash.hash
 	c.CodeAddr = addr
 }

@@ -17,25 +17,28 @@
 package evm
 
 import (
+	"fmt"
+
+	"github.com/hpb-project/go-hpb/config"
 )
 
-func minSwapStack(n int) int {
-	return minStack(n, n)
-}
-func maxSwapStack(n int) int {
-	return maxStack(n, n)
+func makeStackFunc(pop, push int) stackValidationFunc {
+	return func(stack *Stack) error {
+		if err := stack.require(pop); err != nil {
+			return err
+		}
+
+		if stack.len()+push-pop > int(config.StackLimit) {
+			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), config.StackLimit)
+		}
+		return nil
+	}
 }
 
-func minDupStack(n int) int {
-	return minStack(n, n+1)
-}
-func maxDupStack(n int) int {
-	return maxStack(n, n+1)
+func makeDupStackFunc(n int) stackValidationFunc {
+	return makeStackFunc(n, n+1)
 }
 
-func maxStack(pop, push int) int {
-	return int(params.StackLimit) + pop - push
-}
-func minStack(pops, push int) int {
-	return pops
+func makeSwapStackFunc(n int) stackValidationFunc {
+	return makeStackFunc(n, n)
 }

@@ -17,7 +17,9 @@
 package evm
 
 import (
-	"github.com/holiman/uint256"
+	"math/big"
+
+	"github.com/hpb-project/go-hpb/config"
 )
 
 const (
@@ -37,19 +39,19 @@ const (
 //
 // The cost of gas was changed during the homestead price change HF. To allow for EIP150
 // to be implemented. The returned gas is gas - base * 63 / 64.
-func callGas(gasTable config.GasTable, availableGas, base uint64, callCost *uint256.Int) (uint64, error) {
+func callGas(gasTable config.GasTable, availableGas, base uint64, callCost *big.Int) (uint64, error) {
 	if gasTable.CreateBySuicide > 0 {
 		availableGas = availableGas - base
 		gas := availableGas - availableGas/64
 		// If the bit length exceeds 64 bit we know that the newly calculated "gas" for EIP150
-		// is smaller than the requested amount. Therefore we return the new gas instead
+		// is smaller than the requested amount. Therefor we return the new gas instead
 		// of returning an error.
-		if !callCost.IsUint64() || gas < callCost.Uint64() {
+		if callCost.BitLen() > 64 || gas < callCost.Uint64() {
 			return gas, nil
 		}
 	}
-	if !callCost.IsUint64() {
-		return 0, ErrGasUintOverflow
+	if callCost.BitLen() > 64 {
+		return 0, errGasUintOverflow
 	}
 
 	return callCost.Uint64(), nil
