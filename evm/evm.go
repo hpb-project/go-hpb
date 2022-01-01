@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package evm
 
 import (
 	"math/big"
@@ -22,7 +22,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/vm/vm"
+	"github.com/hpb-project/go-hpb/evm/vm"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -39,7 +39,6 @@ type ChainContext interface {
 func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common.Address) vm.BlockContext {
 	var (
 		beneficiary common.Address
-		baseFee     *big.Int
 	)
 
 	// If we don't have an explicit author (i.e. not mining), extract from the header
@@ -48,9 +47,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	} else {
 		beneficiary = *author
 	}
-	if header.BaseFee != nil {
-		baseFee = new(big.Int).Set(header.BaseFee)
-	}
+
 	return vm.BlockContext{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
@@ -59,7 +56,6 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).SetUint64(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
-		BaseFee:     baseFee,
 		GasLimit:    header.GasLimit,
 	}
 }
