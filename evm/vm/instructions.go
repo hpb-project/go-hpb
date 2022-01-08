@@ -19,7 +19,7 @@ package vm
 import (
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker-go/module/vm/evm/evm-go/params"
+	params "github.com/hpb-project/go-hpb/config"
 	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
