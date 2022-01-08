@@ -75,6 +75,30 @@ type StateDB struct {
 	lock sync.Mutex
 }
 
+func (self *StateDB) SubRefund(u uint64) {
+	panic("implement me")
+}
+
+func (self *StateDB) GetCommittedState(address common.Address, hash common.Hash) common.Hash {
+	panic("implement me")
+}
+
+func (self *StateDB) AddressInAccessList(addr common.Address) bool {
+	panic("implement me")
+}
+
+func (self *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
+	panic("implement me")
+}
+
+func (self *StateDB) AddAddressToAccessList(addr common.Address) {
+	panic("implement me")
+}
+
+func (self *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	panic("implement me")
+}
+
 // Create a new state from a given trie
 func New(root common.Hash, db Database) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
@@ -161,9 +185,9 @@ func (self *StateDB) Preimages() map[common.Hash][]byte {
 	return self.preimages
 }
 
-func (self *StateDB) AddRefund(gas *big.Int) {
+func (self *StateDB) AddRefund(gas uint64) {
 	self.journal = append(self.journal, refundChange{prev: new(big.Int).Set(self.refund)})
-	self.refund.Add(self.refund, gas)
+	self.refund.Add(self.refund, new(big.Int).SetUint64(gas))
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -471,7 +495,7 @@ func (self *StateDB) CreateAccount(addr common.Address) {
 	}
 }
 
-func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
+func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) (err error) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 	so := db.getStateObject(addr)
@@ -492,6 +516,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 			cb(key, common.BytesToHash(it.Value))
 		}
 	}
+	return
 }
 
 // Copy creates a deep, independent copy of the state.
@@ -565,8 +590,8 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 // GetRefund returns the current value of the refund counter.
 // The return value must not be modified by the caller and will become
 // invalid at the next call to AddRefund.
-func (self *StateDB) GetRefund() *big.Int {
-	return self.refund
+func (self *StateDB) GetRefund() uint64 {
+	return self.refund.Uint64()
 }
 
 // Finalise finalises the state by removing the self destructed objects
