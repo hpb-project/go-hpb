@@ -19,10 +19,10 @@ package vm
 import (
 	"sync/atomic"
 
-	params "github.com/hpb-project/go-hpb/config"
 	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	params "github.com/hpb-project/go-hpb/config"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -815,6 +815,11 @@ func opUndefined(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) (
 
 func opStop(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	return nil, errStopToken
+}
+
+func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	scope.stack.push(new(uint256.Int).SetBytes(interpreter.evm.Random))
+	return nil, nil
 }
 
 func opSelfdestruct(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
