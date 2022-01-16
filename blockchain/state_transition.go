@@ -282,7 +282,7 @@ func (st *StateTransition) refundGas() {
 
 	// Apply refund counter, capped to half of the used gas.
 	uhalf := remaining.Div(st.gasUsed(), common.Big2)
-	refund := math.BigMin(uhalf, st.state.GetRefund())
+	refund := math.BigMin(uhalf, new(big.Int).SetUint64(st.state.GetRefund()))
 	st.gas += refund.Uint64()
 
 	st.state.AddBalance(sender.Address(), refund.Mul(refund, st.gasPrice))
