@@ -37,8 +37,9 @@ import (
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
 
 var (
-	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
-	errNoSigner   = errors.New("missing signing methods")
+	ErrInvalidSig         = errors.New("invalid transaction v, r, s values")
+	errNoSigner           = errors.New("missing signing methods")
+	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
 
 // Transaction types.

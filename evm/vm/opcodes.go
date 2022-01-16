@@ -202,6 +202,10 @@ const (
 	LOG4
 )
 
+// 0xEF range HPB opcode
+const (
+	RANDOM OpCode = 0xEF
+)
 // 0xf0 range - closures.
 const (
 	CREATE       OpCode = 0xf0
@@ -370,6 +374,8 @@ var opCodeToString = map[OpCode]string{
 	LOG3:   "LOG3",
 	LOG4:   "LOG4",
 
+	// 0xEF range
+	RANDOM: "RANDOM",
 	// 0xf0 range.
 	CREATE:       "CREATE",
 	CALL:         "CALL",
@@ -536,6 +542,8 @@ var stringToOp = map[string]OpCode{
 	"REVERT":         REVERT,
 	"INVALID":        INVALID,
 	"SELFDESTRUCT":   SELFDESTRUCT,
+	// HPB
+	"RANDOM":  RANDOM,
 }
 
 // StringToOp finds the opcode whose name is stored in `str`.

@@ -35,6 +35,22 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 }
 
+// Message represents a message sent to a contract.
+type Message interface {
+	From() common.Address
+	//FromFrontier() (common.Address, error)
+	To() *common.Address
+
+	GasPrice() *big.Int
+	Gas() uint64
+	Value() *big.Int
+
+	Nonce() uint64
+	CheckNonce() bool
+	Data() []byte
+	ExData() []byte
+}
+
 // NewEVMBlockContext creates a new context for use in the EVM.
 func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common.Address) vm.BlockContext {
 	var (
@@ -47,16 +63,17 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	} else {
 		beneficiary = *author
 	}
-
+	extra, _ := types.BytesToExtraDetail(header.Extra)
 	return vm.BlockContext{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
 		GetHash:     GetHashFn(header, chain),
 		Coinbase:    beneficiary,
 		BlockNumber: new(big.Int).Set(header.Number),
-		Time:        new(big.Int).SetUint64(header.Time),
+		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
-		GasLimit:    header.GasLimit,
+		GasLimit:    header.GasLimit.Uint64(),
+		Random:      extra.GetSignedLastRND()[:32],
 	}
 }
 

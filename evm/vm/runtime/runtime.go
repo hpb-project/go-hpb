@@ -21,8 +21,8 @@ import (
 	"math/big"
 	"time"
 
-	rawdb "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
+	rawdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	params "github.com/hpb-project/go-hpb/config"

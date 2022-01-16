@@ -28,6 +28,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto/bls12381"
 	"github.com/hpb-project/go-hpb/common/crypto/bn256"
 	"github.com/hpb-project/go-hpb/common/math"
+	"github.com/hpb-project/go-hpb/config"
 
 	params "github.com/hpb-project/go-hpb/config"
 	//lint:ignore SA1019 Needed for precompile
@@ -67,29 +68,31 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 // PrecompiledContractsIstanbul contains the default set of pre-compiled Ethereum
 // contracts used in the Istanbul release.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &bigModExp{eip2565: false},
-	common.BytesToAddress([]byte{6}): &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}): &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}): &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}): &blake2F{},
+	common.BytesToAddress([]byte{1}):   &ecrecover{},
+	common.BytesToAddress([]byte{2}):   &sha256hash{},
+	common.BytesToAddress([]byte{3}):   &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):   &dataCopy{},
+	common.BytesToAddress([]byte{5}):   &bigModExp{eip2565: false},
+	common.BytesToAddress([]byte{6}):   &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):   &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):   &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):   &blake2F{},
+	common.BytesToAddress([]byte{100}): &zscverify{},
 }
 
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum
 // contracts used in the Berlin release.
 var PrecompiledContractsBerlin = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &bigModExp{eip2565: true},
-	common.BytesToAddress([]byte{6}): &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}): &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}): &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}): &blake2F{},
+	common.BytesToAddress([]byte{1}):   &ecrecover{},
+	common.BytesToAddress([]byte{2}):   &sha256hash{},
+	common.BytesToAddress([]byte{3}):   &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):   &dataCopy{},
+	common.BytesToAddress([]byte{5}):   &bigModExp{eip2565: true},
+	common.BytesToAddress([]byte{6}):   &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):   &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):   &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):   &blake2F{},
+	common.BytesToAddress([]byte{100}): &zscverify{},
 }
 
 // PrecompiledContractsBLS contains the set of pre-compiled Ethereum
@@ -1033,4 +1036,14 @@ func (c *bls12381MapG2) Run(input []byte) ([]byte, error) {
 
 	// Encode the G2 point to 256 bytes
 	return g.EncodePoint(r), nil
+}
+
+// zscverify implemented as a native contract.
+type zscverify struct{}
+
+func (c *zscverify) RequiredGas(input []byte) uint64 {
+	return config.ZSCverifyGas
+}
+func (c *zscverify) Run(input []byte) ([]byte, error) {
+	return verify(input)
 }
