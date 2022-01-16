@@ -79,9 +79,9 @@ type stateObject struct {
 
 	originStorage  Storage // Storage cache of original entries to dedup rewrites, reset for every transaction
 	pendingStorage Storage // Storage entries that need to be flushed to disk, at the end of an entire block
-	cachedStorage Storage // Storage entry cache to avoid duplicate reads
-	dirtyStorage  Storage // Storage entries that need to be flushed to disk
-	fakeStorage   Storage // Fake storage which constructed by caller for debugging purpose.
+	//cachedStorage Storage // Storage entry cache to avoid duplicate reads
+	dirtyStorage Storage // Storage entries that need to be flushed to disk
+	fakeStorage  Storage // Fake storage which constructed by caller for debugging purpose.
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -91,7 +91,7 @@ type stateObject struct {
 	touched   bool
 	deleted   bool
 
-	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
+	onDirty func(addr common.Address) // Callback method to mark a state object newly dirty
 }
 
 // empty returns whether the account is considered empty.
@@ -120,15 +120,14 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data.Root = emptyRoot
 	}
 	return &stateObject{
-		db:            db,
-		address:       address,
-		addrHash:      crypto.Keccak256Hash(address[:]),
-		data:          data,
+		db:             db,
+		address:        address,
+		addrHash:       crypto.Keccak256Hash(address[:]),
+		data:           data,
 		originStorage:  make(Storage),
 		pendingStorage: make(Storage),
-		cachedStorage: make(Storage),
-		dirtyStorage:  make(Storage),
-		onDirty:       onDirty,
+		dirtyStorage:   make(Storage),
+		onDirty:        onDirty,
 	}
 }
 
@@ -207,8 +206,8 @@ func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Has
 	}
 	// If no live objects are available, attempt to use snapshots
 	var (
-		enc   []byte
-		err   error
+		enc []byte
+		err error
 	)
 	// load from the database.
 	if enc, err = s.getTrie(db).TryGet(key.Bytes()); err != nil {
@@ -324,6 +323,7 @@ func (s *stateObject) updateTrie(db Database) Trie {
 	}
 	return tr
 }
+
 //
 //
 //// updateTrie writes cached storage modifications into the object's storage trie.
@@ -414,7 +414,6 @@ func (self *stateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
 	stateObject.originStorage = self.originStorage.Copy()
 	stateObject.pendingStorage = self.pendingStorage.Copy()
-	stateObject.cachedStorage = self.dirtyStorage.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
