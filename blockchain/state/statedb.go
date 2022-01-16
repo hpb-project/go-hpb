@@ -36,6 +36,11 @@ type revision struct {
 	journalIndex int
 }
 
+var (
+	// emptyRoot is the known root hash of an empty trie.
+	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+)
+
 // StateDBs within the hpb protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -72,31 +77,10 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
+	// Per-transaction access list
+	accessList *accessList
+
 	lock sync.Mutex
-}
-
-func (self *StateDB) SubRefund(u uint64) {
-	panic("implement me")
-}
-
-func (self *StateDB) GetCommittedState(address common.Address, hash common.Hash) common.Hash {
-	panic("implement me")
-}
-
-func (self *StateDB) AddressInAccessList(addr common.Address) bool {
-	panic("implement me")
-}
-
-func (self *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
-	panic("implement me")
-}
-
-func (self *StateDB) AddAddressToAccessList(addr common.Address) {
-	panic("implement me")
-}
-
-func (self *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
-	panic("implement me")
 }
 
 // Create a new state from a given trie
@@ -113,6 +97,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		refund:            new(big.Int),
 		logs:              make(map[common.Hash][]*types.Log),
 		preimages:         make(map[common.Hash][]byte),
+		accessList:        newAccessList(),
 	}, nil
 }
 
@@ -188,6 +173,16 @@ func (self *StateDB) Preimages() map[common.Hash][]byte {
 func (self *StateDB) AddRefund(gas uint64) {
 	self.journal = append(self.journal, refundChange{prev: new(big.Int).Set(self.refund)})
 	self.refund.Add(self.refund, new(big.Int).SetUint64(gas))
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (self *StateDB) SubRefund(gas uint64) {
+	self.journal = append(self.journal, refundChange{prev: new(big.Int).Set(self.refund)})
+	if gas > self.refund.Uint64() {
+		panic(fmt.Sprintf("Refund counter below zero (gas: %d > refund: %d)", gas, self.refund.Uint64()))
+	}
+	self.refund.Sub(self.refund, new(big.Int).SetUint64(gas))
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -548,6 +543,13 @@ func (self *StateDB) Copy() *StateDB {
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage
 	}
+	// Do we need to copy the access list? In practice: No. At the start of a
+	// transaction, the access list is empty. In practice, we only ever copy state
+	// _between_ transactions/blocks, never in the middle of a transaction.
+	// However, it doesn't cost us much to copy an empty list, so we do it anyway
+	// to not blow up if we ever decide copy it in the middle of a transaction
+	state.accessList = self.accessList.Copy()
+
 	return state
 }
 
@@ -626,6 +628,7 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
 	self.txIndex = ti
+	self.accessList = newAccessList()
 }
 
 // DeleteSuicides flags the suicided objects for deletion so that it
@@ -696,4 +699,76 @@ func (s *StateDB) CommitTo(dbw trie.DatabaseWriter, deleteEmptyObjects bool) (ro
 	root, err = s.trie.CommitTo(dbw)
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
+}
+
+// GetCommittedState retrieves a value from the given account's committed storage trie.
+func (s *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(s.db, hash)
+	}
+	return common.Hash{}
+}
+
+// PrepareAccessList handles the preparatory steps for executing a state transition with
+// regards to both EIP-2929 and EIP-2930:
+//
+// - Add sender to access list (2929)
+// - Add destination to access list (2929)
+// - Add precompiles to access list (2929)
+// - Add the contents of the optional tx access list (2930)
+//
+// This method should only be called if Berlin/2929+2930 is applicable at the current number.
+func (s *StateDB) PrepareAccessList(sender common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
+	s.AddAddressToAccessList(sender)
+	if dst != nil {
+		s.AddAddressToAccessList(*dst)
+		// If it's a create-tx, the destination will be added inside evm.create
+	}
+	for _, addr := range precompiles {
+		s.AddAddressToAccessList(addr)
+	}
+	for _, el := range list {
+		s.AddAddressToAccessList(el.Address)
+		for _, key := range el.StorageKeys {
+			s.AddSlotToAccessList(el.Address, key)
+		}
+	}
+}
+
+// AddressInAccessList returns true if the given address is in the access list.
+func (s *StateDB) AddressInAccessList(addr common.Address) bool {
+	return s.accessList.ContainsAddress(addr)
+}
+
+
+// AddAddressToAccessList adds the given address to the access list
+func (s *StateDB) AddAddressToAccessList(addr common.Address) {
+	if s.accessList.AddAddress(addr) {
+		s.journal = append(s.journal, accessListAddAccountChange{&addr})
+	}
+}
+
+// AddSlotToAccessList adds the given (address, slot)-tuple to the access list
+func (s *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	addrMod, slotMod := s.accessList.AddSlot(addr, slot)
+	if addrMod {
+		// In practice, this should not happen, since there is no way to enter the
+		// scope of 'address' without having the 'address' become already added
+		// to the access list (via call-variant, create, etc).
+		// Better safe than sorry, though
+		s.journal = append(s.journal, accessListAddAccountChange{&addr})
+	}
+	if slotMod {
+		s.journal = append(s.journal, accessListAddSlotChange{
+			address: &addr,
+			slot:    &slot,
+		})
+	}
+}
+
+
+// SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
+func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
+	return s.accessList.Contains(addr, slot)
 }

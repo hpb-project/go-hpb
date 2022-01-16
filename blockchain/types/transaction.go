@@ -41,6 +41,36 @@ var (
 	errNoSigner   = errors.New("missing signing methods")
 )
 
+// Transaction types.
+const (
+	LegacyTxType = iota
+	AccessListTxType
+	DynamicFeeTxType
+)
+
+// TxData is the underlying data of a transaction.
+//
+// This is implemented by DynamicFeeTx, LegacyTx and AccessListTx.
+type TxData interface {
+	txType() byte // returns the type ID
+	copy() TxData // creates a deep copy and initializes all fields
+
+	chainID() *big.Int
+	accessList() AccessList
+	data() []byte
+	gas() uint64
+	gasPrice() *big.Int
+	gasTipCap() *big.Int
+	gasFeeCap() *big.Int
+	value() *big.Int
+	nonce() uint64
+	to() *common.Address
+
+	rawSignatureValues() (v, r, s *big.Int)
+	setSignatureValues(chainID, v, r, s *big.Int)
+}
+
+
 //Definition of transaction'exdata'
 //Transaction Version Number and Transfer Transaction Occupy 16 Bytes of 'exdata' Field
 type TxExdata struct {
@@ -649,3 +679,12 @@ func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) ExData() TxExdata     { return m.exdata }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+
+// copyAddressPtr copies an address.
+func copyAddressPtr(a *common.Address) *common.Address {
+	if a == nil {
+		return nil
+	}
+	cpy := *a
+	return &cpy
+}

@@ -19,13 +19,12 @@ package state
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"math/big"
-
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/common/trie"
+	"io"
+	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -78,6 +77,8 @@ type stateObject struct {
 	trie Trie // storage trie, which becomes non-nil on first access
 	code Code // contract bytecode, which gets set when code is loaded
 
+	originStorage  Storage // Storage cache of original entries to dedup rewrites, reset for every transaction
+	pendingStorage Storage // Storage entries that need to be flushed to disk, at the end of an entire block
 	cachedStorage Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 	fakeStorage   Storage // Fake storage which constructed by caller for debugging purpose.
@@ -89,6 +90,7 @@ type stateObject struct {
 	suicided  bool
 	touched   bool
 	deleted   bool
+
 	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
 }
 
@@ -114,11 +116,16 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
 	}
+	if data.Root == (common.Hash{}) {
+		data.Root = emptyRoot
+	}
 	return &stateObject{
 		db:            db,
 		address:       address,
 		addrHash:      crypto.Keccak256Hash(address[:]),
 		data:          data,
+		originStorage:  make(Storage),
+		pendingStorage: make(Storage),
 		cachedStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 		onDirty:       onDirty,
@@ -151,6 +158,7 @@ func (c *stateObject) touch() {
 		prev:      c.touched,
 		prevDirty: c.onDirty == nil,
 	})
+
 	if c.onDirty != nil {
 		c.onDirty(c.Address())
 		c.onDirty = nil
@@ -176,27 +184,46 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 	if self.fakeStorage != nil {
 		return self.fakeStorage[key]
 	}
-
-	value, exists := self.cachedStorage[key]
-	if exists {
+	// If we have a dirty value for this state entry, return it
+	value, dirty := self.dirtyStorage[key]
+	if dirty {
 		return value
 	}
-	// Load from DB in case it is missing.
-	enc, err := self.getTrie(db).TryGet(key[:])
-	if err != nil {
-		self.setError(err)
+	return self.GetCommittedState(db, key)
+}
+
+// GetCommittedState retrieves a value from the committed account storage trie.
+func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
+	// If the fake storage is set, only lookup the state here(in the debugging mode)
+	if s.fakeStorage != nil {
+		return s.fakeStorage[key]
+	}
+	// If we have a pending write or clean cached, return that
+	if value, pending := s.pendingStorage[key]; pending {
+		return value
+	}
+	if value, cached := s.originStorage[key]; cached {
+		return value
+	}
+	// If no live objects are available, attempt to use snapshots
+	var (
+		enc   []byte
+		err   error
+	)
+	// load from the database.
+	if enc, err = s.getTrie(db).TryGet(key.Bytes()); err != nil {
+		s.setError(err)
 		return common.Hash{}
 	}
+	var value common.Hash
 	if len(enc) > 0 {
 		_, content, _, err := rlp.Split(enc)
 		if err != nil {
-			self.setError(err)
+			s.setError(err)
 		}
 		value.SetBytes(content)
 	}
-	if (value != common.Hash{}) {
-		self.cachedStorage[key] = value
-	}
+	s.originStorage[key] = value
 	return value
 }
 
@@ -207,11 +234,16 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 		self.fakeStorage[key] = value
 		return
 	}
+	// If the new value is the same as old, don't set
+	prev := self.GetState(db, key)
+	if prev == value {
+		return
+	}
 
 	self.db.journal = append(self.db.journal, storageChange{
 		account:  &self.address,
 		key:      key,
-		prevalue: self.GetState(db, key),
+		prevalue: prev,
 	})
 	self.setState(key, value)
 }
@@ -235,7 +267,6 @@ func (s *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
 }
 
 func (self *stateObject) setState(key, value common.Hash) {
-	self.cachedStorage[key] = value
 	self.dirtyStorage[key] = value
 
 	if self.onDirty != nil {
@@ -244,21 +275,72 @@ func (self *stateObject) setState(key, value common.Hash) {
 	}
 }
 
+// finalise moves all dirty storage slots into the pending area to be hashed or
+// committed later. It is invoked at the end of every transaction.
+func (s *stateObject) finalise(prefetch bool) {
+	slotsToPrefetch := make([][]byte, 0, len(s.dirtyStorage))
+	for key, value := range s.dirtyStorage {
+		s.pendingStorage[key] = value
+		if value != s.originStorage[key] {
+			slotsToPrefetch = append(slotsToPrefetch, common.CopyBytes(key[:])) // Copy needed for closure
+		}
+	}
+	if len(s.dirtyStorage) > 0 {
+		s.dirtyStorage = make(Storage)
+	}
+}
+
 // updateTrie writes cached storage modifications into the object's storage trie.
-func (self *stateObject) updateTrie(db Database) Trie {
-	tr := self.getTrie(db)
-	for key, value := range self.dirtyStorage {
-		delete(self.dirtyStorage, key)
-		if (value == common.Hash{}) {
-			self.setError(tr.TryDelete(key[:]))
+// It will return nil if the trie has not been loaded and no changes have been made
+func (s *stateObject) updateTrie(db Database) Trie {
+	// Make sure all dirty slots are finalized into the pending storage area
+	s.finalise(false) // Don't prefetch anymore, pull directly if need be
+	if len(s.pendingStorage) == 0 {
+		return s.trie
+	}
+	// Insert all the pending updates into the trie
+	tr := s.getTrie(db)
+
+	usedStorage := make([][]byte, 0, len(s.pendingStorage))
+	for key, value := range s.pendingStorage {
+		// Skip noop changes, persist actual changes
+		if value == s.originStorage[key] {
 			continue
 		}
-		// Encoding []byte cannot fail, ok to ignore the error.
-		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
-		self.setError(tr.TryUpdate(key[:], v))
+		s.originStorage[key] = value
+
+		var v []byte
+		if (value == common.Hash{}) {
+			s.setError(tr.TryDelete(key[:]))
+		} else {
+			// Encoding []byte cannot fail, ok to ignore the error.
+			v, _ = rlp.EncodeToBytes(common.TrimLeftZeroes(value[:]))
+			s.setError(tr.TryUpdate(key[:], v))
+		}
+		usedStorage = append(usedStorage, common.CopyBytes(key[:])) // Copy needed for closure
+	}
+	if len(s.pendingStorage) > 0 {
+		s.pendingStorage = make(Storage)
 	}
 	return tr
 }
+//
+//
+//// updateTrie writes cached storage modifications into the object's storage trie.
+//func (self *stateObject) updateTrie(db Database) Trie {
+//	tr := self.getTrie(db)
+//	for key, value := range self.dirtyStorage {
+//		delete(self.dirtyStorage, key)
+//		if (value == common.Hash{}) {
+//			self.setError(tr.TryDelete(key[:]))
+//			continue
+//		}
+//		// Encoding []byte cannot fail, ok to ignore the error.
+//		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
+//		self.setError(tr.TryUpdate(key[:], v))
+//	}
+//	return tr
+//}
 
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
@@ -330,6 +412,8 @@ func (self *stateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)
 	}
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
+	stateObject.originStorage = self.originStorage.Copy()
+	stateObject.pendingStorage = self.pendingStorage.Copy()
 	stateObject.cachedStorage = self.dirtyStorage.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
@@ -360,6 +444,23 @@ func (self *stateObject) Code(db Database) []byte {
 	}
 	self.code = code
 	return code
+}
+
+// CodeSize returns the size of the contract code associated with this object,
+// or zero if none. This method is an almost mirror of Code, but uses a cache
+// inside the database to avoid loading codes seen recently.
+func (s *stateObject) CodeSize(db Database) int {
+	if s.code != nil {
+		return len(s.code)
+	}
+	if bytes.Equal(s.CodeHash(), emptyCodeHash) {
+		return 0
+	}
+	size, err := db.ContractCodeSize(s.addrHash, common.BytesToHash(s.CodeHash()))
+	if err != nil {
+		s.setError(fmt.Errorf("can't load code size %x: %v", s.CodeHash(), err))
+	}
+	return size
 }
 
 func (self *stateObject) SetCode(codeHash common.Hash, code []byte) {
