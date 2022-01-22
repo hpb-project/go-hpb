@@ -33,7 +33,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/synctrl"
@@ -167,7 +166,7 @@ func (b *HpbApiBackend) GetTd(blockHash common.Hash) *big.Int {
 	return b.hpb.Hpbbc.GetTdByHash(blockHash)
 }
 
-func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmConfig evm.Config) (vmcore.EVM, func() error, error) {
+func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header) (vmcore.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 	return vm.NewEVM(&b.hpb.Hpbconfig.BlockChain, msg, header, b.hpb.BlockChain(), nil, state), vmError, nil

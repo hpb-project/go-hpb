@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hpb-project/go-hpb/vmcore"
+	vmcorevm "github.com/hpb-project/go-hpb/vmcore/vm"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -826,7 +827,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message vmcore.Message,
 			Gas:         new(big.Int).SetUint64(result.UsedGas),
 			Failed:      result.Failed(),
 			ReturnValue: returnVal,
-			StructLogs:  hpbapi.FormatLogs(tracer.StructLogs()),
+			StructLogs:  vmcorevm.FormatLogs(tracer.StructLogs()),
 		}, nil
 
 	case *tracers.Tracer:

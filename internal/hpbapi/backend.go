@@ -30,7 +30,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/synctrl"
 )
@@ -58,7 +57,7 @@ type Backend interface {
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
 	GetTd(blockHash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (vmcore.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header) (vmcore.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscription
 	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
 	SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) sub.Subscription
