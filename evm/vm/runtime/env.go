@@ -17,8 +17,8 @@
 package runtime
 
 import (
-	core "github.com/hpb-project/go-hpb/evm"
 	"github.com/hpb-project/go-hpb/evm/vm"
+	"github.com/hpb-project/go-hpb/vmcore"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
@@ -27,8 +27,8 @@ func NewEnv(cfg *Config) *vm.EVM {
 		GasPrice: cfg.GasPrice,
 	}
 	blockContext := vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
+		CanTransfer: vmcore.CanTransfer,
+		Transfer:    vmcore.Transfer,
 		GetHash:     cfg.GetHashFn,
 		Coinbase:    cfg.Coinbase,
 		BlockNumber: cfg.BlockNumber,

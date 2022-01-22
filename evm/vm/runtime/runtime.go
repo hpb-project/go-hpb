@@ -79,7 +79,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.BaseFee == nil {
-		cfg.BaseFee = big.NewInt(params.InitialBaseFee)
+		cfg.BaseFee = params.InitialBaseFee
 	}
 }
 
@@ -95,7 +95,8 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+		mem, _ := rawdb.NewMemDatabase()
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(mem))
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -126,7 +127,8 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+		mem, _ := rawdb.NewMemDatabase()
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(mem))
 	}
 	var (
 		vmenv  = NewEnv(cfg)

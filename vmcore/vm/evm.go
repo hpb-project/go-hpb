@@ -5,6 +5,8 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/evm"
+	eevm "github.com/hpb-project/go-hpb/evm/vm"
 	"github.com/hpb-project/go-hpb/hvm"
 	hevm "github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/vmcore"
@@ -22,9 +24,11 @@ func NewEVM(config *config.ChainConfig, msg vmcore.Message, header *types.Header
 		vmenv := hevm.NewEVM(context, statedb, config, cfg)
 		return vmenv
 	} else {
-		// todo: add evm
+		cfg := eevm.Config{}
+		txContext := evm.NewEVMTxContext(msg)
+		blockContext := evm.NewEVMBlockContext(header, chain, author)
+		return eevm.NewEVM(blockContext, txContext, statedb, config, cfg)
 	}
-	return nil
 }
 
 func NewEVMForGeneration(config *config.ChainConfig, header *types.Header,
@@ -47,6 +51,23 @@ func NewEVMForGeneration(config *config.ChainConfig, header *types.Header,
 		return vmenv
 	} else {
 		// todo: add evm
+		cfg := eevm.Config{}
+		txContext := eevm.TxContext{
+			Origin:   author,
+			GasPrice: new(big.Int).Set(big.NewInt(gasPrice)),
+		}
+		extra, _ := types.BytesToExtraDetail(header.Extra)
+		blockContext := eevm.BlockContext{
+			CanTransfer: vmcore.CanTransfer,
+			Transfer:    vmcore.Transfer,
+			GetHash:     getHash,
+			Coinbase:    author,
+			BlockNumber: new(big.Int).Set(header.Number),
+			Time:        new(big.Int).Set(header.Time),
+			Difficulty:  new(big.Int).Set(header.Difficulty),
+			GasLimit:    header.GasLimit.Uint64(),
+			Random:      extra.GetSignedLastRND()[:32],
+		}
+		return eevm.NewEVM(blockContext, txContext, statedb, config, cfg)
 	}
-	return nil
 }

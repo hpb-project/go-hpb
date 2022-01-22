@@ -17,28 +17,12 @@
 package vm
 
 import (
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 
 	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/common"
 )
-
-// ContractRef is a reference to the contract's backing object
-type ContractRef interface {
-	Address() common.Address
-}
-
-// AccountRef implements ContractRef.
-//
-// Account references are used during EVM initialisation and
-// it's primary use is to fetch addresses. Removing this object
-// proves difficult because of the cached jump destinations which
-// are fetched from the parent contract (i.e. the caller), which
-// is a ContractRef.
-type AccountRef common.Address
-
-// Address casts AccountRef to a Address
-func (ar AccountRef) Address() common.Address { return (common.Address)(ar) }
 
 // Contract represents an ethereum contract in the state database. It contains
 // the contract code, calling arguments. Contract implements ContractRef
@@ -47,8 +31,8 @@ type Contract struct {
 	// contract. However when the "call method" is delegated this value
 	// needs to be initialised to that of the caller's caller.
 	CallerAddress common.Address
-	caller        ContractRef
-	self          ContractRef
+	caller        vmcore.ContractRef
+	self          vmcore.ContractRef
 
 	jumpdests map[common.Hash]bitvec // Aggregated result of JUMPDEST analysis.
 	analysis  bitvec                 // Locally cached result of JUMPDEST analysis
@@ -63,7 +47,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
+func NewContract(caller vmcore.ContractRef, object vmcore.ContractRef, value *big.Int, gas uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object}
 
 	if parent, ok := caller.(*Contract); ok {
