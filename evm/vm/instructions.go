@@ -818,7 +818,7 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 }
 
 func opRandom(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	scope.stack.push(new(uint256.Int).SetBytes(interpreter.evm.Random))
+	scope.Stack.push(new(uint256.Int).SetBytes(interpreter.evm.Context.Random))
 	return nil, nil
 }
 
