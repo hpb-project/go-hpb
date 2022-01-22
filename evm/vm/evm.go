@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"encoding/json"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
+	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	params "github.com/hpb-project/go-hpb/config"
 )
 
@@ -55,6 +58,26 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	}
 	p, ok := precompiles[addr]
 	return p, ok
+}
+
+type State_Diff struct {
+	from     common.Address //transfer from address
+	to       common.Address //transfer to address
+	tvalue   string         //transfer value
+	gaslimit uint64         //transfer gaslimit
+	depth    int            //evm depth
+	id       int            //evm transfer counts
+}
+
+func (statediff State_Diff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"from":     statediff.from,
+		"to":       statediff.to,
+		"value":    statediff.tvalue,
+		"gaslimit": statediff.gaslimit,
+		"depth":    statediff.depth,
+		"id":       statediff.id,
+	})
 }
 
 // BlockContext provides the EVM with auxiliary information. Once provided
@@ -121,6 +144,8 @@ type EVM struct {
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
 	callGasTemp uint64
+	StateDiff   []*State_Diff
+	depthid     [config.CallCreateDepth]int
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -240,6 +265,18 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		// TODO: consider clearing up unused snapshots:
 		//} else {
 		//	evm.StateDB.DiscardSnapshot(snapshot)
+	} else {
+		log.Debug("EVM Transfer", "caller", caller.Address(), "to", addr, "value", value.String())
+		statediff := &State_Diff{
+			from:     caller.Address(),
+			to:       addr,
+			tvalue:   value.String(),
+			gaslimit: gas,
+			depth:    evm.depth,
+			id:       evm.depthid[evm.depth],
+		}
+		evm.depthid[evm.depth]++
+		evm.StateDiff = append(evm.StateDiff, statediff)
 	}
 	return ret, gas, err
 }
@@ -513,3 +550,7 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
+
+func (evm *EVM) GetStateDiff() []*State_Diff {
+	return evm.StateDiff
+}
