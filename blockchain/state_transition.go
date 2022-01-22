@@ -28,7 +28,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/hvm"
 	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/hvm/native"
 )
 
 var (
@@ -200,14 +199,14 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	}
 
 	// Fail if we're trying to transfer more than the available balance
-	if !native.CanTransfer(st.state, from, msg.Value()) {
+	if !hvm.CanTransfer(st.state, from, msg.Value()) {
 		return nil, nil, nil, false, ErrInsufficientBalance
 	}
 
 	if !st.state.Exist(st.to().Address()) {
 		st.state.CreateAccount(to)
 	}
-	native.Transfer(st.state, from, to, st.msg.Value())
+	hvm.Transfer(st.state, from, to, st.msg.Value())
 
 	sender := st.from()
 	st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
