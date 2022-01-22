@@ -73,6 +73,10 @@ type EVM interface {
 	Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error)
 	GetCoinbase() common.Address
 	GetStateDB() StateDB
+	GetOrigin() common.Address
+	GetStateDiff() []*State_Diff
+	Cancel()
+	Cancelled() bool
 }
 
 // AccountRef implements ContractRef.

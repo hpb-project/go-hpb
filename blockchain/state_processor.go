@@ -18,6 +18,7 @@ package bc
 
 import (
 	"encoding/json"
+	"github.com/hpb-project/go-hpb/vmcore/vm"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -28,8 +29,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -133,12 +132,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 		log.Error("Asmessage err", "err", err)
 		return "", nil, nil, err
 	}
-	cfg := evm.Config{}
-	// Create a new context to be used in the EVM environment
-	context := hvm.NewEVMContext(msg, header, bc, author)
-	// Create a new environment which holds all relevant information
-	// about the transaction and calling mechanisms.
-	vmenv := evm.NewEVM(context, statedb, config, cfg)
+	vmenv := vm.NewEVM(config, msg, header, bc, author, statedb)
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg, gp, header)
 	statediff, errs := json.Marshal(vmenv.GetStateDiff())
@@ -163,7 +157,7 @@ func ApplyTransaction(config *config.ChainConfig, bc *BlockChain, author *common
 	receipt.GasUsed = new(big.Int).Set(gas)
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
-		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.GetOrigin(), tx.Nonce())
 	}
 
 	// Set the receipt logs and create a bloom for filtering
@@ -220,15 +214,8 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 		log.Error("Asmessage err", "err", err)
 		return nil, nil, err
 	}
-	if header.Number.Uint64() > consensus.StageNumberEvmV2 {
 
-	}
-	cfg := evm.Config{}
-	// Create a new context to be used in the EVM environment
-	context := hvm.NewEVMContext(msg, header, bc, author)
-	// Create a new environment which holds all relevant information
-	// about the transaction and calling mechanisms.
-	vmenv := evm.NewEVM(context, statedb, config, cfg)
+	vmenv := vm.NewEVM(config, msg, header, bc, author, statedb)
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg, gp, header)
 	if err != nil {
@@ -250,7 +237,7 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 	receipt.GasUsed = new(big.Int).Set(gas)
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
-		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.GetOrigin(), tx.Nonce())
 	}
 
 	// Set the receipt logs and create a bloom for filtering

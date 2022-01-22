@@ -17,7 +17,6 @@
 package evm
 
 import (
-	"encoding/json"
 	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 	"sync/atomic"
@@ -97,26 +96,6 @@ type Context struct {
 //
 // The EVM should never be reused and is not thread safe.
 
-type State_Diff struct {
-	from     common.Address //transfer from address
-	to       common.Address //transfer to address
-	tvalue   string         //transfer value
-	gaslimit uint64         //transfer gaslimit
-	depth    int            //evm depth
-	id       int            //evm transfer counts
-}
-
-func (statediff State_Diff) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"from":     statediff.from,
-		"to":       statediff.to,
-		"value":    statediff.tvalue,
-		"gaslimit": statediff.gaslimit,
-		"depth":    statediff.depth,
-		"id":       statediff.id,
-	})
-}
-
 type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
@@ -136,7 +115,7 @@ type EVM struct {
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort     int32
-	StateDiff []*State_Diff
+	StateDiff []*vmcore.State_Diff
 	depthid   [config.CallCreateDepth]int
 }
 
@@ -261,13 +240,13 @@ func (evm *EVM) Call(caller vmcore.ContractRef, addr common.Address, input []byt
 	} else {
 		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value.String())
 
-		statediff := &State_Diff{
-			from:     caller.Address(),
-			to:       to.Address(),
-			tvalue:   value.String(),
-			gaslimit: gas,
-			depth:    evm.depth,
-			id:       evm.depthid[evm.depth],
+		statediff := &vmcore.State_Diff{
+			From:     caller.Address(),
+			To:       to.Address(),
+			Tvalue:   value.String(),
+			Gaslimit: gas,
+			Depth:    evm.depth,
+			Id:       evm.depthid[evm.depth],
 		}
 		evm.depthid[evm.depth]++
 		evm.StateDiff = append(evm.StateDiff, statediff)
@@ -575,7 +554,7 @@ func (evm *EVM) ChainConfig() *config.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
-func (evm *EVM) GetStateDiff() []*State_Diff {
+func (evm *EVM) GetStateDiff() []*vmcore.State_Diff {
 	return evm.StateDiff
 }
 
@@ -585,4 +564,8 @@ func (evm *EVM) GetCoinbase() common.Address {
 
 func (evm *EVM) GetStateDB() vmcore.StateDB {
 	return evm.StateDB
+}
+
+func (evm *EVM) GetOrigin() common.Address {
+	return evm.Context.Origin
 }

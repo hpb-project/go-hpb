@@ -19,6 +19,7 @@ package hpbapi
 
 import (
 	"context"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 
 	accounts "github.com/hpb-project/go-hpb/account"
@@ -57,7 +58,7 @@ type Backend interface {
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
 	GetTd(blockHash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (*evm.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (vmcore.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscription
 	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
 	SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) sub.Subscription
