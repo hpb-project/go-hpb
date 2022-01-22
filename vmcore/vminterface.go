@@ -71,6 +71,7 @@ type ContractRef interface {
 type EVM interface {
 	Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
 	Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error)
+	InnerCall(caller ContractRef, addr common.Address, input []byte) (ret []byte, err error)
 	GetCoinbase() common.Address
 	GetStateDB() StateDB
 	GetOrigin() common.Address
@@ -111,4 +112,17 @@ func CanTransfer(db StateDB, addr common.Address, amount *big.Int) bool {
 func Transfer(db StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
+}
+
+// GetHashFn returns a GetHashFunc which retrieves header hashes by number
+func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash {
+	return func(n uint64) common.Hash {
+		for header := chain.GetHeader(ref.ParentHash, ref.Number.Uint64()-1); header != nil; header = chain.GetHeader(header.ParentHash, header.Number.Uint64()-1) {
+			if header.Number.Uint64() == n {
+				return header.Hash()
+			}
+		}
+
+		return common.Hash{}
+	}
 }
