@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -186,7 +187,7 @@ func (sw *stackWrapper) pushObject(vm *duktape.Context) {
 
 // dbWrapper provides a JavaScript wrapper around vm.Database.
 type dbWrapper struct {
-	db vm.StateDB
+	db vmcore.StateDB
 }
 
 // pushObject assembles a JSVM object wrapping a swappable database and pushes it

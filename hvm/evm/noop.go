@@ -17,29 +17,30 @@
 package evm
 
 import (
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 )
 
-func NoopCanTransfer(db StateDB, from common.Address, balance *big.Int) bool {
+func NoopCanTransfer(db vmcore.StateDB, from common.Address, balance *big.Int) bool {
 	return true
 }
-func NoopTransfer(db StateDB, from, to common.Address, amount *big.Int) {}
+func NoopTransfer(db vmcore.StateDB, from, to common.Address, amount *big.Int) {}
 
 type NoopEVMCallContext struct{}
 
-func (NoopEVMCallContext) Call(caller ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error) {
+func (NoopEVMCallContext) Call(caller vmcore.ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error) {
 	return nil, nil
 }
-func (NoopEVMCallContext) CallCode(caller ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error) {
+func (NoopEVMCallContext) CallCode(caller vmcore.ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error) {
 	return nil, nil
 }
-func (NoopEVMCallContext) Create(caller ContractRef, data []byte, gas, value *big.Int) ([]byte, common.Address, error) {
+func (NoopEVMCallContext) Create(caller vmcore.ContractRef, data []byte, gas, value *big.Int) ([]byte, common.Address, error) {
 	return nil, common.Address{}, nil
 }
-func (NoopEVMCallContext) DelegateCall(me ContractRef, addr common.Address, data []byte, gas *big.Int) ([]byte, error) {
+func (NoopEVMCallContext) DelegateCall(me vmcore.ContractRef, addr common.Address, data []byte, gas *big.Int) ([]byte, error) {
 	return nil, nil
 }
 

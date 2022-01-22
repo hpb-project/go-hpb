@@ -220,6 +220,9 @@ func ApplyTransactionNonFinallize(config *config.ChainConfig, bc *BlockChain, au
 		log.Error("Asmessage err", "err", err)
 		return nil, nil, err
 	}
+	if header.Number.Uint64() > consensus.StageNumberEvmV2 {
+
+	}
 	cfg := evm.Config{}
 	// Create a new context to be used in the EVM environment
 	context := hvm.NewEVMContext(msg, header, bc, author)

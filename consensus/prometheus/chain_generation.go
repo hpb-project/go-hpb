@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math"
 	"math/big"
 	"sort"
@@ -721,7 +722,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -734,7 +735,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 
 	//get contract addr
 	packres, err := fechABI.Pack("getContractAddr")
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("getContractAddr InnerCall fail", "err", err)
 		return err
@@ -745,7 +746,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	}
 
 	packres, _ = fechABI.Pack("getFunStr")
-	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultfun, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err
@@ -775,7 +776,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 	bufparam.Write(pendingbc[:32-len(paramnum.Bytes())])
 	bufparam.Write(paramnum.Bytes())
 
-	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realaddr, bufparam.Bytes())
+	resultvote, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), realaddr, bufparam.Bytes())
 	vmenv.Cancel()
 	if err != nil {
 		log.Error("realaddr InnerCall fail", "err", err)
@@ -865,7 +866,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -878,7 +879,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 
 	//get contract addr
 	packres, err := fechABI.Pack("getContractAddr")
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("getContractAddr InnerCall fail", "err", err)
 		return err, nil, nil
@@ -889,7 +890,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	}
 
 	packres, _ = fechABI.Pack("getFunStr")
-	resultfun, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultfun, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err, nil, nil
@@ -919,7 +920,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 	bufparam.Write(pendingbc[:32-len(paramnum.Bytes())])
 	bufparam.Write(paramnum.Bytes())
 
-	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realaddr, bufparam.Bytes())
+	resultvote, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), realaddr, bufparam.Bytes())
 	vmenv.Cancel()
 	if err != nil {
 		log.Error("realaddr InnerCall fail", "err", err)
@@ -1209,7 +1210,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1222,7 +1223,7 @@ func (c *Prometheus) GetNodeinfoFromContract(chain consensus.ChainReader, header
 
 	//get bootnode info "addr,cid,hid"
 	packres, err := fechABI.Pack(consensus.BootnodeInfoContractMethodName)
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("get bootnode info from InnerCall fail", "err", err)
 		return err, nil
@@ -1308,7 +1309,7 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1321,7 +1322,7 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 
 	//get bootnode info "addr,cid,hid"
 	packres, err := fechABI.Pack(consensus.NewContractMethod, big.NewInt(consensus.InvokeIndexThree))
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetCoinAddressFromNewContract fail", "err", err)
 		return err, nil, nil
@@ -1341,7 +1342,7 @@ func (c *Prometheus) GetCoinAddressFromNewContract(chain consensus.ChainReader, 
 	log.Debug("contractAddr", "contractaddr", realcontract.contractAddr)
 	log.Debug("contractAddr", "methodId", common.ToHex(realcontract.methodId))
 
-	result, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
+	result, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err, nil, nil
@@ -1380,7 +1381,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1393,7 +1394,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 
 	//get contract addr
 	packres, err := fechABI.Pack(consensus.NewContractMethod, big.NewInt(consensus.InvokeIndexTwo))
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("getContractAddr InnerCall fail", "err", err)
 		return err, nil
@@ -1411,7 +1412,7 @@ func (c *Prometheus) GetVoteResFromNewContract(chain consensus.ChainReader, head
 	realcontract.contractAddr = common.BytesToAddress(resultaddr[12:32])
 	realcontract.methodId = []byte(resultaddr[32:36])
 
-	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
+	resultvote, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
 	if err != nil {
 		log.Error("getFunStr InnerCall fail", "err", err)
 		return err, nil
@@ -1454,7 +1455,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1468,7 +1469,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewContractMethod, big.NewInt(consensus.InvokeIndexOne))
 	log.Debug("GetNodeinfoFromNewContract", "packres", common.ToHex(packres))
-	resultaddr, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultaddr, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetNodeinfoFromNewContract bootnode info from InnerCall fail", "err", err)
 		return err, nil
@@ -1491,7 +1492,7 @@ func (c *Prometheus) GetNodeinfoFromNewContract(chain consensus.ChainReader, hea
 		log.Error("GetNodeinfoFromNewContract getcontractaddr", "err", err)
 		return err, nil
 	}
-	resultaddr, err = vmenv.InnerCall(evm.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
+	resultaddr, err = vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), realcontract.contractAddr, realcontract.methodId)
 	if err != nil {
 		log.Error("GetNodeinfoFromNewContract bootnode info from InnerCall fail", "err", err)
 		return err, nil
@@ -1669,7 +1670,7 @@ func (c *Prometheus) GetNodeinfoFromElectContract(chain consensus.ChainReader, h
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1683,7 +1684,7 @@ func (c *Prometheus) GetNodeinfoFromElectContract(chain consensus.ChainReader, h
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewgetAllHpbNodes)
 	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
-	result, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	result, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
 		return err, nil
@@ -1748,7 +1749,7 @@ func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader,
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1761,7 +1762,7 @@ func (c *Prometheus) GetVoteResFromElectionContract(chain consensus.ChainReader,
 
 	//get contract addr
 	packres, err := fechABI.Pack(consensus.NewfetchAllVoteResult)
-	resultvote, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultvote, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetVoteResFromElectionContract InnerCall fail", "err", err)
 		return err, nil
@@ -1805,7 +1806,7 @@ func (c *Prometheus) GetCoinAddressFromElectionContract(chain consensus.ChainRea
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1817,7 +1818,7 @@ func (c *Prometheus) GetCoinAddressFromElectionContract(chain consensus.ChainRea
 	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewContractInterfaceABI))
 
 	packres, err := fechABI.Pack(consensus.NewfetchAllHolderAddrs)
-	resultcoin, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), fechaddr, packres)
+	resultcoin, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), fechaddr, packres)
 	if err != nil {
 		log.Error("GetCoinAddressFromElectionContract fail", "err", err)
 		return err, nil, nil
@@ -1855,7 +1856,7 @@ func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainRea
 		Transfer:    evm.Transfer,
 		GetHash:     func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() },
 		Origin:      c.GetSinger(),
-		Coinbase:    c.GetSinger(),
+		Miner:       c.GetSinger(),
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
@@ -1870,7 +1871,7 @@ func (c *Prometheus) GetBlockNumberFromBlockSetContract(chain consensus.ChainRea
 	}
 
 	packres, err := fechABI.Pack(consensus.BlockSetGetValue, key)
-	blockbytes, err := vmenv.InnerCall(evm.AccountRef(c.GetSinger()), contractAddr, packres)
+	blockbytes, err := vmenv.InnerCall(vmcore.AccountRef(c.GetSinger()), contractAddr, packres)
 	if err != nil {
 		log.Debug("GetBlockNumberFromContract fail", "contract addr ", contractAddr, "key", key, "err", err)
 		return err, maxBlock

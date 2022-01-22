@@ -545,7 +545,7 @@ func opBlockhash(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack
 }
 
 func opCoinbase(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	stack.push(evm.Coinbase.Big())
+	stack.push(evm.GetCoinbase().Big())
 	return nil, nil
 }
 

@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -772,7 +773,7 @@ func (api *PrivateDebugAPI) TraceCall(ctx context.Context, args hpbapi.CallArgs,
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
-func (api *PrivateDebugAPI) traceTx(ctx context.Context, message hvm.Message, vmctx vm.Context, statedb *state.StateDB, config *TraceConfig, header *types.Header) (interface{}, error) {
+func (api *PrivateDebugAPI) traceTx(ctx context.Context, message vmcore.Message, vmctx vm.Context, statedb *state.StateDB, config *TraceConfig, header *types.Header) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
 		tracer    vm.Tracer
@@ -837,7 +838,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message hvm.Message, vm
 }
 
 // computeTxEnv returns the execution environment of a certain transaction.
-func (api *PrivateDebugAPI) computeTxEnv(block *types.Block, txIndex int, reexec uint64) (hvm.Message, vm.Context, *state.StateDB, error) {
+func (api *PrivateDebugAPI) computeTxEnv(block *types.Block, txIndex int, reexec uint64) (vmcore.Message, vm.Context, *state.StateDB, error) {
 	// Create the parent state database
 	parent := api.hpb.BlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1)
 	if parent == nil {
