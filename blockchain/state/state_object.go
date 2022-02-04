@@ -19,12 +19,13 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/common/trie"
-	"io"
-	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -294,9 +295,9 @@ func (s *stateObject) finalise(prefetch bool) {
 func (s *stateObject) updateTrie(db Database) Trie {
 	// Make sure all dirty slots are finalized into the pending storage area
 	s.finalise(false) // Don't prefetch anymore, pull directly if need be
-	if len(s.pendingStorage) == 0 {
-		return s.trie
-	}
+	// if len(s.pendingStorage) == 0 {
+	// 	return s.trie
+	// }
 	// Insert all the pending updates into the trie
 	tr := s.getTrie(db)
 
@@ -344,7 +345,9 @@ func (s *stateObject) updateTrie(db Database) Trie {
 
 // UpdateRoot sets the trie root to the current root hash of
 func (self *stateObject) updateRoot(db Database) {
-	self.updateTrie(db)
+	if self.updateTrie(db) == nil {
+		return
+	}
 	self.data.Root = self.trie.Hash()
 }
 
