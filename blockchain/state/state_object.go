@@ -295,9 +295,9 @@ func (s *stateObject) finalise(prefetch bool) {
 func (s *stateObject) updateTrie(db Database) Trie {
 	// Make sure all dirty slots are finalized into the pending storage area
 	s.finalise(false) // Don't prefetch anymore, pull directly if need be
-	// if len(s.pendingStorage) == 0 {
-	// 	return s.trie
-	// }
+	if len(s.pendingStorage) == 0 && s.trie != nil {
+		return s.trie
+	}
 	// Insert all the pending updates into the trie
 	tr := s.getTrie(db)
 
