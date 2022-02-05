@@ -36,6 +36,18 @@ var MainnetChainConfig = &ChainConfig{
 		Period: 3,
 		Epoch:  30000,
 	},
+	HomesteadBlock:      big.NewInt(10_000),
+	EIP150Block:         big.NewInt(10_000),
+	EIP155Block:         big.NewInt(10_000),
+	EIP158Block:         big.NewInt(10_000),
+	ByzantiumBlock:      big.NewInt(10_000),
+	ConstantinopleBlock: big.NewInt(10_000),
+	PetersburgBlock:     big.NewInt(10_000),
+	IstanbulBlock:       big.NewInt(10_000),
+	MuirGlacierBlock:    big.NewInt(10_000),
+	BerlinBlock:         big.NewInt(10_000),
+	LondonBlock:         big.NewInt(10_000),
+	ArrowGlacierBlock:   big.NewInt(10_000),
 }
 
 var blockCacheLimit = 8192 // Maximum number of blocks to cache before throttling the download
@@ -120,8 +132,20 @@ type ChainConfig struct {
 }
 
 var DefaultBlockChainConfig = ChainConfig{
-	ChainId:    MainnetChainConfig.ChainId,
-	Prometheus: &DefaultPrometheusConfig,
+	ChainId:             MainnetChainConfig.ChainId,
+	Prometheus:          &DefaultPrometheusConfig,
+	HomesteadBlock:      MainnetChainConfig.HomesteadBlock,
+	EIP150Block:         MainnetChainConfig.EIP150Block,
+	EIP155Block:         MainnetChainConfig.EIP155Block,
+	EIP158Block:         MainnetChainConfig.EIP158Block,
+	ByzantiumBlock:      MainnetChainConfig.ByzantiumBlock,
+	ConstantinopleBlock: MainnetChainConfig.ConstantinopleBlock,
+	PetersburgBlock:     MainnetChainConfig.PetersburgBlock,
+	IstanbulBlock:       MainnetChainConfig.IstanbulBlock,
+	MuirGlacierBlock:    MainnetChainConfig.MuirGlacierBlock,
+	BerlinBlock:         MainnetChainConfig.BerlinBlock,
+	LondonBlock:         MainnetChainConfig.LondonBlock,
+	ArrowGlacierBlock:   MainnetChainConfig.ArrowGlacierBlock,
 }
 
 var (
