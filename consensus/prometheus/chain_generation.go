@@ -19,14 +19,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"github.com/hpb-project/go-hpb/vmcore"
-	"github.com/hpb-project/go-hpb/vmcore/vm"
 	"math"
 	"math/big"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hpb-project/go-hpb/vmcore"
+	"github.com/hpb-project/go-hpb/vmcore/vm"
 
 	lru "github.com/hashicorp/golang-lru"
 	accounts "github.com/hpb-project/go-hpb/account"
@@ -274,6 +275,9 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 				} else {
 					//log.Info("PrepareHeader", "remove lastminer", lastMiner, "number",i,"signerSize",len(snap.Signers))
 				}
+			}
+			if len(chooseSet) == 0 {
+				chooseSet = append(chooseSet, lastMiner)
 			}
 			sort.Sort(chooseSet)
 
