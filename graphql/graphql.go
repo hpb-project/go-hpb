@@ -34,7 +34,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/hexutil"
 	"github.com/hpb-project/go-hpb/common/rlp"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	hpb_project "github.com/hpb-project/go-hpb/interface"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/rpc"
@@ -790,7 +789,7 @@ func (b *Block) Call(ctx context.Context, args struct {
 			return nil, err
 		}
 	}
-	result, err := hpbapi.DoCall(ctx, b.backend, args.Data, *b.numberOrHash, nil, evm.Config{}, 5*time.Second, b.backend.RPCGasCap())
+	result, err := hpbapi.DoCall(ctx, b.backend, args.Data, *b.numberOrHash, nil, 5*time.Second, b.backend.RPCGasCap())
 	if err != nil {
 		return nil, err
 	}
@@ -860,7 +859,7 @@ func (p *Pending) Call(ctx context.Context, args struct {
 	Data hpbapi.CallArgs
 }) (*CallResult, error) {
 	pendingBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-	result, err := hpbapi.DoCall(ctx, p.backend, args.Data, pendingBlockNr, nil, evm.Config{}, 5*time.Second, p.backend.RPCGasCap())
+	result, err := hpbapi.DoCall(ctx, p.backend, args.Data, pendingBlockNr, nil, 5*time.Second, p.backend.RPCGasCap())
 	if err != nil {
 		return nil, err
 	}

@@ -1045,7 +1045,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	}
 
 	var mode config.SyncMode
-	if headers[0].Number.Uint64() < consensus.StageDiffculty {
+	if headers[0].Number.Uint64() < consensus.StageNumberEvmV2 {
 		mode = config.FastSync
 	} else {
 		mode = config.FullSync
