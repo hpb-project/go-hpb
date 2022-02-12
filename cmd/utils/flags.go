@@ -481,12 +481,12 @@ var (
 	CriticalFlag = cli.Uint64Flag{
 		Name:  "critical.flag",
 		Usage: "Used for critical deal issue in mainnet",
-		Value: 1,
+		Value: 0,
 	}
 	CriticalBackBlockFlag = cli.Uint64Flag{
 		Name:  "critical.block",
 		Usage: "return the node height to block number",
-		Value: 12414000,
+		Value: 10000000000,
 	}
 	ArchivedBlockFalg = cli.Int64Flag{
 		Name:  "archived",
@@ -821,6 +821,7 @@ func SetNetWorkConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 	cfg.Network.WsEndpoint = cfg.Network.WSEndpoint()
 	cfg.Network.IpcEndpoint = cfg.Node.IPCEndpoint()
 	cfg.Network.HttpEndpoint = cfg.Network.HTTPEndpoint()
+	cfg.Network.GraphQLEndPoint = cfg.Network.GraphQLEndpoint()
 
 }
 

@@ -83,7 +83,6 @@ var (
 	StageNumberV   uint64 = 999999000000 // unused forever
 	StageNumberVI  uint64 = 2561790
 	StageNumberVII uint64 = 2896000
-	StageDiffculty uint64 = 11850000
 
 	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
 	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.

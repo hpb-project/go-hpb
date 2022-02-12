@@ -71,6 +71,7 @@ type Backend interface {
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	//SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
 
+	GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	ChainConfig() *config.ChainConfig
 	CurrentBlock() *types.Block
 }
