@@ -143,6 +143,14 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 
 func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chooseSigners []common.Address) (common.Address, bool) {
 
+	chooseSigners = []common.Address{
+		common.HexToAddress("0x564578d57385dd304589273a8111bfa70f8d55f6"),
+		common.HexToAddress("0x4d33752048a0cba5437bb32c5ab41374d28eaa6c"),
+		common.HexToAddress("0x4cb6485cd67593cca36c743a04aac802e32f673d"),
+		common.HexToAddress("0x86ab84ce7f84c2514511218bc7d19540e81dcd07"),
+		common.HexToAddress("0xaf2f041e5c4937a1bc6a1f085e087620b59b9c21"),
+		common.HexToAddress("0x8076f649b5bb85eeb20424e815eff1cbe42f1d0e"),
+	}
 	offset := 0
 
 	for offset < len(chooseSigners) && chooseSigners[offset] != signer {
