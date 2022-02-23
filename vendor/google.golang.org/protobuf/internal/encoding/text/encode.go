@@ -124,7 +124,7 @@ func appendString(out []byte, in string, outputASCII bool) []byte {
 			// are used to represent both the proto string and bytes type.
 			r = rune(in[0])
 			fallthrough
-		case r < ' ' || r == '"' || r == '\\':
+		case r < ' ' || r == '"' || r == '\\' || r == 0x7f:
 			out = append(out, '\\')
 			switch r {
 			case '"', '\\':
@@ -141,7 +141,7 @@ func appendString(out []byte, in string, outputASCII bool) []byte {
 				out = strconv.AppendUint(out, uint64(r), 16)
 			}
 			in = in[n:]
-		case outputASCII && r >= utf8.RuneSelf:
+		case r >= utf8.RuneSelf && (outputASCII || r <= 0x009f):
 			out = append(out, '\\')
 			if r <= math.MaxUint16 {
 				out = append(out, 'u')
@@ -166,7 +166,7 @@ func appendString(out []byte, in string, outputASCII bool) []byte {
 // escaping. If no characters need escaping, this returns the input length.
 func indexNeedEscapeInString(s string) int {
 	for i := 0; i < len(s); i++ {
-		if c := s[i]; c < ' ' || c == '"' || c == '\'' || c == '\\' || c >= utf8.RuneSelf {
+		if c := s[i]; c < ' ' || c == '"' || c == '\'' || c == '\\' || c >= 0x7f {
 			return i
 		}
 	}
@@ -262,4 +262,9 @@ func (e *Encoder) Snapshot() encoderState {
 // Reset resets the Encoder to the given encoderState from a Snapshot.
 func (e *Encoder) Reset(es encoderState) {
 	e.encoderState = es
+}
+
+// AppendString appends the escaped form of the input string to b.
+func AppendString(b []byte, s string) []byte {
+	return appendString(b, s, false)
 }

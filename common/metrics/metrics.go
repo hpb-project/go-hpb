@@ -23,13 +23,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deathowl/go-metrics-prometheus"
+	"net/http"
+
+	prometheusmetrics "github.com/deathowl/go-metrics-prometheus"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
-	"net/http"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
@@ -49,7 +50,7 @@ func Start() {
 		}
 	}
 	prometheusRegistry := prometheus.NewRegistry()
-	prometheusRegistry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), ""))
+	prometheusRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{PidFn: func() (int, error) { return os.Getpid(), nil }, Namespace: ""}))
 	prometheusRegistry.MustRegister(prometheus.NewGoCollector())
 	metricsRegistry := metrics.DefaultRegistry
 	pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "go_hpb", "", prometheusRegistry, 1*time.Second)

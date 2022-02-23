@@ -77,7 +77,7 @@ type accountCache struct {
 
 // fileCache is a cache of files seen during scan of keystore
 type fileCache struct {
-	all   *set.SetNonTS // list of all files
+	all   set.Interface // list of all files
 	mtime time.Time     // latest mtime seen
 	mu    sync.RWMutex
 }
@@ -87,7 +87,7 @@ func newAccountCache(keydir string) (*accountCache, chan struct{}) {
 		keydir: keydir,
 		byAddr: make(map[common.Address][]accounts.Account),
 		notify: make(chan struct{}, 1),
-		fileC:  fileCache{all: set.NewNonTS()},
+		fileC:  fileCache{all: set.New(set.NonThreadSafe)},
 	}
 	ac.watcher = newWatcher(ac)
 	return ac, ac.notify
@@ -249,8 +249,8 @@ func (fc *fileCache) scanFiles(keyDir string) (set.Interface, set.Interface, set
 	prevMtime := fc.mtime
 	fc.mu.RUnlock()
 
-	filesNow := set.NewNonTS()
-	moddedFiles := set.NewNonTS()
+	filesNow := set.New(set.NonThreadSafe)
+	moddedFiles := set.New(set.NonThreadSafe)
 	var newMtime time.Time
 	for _, fi := range files {
 		modTime := fi.ModTime()
