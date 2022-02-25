@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"flag"
-	"log"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"log"
 
 	"github.com/hpb-project/go-hpb/common/crypto"
 )
@@ -17,6 +18,7 @@ var (
 	input    = flag.String("f", "data.txt", "test data file path")
 	pTotal   = flag.Int("total", 10000, "total tasks for stress test")
 	routines = flag.Int("r", 1, "routine number and cpu cores to used")
+	mode     = flag.Int("mode", 0, "0/1 (cpu/boe mode)")
 )
 
 func stressTest(groups []*Group) {
@@ -38,6 +40,7 @@ func stressTest(groups []*Group) {
 				if bytes.Compare(pubk, groups[t].pubkey) != 0 {
 					log.Fatal("ecre recover failed", "got ", hex.EncodeToString(pubk), "expect ", hex.EncodeToString(groups[t].pubkey))
 				}
+				log.Println("got pubkey ", hex.EncodeToString(pubk), "expect", hex.EncodeToString(groups[t].pubkey))
 			}
 		}(i)
 	}
@@ -56,8 +59,15 @@ func main() {
 		log.Fatal("load data failed", "err", err)
 		return
 	}
-	for i := 0; i < 10000; i++ {
-		stressTest(groups)
+	if *mode == 0 {
+		for i := 0; i < 10000; i++ {
+			stressTest(groups)
+		}
+	} else if *mode == 1 {
+		for i := 0; i < 10000; i++ {
+			b := prepareBoeTest(groups)
+			boestress(groups, b)
+		}
 	}
 
 }

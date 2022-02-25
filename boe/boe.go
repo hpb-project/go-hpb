@@ -385,6 +385,7 @@ func (boe *BoeHandle) Init() error {
 	if runtime.NumCPU()/4 > boe.maxThNum {
 		boe.maxThNum = runtime.NumCPU() / 4
 	}
+	boe.maxThNum = 1
 
 	boe.thPool = make([]*TaskTh, boe.maxThNum)
 	boe.postCh = make(chan postParam, 1000000)
@@ -632,17 +633,17 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 
 func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
 	async_call = async_call + 1
-	if boe.sleep || ((async_call >= 100) && (async_call%2 == 0)) {
-		rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
-		copy(rs.TxHash, txhash)
-		copy(rs.Hash, hash)
-		copy(rs.Sig[32-len(r):32], r)
-		copy(rs.Sig[64-len(s):64], s)
-		rs.Sig[64] = v
-		boe.postToSoft(&rs)
+	// if boe.sleep || ((async_call >= 100) && (async_call%2 == 0)) {
+	// 	rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
+	// 	copy(rs.TxHash, txhash)
+	// 	copy(rs.Hash, hash)
+	// 	copy(rs.Sig[32-len(r):32], r)
+	// 	copy(rs.Sig[64-len(s):64], s)
+	// 	rs.Sig[64] = v
+	// 	boe.postToSoft(&rs)
 
-		return nil
-	}
+	// 	return nil
+	// }
 
 	var (
 		m_sig   = make([]byte, 97)
