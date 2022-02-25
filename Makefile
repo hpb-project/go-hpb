@@ -13,6 +13,12 @@ GOHPB = $(shell pwd)
 GO ?= latest
 GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 
+boetest:
+	build/env.sh go run build/ci.go install ./cmd/boetest
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/boetest\" to launch."
+
+
 ghpb:
 	build/env.sh go run build/ci.go install ./cmd/ghpb
 	@echo "Done building."

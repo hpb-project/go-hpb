@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"flag"
-	"github.com/hpb-project/go-hpb/common/crypto"
 	"log"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hpb-project/go-hpb/common/crypto"
 )
 
 var (
@@ -18,14 +19,7 @@ var (
 	routines = flag.Int("r", 1, "routine number and cpu cores to used")
 )
 
-func main() {
-	flag.Parse()
-	runtime.GOMAXPROCS(*routines)
-	groups, err := loadData(*input, *pTotal)
-	if err != nil {
-		log.Fatal("load data failed", "err", err)
-		return
-	}
+func stressTest(groups []*Group) {
 	var total int32
 	wg := sync.WaitGroup{}
 	start := time.Now()
@@ -51,4 +45,19 @@ func main() {
 	end := time.Now()
 	d := end.Sub(start).Milliseconds()
 	log.Printf("test count %d and cost %dms\n", total, d)
+
+}
+
+func main() {
+	flag.Parse()
+	runtime.GOMAXPROCS(*routines)
+	groups, err := loadData(*input, *pTotal)
+	if err != nil {
+		log.Fatal("load data failed", "err", err)
+		return
+	}
+	for i := 0; i < 10000; i++ {
+		stressTest(groups)
+	}
+
 }
