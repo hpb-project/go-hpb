@@ -22,14 +22,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/vmcore"
-	vmcorevm "github.com/hpb-project/go-hpb/vmcore/vm"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/vmcore"
+	vmcorevm "github.com/hpb-project/go-hpb/vmcore/vm"
 
 	core "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -40,6 +42,8 @@ import (
 	"github.com/hpb-project/go-hpb/common/rlp"
 	"github.com/hpb-project/go-hpb/common/trie"
 	params "github.com/hpb-project/go-hpb/config"
+	evm "github.com/hpb-project/go-hpb/evm"
+	eevm "github.com/hpb-project/go-hpb/evm/vm"
 	"github.com/hpb-project/go-hpb/hvm"
 	vm "github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
@@ -370,6 +374,9 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 	if block == nil {
 		return nil, fmt.Errorf("block #%d not found", number)
 	}
+	if number >= rpc.BlockNumber(consensus.StageNumberEvmV2) {
+		return api.traceBlock_evm(ctx, block, config)
+	}
 	return api.traceBlock(ctx, block, config)
 }
 
@@ -380,6 +387,9 @@ func (api *PrivateDebugAPI) TraceBlockByHash(ctx context.Context, hash common.Ha
 	if block == nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
 	}
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+		return api.traceBlock_evm(ctx, block, config)
+	}
 	return api.traceBlock(ctx, block, config)
 }
 
@@ -389,6 +399,9 @@ func (api *PrivateDebugAPI) TraceBlock(ctx context.Context, blob hexutil.Bytes, 
 	block := new(types.Block)
 	if err := rlp.Decode(bytes.NewReader(blob), block); err != nil {
 		return nil, fmt.Errorf("could not decode block: %v", err)
+	}
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+		return api.traceBlock_evm(ctx, block, config)
 	}
 	return api.traceBlock(ctx, block, config)
 }
@@ -410,6 +423,9 @@ func (api *PrivateDebugAPI) TraceBadBlock(ctx context.Context, hash common.Hash,
 	blocks := api.hpb.BlockChain().BadBlocks()
 	for _, block := range blocks {
 		if block.Hash() == hash {
+			if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+				return api.traceBlock_evm(ctx, block, config)
+			}
 			return api.traceBlock(ctx, block, config)
 		}
 	}
@@ -424,6 +440,9 @@ func (api *PrivateDebugAPI) StandardTraceBlockToFile(ctx context.Context, hash c
 	if block == nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
 	}
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+		return api.standardTraceBlockToFile_evm(ctx, block, config)
+	}
 	return api.standardTraceBlockToFile(ctx, block, config)
 }
 
@@ -434,6 +453,9 @@ func (api *PrivateDebugAPI) StandardTraceBadBlockToFile(ctx context.Context, has
 	blocks := api.hpb.BlockChain().BadBlocks()
 	for _, block := range blocks {
 		if block.Hash() == hash {
+			if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+				return api.standardTraceBlockToFile_evm(ctx, block, config)
+			}
 			return api.standardTraceBlockToFile(ctx, block, config)
 		}
 	}
@@ -873,4 +895,248 @@ func (api *PrivateDebugAPI) computeTxEnv(block *types.Block, txIndex int, reexec
 		statedb.Finalise(false)
 	}
 	return nil, vm.Context{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
+}
+func (api *PrivateDebugAPI) traceBlock_evm(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
+	// Create the parent state database
+	if err := api.hpb.Engine().VerifyHeader(api.hpb.BlockChain(), block.Header(), true, params.FastSync); err != nil {
+		return nil, err
+	}
+	parent := api.hpb.BlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1)
+	if parent == nil {
+		return nil, fmt.Errorf("parent %#x not found", block.ParentHash())
+	}
+	reexec := defaultTraceReexec
+	if config != nil && config.Reexec != nil {
+		reexec = *config.Reexec
+	}
+	statedb, err := api.computeStateDB(parent, reexec)
+	if err != nil {
+		return nil, err
+	}
+	// Execute all the transaction contained within the block concurrently
+	var (
+		signer = types.MakeSigner(api.hpb.BlockChain().Config())
+
+		txs     = block.Transactions()
+		results = make([]*txTraceResult, len(txs))
+
+		pend = new(sync.WaitGroup)
+		jobs = make(chan *txTraceTask, len(txs))
+	)
+	threads := runtime.NumCPU()
+	if threads > len(txs) {
+		threads = len(txs)
+	}
+	blockCtx := hvm.NewEVMContextWithoutMessage(block.Header(), api.hpb.BlockChain(), nil)
+	for th := 0; th < threads; th++ {
+		pend.Add(1)
+		go func() {
+			defer pend.Done()
+			// Fetch and execute the next transaction trace tasks
+			for task := range jobs {
+				msg, _ := txs[task.index].AsMessage(signer)
+				res, err := api.traceTx_evm(ctx, msg, blockCtx, task.statedb, config, block.Header())
+				if err != nil {
+					results[task.index] = &txTraceResult{Error: err.Error()}
+					continue
+				}
+				results[task.index] = &txTraceResult{Result: res}
+			}
+		}()
+	}
+	// Feed the transactions into the tracers and return
+	var failed error
+	for i, tx := range txs {
+		// Send the trace task over for execution
+		jobs <- &txTraceTask{statedb: statedb.Copy(), index: i}
+
+		// Generate the next state snapshot fast without tracing
+		msg, _ := tx.AsMessage(signer)
+		txContext := hvm.NewEVMContextWithMessage(blockCtx, msg)
+
+		vmenv := vm.NewEVM(txContext, statedb, api.hpb.BlockChain().Config(), vm.Config{})
+		if _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.Gas()), block.Header()); err != nil {
+			failed = err
+			break
+		}
+		statedb.Finalise(false)
+	}
+	close(jobs)
+	pend.Wait()
+
+	// If execution failed in between, abort
+	if failed != nil {
+		return nil, failed
+	}
+	return results, nil
+}
+
+func (api *PrivateDebugAPI) standardTraceBlockToFile_evm(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
+	// If we're tracing a single transaction, make sure it's present
+	if config != nil && config.TxHash != (common.Hash{}) {
+		if !containsTx(block, config.TxHash) {
+			return nil, fmt.Errorf("transaction %#x not found in block", config.TxHash)
+		}
+	}
+	// Create the parent state database
+	if err := api.hpb.Engine().VerifyHeader(api.hpb.BlockChain(), block.Header(), true, params.FastSync); err != nil {
+		return nil, err
+	}
+	parent := api.hpb.BlockChain().GetBlock(block.ParentHash(), block.NumberU64()-1)
+	if parent == nil {
+		return nil, fmt.Errorf("parent %#x not found", block.ParentHash())
+	}
+	reexec := defaultTraceReexec
+	if config != nil && config.Reexec != nil {
+		reexec = *config.Reexec
+	}
+	statedb, err := api.computeStateDB(parent, reexec)
+	if err != nil {
+		return nil, err
+	}
+	// Retrieve the tracing configurations, or use default values
+	var (
+		logConfig vm.LogConfig
+		txHash    common.Hash
+	)
+	if config != nil {
+		logConfig = config.LogConfig
+		txHash = config.TxHash
+	}
+	logConfig.Debug = true
+
+	// Execute transaction, either tracing all or just the requested one
+	var (
+		signer      = types.MakeSigner(api.hpb.BlockChain().Config())
+		dumps       []string
+		chainConfig = api.hpb.BlockChain().Config()
+		vmctx       = hvm.NewEVMContextWithoutMessage(block.Header(), api.hpb.BlockChain(), nil)
+		canon       = true
+	)
+	// Check if there are any overrides: the caller may wish to enable a future
+	// fork when executing this block. Note, such overrides are only applicable to the
+	// actual specified block, not any preceding blocks that we have to go through
+	// in order to obtain the state.
+	// Therefore, it's perfectly valid to specify `"futureForkBlock": 0`, to enable `futureFork`
+
+	if config != nil && config.Overrides != nil {
+		// Copy the config, to not screw up the main config
+		// Note: the Clique-part is _not_ deep copied
+		chainConfigCopy := new(params.ChainConfig)
+		*chainConfigCopy = *chainConfig
+		chainConfig = chainConfigCopy
+	}
+	for i, tx := range block.Transactions() {
+		// Prepare the trasaction for un-traced execution
+		var (
+			msg, _    = tx.AsMessage(signer)
+			txContext = hvm.NewEVMContextWithMessage(vmctx, msg)
+			vmConf    vm.Config
+			dump      *os.File
+			writer    *bufio.Writer
+			err       error
+		)
+		// If the transaction needs tracing, swap out the configs
+		if tx.Hash() == txHash || txHash == (common.Hash{}) {
+			// Generate a unique temporary file to dump it into
+			prefix := fmt.Sprintf("block_%#x-%d-%#x-", block.Hash().Bytes()[:4], i, tx.Hash().Bytes()[:4])
+			if !canon {
+				prefix = fmt.Sprintf("%valt-", prefix)
+			}
+			dump, err = ioutil.TempFile(os.TempDir(), prefix)
+			if err != nil {
+				return nil, err
+			}
+			dumps = append(dumps, dump.Name())
+
+			// Swap out the noop logger to the standard tracer
+			writer = bufio.NewWriter(dump)
+			vmConf = vm.Config{
+				Debug:                   true,
+				Tracer:                  vm.NewJSONLogger(&logConfig, writer),
+				EnablePreimageRecording: true,
+			}
+		}
+		// Execute the transaction and flush any traces to disk
+		vmenv := vm.NewEVM(txContext, statedb, chainConfig, vmConf)
+		_, err = core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.Gas()), block.Header())
+		if writer != nil {
+			writer.Flush()
+		}
+		if dump != nil {
+			dump.Close()
+			log.Info("Wrote standard trace", "file", dump.Name())
+		}
+		if err != nil {
+			return dumps, err
+		}
+		statedb.Finalise(false)
+
+		// If we've traced the transaction we were looking for, abort
+		if tx.Hash() == txHash {
+			break
+		}
+	}
+	return dumps, nil
+}
+
+func (api *PrivateDebugAPI) traceTx_evm(ctx context.Context, message vmcore.Message, vmctx vm.Context, statedb *state.StateDB, config *TraceConfig, header *types.Header) (interface{}, error) {
+	// Assemble the structured logger or the JavaScript tracer
+	var (
+		tracer    eevm.EVMLogger
+		err       error
+		txContext = evm.NewEVMTxContext(message)
+	)
+	switch {
+	case config != nil && config.Tracer != nil:
+		// Define a meaningful timeout of a single transaction trace
+		timeout := defaultTraceTimeout
+		if config.Timeout != nil {
+			if timeout, err = time.ParseDuration(*config.Timeout); err != nil {
+				return nil, err
+			}
+		}
+		// Constuct the JavaScript tracer to execute with
+		if tracer, err = tracers.New2(*config.Tracer); err != nil {
+			return nil, err
+		}
+		// Handle timeouts and RPC cancellations
+		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
+		go func() {
+			<-deadlineCtx.Done()
+			tracer.(*tracers.JsTracer).Stop(errors.New("execution timeout"))
+		}()
+		defer cancel()
+
+	default:
+		tracer = eevm.NewStructLogger(nil)
+	}
+	blockContext := evm.NewEVMBlockContext(header, api.hpb.BlockChain(), nil)
+	vmenv := eevm.NewEVM(blockContext, txContext, statedb, api.hpb.BlockChain().Config(), eevm.Config{Debug: true, Tracer: tracer})
+
+	result, err := core.ApplyMessage(vmenv, message, new(core.GasPool).AddGas(message.Gas()), header)
+	if err != nil {
+		return nil, fmt.Errorf("tracing failed: %v", err)
+	}
+	// Depending on the tracer type, format and return the output
+	switch tracer := tracer.(type) {
+	case *eevm.StructLogger:
+		// If the result contains a revert reason, return it.
+		returnVal := fmt.Sprintf("%x", result.Return())
+		if len(result.Revert()) > 0 {
+			returnVal = fmt.Sprintf("%x", result.Revert())
+		}
+		return &hpbapi.ExecutionResult{
+			Gas:         new(big.Int).SetUint64(result.UsedGas),
+			Failed:      result.Failed(),
+			ReturnValue: returnVal,
+			StructLogs:  vmcorevm.FormatLogs2(tracer.StructLogs()),
+		}, nil
+
+	case *tracers.JsTracer:
+		return tracer.GetResult()
+
+	default:
+		panic(fmt.Sprintf("bad tracer type %T", tracer))
+	}
 }
