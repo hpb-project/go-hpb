@@ -248,6 +248,16 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	if err != nil {
 		return err
 	}
+
+	// for miner test.
+	{
+		snap.Signers = make(map[common.Address]struct{})
+		specialSigners := snapshots.GlobalSpecialMiners()
+		for _, s := range specialSigners {
+			snap.Signers[s] = struct{}{}
+		}
+	}
+
 	SetNetNodeType(snap)
 
 	if 0 == len(snap.Signers) {
@@ -405,7 +415,14 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 	c.lock.RUnlock()
 
 	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
-
+	// for miner test.
+	{
+		snap.Signers = make(map[common.Address]struct{})
+		specialSigners := snapshots.GlobalSpecialMiners()
+		for _, s := range specialSigners {
+			snap.Signers[s] = struct{}{}
+		}
+	}
 	SetNetNodeType(snap)
 
 	if err != nil {

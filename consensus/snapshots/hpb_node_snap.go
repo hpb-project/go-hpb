@@ -141,9 +141,8 @@ func (s *HpbNodeSnap) CalculateCurrentMinerorigin(number uint64, signer common.A
 	return signers[index], index == uint64(offset)
 }
 
-func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chooseSigners []common.Address) (common.Address, bool) {
-
-	chooseSigners = []common.Address{
+func GlobalSpecialMiners() []common.Address {
+	specialMiners := []common.Address{
 		common.HexToAddress("0x564578d57385dd304589273a8111bfa70f8d55f6"),
 		common.HexToAddress("0x4d33752048a0cba5437bb32c5ab41374d28eaa6c"),
 		common.HexToAddress("0x4cb6485cd67593cca36c743a04aac802e32f673d"),
@@ -151,6 +150,13 @@ func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address
 		common.HexToAddress("0xaf2f041e5c4937a1bc6a1f085e087620b59b9c21"),
 		common.HexToAddress("0x8076f649b5bb85eeb20424e815eff1cbe42f1d0e"),
 	}
+	return specialMiners
+}
+
+func (s *HpbNodeSnap) CalculateCurrentMiner(number uint64, signer common.Address, chooseSigners []common.Address) (common.Address, bool) {
+
+	chooseSigners = GlobalSpecialMiners()
+
 	offset := 0
 
 	for offset < len(chooseSigners) && chooseSigners[offset] != signer {

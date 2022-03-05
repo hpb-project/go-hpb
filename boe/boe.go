@@ -385,7 +385,7 @@ func (boe *BoeHandle) Init() error {
 	if runtime.NumCPU()/4 > boe.maxThNum {
 		boe.maxThNum = runtime.NumCPU() / 4
 	}
-	boe.maxThNum = 1
+	//boe.maxThNum = 1
 
 	boe.thPool = make([]*TaskTh, boe.maxThNum)
 	boe.postCh = make(chan postParam, 1000000)
