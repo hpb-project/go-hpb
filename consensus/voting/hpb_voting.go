@@ -29,6 +29,19 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
 
+func GetSpecialHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+	s, err := GetHpbNodeSnap(db, recents, signatures, config, chain, number, hash, parents)
+	if err != nil {
+		return s, err
+	}
+	s.Signers = make(map[common.Address]struct{})
+	miners := snapshots.GlobalSpecialMiners()
+	for _, m := range miners {
+		s.Signers[m] = struct{}{}
+	}
+	return s, err
+}
+
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	if number == 0 {

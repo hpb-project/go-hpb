@@ -67,7 +67,7 @@ func (c *Prometheus) SetNetTopology(chain consensus.ChainReader, headers []*type
 func (c *Prometheus) SetNetTypeByOneHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) {
 	number := header.Number.Uint64()
 	// Retrieve the getHpbNodeSnap needed to verify this header and cache it
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents)
+	snap, err := voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, parents)
 	if err != nil || len(snap.Signers) == 0 {
 		log.Warn("-------------------snap retrieve fail-------------------------")
 		return
@@ -268,7 +268,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 	var snap *snapshots.HpbNodeSnap
 	if mode == config.FullSync {
-		snap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+		snap, err = voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 		if err != nil {
 			log.Debug("verifySeal GetHpbNodeSnap fail", "err", err)
 			return consensus.ErrInvalidblockbutnodrop
