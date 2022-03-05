@@ -493,6 +493,10 @@ var (
 		Usage: "unSupport get block detail info by rpc with the blockNumber little than param",
 		Value: -1,
 	}
+	TestFlag = cli.BoolFlag{
+		Name:  "boetest",
+		Usage: "boetest",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

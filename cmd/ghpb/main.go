@@ -19,6 +19,10 @@ package main
 
 import (
 	"fmt"
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
+	"math/big"
 	"os"
 	"runtime"
 	"sort"
@@ -250,6 +254,36 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
+
+	if ctx.GlobalBool(utils.TestFlag.Name) == true {
+		// tx process test.
+		var blocknumber uint64 = 1756679
+		db := stack.ChainDb()
+		memdb := state.NewDatabase(db)
+		block := stack.Hpbbc.GetBlockByNumber(blocknumber)
+		parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
+
+		statedb, err := state.New(parent.Root(), memdb)
+		if err != nil {
+			log.Error("state new failed", "err", err)
+		}
+		var txs = make([]types.Transaction, 0)
+		blocktxs := block.Transactions()
+		for i := 0; i < 1000000; i++ {
+			tx := blocktxs[0]
+			txs = append(txs, *tx)
+		}
+		var start = time.Now()
+		var last = start
+		for i, tx := range txs {
+			bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, nil,
+				new(bc.GasPool), statedb, block.Header(), &tx, new(big.Int))
+			statedb.Reset(parent.Root())
+			if time.Now().After(last.Add(time.Second)) {
+				log.Info("process tx ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
+			}
+		}
+	}
 
 	go func() {
 
