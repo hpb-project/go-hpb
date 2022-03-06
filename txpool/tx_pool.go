@@ -1131,6 +1131,28 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 	return pending, queued
 }
 
+// ContentFrom retrieves the data content of the transaction pool, returning the
+// pending as well as queued transactions of this address, grouped by nonce.
+func (pool *TxPool) ContentFrom(addr common.Address) (types.Transactions, types.Transactions) {
+	var pending types.Transactions
+	var queued types.Transactions
+
+	if lk, ok := pool.userlock.Load(addr); ok {
+		mu := lk.(*sync.RWMutex)
+		mu.Lock()
+		defer mu.Unlock()
+		pending = pool.pendingTxList(addr).Flatten()
+	}
+
+	if lk, ok := pool.userlock.Load(addr); ok {
+		mu := lk.(*sync.RWMutex)
+		mu.Lock()
+		defer mu.Unlock()
+		queued = pool.queueTxList(addr).Flatten()
+	}
+	return pending, queued
+}
+
 // SubscribeTxPreEvent ...
 func (pool *TxPool) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))

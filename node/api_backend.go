@@ -19,9 +19,10 @@ package node
 import (
 	"context"
 	"errors"
+	"math/big"
+
 	"github.com/hpb-project/go-hpb/vmcore"
 	"github.com/hpb-project/go-hpb/vmcore/vm"
-	"math/big"
 
 	accounts "github.com/hpb-project/go-hpb/account"
 	bc "github.com/hpb-project/go-hpb/blockchain"
@@ -251,6 +252,10 @@ func (b *HpbApiBackend) Stats() (pending int, queued int) {
 
 func (b *HpbApiBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	return b.hpb.TxPool().Content()
+}
+
+func (b *HpbApiBackend) TxPoolContentFrom(addr common.Address) (types.Transactions, types.Transactions) {
+	return b.hpb.TxPool().ContentFrom(addr)
 }
 
 func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {
