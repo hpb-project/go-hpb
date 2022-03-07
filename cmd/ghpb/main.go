@@ -118,6 +118,7 @@ var (
 		utils.CriticalFlag,
 		utils.CriticalBackBlockFlag,
 		utils.ArchivedBlockFalg,
+		utils.TestFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -256,33 +257,65 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 	stack.AccountManager().Subscribe(events)
 
 	if ctx.GlobalBool(utils.TestFlag.Name) == true {
-		// tx process test.
-		var blocknumber uint64 = 1756679
-		db := stack.ChainDb()
-		memdb := state.NewDatabase(db)
-		block := stack.Hpbbc.GetBlockByNumber(blocknumber)
-		parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
+		{
+			// tx process test.
+			var blocknumber uint64 = 13965331
+			db := stack.ChainDb()
+			memdb := state.NewDatabase(db)
+			block := stack.Hpbbc.GetBlockByNumber(blocknumber)
+			parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
 
-		statedb, err := state.New(parent.Root(), memdb)
-		if err != nil {
-			log.Error("state new failed", "err", err)
-		}
-		var txs = make([]types.Transaction, 0)
-		blocktxs := block.Transactions()
-		for i := 0; i < 1000000; i++ {
-			tx := blocktxs[0]
-			txs = append(txs, *tx)
-		}
-		var start = time.Now()
-		var last = start
-		for i, tx := range txs {
-			bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, nil,
-				new(bc.GasPool), statedb, block.Header(), &tx, new(big.Int))
-			statedb.Reset(parent.Root())
-			if time.Now().After(last.Add(time.Second)) {
-				log.Info("process tx ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
+			statedb, err := state.New(parent.Root(), memdb)
+			if err != nil {
+				log.Error("state new failed", "err", err)
+			}
+			var txs = make([]types.Transaction, 0)
+			blocktxs := block.Transactions()
+			for i := 0; i < 300000; i++ {
+				tx := blocktxs[0]
+				txs = append(txs, *tx)
+			}
+			var start = time.Now()
+			var last = start
+
+			var boesigner = types.NewBoeSigner(stack.Hpbbc.Config().ChainId)
+			//var pointtxs = make([]*types.Transaction, 0, len(txs))
+			//for _,tx := range txs {
+			//	ntx := tx
+			//	ptx := &ntx
+			//	pointtxs = append(pointtxs, ptx)
+			//	boesigner.Sender(ptx)
+			//}
+			for i, tx := range txs {
+				ptx := &tx
+				boesigner.Sender(ptx)
+				var gp bc.GasPool = 200000
+				bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, nil,
+					&gp, statedb, block.Header(), ptx, new(big.Int))
+				statedb.Reset(parent.Root())
+				if time.Now().After(last.Add(time.Second)) {
+					log.Info("process tx ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
+					last = time.Now()
+				}
 			}
 		}
+		//{
+		//	// block process test.
+		//	// tx process test.
+		//	var blocknumber uint64 = 1756679
+		//	db := stack.ChainDb()
+		//	memdb := state.NewDatabase(db)
+		//	block := stack.Hpbbc.GetBlockByNumber(blocknumber)
+		//	parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
+		//
+		//	statedb, err := state.New(parent.Root(), memdb)
+		//	if err != nil {
+		//		log.Error("state new failed", "err", err)
+		//	}
+		//	sp := bc.NewStateProcessor(stack.Hpbbc.Config(), stack.Hpbbc, stack.Engine())
+		//	sp.Process()
+		//}
+
 	}
 
 	go func() {
