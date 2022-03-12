@@ -19,15 +19,16 @@ package main
 
 import (
 	"fmt"
-	bc "github.com/hpb-project/go-hpb/blockchain"
-	"github.com/hpb-project/go-hpb/blockchain/state"
-	"github.com/hpb-project/go-hpb/blockchain/types"
 	"math/big"
 	"os"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
+
+	bc "github.com/hpb-project/go-hpb/blockchain"
+	"github.com/hpb-project/go-hpb/blockchain/state"
+	"github.com/hpb-project/go-hpb/blockchain/types"
 
 	accounts "github.com/hpb-project/go-hpb/account"
 	"github.com/hpb-project/go-hpb/account/keystore"
@@ -256,7 +257,8 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
 
-	if ctx.GlobalBool(utils.TestFlag.Name) == true {
+	var testflag = ctx.GlobalInt64(utils.TestFlag.Name)
+	if testflag != 0 {
 		{
 			// tx process test.
 			var blocknumber uint64 = 13965331
@@ -275,23 +277,31 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 				tx := blocktxs[0]
 				txs = append(txs, *tx)
 			}
+
+			var boesigner = types.NewBoeSigner(stack.Hpbbc.Config().ChainId)
+			var pointtxs = make([]*types.Transaction, 0, len(txs))
+			for _, tx := range txs {
+				ntx := tx
+				ptx := &ntx
+				pointtxs = append(pointtxs, ptx)
+			}
+			author := block.Header().Coinbase
+
+			// if testflag == 1 {
+			// 	// boe async sender.
+			// 	for i := 0; i < len(pointtxs); i++ {
+			// 		types.ASynSender(boesigner, pointtxs[i])
+			// 	}
+			// }
+
 			var start = time.Now()
 			var last = start
 
-			var boesigner = types.NewBoeSigner(stack.Hpbbc.Config().ChainId)
-			//var pointtxs = make([]*types.Transaction, 0, len(txs))
-			//for _,tx := range txs {
-			//	ntx := tx
-			//	ptx := &ntx
-			//	pointtxs = append(pointtxs, ptx)
-			//	boesigner.Sender(ptx)
-			//}
-			for i, tx := range txs {
-				ptx := &tx
-				boesigner.Sender(ptx)
+			for i := 0; i < len(pointtxs); i++ {
 				var gp bc.GasPool = 200000
-				bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, nil,
-					&gp, statedb, block.Header(), ptx, new(big.Int))
+				types.Sender(boesigner, pointtxs[i])
+				bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, &author,
+					&gp, statedb, block.Header(), pointtxs[i], new(big.Int))
 				statedb.Reset(parent.Root())
 				if time.Now().After(last.Add(time.Second)) {
 					log.Info("process tx ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
@@ -299,23 +309,6 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 				}
 			}
 		}
-		//{
-		//	// block process test.
-		//	// tx process test.
-		//	var blocknumber uint64 = 1756679
-		//	db := stack.ChainDb()
-		//	memdb := state.NewDatabase(db)
-		//	block := stack.Hpbbc.GetBlockByNumber(blocknumber)
-		//	parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
-		//
-		//	statedb, err := state.New(parent.Root(), memdb)
-		//	if err != nil {
-		//		log.Error("state new failed", "err", err)
-		//	}
-		//	sp := bc.NewStateProcessor(stack.Hpbbc.Config(), stack.Hpbbc, stack.Engine())
-		//	sp.Process()
-		//}
-
 	}
 
 	go func() {

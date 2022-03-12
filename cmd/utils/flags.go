@@ -493,9 +493,10 @@ var (
 		Usage: "unSupport get block detail info by rpc with the blockNumber little than param",
 		Value: -1,
 	}
-	TestFlag = cli.BoolFlag{
+	TestFlag = cli.Int64Flag{
 		Name:  "boetest",
-		Usage: "boetest",
+	       Usage: "boetest",
+	       Value: 0, // 0: no test 1: boe test  2: cpu test.
 	}
 )
 

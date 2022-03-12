@@ -385,7 +385,7 @@ func (boe *BoeHandle) Init() error {
 	if runtime.NumCPU()/4 > boe.maxThNum {
 		boe.maxThNum = runtime.NumCPU() / 4
 	}
-	//boe.maxThNum = 1
+	boe.maxThNum = 1
 
 	boe.thPool = make([]*TaskTh, boe.maxThNum)
 	boe.postCh = make(chan postParam, 1000000)
@@ -673,8 +673,31 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 }
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
+	var (
+		result = make([]byte, 65)
+		m_sig  = make([]byte, 97)
+		c_sig  = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+	)
 	sync_call = sync_call + 1
-	return softRecoverPubkey(hash, r, s, v)
+	copy(m_sig[32-len(r):32], r)
+	copy(m_sig[64-len(s):64], s)
+	copy(m_sig[96-len(hash):96], hash)
+	m_sig[96] = v
+	//st := time.Now()
+	c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+	//et := time.Now()
+	if c_ret == C.BOE_OK {
+		//fmt.Println("boe valid sign cost ", et.Sub(st).Microseconds(), "us")
+		result[0] = 4
+		return result, nil
+	}
+	//fmt.Println("boe valid sign failed, use softrecover pubkey")
+	// sync_call = sync_call + 1
+	//st2 := time.Now()
+	pub, err := softRecoverPubkey(hash, r, s, v)
+	//et2 := time.Now()
+	//fmt.Println("soft ware valid sign cost", et2.Sub(st2).Microseconds(), "us")
+	return pub, err
 }
 
 func (boe *BoeHandle) GetNextHash(hash []byte) ([]byte, error) {

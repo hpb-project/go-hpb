@@ -42,6 +42,7 @@ func init() {
 }
 
 func (this *SenderCache) Set(txhash common.Hash, addr common.Address) error {
+	return nil
 	if this.cache != nil {
 		this.cache.Add(txhash, addr)
 	}
@@ -49,6 +50,7 @@ func (this *SenderCache) Set(txhash common.Hash, addr common.Address) error {
 }
 
 func (this *SenderCache) Get(txhash common.Hash) (common.Address, error) {
+	return common.Address{}, errNotFind
 	if this.cache != nil {
 		v, find := this.cache.Get(txhash)
 		if find {
@@ -59,6 +61,7 @@ func (this *SenderCache) Get(txhash common.Hash) (common.Address, error) {
 }
 
 func (this *SenderCache) GetOrSet(txhash common.Hash, addr common.Address) {
+	return
 	if this.cache != nil {
 		_, find := this.cache.Get(txhash)
 		if !find {
@@ -72,3 +75,4 @@ func (this *SenderCache) Delete(txhash common.Hash) {
 		this.cache.Remove(txhash)
 	}
 }
+
