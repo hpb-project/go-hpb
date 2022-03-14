@@ -287,19 +287,19 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 			}
 			author := block.Header().Coinbase
 
-			// if testflag == 1 {
-			// 	// boe async sender.
-			// 	for i := 0; i < len(pointtxs); i++ {
-			// 		types.ASynSender(boesigner, pointtxs[i])
-			// 	}
-			// }
+			if testflag == 1 {
+				// boe async sender.
+				for i := 0; i < len(pointtxs); i++ {
+					types.ASynSender(boesigner, pointtxs[i])
+				}
+			}
 
 			var start = time.Now()
 			var last = start
 
 			for i := 0; i < len(pointtxs); i++ {
 				var gp bc.GasPool = 200000
-				types.Sender(boesigner, pointtxs[i])
+				// types.Sender(boesigner, pointtxs[i])
 				bc.ApplyTransactionNonContractNonFinallize(stack.Hpbbc.Config(), stack.Hpbbc, &author,
 					&gp, statedb, block.Header(), pointtxs[i], new(big.Int))
 				statedb.Reset(parent.Root())

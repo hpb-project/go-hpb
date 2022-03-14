@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/hpb-project/go-hpb/boe"
 	"github.com/hpb-project/go-hpb/common"
@@ -33,6 +34,23 @@ var (
 	ErrInvalidChainId    = errors.New("invalid chain id for signer")
 	ErrInvalidAsynsinger = errors.New("invalid chain id  Asyn Send OK for signer")
 )
+
+var (
+	asynctxmap            = sync.Map{}
+	boesigner      Signer = nil
+	globalIndex, _        = new(big.Int).SetString("25033319cd3631bc83d37b2e9ccd4ae4fcb5217e96d917c33a22de4a95173d52", 16)
+	indexMutex            = sync.RWMutex{}
+	big1                  = big.NewInt(1)
+)
+
+func getIndex() common.Hash {
+	indexMutex.Lock()
+	defer indexMutex.Unlock()
+	globalIndex = new(big.Int).Add(globalIndex, big1)
+	h := common.Hash{}
+	h.SetBytes(globalIndex.Bytes())
+	return h
+}
 
 // sigCache is used to cache the derived sender and contains
 // the signer used to derive it.
@@ -74,17 +92,10 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 			return sigCache.from, nil
 		}
 	}
-	txhash := tx.Hash()
-	address, err := Sendercache.Get(txhash)
-	if err == nil {
-		tx.from.Store(sigCache{signer: signer, from: address})
-		return address, nil
-	}
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
 	}
-	Sendercache.GetOrSet(txhash, addr)
 	tx.from.Store(sigCache{signer: signer, from: addr})
 
 	return addr, nil
@@ -98,11 +109,6 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	asynAddress, err := Sendercache.Get(tx.Hash())
-	if err == nil {
-		tx.from.Store(sigCache{signer: signer, from: asynAddress})
-		return asynAddress, nil
-	}
 	return signer.ASynSender(tx)
 }
 
@@ -162,6 +168,7 @@ func (s BoeSigner) Sender(tx *Transaction) (common.Address, error) {
 	if !CheckChainIdCompatible(tx.ChainId()) && (tx.ChainId().Cmp(s.chainId) != 0) {
 		return common.Address{}, ErrInvalidChainId
 	}
+
 	if compableV(tx.data.V) {
 		compableChainId := config.CompatibleChainId
 		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
@@ -180,17 +187,18 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
 	}
-
+	index := getIndex()
+	asynctxmap.Store(index, tx)
 	if compableV(tx.data.V) {
 		compableChainId := config.CompatibleChainId
 		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
 		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
 		V.Sub(V, big8)
-		return ASynrecoverPlain(tx.Hash(), s.CompableHash(tx), tx.data.R, tx.data.S, V)
+		return ASynrecoverPlain(index, s.CompableHash(tx), tx.data.R, tx.data.S, V)
 	} else {
 		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 		V.Sub(V, big8)
-		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
+		return ASynrecoverPlain(index, s.Hash(tx), tx.data.R, tx.data.S, V)
 	}
 
 }
@@ -305,6 +313,9 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	if len(rs.Pub) == 0 || rs.Pub[0] != 4 {
 		log.Error("boecallback boe invalid public key")
 	}
+	if boesigner == nil {
+		boesigner = MakeSigner(&config.GetHpbConfigInstance().BlockChain)
+	}
 
 	var addr = common.Address{}
 	copy(addr[:], crypto.Keccak256(rs.Pub[1:])[12:])
@@ -312,5 +323,14 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	var comhash common.Hash
 	copy(comhash[0:], rs.TxHash[0:])
 
-	Sendercache.GetOrSet(comhash, addr)
+	var h common.Hash
+	h.SetBytes(rs.TxHash)
+
+	tx, exist := asynctxmap.Load(h)
+	if exist {
+		ptx := tx.(*Transaction)
+		if sc := ptx.from.Load(); sc == nil {
+			ptx.from.Store(sigCache{signer: boesigner, from: addr})
+		}
+	}
 }
