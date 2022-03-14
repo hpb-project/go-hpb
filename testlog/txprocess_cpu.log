@@ -1,0 +1,78 @@
+INFO [03-15|00:58:30]  HPB : Create New HpbConfig object 
+INFO [03-15|00:58:30]  HPB : Set global gas cap                cap=50000000
+INFO [03-15|00:58:30]  HPB : Start Node with                   Archived block =-1
+ERROR[03-15|00:58:41]  HPB : Bootstrap URL invalid             hnode=hnode://283d1de984ee071e322a96e3a2e98cfba1adb4dee23e4af5846f72e23b364c11ab5280d1a8511394e03cb4dc6b3b6d86cf862d87afcbd2f324deb220390bbbae@bootnode4.hpb.io:30306 err="lookup bootnode4.hpb.io on 8.8.8.8:53: read udp 192.168.1.103:53290->8.8.8.8:53: i/o timeout"
+INFO [03-15|00:58:46]  HPB : Initialising Hpb node             network=100
+INFO [03-15|00:58:46]  HPB : Allocated cache and file handles  database=/home/luxq/hpnode/node/data/ghpb/chaindata cache=128 handles=524288
+WARN [03-15|00:58:47]  HPB : Boe init fail. 
+WARN [03-15|00:58:47]  HPB : Get coinbase from boe fail, and set coinbase with account[0] 
+INFO [03-15|00:58:47]  HPB : consensus.HpbNodenumber           value=31
+INFO [03-15|00:58:47]  HPB : consensus.NumberPrehp             value=20
+INFO [03-15|00:58:47]  HPB : consensus.IgnoreRetErr            value=false
+INFO [03-15|00:58:47]  HPB : conf.Prometheus.Period            value=6
+INFO [03-15|00:58:47]  HPB : config.MainnetBootnodes           value=hnode://0a4ee79961f00dcf3601ae662cf010760c8166a22eac5bfddf28ab16513b497f72a1d6ebc6eb7afdfec391fa2b8997b4a74b33e7f3af5c81205f5ebb167658df@bootnode1.hpb.io:30306
+INFO [03-15|00:58:47]  HPB : config.MainnetBootnodes           value=hnode://f31f58a70cd4880f506c8f1038be2c48823bb6f43529b16e82d67f5d74ff3c02e339f6b9ccb61c69c32f798ace3d8c8ac49014e9fefb58d9774c60e6f80c512e@bootnode2.hpb.io:30306
+INFO [03-15|00:58:47]  HPB : config.MainnetBootnodes           value=hnode://230af50ef9f6209129be4879e5e0ce53fdce2de1b48a18388bfb15009998a4985eb864459c3c013f999d1ba44748b10a746e20e02da159f10b104025cb7f932a@bootnode3.hpb.io:30306
+INFO [03-15|00:58:47]  HPB : config.MainnetBootnodes           value=hnode://283d1de984ee071e322a96e3a2e98cfba1adb4dee23e4af5846f72e23b364c11ab5280d1a8511394e03cb4dc6b3b6d86cf862d87afcbd2f324deb220390bbbae@bootnode4.hpb.io:30306
+INFO [03-15|00:58:47]  HPB : config.MainnetBootnodes           value=hnode://33c5b55d6dc4aaf6bcb4502d69bf4ca8db7550e7b01cae1c53fca9ce8b60b440102d4c4dcd578136d64c8934fc90f0ad96bcf828bc611a9bbb7ea33369bc1aa0@bootnode5.hpb.io:30306
+INFO [03-15|00:58:47]  HPB : Loaded most recent local header   number=13971799 hash=eb73b3…a2862d td=24487190
+INFO [03-15|00:58:47]  HPB : Loaded most recent local full block number=13971799 hash=eb73b3…a2862d td=24487190
+INFO [03-15|00:58:47]  HPB : Loaded most recent local fast block number=13971799 hash=eb73b3…a2862d td=24487190
+WARN [03-15|00:58:47]  HPB : Blockchain not empty, fast sync disabled 
+INFO [03-15|00:58:47]  HPB : Set coinbase address by start     address=0x66Af2BeB1e5c5ca3394F6B0156895510c9661Be7 roletype=
+INFO [03-15|00:58:47]  HPB : Change node local type            from=UnknownNode to=PreNode
+INFO [03-15|00:58:47]  HPB : Set Init Local Type by p2p        type=PreNode
+INFO [03-15|00:58:47]  HPB : Starting P2P networking 
+INFO [03-15|00:58:49]  HPB : UDP listener up                   self=hnode://ed05f449176c2d978e6bbb3be97f08c347f3d20e650fa9b54cc896924355fb0d7afcbefd8bba1b1a516726810a89215dd85da384c02449a24d78d7fbf0d10de2@[::]:11111
+ERROR[03-15|00:58:49]  HPB : p2p get boe version               error="init failed"
+INFO [03-15|00:58:49]  HPB : Server start with type.           NodeType=PreNode
+INFO [03-15|00:58:49]  HPB : Start server of bandwidth test.   port=11211
+INFO [03-15|00:58:49]  HPB : IPC endpoint opened               url=/home/luxq/hpnode/node/data/ghpb.ipc
+ERROR[03-15|00:58:49]  HPB : HTTP endpoint is null 
+INFO [03-15|00:58:50]  HPB : process tx                        total=2274 cost=1.000
+INFO [03-15|00:58:51]  HPB : process tx                        total=4424 cost=2.001
+INFO [03-15|00:58:52]  HPB : process tx                        total=6707 cost=3.001
+INFO [03-15|00:58:53]  HPB : process tx                        total=8931 cost=4.002
+INFO [03-15|00:58:54]  HPB : process tx                        total=11262 cost=5.002
+INFO [03-15|00:58:55]  HPB : process tx                        total=13512 cost=6.002
+INFO [03-15|00:58:56]  HPB : process tx                        total=15856 cost=7.002
+INFO [03-15|00:58:57]  HPB : process tx                        total=18173 cost=8.003
+INFO [03-15|00:58:58]  HPB : process tx                        total=20484 cost=9.003
+INFO [03-15|00:58:59]  HPB : process tx                        total=22805 cost=10.003
+INFO [03-15|00:59:00]  HPB : process tx                        total=25062 cost=11.003
+INFO [03-15|00:59:01]  HPB : process tx                        total=27460 cost=12.003
+INFO [03-15|00:59:02]  HPB : process tx                        total=29790 cost=13.004
+INFO [03-15|00:59:03]  HPB : process tx                        total=32163 cost=14.004
+INFO [03-15|00:58:50]  HPB : process tx                        total=2274 cost=1.000
+INFO [03-15|00:59:04]  HPB : process tx                        total=34489 cost=15.004
+INFO [03-15|00:59:05]  HPB : process tx                        total=36866 cost=16.004
+INFO [03-15|00:59:06]  HPB : process tx                        total=39216 cost=17.004
+INFO [03-15|00:59:07]  HPB : process tx                        total=41495 cost=18.005
+INFO [03-15|00:59:08]  HPB : process tx                        total=43821 cost=19.005
+INFO [03-15|00:59:09]  HPB : process tx                        total=46308 cost=20.005
+INFO [03-15|00:59:10]  HPB : process tx                        total=48667 cost=21.005
+INFO [03-15|00:59:11]  HPB : process tx                        total=51100 cost=22.006
+INFO [03-15|00:59:12]  HPB : Remote node is boot.              id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f
+INFO [03-15|00:59:12]  HPB : Verify the remote hardware.       id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f result=true
+INFO [03-15|00:59:12]  HPB : P2P set init peer remote type bootnode id=f31f58a70cd4880f port=30306
+INFO [03-15|00:59:12]  HPB : Start hpb message loop.           id=f31f58a70cd4880f port=30306
+INFO [03-15|00:59:12]  HPB : Remote node is boot.              id=0a4ee79961f00dcf addr=47.94.20.30:30306    conn=dyndial id=0a4ee79961f00dcf
+INFO [03-15|00:59:12]  HPB : Verify the remote hardware.       id=0a4ee79961f00dcf addr=47.94.20.30:30306    conn=dyndial id=0a4ee79961f00dcf result=true
+INFO [03-15|00:59:12]  HPB : P2P set init peer remote type bootnode id=0a4ee79961f00dcf port=30306
+INFO [03-15|00:59:12]  HPB : Start hpb message loop.           id=0a4ee79961f00dcf port=30306
+INFO [03-15|00:59:12]  HPB : process tx                        total=53483 cost=23.006
+INFO [03-15|00:59:13]  HPB : process tx                        total=55839 cost=24.007
+INFO [03-15|00:59:14]  HPB : process tx                        total=58168 cost=25.007
+INFO [03-15|00:59:15]  HPB : process tx                        total=60632 cost=26.007
+INFO [03-15|00:59:16]  HPB : process tx                        total=63093 cost=27.007
+INFO [03-15|00:59:17]  HPB : process tx                        total=65406 cost=28.008
+INFO [03-15|00:59:18]  HPB : process tx                        total=67710 cost=29.008
+INFO [03-15|00:59:19]  HPB : process tx                        total=69999 cost=30.008
+INFO [03-15|00:59:20]  HPB : process tx                        total=72397 cost=31.008
+INFO [03-15|00:59:21]  HPB : process tx                        total=74797 cost=32.008
+INFO [03-15|00:59:22]  HPB : process tx                        total=77202 cost=33.009
+INFO [03-15|00:59:23]  HPB : process tx                        total=79574 cost=34.009
+INFO [03-15|00:59:24]  HPB : process tx                        total=82055 cost=35.009
+INFO [03-15|00:59:25]  HPB : process tx                        total=84399 cost=36.010
+^CINFO [03-15|00:59:25]  HPB : Got interrupt, shutting down...
+

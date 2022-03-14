@@ -1,0 +1,118 @@
+INFO [03-15|00:51:45]  HPB : Create New HpbConfig object
+INFO [03-15|00:51:45]  HPB : Set global gas cap                cap=50000000
+INFO [03-15|00:51:45]  HPB : Start Node with                   Archived block =-1
+INFO [03-15|00:51:56]  HPB : Initialising Hpb node             network=100
+INFO [03-15|00:51:56]  HPB : Allocated cache and file handles  database=/home/luxq/hpnode/node/data/ghpb/chaindata cache=128 handles=524288
+INFO [03-15|00:51:58]  HPB : set coinbase of node              : =0x4cB6485cD67593CCa36c743A04AAc802E32F673d
+INFO [03-15|00:51:58]  HPB : consensus.HpbNodenumber           value=31
+INFO [03-15|00:51:58]  HPB : consensus.NumberPrehp             value=20
+INFO [03-15|00:51:58]  HPB : consensus.IgnoreRetErr            value=false
+INFO [03-15|00:51:58]  HPB : conf.Prometheus.Period            value=6
+INFO [03-15|00:51:58]  HPB : config.MainnetBootnodes           value=hnode://0a4ee79961f00dcf3601ae662cf010760c8166a22eac5bfddf28ab16513b497f72a1d6ebc6eb7afdfec391fa2b8997b4a74b33e7f3af5c81205f5ebb167658df@bootnode1.hpb.io:30306 
+INFO [03-15|00:51:58]  HPB : config.MainnetBootnodes           value=hnode://f31f58a70cd4880f506c8f1038be2c48823bb6f43529b16e82d67f5d74ff3c02e339f6b9ccb61c69c32f798ace3d8c8ac49014e9fefb58d9774c60e6f80c512e@bootnode2.hpb.io:30306 
+INFO [03-15|00:51:58]  HPB : config.MainnetBootnodes           value=hnode://230af50ef9f6209129be4879e5e0ce53fdce2de1b48a18388bfb15009998a4985eb864459c3c013f999d1ba44748b10a746e20e02da159f10b104025cb7f932a@bootnode3.hpb.io:30306 
+INFO [03-15|00:51:58]  HPB : config.MainnetBootnodes           value=hnode://283d1de984ee071e322a96e3a2e98cfba1adb4dee23e4af5846f72e23b364c11ab5280d1a8511394e03cb4dc6b3b6d86cf862d87afcbd2f324deb220390bbbae@bootnode4.hpb.io:30306 
+INFO [03-15|00:51:58]  HPB : config.MainnetBootnodes           value=hnode://33c5b55d6dc4aaf6bcb4502d69bf4ca8db7550e7b01cae1c53fca9ce8b60b440102d4c4dcd578136d64c8934fc90f0ad96bcf828bc611a9bbb7ea33369bc1aa0@bootnode5.hpb.io:30306 
+INFO [03-15|00:51:58]  HPB : Loaded most recent local header   number=13971799 hash=eb73b3…a2862d td=24487190
+INFO [03-15|00:51:58]  HPB : Loaded most recent local full block number=13971799 hash=eb73b3…a2862d td=24487190
+INFO [03-15|00:51:58]  HPB : Loaded most recent local fast block number=13971799 hash=eb73b3…a2862d td=24487190
+WARN [03-15|00:51:58]  HPB : Blockchain not empty, fast sync disabled
+INFO [03-15|00:51:58]  HPB : Set coinbase address by start     address=0x4cB6485cD67593CCa36c743A04AAc802E32F673d roletype=
+INFO [03-15|00:51:58]  HPB : Change node local type            from=UnknownNode to=PreNode
+INFO [03-15|00:51:58]  HPB : Set Init Local Type by p2p        type=PreNode
+INFO [03-15|00:51:58]  HPB : Starting P2P networking
+INFO [03-15|00:52:00]  HPB : UDP listener up                   self=hnode://ed05f449176c2d978e6bbb3be97f08c347f3d20e650fa9b54cc896924355fb0d7afcbefd8bba1b1a516726810a89215dd85da384c02449a24d78d7fbf0d10de2@[::]:11111
+INFO [03-15|00:52:00]  HPB : Server start with type.           NodeType=PreNode
+INFO [03-15|00:52:00]  HPB : Start server of bandwidth test.   port=11211
+INFO [03-15|00:52:00]  HPB : IPC endpoint opened               url=/home/luxq/hpnode/node/data/ghpb.ipc
+ERROR[03-15|00:52:00]  HPB : HTTP endpoint is null
+INFO [03-15|00:52:04]  HPB : process tx                        total=6054 cost=1.000
+INFO [03-15|00:52:05]  HPB : process tx                        total=11935 cost=2.000
+INFO [03-15|00:52:06]  HPB : process tx                        total=17953 cost=3.000
+INFO [03-15|00:52:07]  HPB : process tx                        total=24042 cost=4.000
+INFO [03-15|00:52:08]  HPB : process tx                        total=30151 cost=5.001
+INFO [03-15|00:52:09]  HPB : process tx                        total=36280 cost=6.001
+INFO [03-15|00:52:10]  HPB : process tx                        total=42467 cost=7.001
+INFO [03-15|00:52:11]  HPB : process tx                        total=48579 cost=8.001
+INFO [03-15|00:52:12]  HPB : process tx                        total=54818 cost=9.001
+INFO [03-15|00:52:13]  HPB : process tx                        total=60766 cost=10.001
+INFO [03-15|00:52:14]  HPB : process tx                        total=66938 cost=11.001
+INFO [03-15|00:52:15]  HPB : process tx                        total=73189 cost=12.001
+INFO [03-15|00:52:16]  HPB : process tx                        total=79243 cost=13.002
+INFO [03-15|00:52:17]  HPB : process tx                        total=85320 cost=14.002
+INFO [03-15|00:52:17]  HPB : Remote node is boot.              id=0a4ee79961f00dcf addr=47.94.20.30:30306 conn=dyndial id=0a4ee79961f00dcf
+INFO [03-15|00:52:17]  HPB : Verify the remote hardware.       id=0a4ee79961f00dcf addr=47.94.20.30:30306 conn=dyndial id=0a4ee79961f00dcf result=true
+INFO [03-15|00:52:17]  HPB : P2P set init peer remote type bootnode id=0a4ee79961f00dcf port=30306
+INFO [03-15|00:52:17]  HPB : Start hpb message loop.           id=0a4ee79961f00dcf port=30306
+INFO [03-15|00:52:17]  HPB : Remote node is boot.              id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f
+INFO [03-15|00:52:17]  HPB : Verify the remote hardware.       id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f result=true
+INFO [03-15|00:52:17]  HPB : P2P set init peer remote type bootnode id=f31f58a70cd4880f port=30306
+INFO [03-15|00:52:17]  HPB : Start hpb message loop.           id=f31f58a70cd4880f port=30306
+INFO [03-15|00:52:18]  HPB : process tx                        total=91293 cost=15.002
+INFO [03-15|00:52:19]  HPB : process tx                        total=97418 cost=16.002
+INFO [03-15|00:52:20]  HPB : process tx                        total=103589 cost=17.002
+INFO [03-15|00:52:21]  HPB : process tx                        total=109711 cost=18.002
+INFO [03-15|00:52:22]  HPB : process tx                        total=115663 cost=19.002
+INFO [03-15|00:52:23]  HPB : process tx                        total=121391 cost=20.002
+INFO [03-15|00:52:24]  HPB : process tx                        total=127331 cost=21.002
+INFO [03-15|00:52:25]  HPB : process tx                        total=133217 cost=22.002
+INFO [03-15|00:52:26]  HPB : process tx                        total=139328 cost=23.003
+INFO [03-15|00:52:27]  HPB : process tx                        total=145280 cost=24.003
+INFO [03-15|00:52:28]  HPB : process tx                        total=151139 cost=25.003
+INFO [03-15|00:52:29]  HPB : process tx                        total=156827 cost=26.003
+INFO [03-15|00:52:30]  HPB : process tx                        total=162661 cost=27.003
+INFO [03-15|00:52:31]  HPB : process tx                        total=168398 cost=28.004
+INFO [03-15|00:52:32]  HPB : process tx                        total=174774 cost=29.004
+INFO [03-15|00:52:33]  HPB : process tx                        total=181166 cost=30.004
+INFO [03-15|00:52:34]  HPB : process tx                        total=187636 cost=31.004
+INFO [03-15|00:52:35]  HPB : process tx                        total=193860 cost=32.004
+INFO [03-15|00:52:36]  HPB : process tx                        total=200469 cost=33.004
+INFO [03-15|00:52:37]  HPB : process tx                        total=206655 cost=34.004
+INFO [03-15|00:52:38]  HPB : process tx                        total=213322 cost=35.004
+INFO [03-15|00:52:39]  HPB : process tx                        total=219699 cost=36.004
+INFO [03-15|00:52:40]  HPB : process tx                        total=226395 cost=37.005
+INFO [03-15|00:52:41]  HPB : process tx                        total=233076 cost=38.005
+INFO [03-15|00:52:42]  HPB : process tx                        total=239700 cost=39.005
+INFO [03-15|00:52:43]  HPB : process tx                        total=246173 cost=40.005
+INFO [03-15|00:52:44]  HPB : process tx                        total=252766 cost=41.005
+INFO [03-15|00:52:45]  HPB : process tx                        total=259133 cost=42.005
+INFO [03-15|00:52:46]  HPB : process tx                        total=265683 cost=43.005
+INFO [03-15|00:52:47]  HPB : process tx                        total=272274 cost=44.005
+INFO [03-15|00:52:48]  HPB : process tx                        total=278492 cost=45.006
+INFO [03-15|00:52:49]  HPB : process tx                        total=284772 cost=46.006
+INFO [03-15|00:52:50]  HPB : process tx                        total=291383 cost=47.006
+INFO [03-15|00:52:50]  HPB : Boe verify the remote.            id=dd79ca8d7eafbbe8 addr=110.240.249.76:30303 conn=dyndial id=dd79ca8d7eafbbe8 result=true
+INFO [03-15|00:52:50]  HPB : Verify the remote hardware.       id=dd79ca8d7eafbbe8 addr=110.240.249.76:30303 conn=dyndial id=dd79ca8d7eafbbe8 result=true
+INFO [03-15|00:52:50]  HPB : P2P set init peer remote type prenode id=dd79ca8d7eafbbe8 port=30303
+INFO [03-15|00:52:50]  HPB : Network has register peer to syncer id=dd79ca8d7eafbbe8 port=30303
+INFO [03-15|00:52:50]  HPB : Start hpb message loop.           id=dd79ca8d7eafbbe8 port=30303
+INFO [03-15|00:52:50]  HPB : Boe verify the remote.            id=135e23b715942b91 addr=78.110.163.126:3004  conn=dyndial id=135e23b715942b91 result=true
+INFO [03-15|00:52:50]  HPB : Verify the remote hardware.       id=135e23b715942b91 addr=78.110.163.126:3004  conn=dyndial id=135e23b715942b91 result=true
+INFO [03-15|00:52:51]  HPB : P2P set init peer remote type prenode id=135e23b715942b91 port=3004
+INFO [03-15|00:52:51]  HPB : process tx                        total=297607 cost=48.006
+INFO [03-15|00:52:51]  HPB : Network has register peer to syncer id=135e23b715942b91 port=3004
+INFO [03-15|00:52:51]  HPB : Start hpb message loop.           id=135e23b715942b91 port=3004
+INFO [03-15|00:52:52]  HPB : Boe verify the remote.            id=aa7a8a8b07ab5f0d addr=218.95.37.250:30303  conn=dyndial id=aa7a8a8b07ab5f0d result=true
+INFO [03-15|00:52:52]  HPB : Verify the remote hardware.       id=aa7a8a8b07ab5f0d addr=218.95.37.250:30303  conn=dyndial id=aa7a8a8b07ab5f0d result=true
+INFO [03-15|00:52:52]  HPB : P2P set init peer remote type prenode id=aa7a8a8b07ab5f0d port=30303
+INFO [03-15|00:52:52]  HPB : Network has register peer to syncer id=aa7a8a8b07ab5f0d port=30303
+INFO [03-15|00:52:52]  HPB : Start hpb message loop.           id=aa7a8a8b07ab5f0d port=30303
+INFO [03-15|00:52:52]  HPB : Boe verify the remote.            id=5b4ca463448ee765 addr=82.161.205.234:30303 conn=dyndial id=5b4ca463448ee765 result=true
+INFO [03-15|00:52:52]  HPB : Verify the remote hardware.       id=5b4ca463448ee765 addr=82.161.205.234:30303 conn=dyndial id=5b4ca463448ee765 result=true
+INFO [03-15|00:52:53]  HPB : P2P set init peer remote type prenode id=5b4ca463448ee765 port=30303
+INFO [03-15|00:52:53]  HPB : Boe verify the remote.            id=dd16a56fe3766ac1 addr=103.205.7.126:30303  conn=dyndial id=dd16a56fe3766ac1 result=true
+INFO [03-15|00:52:53]  HPB : Verify the remote hardware.       id=dd16a56fe3766ac1 addr=103.205.7.126:30303  conn=dyndial id=dd16a56fe3766ac1 result=true
+INFO [03-15|00:52:53]  HPB : P2P set init peer remote type prenode id=dd16a56fe3766ac1 port=30303
+INFO [03-15|00:52:53]  HPB : Network has register peer to syncer id=dd16a56fe3766ac1 port=30303
+INFO [03-15|00:52:53]  HPB : Start hpb message loop.           id=dd16a56fe3766ac1 port=30303
+INFO [03-15|00:52:53]  HPB : Boe verify the remote.            id=6708ca18c07fd056 addr=183.60.143.100:30303 conn=dyndial id=6708ca18c07fd056 result=true
+INFO [03-15|00:52:53]  HPB : Verify the remote hardware.       id=6708ca18c07fd056 addr=183.60.143.100:30303 conn=dyndial id=6708ca18c07fd056 result=true
+INFO [03-15|00:52:53]  HPB : P2P set init peer remote type prenode id=6708ca18c07fd056 port=30303
+INFO [03-15|00:52:53]  HPB : Network has register peer to syncer id=6708ca18c07fd056 port=30303
+INFO [03-15|00:52:53]  HPB : Start hpb message loop.           id=6708ca18c07fd056 port=30303
+INFO [03-15|00:52:55]  HPB : Boe verify the remote.            id=efb478abce96dc9c addr=218.30.67.43:30303   conn=dyndial id=efb478abce96dc9c result=true
+INFO [03-15|00:52:55]  HPB : Verify the remote hardware.       id=efb478abce96dc9c addr=218.30.67.43:30303   conn=dyndial id=efb478abce96dc9c result=true
+INFO [03-15|00:52:55]  HPB : P2P set init peer remote type prenode id=efb478abce96dc9c port=30303
+INFO [03-15|00:52:55]  HPB : Network has register peer to syncer id=efb478abce96dc9c port=30303
+INFO [03-15|00:52:55]  HPB : Start hpb message loop.           id=efb478abce96dc9c port=30303
+
