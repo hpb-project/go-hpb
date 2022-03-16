@@ -1,0 +1,111 @@
+INFO [03-16|10:25:24]  HPB : Create New HpbConfig object 
+INFO [03-16|10:25:24]  HPB : Set global gas cap                cap=50000000
+INFO [03-16|10:25:24]  HPB : Start Node with                   Archived block =-1
+INFO [03-16|10:25:24]  HPB : Initialising Hpb node             network=100
+INFO [03-16|10:25:24]  HPB : Allocated cache and file handles  database=/home/hpb/ssd/testnode/node/data/ghpb/chaindata cache=128 handles=524288
+WARN [03-16|10:25:25]  HPB : Boe init fail. 
+WARN [03-16|10:25:25]  HPB : Get coinbase from boe fail, and set coinbase with account[0] 
+INFO [03-16|10:25:25]  HPB : consensus.HpbNodenumber           value=31
+INFO [03-16|10:25:25]  HPB : consensus.NumberPrehp             value=20
+INFO [03-16|10:25:25]  HPB : consensus.IgnoreRetErr            value=false
+INFO [03-16|10:25:25]  HPB : conf.Prometheus.Period            value=6
+INFO [03-16|10:25:25]  HPB : config.MainnetBootnodes           value=hnode://0a4ee79961f00dcf3601ae662cf010760c8166a22eac5bfddf28ab16513b497f72a1d6ebc6eb7afdfec391fa2b8997b4a74b33e7f3af5c81205f5ebb167658df@bootnode1.hpb.io:30306
+INFO [03-16|10:25:25]  HPB : config.MainnetBootnodes           value=hnode://f31f58a70cd4880f506c8f1038be2c48823bb6f43529b16e82d67f5d74ff3c02e339f6b9ccb61c69c32f798ace3d8c8ac49014e9fefb58d9774c60e6f80c512e@bootnode2.hpb.io:30306
+INFO [03-16|10:25:25]  HPB : config.MainnetBootnodes           value=hnode://230af50ef9f6209129be4879e5e0ce53fdce2de1b48a18388bfb15009998a4985eb864459c3c013f999d1ba44748b10a746e20e02da159f10b104025cb7f932a@bootnode3.hpb.io:30306
+INFO [03-16|10:25:25]  HPB : config.MainnetBootnodes           value=hnode://283d1de984ee071e322a96e3a2e98cfba1adb4dee23e4af5846f72e23b364c11ab5280d1a8511394e03cb4dc6b3b6d86cf862d87afcbd2f324deb220390bbbae@bootnode4.hpb.io:30306
+INFO [03-16|10:25:25]  HPB : config.MainnetBootnodes           value=hnode://33c5b55d6dc4aaf6bcb4502d69bf4ca8db7550e7b01cae1c53fca9ce8b60b440102d4c4dcd578136d64c8934fc90f0ad96bcf828bc611a9bbb7ea33369bc1aa0@bootnode5.hpb.io:30306
+INFO [03-16|10:25:25]  HPB : Loaded most recent local header   number=14105292 hash=79961d…b7d7a6 td=24690625
+INFO [03-16|10:25:25]  HPB : Loaded most recent local full block number=14105292 hash=79961d…b7d7a6 td=24690625
+INFO [03-16|10:25:25]  HPB : Loaded most recent local fast block number=14105292 hash=79961d…b7d7a6 td=24690625
+WARN [03-16|10:25:25]  HPB : Blockchain not empty, fast sync disabled 
+INFO [03-16|10:25:25]  HPB : Set coinbase address by start     address=0x8076f649B5Bb85eeB20424E815eFF1CBE42F1d0e roletype=
+INFO [03-16|10:25:25]  HPB : Change node local type            from=UnknownNode to=PreNode
+INFO [03-16|10:25:25]  HPB : Set Init Local Type by p2p        type=PreNode
+INFO [03-16|10:25:25]  HPB : Starting P2P networking 
+INFO [03-16|10:25:27]  HPB : UDP listener up                   self=hnode://451133d719537926cd8436cb89dad2401004c071630046dd4a90402387cc8678b68d2702ff02d732d2d69aaa57d8394d9daa4dca74b2236b337cfba45a273899@[::]:11111
+ERROR[03-16|10:25:27]  HPB : p2p get boe version               error="init failed"
+INFO [03-16|10:25:27]  HPB : Server start with type.           NodeType=PreNode
+INFO [03-16|10:25:27]  HPB : Start server of bandwidth test.   port=11211
+INFO [03-16|10:25:27]  HPB : IPC endpoint opened               url=/home/hpb/ssd/testnode/node/data/ghpb.ipc
+ERROR[03-16|10:25:27]  HPB : HTTP endpoint is null 
+INFO [03-16|10:25:44]  HPB : Remote node is boot.              id=0a4ee79961f00dcf addr=47.94.20.30:30306 conn=dyndial id=0a4ee79961f00dcf
+INFO [03-16|10:25:44]  HPB : Verify the remote hardware.       id=0a4ee79961f00dcf addr=47.94.20.30:30306 conn=dyndial id=0a4ee79961f00dcf result=true
+INFO [03-16|10:25:44]  HPB : Remote node is boot.              id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f
+INFO [03-16|10:25:44]  HPB : Verify the remote hardware.       id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f result=true
+INFO [03-16|10:25:45]  HPB : P2P set init peer remote type bootnode id=0a4ee79961f00dcf port=30306
+INFO [03-16|10:25:45]  HPB : Start hpb message loop.           id=0a4ee79961f00dcf port=30306
+INFO [03-16|10:25:45]  HPB : P2P set init peer remote type bootnode id=f31f58a70cd4880f port=30306
+INFO [03-16|10:25:45]  HPB : Start hpb message loop.           id=f31f58a70cd4880f port=30306
+INFO [03-16|10:25:46]  HPB : Remote node is boot.              id=230af50ef9f62091 addr=47.75.213.166:30306  conn=dyndial id=230af50ef9f62091
+INFO [03-16|10:25:46]  HPB : Verify the remote hardware.       id=230af50ef9f62091 addr=47.75.213.166:30306  conn=dyndial id=230af50ef9f62091 result=true
+INFO [03-16|10:25:46]  HPB : P2P set init peer remote type bootnode id=230af50ef9f62091 port=30306
+INFO [03-16|10:25:46]  HPB : Start hpb message loop.           id=230af50ef9f62091 port=30306
+INFO [03-16|10:25:46]  HPB : proBondall stop by peer disconnected. 
+INFO [03-16|10:25:47]  HPB : Remote node is boot.              id=283d1de984ee071e addr=47.88.60.227:30306   conn=dyndial id=283d1de984ee071e
+INFO [03-16|10:25:47]  HPB : Verify the remote hardware.       id=283d1de984ee071e addr=47.88.60.227:30306   conn=dyndial id=283d1de984ee071e result=true
+INFO [03-16|10:25:47]  HPB : P2P set init peer remote type bootnode id=283d1de984ee071e port=30306
+INFO [03-16|10:25:47]  HPB : Start hpb message loop.           id=283d1de984ee071e port=30306
+INFO [03-16|10:25:49]  HPB : Remote node is boot.              id=33c5b55d6dc4aaf6 addr=47.254.133.46:30306  conn=dyndial id=33c5b55d6dc4aaf6
+INFO [03-16|10:25:49]  HPB : Verify the remote hardware.       id=33c5b55d6dc4aaf6 addr=47.254.133.46:30306  conn=dyndial id=33c5b55d6dc4aaf6 result=true
+INFO [03-16|10:25:49]  HPB : P2P set init peer remote type bootnode id=33c5b55d6dc4aaf6 port=30306
+INFO [03-16|10:25:49]  HPB : Start hpb message loop.           id=33c5b55d6dc4aaf6 port=30306
+INFO [03-16|10:26:01]  HPB : process block                     total=1 cost=3.776
+INFO [03-16|10:26:05]  HPB : process block                     total=2 cost=7.459
+INFO [03-16|10:26:08]  HPB : process block                     total=3 cost=11.148
+INFO [03-16|10:26:13]  HPB : process block                     total=4 cost=15.378
+INFO [03-16|10:26:16]  HPB : process block                     total=5 cost=19.013
+INFO [03-16|10:26:20]  HPB : process block                     total=6 cost=22.582
+INFO [03-16|10:26:23]  HPB : process block                     total=7 cost=26.139
+INFO [03-16|10:26:27]  HPB : process block                     total=8 cost=29.704
+INFO [03-16|10:26:30]  HPB : process block                     total=9 cost=33.261
+INFO [03-16|10:26:33]  HPB : Boe verify the remote.            id=135e23b715942b91 addr=78.110.163.126:3004  conn=dyndial id=135e23b715942b91 result=true
+INFO [03-16|10:26:33]  HPB : Verify the remote hardware.       id=135e23b715942b91 addr=78.110.163.126:3004  conn=dyndial id=135e23b715942b91 result=true
+INFO [03-16|10:26:34]  HPB : P2P set init peer remote type prenode id=135e23b715942b91 port=3004
+INFO [03-16|10:26:34]  HPB : Network has register peer to syncer id=135e23b715942b91 port=3004
+INFO [03-16|10:26:34]  HPB : Start hpb message loop.           id=135e23b715942b91 port=3004
+INFO [03-16|10:26:34]  HPB : process block                     total=10 cost=36.873
+INFO [03-16|10:26:35]  HPB : Block synchronisation started 
+INFO [03-16|10:26:37]  HPB : Boe verify the remote.            id=99c381f9c2ea02fe addr=103.205.7.103:30303  conn=dyndial id=99c381f9c2ea02fe result=true
+INFO [03-16|10:26:37]  HPB : Verify the remote hardware.       id=99c381f9c2ea02fe addr=103.205.7.103:30303  conn=dyndial id=99c381f9c2ea02fe result=true
+INFO [03-16|10:26:37]  HPB : P2P set init peer remote type prenode id=99c381f9c2ea02fe port=30303
+INFO [03-16|10:26:38]  HPB : process block                     total=11 cost=40.451
+INFO [03-16|10:26:38]  HPB : Network has register peer to syncer id=99c381f9c2ea02fe port=30303
+INFO [03-16|10:26:38]  HPB : Start hpb message loop.           id=99c381f9c2ea02fe port=30303
+WARN [03-16|10:26:41]  HPB : Ancestor below allowance          peer=135e23b715942b91 number=14015292 hash=000000…000000 allowance=14015292
+WARN [03-16|10:26:41]  HPB : Synchronisation failed, dropping peer peer=135e23b715942b91 err="retrieved ancestor is invalid"
+ERROR[03-16|10:26:41]  HPB : SYN DO REMOVER PEER               peer=135e23b715942b91
+INFO [03-16|10:26:41]  HPB : process block                     total=12 cost=44.052
+INFO [03-16|10:26:45]  HPB : process block                     total=13 cost=47.720
+INFO [03-16|10:26:48]  HPB : Boe verify the remote.            id=9797b0f94b2b7305 addr=103.205.7.131:30303  conn=dyndial id=9797b0f94b2b7305 result=true
+INFO [03-16|10:26:48]  HPB : Verify the remote hardware.       id=9797b0f94b2b7305 addr=103.205.7.131:30303  conn=dyndial id=9797b0f94b2b7305 result=true
+INFO [03-16|10:26:49]  HPB : process block                     total=14 cost=51.465
+INFO [03-16|10:26:49]  HPB : Boe verify the remote.            id=b3bad2fe21c213ff addr=103.205.7.109:30303  conn=dyndial id=b3bad2fe21c213ff result=true
+INFO [03-16|10:26:49]  HPB : Verify the remote hardware.       id=b3bad2fe21c213ff addr=103.205.7.109:30303  conn=dyndial id=b3bad2fe21c213ff result=true
+INFO [03-16|10:26:50]  HPB : P2P set init peer remote type prenode id=b3bad2fe21c213ff port=30303
+INFO [03-16|10:26:50]  HPB : P2P set init peer remote type prenode id=9797b0f94b2b7305 port=30303
+INFO [03-16|10:26:51]  HPB : Network has register peer to syncer id=9797b0f94b2b7305 port=30303
+INFO [03-16|10:26:51]  HPB : Start hpb message loop.           id=9797b0f94b2b7305 port=30303
+INFO [03-16|10:26:51]  HPB : Network has register peer to syncer id=b3bad2fe21c213ff port=30303
+INFO [03-16|10:26:51]  HPB : Start hpb message loop.           id=b3bad2fe21c213ff port=30303
+INFO [03-16|10:26:52]  HPB : process block                     total=15 cost=55.120
+WARN [03-16|10:26:53]  HPB : Ancestor below allowance          peer=99c381f9c2ea02fe number=14015292 hash=000000…000000 allowance=14015292
+WARN [03-16|10:26:53]  HPB : Synchronisation failed, dropping peer peer=99c381f9c2ea02fe err="retrieved ancestor is invalid"
+ERROR[03-16|10:26:53]  HPB : SYN DO REMOVER PEER               peer=99c381f9c2ea02fe
+INFO [03-16|10:26:56]  HPB : process block                     total=16 cost=58.815
+INFO [03-16|10:27:00]  HPB : process block                     total=17 cost=62.560
+INFO [03-16|10:27:03]  HPB : process block                     total=18 cost=66.192
+INFO [03-16|10:27:07]  HPB : process block                     total=19 cost=69.876
+INFO [03-16|10:27:11]  HPB : process block                     total=20 cost=73.563
+INFO [03-16|10:27:14]  HPB : process block                     total=21 cost=77.214
+INFO [03-16|10:27:16]  HPB : Remote node is boot.              id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f
+INFO [03-16|10:27:16]  HPB : Verify the remote hardware.       id=f31f58a70cd4880f addr=47.100.250.120:30306 conn=dyndial id=f31f58a70cd4880f result=true
+INFO [03-16|10:27:16]  HPB : P2P set init peer remote type bootnode id=f31f58a70cd4880f port=30306
+INFO [03-16|10:27:16]  HPB : Start hpb message loop.           id=f31f58a70cd4880f port=30306
+INFO [03-16|10:27:17]  HPB : Boe verify the remote.            id=b95075ec67507206 addr=218.24.35.162:30303  conn=dyndial id=b95075ec67507206 result=true
+INFO [03-16|10:27:17]  HPB : Verify the remote hardware.       id=b95075ec67507206 addr=218.24.35.162:30303  conn=dyndial id=b95075ec67507206 result=true
+INFO [03-16|10:27:17]  HPB : P2P set init peer remote type prenode id=b95075ec67507206 port=30303
+INFO [03-16|10:27:17]  HPB : Network has register peer to syncer id=b95075ec67507206 port=30303
+INFO [03-16|10:27:17]  HPB : Start hpb message loop.           id=b95075ec67507206 port=30303
+INFO [03-16|10:27:18]  HPB : process block                     total=22 cost=80.564
+^CINFO [03-16|10:27:18]  HPB : Got interrupt, shutting down... 
+

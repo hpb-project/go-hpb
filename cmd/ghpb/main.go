@@ -259,7 +259,7 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 
 	var testflag = ctx.GlobalInt64(utils.TestFlag.Name)
 	if testflag != 0 {
-		{
+		if false {
 			// tx process test.
 			var blocknumber uint64 = 13965331
 			db := stack.ChainDb()
@@ -305,6 +305,48 @@ func startNode(ctx *cli.Context, stack *node.Node, conf *config.HpbConfig) {
 				statedb.Reset(parent.Root())
 				if time.Now().After(last.Add(time.Second)) {
 					log.Info("process tx ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
+					last = time.Now()
+				}
+			}
+		}
+		if true {
+			// block process test.
+			var blocknumber uint64 = 1756677
+			db := stack.ChainDb()
+			memdb := state.NewDatabase(db)
+			block := stack.Hpbbc.GetBlockByNumber(blocknumber)
+			parent := stack.Hpbbc.GetBlockByNumber(blocknumber - 1)
+
+			blocks := make([]*types.Block, 0)
+			for i := 0; i < 1000; i++ {
+				b := bc.GetBlock(stack.ChainDb(), block.Hash(), block.NumberU64()) // get more real instance.
+				blocks = append(blocks, b)
+			}
+
+			statedb, err := state.New(parent.Root(), memdb)
+			if err != nil {
+				log.Error("state new failed", "err", err)
+			}
+
+			synsigner := types.MakeSigner(stack.Hpbbc.Config())
+			processer := bc.NewStateProcessor(stack.Hpbbc.Config(), stack.BlockChain(), stack.Hpbbc.Engine())
+
+			var start = time.Now()
+			var last = start
+
+			for i, b := range blocks {
+				if testflag == 1 {
+					// boe use hardware.
+					go func(txs types.Transactions) {
+						for _, tx := range txs {
+							types.ASynSender(synsigner, tx)
+						}
+					}(b.Transactions())
+				}
+				processer.Process(b, statedb)
+				statedb.Reset(parent.Root())
+				if time.Now().After(last.Add(time.Second)) {
+					log.Info("process block ", "total", i+1, "cost", time.Now().Sub(start).Seconds())
 					last = time.Now()
 				}
 			}

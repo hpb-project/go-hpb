@@ -18,8 +18,9 @@ package bc
 
 import (
 	"encoding/json"
-	"github.com/hpb-project/go-hpb/vmcore/vm"
 	"math/big"
+
+	"github.com/hpb-project/go-hpb/vmcore/vm"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"
@@ -68,12 +69,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		gp           = new(GasPool).AddGas(block.GasLimit().Uint64())
 	)
 	bNewVersion := block.Number().Uint64() > consensus.NewContractVersion
-	synsigner := types.MakeSigner(p.config)
-	go func(txs types.Transactions) {
-		for _, tx := range txs {
-			types.ASynSender(synsigner, tx)
-		}
-	}(block.Transactions())
 
 	// Iterate over and process the individual transactions
 	author, _ := p.engine.Author(block.Header())
