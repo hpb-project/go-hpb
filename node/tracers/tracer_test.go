@@ -48,7 +48,7 @@ type dummyStatedb struct {
 	state.StateDB
 }
 
-func (*dummyStatedb) GetRefund() *big.Int { return big.NewInt(1337) }
+func (*dummyStatedb) GetRefund() uint64 { return big.NewInt(1337).Uint64() }
 
 func runTrace(tracer *Tracer) (json.RawMessage, error) {
 

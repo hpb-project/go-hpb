@@ -27,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	params "github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/evm/vm"
+	"github.com/hpb-project/go-hpb/vmcore"
 )
 
 // Config is a basic type specifying certain configuration flags for running
@@ -101,7 +102,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	var (
 		address = common.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
-		sender  = vm.AccountRef(cfg.Origin)
+		sender  = vmcore.AccountRef(cfg.Origin)
 	)
 
 	cfg.State.CreateAccount(address)
@@ -132,7 +133,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	}
 	var (
 		vmenv  = NewEnv(cfg)
-		sender = vm.AccountRef(cfg.Origin)
+		sender = vmcore.AccountRef(cfg.Origin)
 	)
 
 	// Call the code with the given configuration.

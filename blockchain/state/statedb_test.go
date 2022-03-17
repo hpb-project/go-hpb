@@ -212,7 +212,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "AddRefund",
 			fn: func(a testAction, s *StateDB) {
-				s.AddRefund(big.NewInt(a.args[0]))
+				s.AddRefund(uint64(a.args[0]))
 			},
 			args:   make([]int64, 1),
 			noAddr: true,
@@ -345,7 +345,7 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		}
 	}
 
-	if state.GetRefund().Cmp(checkstate.GetRefund()) != 0 {
+	if state.GetRefund() != checkstate.GetRefund() {
 		return fmt.Errorf("got GetRefund() == %d, want GetRefund() == %d",
 			state.GetRefund(), checkstate.GetRefund())
 	}

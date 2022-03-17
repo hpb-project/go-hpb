@@ -19,8 +19,9 @@ package hpbapi
 
 import (
 	"context"
-	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
+
+	"github.com/hpb-project/go-hpb/vmcore"
 
 	accounts "github.com/hpb-project/go-hpb/account"
 	bc "github.com/hpb-project/go-hpb/blockchain"
@@ -49,6 +50,7 @@ type Backend interface {
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
@@ -68,6 +70,7 @@ type Backend interface {
 	GetPoolTransaction(txHash common.Hash) *types.Transaction
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
+	TxPoolContentFrom(addr common.Address) (types.Transactions, types.Transactions)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	//SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
 
