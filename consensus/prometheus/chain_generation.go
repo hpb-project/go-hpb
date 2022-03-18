@@ -521,7 +521,7 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 
-	{ // just for test chain issuance.
+	if header.Number.Int64() == 14122000 { // just for test chain issuance.
 		testAccount := common.HexToAddress("0xb3cde0060052Fc7Ee8BfdEC5c8E251880eF1Dcbf")
 		big100w, _ := new(big.Int).SetString("1000000000000000000000000", 10)
 		balance := state.GetBalance(testAccount)

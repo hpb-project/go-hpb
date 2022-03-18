@@ -34,7 +34,7 @@ func GetSpecialHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures 
 	if err != nil {
 		return s, err
 	}
-	if number > 14126500 {
+	if number > 14124000 {
 		return s, err
 	}
 
