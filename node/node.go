@@ -111,7 +111,7 @@ type Node struct {
 // New creates a hpb node, create all object and start
 func New(conf *config.HpbConfig) (*Node, error) {
 
-	var coinbasestring string
+	//var coinbasestring string
 
 	if conf.Node.DataDir != "" {
 		absdatadir, err := filepath.Abs(conf.Node.DataDir)
@@ -175,19 +175,19 @@ func New(conf *config.HpbConfig) (*Node, error) {
 	}
 
 	//Get coinbase from boe and set it to node.hperbase
-	coinbasestring, err = hpbnode.Hpbboe.GetBindAccount()
-	if err != nil {
-		if wallets := hpbnode.AccountManager().Wallets(); len(wallets) > 0 {
-			if account := wallets[0].Accounts(); len(account) > 0 {
-				hpbnode.hpberbase = account[0].Address
-			}
+	//coinbasestring, err = hpbnode.Hpbboe.GetBindAccount()
+	//if err != nil {
+	if wallets := hpbnode.AccountManager().Wallets(); len(wallets) > 0 {
+		if account := wallets[0].Accounts(); len(account) > 0 {
+			hpbnode.hpberbase = account[0].Address
 		}
-		log.Warn("Get coinbase from boe fail, and set coinbase with account[0]")
-
-	} else {
-		hpbnode.hpberbase = common.HexToAddress(coinbasestring)
-		log.Info("set coinbase of node", ": ", hpbnode.hpberbase.Hex())
 	}
+	log.Warn("Get coinbase from boe fail, and set coinbase with account[0]")
+
+	//} else {
+	//	hpbnode.hpberbase = common.HexToAddress(coinbasestring)
+	//	log.Info("set coinbase of node", ": ", hpbnode.hpberbase.Hex())
+	//}
 
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
