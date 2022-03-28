@@ -19,6 +19,7 @@ package bc
 import (
 	"errors"
 	"fmt"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -26,9 +27,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/consensus"
-	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/hvm/evm"
-	"github.com/hpb-project/go-hpb/hvm/native"
 )
 
 var (
@@ -56,21 +54,21 @@ The state transitioning model does all all the necessary work to work out a vali
 */
 type StateTransition struct {
 	gp         *GasPool
-	msg        hvm.Message
+	msg        vmcore.Message
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
-	state      evm.StateDB
+	state      vmcore.StateDB
 	native     bool
 	header     *types.Header
 	author     *common.Address
-	evm        *evm.EVM
+	evm        vmcore.EVM
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool, header *types.Header) *StateTransition {
+func NewStateTransition(evm vmcore.EVM, msg vmcore.Message, gp *GasPool, header *types.Header) *StateTransition {
 	return &StateTransition{
 		evm:      evm,
 		gp:       gp,
@@ -78,11 +76,11 @@ func NewStateTransition(evm *evm.EVM, msg hvm.Message, gp *GasPool, header *type
 		gasPrice: msg.GasPrice(),
 		value:    msg.Value(),
 		data:     msg.Data(),
-		state:    evm.StateDB,
+		state:    evm.GetStateDB(),
 		header:   header,
 	}
 }
-func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
+func NewStateTransitionNonEVM(msg vmcore.Message, gp *GasPool, statedb *state.StateDB, header *types.Header, author *common.Address) *StateTransition {
 	return &StateTransition{
 		gp:       gp,
 		msg:      msg,
@@ -99,7 +97,7 @@ func NewStateTransitionNonEVM(msg hvm.Message, gp *GasPool, statedb *state.State
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
+func ApplyMessageNonContract(msg vmcore.Message, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header) ([]byte, *big.Int, bool, error) {
 	st := NewStateTransitionNonEVM(msg, gp, statedb, header, author)
 
 	ret, _, gasUsed, failed, err := st.TransitionOnNative(bc)
@@ -113,28 +111,28 @@ func ApplyMessageNonContract(msg hvm.Message, bc *BlockChain, author *common.Add
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *evm.EVM, msg hvm.Message, gp *GasPool, header *types.Header) (*ExecutionResult, error) {
+func ApplyMessage(evm vmcore.EVM, msg vmcore.Message, gp *GasPool, header *types.Header) (*ExecutionResult, error) {
 	return NewStateTransition(evm, msg, gp, header).TransitionDb()
 }
 
-func (st *StateTransition) from() evm.AccountRef {
+func (st *StateTransition) from() vmcore.AccountRef {
 	f := st.msg.From()
 	if !st.state.Exist(f) {
 		st.state.CreateAccount(f)
 	}
-	return evm.AccountRef(f)
+	return vmcore.AccountRef(f)
 }
 
-func (st *StateTransition) to() evm.AccountRef {
+func (st *StateTransition) to() vmcore.AccountRef {
 	if st.msg == nil {
-		return evm.AccountRef{}
+		return vmcore.AccountRef{}
 	}
 	to := st.msg.To()
 	if to == nil {
-		return evm.AccountRef{} // contract creation
+		return vmcore.AccountRef{} // contract creation
 	}
 
-	reference := evm.AccountRef(*to)
+	reference := vmcore.AccountRef(*to)
 	if !st.state.Exist(*to) {
 		st.state.CreateAccount(*to)
 	}
@@ -143,7 +141,7 @@ func (st *StateTransition) to() evm.AccountRef {
 
 func (st *StateTransition) useGas(amount uint64) error {
 	if st.gas < amount {
-		return fmt.Errorf("%w: have %d, want %d", evm.ErrIntrinsicGas, st.gas, amount)
+		return fmt.Errorf("%w: have %d, want %d", vmcore.ErrIntrinsicGas, st.gas, amount)
 	}
 	st.gas -= amount
 
@@ -200,14 +198,14 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	}
 
 	// Fail if we're trying to transfer more than the available balance
-	if !native.CanTransfer(st.state, from, msg.Value()) {
+	if !vmcore.CanTransfer(st.state, from, msg.Value()) {
 		return nil, nil, nil, false, ErrInsufficientBalance
 	}
 
 	if !st.state.Exist(st.to().Address()) {
 		st.state.CreateAccount(to)
 	}
-	native.Transfer(st.state, from, to, st.msg.Value())
+	vmcore.Transfer(st.state, from, to, st.msg.Value())
 
 	sender := st.from()
 	st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
@@ -241,7 +239,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Pay intrinsic gas
 	intrinsicGas := types.IntrinsicGas(st.data, contractCreation, st.header.Number.Uint64() > consensus.StageNumberNewPrecompiledContract)
 	if intrinsicGas.BitLen() > 64 {
-		return nil, hvm.ErrOutOfGas
+		return nil, vmcore.ErrOutOfGas
 	}
 
 	if err := st.useGas(intrinsicGas.Uint64()); err != nil {
@@ -264,7 +262,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+	st.state.AddBalance(st.evm.GetCoinbase(), new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed().Uint64(),
@@ -282,7 +280,7 @@ func (st *StateTransition) refundGas() {
 
 	// Apply refund counter, capped to half of the used gas.
 	uhalf := remaining.Div(st.gasUsed(), common.Big2)
-	refund := math.BigMin(uhalf, st.state.GetRefund())
+	refund := math.BigMin(uhalf, new(big.Int).SetUint64(st.state.GetRefund()))
 	st.gas += refund.Uint64()
 
 	st.state.AddBalance(sender.Address(), refund.Mul(refund, st.gasPrice))
@@ -326,7 +324,7 @@ func (result *ExecutionResult) Return() []byte {
 // Revert returns the concrete revert reason if the execution is aborted by `REVERT`
 // opcode. Note the reason can be nil if no data supplied with revert opcode.
 func (result *ExecutionResult) Revert() []byte {
-	if result.Err != evm.ErrExecutionReverted {
+	if result.Err != vmcore.ErrExecutionReverted {
 		return nil
 	}
 	return common.CopyBytes(result.ReturnData)

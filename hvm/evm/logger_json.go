@@ -55,7 +55,7 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint
 		MemorySize:    memory.Len(),
 		Storage:       nil,
 		Depth:         depth,
-		RefundCounter: env.StateDB.GetRefund().Uint64(),
+		RefundCounter: env.StateDB.GetRefund(),
 		Err:           err,
 	}
 	if !l.cfg.DisableMemory {

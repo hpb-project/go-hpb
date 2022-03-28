@@ -21,6 +21,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/vmcore"
+
 	accounts "github.com/hpb-project/go-hpb/account"
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/state"
@@ -29,7 +31,6 @@ import (
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/synctrl"
 )
@@ -49,6 +50,7 @@ type Backend interface {
 	// BlockChain API
 	SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
@@ -57,7 +59,7 @@ type Backend interface {
 	GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
 	GetTd(blockHash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmCfg evm.Config) (*evm.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header) (vmcore.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- bc.ChainEvent) sub.Subscription
 	SubscribeChainHeadEvent(ch chan<- bc.ChainHeadEvent) sub.Subscription
 	SubscribeChainSideEvent(ch chan<- bc.ChainSideEvent) sub.Subscription
@@ -68,9 +70,11 @@ type Backend interface {
 	GetPoolTransaction(txHash common.Hash) *types.Transaction
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
+	TxPoolContentFrom(addr common.Address) (types.Transactions, types.Transactions)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	//SubscribeTxPreEvent(chan<- bc.TxPreEvent) sub.Subscription
 
+	GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	ChainConfig() *config.ChainConfig
 	CurrentBlock() *types.Block
 }

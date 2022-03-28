@@ -68,9 +68,9 @@ type Work struct {
 	signer types.Signer
 
 	state     *state.StateDB // apply state changes here
-	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
-	family    *set.Set       // family set (used for checking uncle invalidity)
-	uncles    *set.Set       // uncle set
+	ancestors set.Interface  // ancestor set (used for checking uncle parent validity)
+	family    set.Interface  // family set (used for checking uncle invalidity)
+	uncles    set.Interface  // uncle set
 	tcount    int            // tx count in cycle
 
 	Block *types.Block // the new block
@@ -343,9 +343,9 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		config:    self.config,
 		signer:    types.NewBoeSigner(self.config.ChainId),
 		state:     state,
-		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
+		ancestors: set.New(set.ThreadSafe),
+		family:    set.New(set.ThreadSafe),
+		uncles:    set.New(set.ThreadSafe),
 		header:    header,
 		createdAt: time.Now(),
 	}

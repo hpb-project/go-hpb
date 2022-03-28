@@ -21,6 +21,9 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/hpb-project/go-hpb/vmcore"
+	"github.com/hpb-project/go-hpb/vmcore/vm"
+
 	accounts "github.com/hpb-project/go-hpb/account"
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/bloombits"
@@ -31,8 +34,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/event/sub"
-	"github.com/hpb-project/go-hpb/hvm"
-	"github.com/hpb-project/go-hpb/hvm/evm"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/synctrl"
@@ -50,6 +51,10 @@ func (b *HpbApiBackend) ChainConfig() *config.ChainConfig {
 
 func (b *HpbApiBackend) CurrentBlock() *types.Block {
 	return b.hpb.Hpbbc.CurrentBlock()
+}
+
+func (b *HpbApiBackend) CurrentHeader() *types.Header {
+	return b.hpb.Hpbbc.CurrentHeader()
 }
 
 func (b *HpbApiBackend) SetHead(number uint64) {
@@ -115,6 +120,27 @@ func (b *HpbApiBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash r
 	return nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
+func (b *HpbApiBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.HeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.hpb.BlockChain().GetHeaderByHash(hash)
+		if header == nil {
+			return nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.hpb.BlockChain().GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, errors.New("hash is not currently canonical")
+		}
+		header = b.hpb.BlockChain().GetHeader(hash, header.Number.Uint64())
+		if header == nil {
+			return nil, errors.New("header found, but block body is missing")
+		}
+		return header, nil
+	}
+	return nil, errors.New("invalid arguments; neither block nor hash specified")
+}
+
 func (b *HpbApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -158,6 +184,10 @@ func (b *HpbApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) (*t
 	return b.hpb.Hpbbc.GetBlockByHash(blockHash), nil
 }
 
+func (b *HpbApiBackend) GetTransaction(ctx context.Context, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+	return bc.GetTransaction(b.hpb.HpbDb, hash)
+}
+
 func (b *HpbApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
 	return bc.GetBlockReceipts(b.hpb.HpbDb, blockHash, bc.GetBlockNumber(b.hpb.HpbDb, blockHash)), nil
 }
@@ -166,12 +196,10 @@ func (b *HpbApiBackend) GetTd(blockHash common.Hash) *big.Int {
 	return b.hpb.Hpbbc.GetTdByHash(blockHash)
 }
 
-func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header, vmConfig evm.Config) (*evm.EVM, func() error, error) {
+func (b *HpbApiBackend) GetEVM(ctx context.Context, msg types.Message, state *state.StateDB, header *types.Header) (vmcore.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
-
-	context := hvm.NewEVMContext(msg, header, b.hpb.BlockChain(), nil)
-	return evm.NewEVM(context, state, &b.hpb.Hpbconfig.BlockChain, vmConfig), vmError, nil
+	return vm.NewEVM(&b.hpb.Hpbconfig.BlockChain, msg, header, b.hpb.BlockChain(), nil, state), vmError, nil
 }
 
 func (b *HpbApiBackend) SubscribeRemovedLogsEvent(ch chan<- bc.RemovedLogsEvent) sub.Subscription {
@@ -224,6 +252,10 @@ func (b *HpbApiBackend) Stats() (pending int, queued int) {
 
 func (b *HpbApiBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	return b.hpb.TxPool().Content()
+}
+
+func (b *HpbApiBackend) TxPoolContentFrom(addr common.Address) (types.Transactions, types.Transactions) {
+	return b.hpb.TxPool().ContentFrom(addr)
 }
 
 func (b *HpbApiBackend) SubscribeTxPreEvent(ch chan<- bc.TxPreEvent) sub.Subscription {

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -103,6 +104,14 @@ type headerMarshaling struct {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
+}
+
+var headerSize = common.StorageSize(reflect.TypeOf(Header{}).Size())
+
+// Size returns the approximate memory used by all internal contents. It is used
+// to approximate and limit the memory consumption of various caches.
+func (h *Header) Size() common.StorageSize {
+	return headerSize + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen())/8)
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.

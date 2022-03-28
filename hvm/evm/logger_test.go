@@ -33,8 +33,9 @@ func (dummyContractRef) ReturnGas(*big.Int)          {}
 func (dummyContractRef) Address() common.Address     { return common.Address{} }
 func (dummyContractRef) Value() *big.Int             { return new(big.Int) }
 func (dummyContractRef) SetCode(common.Hash, []byte) {}
-func (d *dummyContractRef) ForEachStorage(callback func(key, value common.Hash) bool) {
+func (d *dummyContractRef) ForEachStorage(addr common.Address, callback func(key, value common.Hash) bool) error {
 	d.calledForEach = true
+	return nil
 }
 func (d *dummyContractRef) SubBalance(amount *big.Int) {}
 func (d *dummyContractRef) AddBalance(amount *big.Int) {}
@@ -46,7 +47,7 @@ type dummyStatedb struct {
 	state.StateDB
 }
 
-func (*dummyStatedb) GetRefund() *big.Int { return big.NewInt(1337) }
+func (*dummyStatedb) GetRefund() uint64 { return 1337 }
 
 func TestStoreCapture(t *testing.T) {
 	var (

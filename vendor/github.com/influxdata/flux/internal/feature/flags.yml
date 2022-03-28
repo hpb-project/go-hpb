@@ -1,0 +1,41 @@
+# This file defines feature flags.
+#
+# It is used for code generation in the ./internal/feature package.
+# If you change this file, run `make generate` to regenerate.
+#
+# Format details:
+#
+# - name:         Human-readable name
+#   description:  Human-readable description
+#   key:          Programmatic name
+#   default:      Used when unable to reach server and to infer flag type
+#   contact:      Contact for information or issues regarding the flag
+- name: Narrow Transformation Filter
+  description: Enable the NarrowTransformation implementation of filter
+  key: narrowTransformationFilter
+  default: false
+  contact: Jonathan Sternberg
+
+- name: Aggregate Transformation Transport
+  description: Enable Transport interface for AggregateTransformation
+  key: aggregateTransformationTransport
+  default: false
+  contact: Jonathan Sternberg
+
+- name: Group Transformation Group
+  description: Enable GroupTransformation interface for the group function
+  key: groupTransformationGroup
+  default: false
+  contact: Sean Brickley
+
+- name: Query Concurrency Limit
+  description: Sets the query concurrency limit for the planner
+  key: queryConcurrencyLimit
+  default: 0
+  contact: Jonathan Sternberg
+
+- name: Optimize Derivative
+  description: Enable derivative optimization
+  key: optimizeDerivative
+  default: false
+  contact: Jonathan Sternberg

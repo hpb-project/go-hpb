@@ -17,7 +17,7 @@
 package evm
 
 import (
-	"encoding/json"
+	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -35,8 +35,8 @@ import (
 var emptyCodeHash = crypto.Keccak256Hash(nil)
 
 type (
-	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
-	TransferFunc    func(StateDB, common.Address, common.Address, *big.Int)
+	CanTransferFunc func(vmcore.StateDB, common.Address, *big.Int) bool
+	TransferFunc    func(vmcore.StateDB, common.Address, common.Address, *big.Int)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
@@ -78,7 +78,7 @@ type Context struct {
 	GasPrice *big.Int       // Provides information for GASPRICE
 
 	// Block information
-	Coinbase    common.Address // Provides information for COINBASE
+	Miner       common.Address // Provides information for COINBASE
 	GasLimit    *big.Int       // Provides information for GASLIMIT
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
@@ -96,31 +96,11 @@ type Context struct {
 //
 // The EVM should never be reused and is not thread safe.
 
-type State_Diff struct {
-	from     common.Address //transfer from address
-	to       common.Address //transfer to address
-	tvalue   string         //transfer value
-	gaslimit uint64         //transfer gaslimit
-	depth    int            //evm depth
-	id       int            //evm transfer counts
-}
-
-func (statediff State_Diff) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"from":     statediff.from,
-		"to":       statediff.to,
-		"value":    statediff.tvalue,
-		"gaslimit": statediff.gaslimit,
-		"depth":    statediff.depth,
-		"id":       statediff.id,
-	})
-}
-
 type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
 	// StateDB gives access to the underlying state
-	StateDB StateDB
+	StateDB vmcore.StateDB
 	// Depth is the current call stack
 	depth int
 
@@ -135,7 +115,7 @@ type EVM struct {
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort     int32
-	StateDiff []*State_Diff
+	StateDiff []*vmcore.State_Diff
 	depthid   [config.CallCreateDepth]int
 }
 
@@ -164,19 +144,19 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 
 // CanTransfer checks wether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db StateDB, addr common.Address, amount *big.Int) bool {
+func CanTransfer(db vmcore.StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db StateDB, sender, recipient common.Address, amount *big.Int) {
+func Transfer(db vmcore.StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
 }
 
 // NewEVM retutrns a new EVM . The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb StateDB, chainConfig *config.ChainConfig, vmConfig Config) *EVM {
+func NewEVM(ctx Context, statedb vmcore.StateDB, chainConfig *config.ChainConfig, vmConfig Config) *EVM {
 	evm := &EVM{
 		Context:     ctx,
 		StateDB:     statedb,
@@ -203,7 +183,7 @@ func (evm *EVM) Cancelled() bool {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller vmcore.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -218,7 +198,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	var (
-		to       = AccountRef(addr)
+		to       = vmcore.AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
@@ -260,13 +240,13 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	} else {
 		log.Debug("EVM Transfer", "caller", caller.Address(), "to", to.Address(), "value", value.String())
 
-		statediff := &State_Diff{
-			from:     caller.Address(),
-			to:       to.Address(),
-			tvalue:   value.String(),
-			gaslimit: gas,
-			depth:    evm.depth,
-			id:       evm.depthid[evm.depth],
+		statediff := &vmcore.State_Diff{
+			From:     caller.Address(),
+			To:       to.Address(),
+			Tvalue:   value.String(),
+			Gaslimit: gas,
+			Depth:    evm.depth,
+			Id:       evm.depthid[evm.depth],
 		}
 		evm.depthid[evm.depth]++
 		evm.StateDiff = append(evm.StateDiff, statediff)
@@ -275,7 +255,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte) (ret []byte, err error) {
+func (evm *EVM) InnerCall(caller vmcore.ContractRef, addr common.Address, input []byte) (ret []byte, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, nil
 	}
@@ -286,7 +266,7 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 	}
 
 	var (
-		to       = AccountRef(addr)
+		to       = vmcore.AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
@@ -317,7 +297,7 @@ func (evm *EVM) InnerCall(caller ContractRef, addr common.Address, input []byte)
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) CallCode(caller vmcore.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -333,7 +313,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 
 	var (
 		snapshot = evm.StateDB.Snapshot()
-		to       = AccountRef(caller.Address())
+		to       = vmcore.AccountRef(caller.Address())
 	)
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped evmironment for this execution context
@@ -356,7 +336,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 //
 // DelegateCall differs from CallCode in the sense that it executes the given address'
 // code with the caller as context and the caller is set to the caller of the caller.
-func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) DelegateCall(caller vmcore.ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -367,7 +347,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 
 	var (
 		snapshot = evm.StateDB.Snapshot()
-		to       = AccountRef(caller.Address())
+		to       = vmcore.AccountRef(caller.Address())
 	)
 
 	// Initialise a new contract and make initialise the delegate values
@@ -388,7 +368,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 // as parameters while disallowing any modifications to the state during the call.
 // Opcodes that attempt to perform such modifications will result in exceptions
 // instead of performing the modifications.
-func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) StaticCall(caller vmcore.ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -405,7 +385,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	}
 
 	var (
-		to       = AccountRef(addr)
+		to       = vmcore.AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
 	)
 	// Initialise a new contract and set the code that is to be used by the
@@ -428,7 +408,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 }
 
 // Create creates a new contract using code as deployment code.
-func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create(caller vmcore.ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -456,7 +436,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped evmironment for this execution context
 	// only.
-	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
+	contract := NewContract(caller, vmcore.AccountRef(contractAddr), value, gas)
 
 	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
@@ -504,7 +484,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	return ret, contractAddr, contract.Gas, err
 }
 
-func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, value *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (evm *EVM) Create2(caller vmcore.ContractRef, code []byte, gas uint64, value *big.Int, salt *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 
 	if evm.depth > int(config.CallCreateDepth) {
 		return nil, common.Address{}, gas, ErrDepth
@@ -530,7 +510,7 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, value *big.
 	// initialise a new contract and set the code that is to be used by the
 	// E The contract is a scoped evmironment for this execution context
 	// only.
-	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
+	contract := NewContract(caller, vmcore.AccountRef(contractAddr), value, gas)
 
 	contract.SetCallCode(&contractAddr, codeHash, code)
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
@@ -574,6 +554,18 @@ func (evm *EVM) ChainConfig() *config.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
-func (evm *EVM) GetStateDiff() []*State_Diff {
+func (evm *EVM) GetStateDiff() []*vmcore.State_Diff {
 	return evm.StateDiff
+}
+
+func (evm *EVM) GetCoinbase() common.Address {
+	return evm.Miner
+}
+
+func (evm *EVM) GetStateDB() vmcore.StateDB {
+	return evm.StateDB
+}
+
+func (evm *EVM) GetOrigin() common.Address {
+	return evm.Context.Origin
 }

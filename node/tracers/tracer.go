@@ -25,6 +25,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/hpb-project/go-hpb/vmcore"
+
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/hexutil"
@@ -73,17 +75,17 @@ type opWrapper struct {
 
 // pushObject assembles a JSVM object wrapping a swappable opcode and pushes it
 // onto the VM stack.
-func (ow *opWrapper) pushObject(vm *duktape.Context) {
-	obj := vm.PushObject()
+func (ow *opWrapper) pushObject(dc *duktape.Context) {
+	obj := dc.PushObject()
 
-	vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushInt(int(ow.op)); return 1 })
-	vm.PutPropString(obj, "toNumber")
+	dc.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushInt(int(ow.op)); return 1 })
+	dc.PutPropString(obj, "toNumber")
 
-	vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushString(ow.op.String()); return 1 })
-	vm.PutPropString(obj, "toString")
+	dc.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushString(ow.op.String()); return 1 })
+	dc.PutPropString(obj, "toString")
 
-	vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushBoolean(ow.op.IsPush()); return 1 })
-	vm.PutPropString(obj, "isPush")
+	dc.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushBoolean(ow.op.IsPush()); return 1 })
+	dc.PutPropString(obj, "isPush")
 }
 
 // memoryWrapper provides a JavaScript wrapper around vm.Memory.
@@ -124,11 +126,11 @@ func (mw *memoryWrapper) getUint(addr int64) *big.Int {
 
 // pushObject assembles a JSVM object wrapping a swappable memory and pushes it
 // onto the VM stack.
-func (mw *memoryWrapper) pushObject(vm *duktape.Context) {
-	obj := vm.PushObject()
+func (mw *memoryWrapper) pushObject(dc *duktape.Context) {
+	obj := dc.PushObject()
 
 	// Generate the `slice` method which takes two ints and returns a buffer
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		blob := mw.slice(int64(ctx.GetInt(-2)), int64(ctx.GetInt(-1)))
 		ctx.Pop2()
 
@@ -136,17 +138,17 @@ func (mw *memoryWrapper) pushObject(vm *duktape.Context) {
 		copy(makeSlice(ptr, uint(len(blob))), blob)
 		return 1
 	})
-	vm.PutPropString(obj, "slice")
+	dc.PutPropString(obj, "slice")
 
 	// Generate the `getUint` method which takes an int and returns a bigint
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		offset := int64(ctx.GetInt(-1))
 		ctx.Pop()
 
 		pushBigInt(mw.getUint(offset), ctx)
 		return 1
 	})
-	vm.PutPropString(obj, "getUint")
+	dc.PutPropString(obj, "getUint")
 }
 
 // stackWrapper provides a JavaScript wrapper around vm.Stack.
@@ -167,59 +169,59 @@ func (sw *stackWrapper) peek(idx int) *big.Int {
 
 // pushObject assembles a JSVM object wrapping a swappable stack and pushes it
 // onto the VM stack.
-func (sw *stackWrapper) pushObject(vm *duktape.Context) {
-	obj := vm.PushObject()
+func (sw *stackWrapper) pushObject(dc *duktape.Context) {
+	obj := dc.PushObject()
 
-	vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushInt(len(sw.stack.Data())); return 1 })
-	vm.PutPropString(obj, "length")
+	dc.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushInt(len(sw.stack.Data())); return 1 })
+	dc.PutPropString(obj, "length")
 
 	// Generate the `peek` method which takes an int and returns a bigint
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		offset := ctx.GetInt(-1)
 		ctx.Pop()
 
 		pushBigInt(sw.peek(offset), ctx)
 		return 1
 	})
-	vm.PutPropString(obj, "peek")
+	dc.PutPropString(obj, "peek")
 }
 
 // dbWrapper provides a JavaScript wrapper around vm.Database.
 type dbWrapper struct {
-	db vm.StateDB
+	db vmcore.StateDB
 }
 
 // pushObject assembles a JSVM object wrapping a swappable database and pushes it
 // onto the VM stack.
-func (dw *dbWrapper) pushObject(vm *duktape.Context) {
-	obj := vm.PushObject()
+func (dw *dbWrapper) pushObject(dc *duktape.Context) {
+	obj := dc.PushObject()
 
 	// Push the wrapper for statedb.GetBalance
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		pushBigInt(dw.db.GetBalance(common.BytesToAddress(popSlice(ctx))), ctx)
 		return 1
 	})
-	vm.PutPropString(obj, "getBalance")
+	dc.PutPropString(obj, "getBalance")
 
 	// Push the wrapper for statedb.GetNonce
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		ctx.PushInt(int(dw.db.GetNonce(common.BytesToAddress(popSlice(ctx)))))
 		return 1
 	})
-	vm.PutPropString(obj, "getNonce")
+	dc.PutPropString(obj, "getNonce")
 
 	// Push the wrapper for statedb.GetCode
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		code := dw.db.GetCode(common.BytesToAddress(popSlice(ctx)))
 
 		ptr := ctx.PushFixedBuffer(len(code))
 		copy(makeSlice(ptr, uint(len(code))), code)
 		return 1
 	})
-	vm.PutPropString(obj, "getCode")
+	dc.PutPropString(obj, "getCode")
 
 	// Push the wrapper for statedb.GetState
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		hash := popSlice(ctx)
 		addr := popSlice(ctx)
 
@@ -229,14 +231,14 @@ func (dw *dbWrapper) pushObject(vm *duktape.Context) {
 		copy(makeSlice(ptr, uint(len(state))), state[:])
 		return 1
 	})
-	vm.PutPropString(obj, "getState")
+	dc.PutPropString(obj, "getState")
 
 	// Push the wrapper for statedb.Exists
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		ctx.PushBoolean(dw.db.Exist(common.BytesToAddress(popSlice(ctx))))
 		return 1
 	})
-	vm.PutPropString(obj, "exists")
+	dc.PutPropString(obj, "exists")
 }
 
 // contractWrapper provides a JavaScript wrapper around vm.Contract
@@ -246,41 +248,41 @@ type contractWrapper struct {
 
 // pushObject assembles a JSVM object wrapping a swappable contract and pushes it
 // onto the VM stack.
-func (cw *contractWrapper) pushObject(vm *duktape.Context) {
-	obj := vm.PushObject()
+func (cw *contractWrapper) pushObject(dc *duktape.Context) {
+	obj := dc.PushObject()
 
 	// Push the wrapper for contract.Caller
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		ptr := ctx.PushFixedBuffer(20)
 		copy(makeSlice(ptr, 20), cw.contract.Caller().Bytes())
 		return 1
 	})
-	vm.PutPropString(obj, "getCaller")
+	dc.PutPropString(obj, "getCaller")
 
 	// Push the wrapper for contract.Address
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		ptr := ctx.PushFixedBuffer(20)
 		copy(makeSlice(ptr, 20), cw.contract.Address().Bytes())
 		return 1
 	})
-	vm.PutPropString(obj, "getAddress")
+	dc.PutPropString(obj, "getAddress")
 
 	// Push the wrapper for contract.Value
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		pushBigInt(cw.contract.Value(), ctx)
 		return 1
 	})
-	vm.PutPropString(obj, "getValue")
+	dc.PutPropString(obj, "getValue")
 
 	// Push the wrapper for contract.Input
-	vm.PushGoFunction(func(ctx *duktape.Context) int {
+	dc.PushGoFunction(func(ctx *duktape.Context) int {
 		blob := cw.contract.Input
 
 		ptr := ctx.PushFixedBuffer(len(blob))
 		copy(makeSlice(ptr, uint(len(blob))), blob)
 		return 1
 	})
-	vm.PutPropString(obj, "getInput")
+	dc.PutPropString(obj, "getInput")
 }
 
 // Tracer provides an implementation of Tracer that evaluates a Javascript
@@ -562,7 +564,7 @@ func (jst *Tracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost 
 		*jst.gasValue = uint(gas)
 		*jst.costValue = uint(cost)
 		*jst.depthValue = uint(depth)
-		*jst.refundValue = uint(env.StateDB.GetRefund().Uint64())
+		*jst.refundValue = uint(env.StateDB.GetRefund())
 
 		jst.errorValue = nil
 		if err != nil {

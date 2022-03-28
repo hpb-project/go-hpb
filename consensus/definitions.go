@@ -96,9 +96,10 @@ var (
 	NewContractVersion        uint64 = 3788000
 	CadNodeCheckpointInterval uint64 = 200
 
-	StageElectionKey           = "ElectionBlock"
-	StageNumberElection uint64 = MaxBlockForever // got from contract, otherwise forever not used.
-	StageNumberEvmBugFork uint64 = 12414000 	// fix contract bug for unlimited generate HPB coin happend at 2021-10-20
+	StageElectionKey             = "ElectionBlock"
+	StageNumberElection   uint64 = MaxBlockForever // got from contract, otherwise forever not used.
+	StageNumberEvmBugFork uint64 = 12414000        // fix contract bug for unlimited generate HPB coin happend at 2021-10-20
+	StageNumberEvmV2      uint64 = 14633000
 )
 
 var (

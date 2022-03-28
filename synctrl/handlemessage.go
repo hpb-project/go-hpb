@@ -17,7 +17,11 @@
 package synctrl
 
 import (
-	"github.com/hpb-project/go-hpb/blockchain"
+	"math/big"
+	"sync/atomic"
+	"time"
+
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
@@ -26,12 +30,9 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/txpool"
 	"gopkg.in/fatih/set.v0"
-	"math/big"
-	"sync/atomic"
-	"time"
 )
 
-var handleKnownBlocks = set.New()
+var handleKnownBlocks = set.New(set.ThreadSafe)
 
 // HandleGetBlockHeadersMsg deal received GetBlockHeadersMsg
 func HandleGetBlockHeadersMsg(p *p2p.Peer, msg p2p.Msg) error {
@@ -413,7 +414,7 @@ var poolTxsCh chan *types.Transaction
 func TxsPoolLoop() {
 	duration := time.Millisecond * 500
 	if poolTxsCh != nil {
-		return 
+		return
 	}
 	timer := time.NewTicker(duration)
 
@@ -468,7 +469,7 @@ func HandleTxMsg(p *p2p.Peer, msg p2p.Msg) error {
 			return p2p.ErrResp(p2p.ErrDecode, "transaction %d is nil", i)
 		}
 
-		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) || p.KnownTxsHas(tx.Hash()){
+		if nil != txpool.GetTxPool().GetTxByHash(tx.Hash()) || p.KnownTxsHas(tx.Hash()) {
 			log.Debug("handleTxMsg tx has known or in txpool", "tx", tx.Hash())
 			continue
 		} else {

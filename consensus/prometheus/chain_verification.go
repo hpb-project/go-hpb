@@ -323,8 +323,22 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
 				log.Debug("chainGeneration ", "lastCheckoutPoint", latestCheckPointNumber, "current Number", number)
 				var lastMiner common.Address
-
 				var i = latestCheckPointNumber
+				var pre_headers map[uint64]*types.Header
+				pre_headers = make(map[uint64]*types.Header)
+				var j = number - 1
+				var tmpheader = header
+				for j >= latestCheckPointNumber {
+					tmpheader = chain.GetHeaderByHash(tmpheader.ParentHash)
+					if tmpheader != nil {
+						pre_headers[j] = tmpheader
+					} else {
+						log.Debug("chainGetHeaderByNumber failed ", "number", j)
+						return errors.New("chainGetHeaderByNumber failed")
+					}
+					j--
+				}
+
 				var retry = 5
 				for i <= number {
 					var chooseSet = common.Addresses{}
@@ -336,7 +350,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 					}
 					sort.Sort(chooseSet)
 					if i < number {
-						if oldHeader := chain.GetHeaderByNumber(i); oldHeader != nil {
+						if oldHeader, ok := pre_headers[i]; ok {
 							random := new(big.Int).SetBytes(oldHeader.HardwareRandom).Uint64()
 							lastMiner, _ = snap.CalculateCurrentMiner(random, c.GetSinger(), chooseSet)
 						} else {
