@@ -664,12 +664,10 @@ func opJumpdest(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 }
 
 func opBeginSub(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	log.Error("hvmopcode BEGINSUB")
 	return nil, ErrInvalidSubroutineEntry
 }
 
 func opJumpSub(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	log.Error("hvmopcode BEGINSUB")
 	if len(rstack.data) >= 1023 {
 		return nil, ErrReturnStackExceeded
 	}
@@ -687,7 +685,6 @@ func opJumpSub(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 }
 
 func opReturnSub(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack, rstack *ReturnStack) ([]byte, error) {
-	log.Error("hvmopcode BEGINSUB")
 	if len(rstack.data) == 0 {
 		return nil, ErrInvalidRetsub
 	}
