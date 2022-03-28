@@ -200,9 +200,9 @@ type NetworkConfig struct {
 	// whenever a message is sent to or received from a peer
 	EnableMsgEvents bool
 
-	IpcEndpoint  string // IPC endpoint to listen at (empty = IPC disabled)
-	HttpEndpoint string // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	WsEndpoint   string // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	IpcEndpoint     string // IPC endpoint to listen at (empty = IPC disabled)
+	HttpEndpoint    string // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	WsEndpoint      string // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 	GraphQLEndPoint string
 
 	BootstrapNodes []*discover.Node
@@ -265,7 +265,7 @@ func (c *NetworkConfig) GraphQLEndpoint() string {
 	if c.HTTPHost == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort+1)
+	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort+2)
 }
 
 // DefaultHTTPEndpoint returns the HTTP endpoint used by default.
