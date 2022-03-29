@@ -40,8 +40,8 @@ const HandShakeNoHIDVersion uint64 = 0x0006 // prepare for handshake not check h
 const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release
-	VersionMinor = 8        // Minor version component of the current release
-	VersionPatch = 2        // Patch version component of the current release
+	VersionMinor = 9        // Minor version component of the current release
+	VersionPatch = 0        // Patch version component of the current release
 	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 
