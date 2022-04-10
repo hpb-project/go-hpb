@@ -123,12 +123,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
-	if number < consensus.StateNumberNewHash {
-		return c.hboe.GetNextHash(lastrand)
-	} else {
-		return c.hboe.GetNextHash_v2(lastrand)
-	}
-
+	return c.hboe.GetNextHash(lastrand)
 }
 
 // Prepare function for Block

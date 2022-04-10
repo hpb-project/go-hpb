@@ -761,21 +761,9 @@ func (boe *BoeHandle) HashVerify(old []byte, next []byte) error {
 	if len(old) != 32 || len(next) != 32 {
 		return ErrInvalidParams
 	}
-	version, err := boe.GetVersion()
-	if err != nil {
-		return errors.New("get version failed.")
-	}
-	// The hashVerify is added at version v1.0.1.0.
-	if version.F >= 1 {
-		var ret = C.boe_check_random((*C.uchar)(unsafe.Pointer(&old[0])), (*C.uchar)(unsafe.Pointer(&next[0])))
-		if ret == C.BOE_OK {
-			return nil
-		} else {
-			log.Debug("Boe HashVerify failed", "ecode:", uint32(ret.ecode))
-		}
-	} else {
+	{
 		// use old version if user not upgrade boe-firmware.
-		log.Debug("Boe HashVerify", "used lower version boefirmware", version.VersionString())
+		//log.Debug("Boe HashVerify", "used lower version boefirmware", version.VersionString())
 		newrand, err := boe.GetNextHash(old)
 		if err != nil {
 			log.Error("Boe HashVerify GetNextHash", "fail", err)
