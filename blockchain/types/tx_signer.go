@@ -92,10 +92,17 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 			return sigCache.from, nil
 		}
 	}
+	txhash := tx.Hash()
+	address, err := Sendercache.Get(txhash)
+	if err == nil {
+		tx.from.Store(sigCache{signer: signer, from: address})
+		return address, nil
+	}
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
 	}
+	Sendercache.GetOrSet(txhash, addr)
 	tx.from.Store(sigCache{signer: signer, from: addr})
 
 	return addr, nil
@@ -109,6 +116,11 @@ func ASynSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
+	asynAddress, err := Sendercache.Get(tx.Hash())
+	if err == nil {
+		tx.from.Store(sigCache{signer: signer, from: asynAddress})
+		return asynAddress, nil
+	}
 	return signer.ASynSender(tx)
 }
 
@@ -332,5 +344,6 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 		if sc := ptx.from.Load(); sc == nil {
 			ptx.from.Store(sigCache{signer: boesigner, from: addr})
 		}
+		Sendercache.GetOrSet(ptx.Hash(), addr)
 	}
 }

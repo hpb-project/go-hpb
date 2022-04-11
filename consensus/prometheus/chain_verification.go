@@ -174,7 +174,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 				log.Error("BAD COIN BASE", "miner", header.Coinbase.String(), "local", cadWinner[0].Address[:], "header", header.CandAddress[:])
 				return consensus.ErrInvalidCadaddr
 			}
-		} else {
+		} else if err != consensus.ErrNilState {
 			return err
 		}
 	}
@@ -390,7 +390,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainReader, header *types.Header, number uint64, verify bool) ([]*snapshots.CadWinner, []byte, error) {
 
 	if state == nil {
-		return nil, nil, errors.New("chain stateAt return nil")
+		return nil, nil, consensus.ErrNilState
 	}
 	var err error
 	var bootnodeinfp []p2p.HwPair

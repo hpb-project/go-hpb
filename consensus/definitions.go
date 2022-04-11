@@ -162,6 +162,7 @@ var (
 	ErrInvalidCadaddr = errors.New("invalid cadaddress")
 	Errnilparam       = errors.New("input param is nil")
 	ErrNoLastBlock    = errors.New("No Last Block when verify during the fullsync")
+	ErrNilState       = errors.New("chain stateAt return nil")
 )
 
 var (
