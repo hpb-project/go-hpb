@@ -59,6 +59,8 @@ import (
 	"github.com/hpb-project/go-hpb/node/db"
 	"github.com/hpb-project/go-hpb/node/gasprice"
 	"github.com/hpb-project/go-hpb/worker"
+
+	_ "net/http/pprof"
 )
 
 // Node is a container on which services can be registered.
@@ -342,6 +344,11 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 	hpbnode.Hpbrpcmanager.Start(hpbnode.RpcAPIs)
 	hpbnode.Hpbtxpool.Start()
 	hpbnode.startgraphql()
+
+	// pprof start
+	go func() {
+		http.ListenAndServe(":8085", nil)
+	}()
 	return nil
 
 }
