@@ -990,6 +990,12 @@ func RPCMarshalHeader(head *types.Header) map[string]interface{} {
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
+	var realrandom = b.SignedLastRND()
+	if len(realrandom) > 32 {
+		realrandom = realrandom[:32]
+	} else {
+		realrandom = []byte{}
+	}
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
@@ -1015,6 +1021,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"hardwareRandom":   hexutil.Bytes(head.HardwareRandom),
 		"HWRealRnd":        hexutil.Bytes(b.HWRealRND()),
 		"SignLastRealRnd":  hexutil.Bytes(b.SignedLastRND()),
+		"realRandom":       hexutil.Bytes(realrandom),
 	}
 
 	if inclTx {
