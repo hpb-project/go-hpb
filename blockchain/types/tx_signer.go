@@ -199,18 +199,20 @@ func (s BoeSigner) ASynSender(tx *Transaction) (common.Address, error) {
 		log.Warn("ASynSender tx.Protected()")
 		return common.Address{}, ErrInvalidChainId
 	}
-	index := getIndex()
-	asynctxmap.Store(index, tx)
+	//index := getIndex()
+	//asynctxmap.Store(index, tx)
 	if compableV(tx.data.V) {
 		compableChainId := config.CompatibleChainId
 		compableChainIdMul := new(big.Int).Mul(compableChainId, big.NewInt(2))
 		V := new(big.Int).Sub(tx.data.V, compableChainIdMul)
 		V.Sub(V, big8)
-		return ASynrecoverPlain(index, s.CompableHash(tx), tx.data.R, tx.data.S, V)
+		//return ASynrecoverPlain(index, s.CompableHash(tx), tx.data.R, tx.data.S, V)
+		return ASynrecoverPlain(tx.Hash(), s.CompableHash(tx), tx.data.R, tx.data.S, V)
 	} else {
 		V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 		V.Sub(V, big8)
-		return ASynrecoverPlain(index, s.Hash(tx), tx.data.R, tx.data.S, V)
+		//return ASynrecoverPlain(index, s.Hash(tx), tx.data.R, tx.data.S, V)
+		return ASynrecoverPlain(tx.Hash(), s.Hash(tx), tx.data.R, tx.data.S, V)
 	}
 
 }
@@ -325,9 +327,9 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	if len(rs.Pub) == 0 || rs.Pub[0] != 4 {
 		log.Error("boecallback boe invalid public key")
 	}
-	if boesigner == nil {
-		boesigner = MakeSigner(&config.GetHpbConfigInstance().BlockChain)
-	}
+	//if boesigner == nil {
+	//	boesigner = MakeSigner(&config.GetHpbConfigInstance().BlockChain)
+	//}
 
 	var addr = common.Address{}
 	copy(addr[:], crypto.Keccak256(rs.Pub[1:])[12:])
@@ -335,15 +337,16 @@ func boecallback(rs boe.RecoverPubkey, err error) {
 	var comhash common.Hash
 	copy(comhash[0:], rs.TxHash[0:])
 
-	var h common.Hash
-	h.SetBytes(rs.TxHash)
-
-	tx, exist := asynctxmap.Load(h)
-	if exist {
-		ptx := tx.(*Transaction)
-		if sc := ptx.from.Load(); sc == nil {
-			ptx.from.Store(sigCache{signer: boesigner, from: addr})
-		}
-		Sendercache.GetOrSet(ptx.Hash(), addr)
-	}
+	//var h common.Hash
+	//h.SetBytes(rs.TxHash)
+	//
+	//tx, exist := asynctxmap.Load(h)
+	//if exist {
+	//	ptx := tx.(*Transaction)
+	//	if sc := ptx.from.Load(); sc == nil {
+	//		ptx.from.Store(sigCache{signer: boesigner, from: addr})
+	//	}
+	//	Sendercache.GetOrSet(ptx.Hash(), addr)
+	//}
+	Sendercache.GetOrSet(comhash, addr)
 }

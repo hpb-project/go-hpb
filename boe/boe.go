@@ -379,17 +379,28 @@ func (boe *BoeHandle) Init() error {
 	if boe.bcontinue {
 		return nil
 	}
-
-	boe.bcontinue = true
-	// use 1/4 cpu
-	if runtime.NumCPU()/4 > boe.maxThNum {
-		boe.maxThNum = runtime.NumCPU() / 4
-	}
 	boe.maxThNum = 1
-
-	boe.thPool = make([]*TaskTh, boe.maxThNum)
 	boe.postCh = make(chan postParam, 1000000)
 	boe.rboeCh = make(chan struct{}, 1000000)
+	boe.bcontinue = true
+	var err error
+	ret := C.boe_init()
+	if ret == C.BOE_OK {
+		boe.boeInit = true
+		C.initRQ()
+		boe.wg.Add(1)
+		go PostRecoverPubkey(boe)
+		// use 1/4 cpu
+		if runtime.NumCPU()/4 > boe.maxThNum {
+			boe.maxThNum = runtime.NumCPU() / 4
+		}
+		C.boe_valid_sign_callback((C.BoeValidSignCallback)(unsafe.Pointer(C.recover_pubkey_callback)))
+	} else {
+		C.boe_err_free(ret)
+		err = ErrInitFailed
+	}
+
+	boe.thPool = make([]*TaskTh, boe.maxThNum)
 
 	for i := 0; i < boe.maxThNum; i++ {
 		boe.thPool[i] = &TaskTh{isFull: false, queue: make(chan RecoverPubkey, 100000)}
@@ -401,20 +412,7 @@ func (boe *BoeHandle) Init() error {
 
 	boe.wg.Add(1)
 	go boe.performance()
-
-	ret := C.boe_init()
-	if ret == C.BOE_OK {
-		boe.boeInit = true
-		C.initRQ()
-		boe.wg.Add(1)
-		go PostRecoverPubkey(boe)
-
-		C.boe_valid_sign_callback((C.BoeValidSignCallback)(unsafe.Pointer(C.recover_pubkey_callback)))
-		return nil
-	}
-
-	C.boe_err_free(ret)
-	return ErrInitFailed
+	return err
 }
 
 func (boe *BoeHandle) Release() error {
@@ -450,7 +448,6 @@ func (boe *BoeHandle) GetBindAccount() (string, error) {
 	log.Debug("boe", "GetBindAccount ecode", uint32(ret.ecode))
 	C.boe_err_free(ret)
 	return "", ErrGetAccountFailed
-
 }
 
 // get boe firmware version
@@ -633,17 +630,17 @@ func softRecoverPubkey(hash []byte, r []byte, s []byte, v byte) ([]byte, error) 
 
 func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s []byte, v byte) error {
 	async_call = async_call + 1
-	// if boe.sleep || ((async_call >= 100) && (async_call%2 == 0)) {
-	// 	rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
-	// 	copy(rs.TxHash, txhash)
-	// 	copy(rs.Hash, hash)
-	// 	copy(rs.Sig[32-len(r):32], r)
-	// 	copy(rs.Sig[64-len(s):64], s)
-	// 	rs.Sig[64] = v
-	// 	boe.postToSoft(&rs)
+	if boe.sleep || boe.boeInit == false || ((async_call >= 100) && (async_call%2 == 0)) {
+		rs := RecoverPubkey{TxHash: make([]byte, 32), Hash: make([]byte, 32), Sig: make([]byte, 65), Pub: make([]byte, 65)}
+		copy(rs.TxHash, txhash)
+		copy(rs.Hash, hash)
+		copy(rs.Sig[32-len(r):32], r)
+		copy(rs.Sig[64-len(s):64], s)
+		rs.Sig[64] = v
+		boe.postToSoft(&rs)
 
-	// 	return nil
-	// }
+		return nil
+	}
 
 	var (
 		m_sig   = make([]byte, 97)
@@ -673,30 +670,24 @@ func (boe *BoeHandle) ASyncValidateSign(txhash []byte, hash []byte, r []byte, s 
 }
 
 func (boe *BoeHandle) ValidateSign(hash []byte, r []byte, s []byte, v byte) ([]byte, error) {
-	var (
-		result = make([]byte, 65)
-		m_sig  = make([]byte, 97)
-		c_sig  = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
-	)
-	sync_call = sync_call + 1
-	copy(m_sig[32-len(r):32], r)
-	copy(m_sig[64-len(s):64], s)
-	copy(m_sig[96-len(hash):96], hash)
-	m_sig[96] = v
-	//st := time.Now()
-	c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
-	//et := time.Now()
-	if c_ret == C.BOE_OK {
-		//fmt.Println("boe valid sign cost ", et.Sub(st).Microseconds(), "us")
-		result[0] = 4
-		return result, nil
+	if boe.boeInit {
+		var (
+			result = make([]byte, 65)
+			m_sig  = make([]byte, 97)
+			c_sig  = (*C.uchar)(unsafe.Pointer(&m_sig[0]))
+		)
+		sync_call = sync_call + 1
+		copy(m_sig[32-len(r):32], r)
+		copy(m_sig[64-len(s):64], s)
+		copy(m_sig[96-len(hash):96], hash)
+		m_sig[96] = v
+		c_ret := C.boe_valid_sign(c_sig, (*C.uchar)(unsafe.Pointer(&result[1])))
+		if c_ret == C.BOE_OK {
+			result[0] = 4
+			return result, nil
+		}
 	}
-	//fmt.Println("boe valid sign failed, use softrecover pubkey")
-	// sync_call = sync_call + 1
-	//st2 := time.Now()
 	pub, err := softRecoverPubkey(hash, r, s, v)
-	//et2 := time.Now()
-	//fmt.Println("soft ware valid sign cost", et2.Sub(st2).Microseconds(), "us")
 	return pub, err
 }
 
@@ -793,4 +784,3 @@ func (boe *BoeHandle) Sleep() {
 		}()
 	}
 }
-
