@@ -18,7 +18,7 @@ package config
 
 var DefaultPrometheusConfig = PrometheusConfig{
 	//for test,change from 3 to 6 seconds
-	Period: 6,
+	Period: 3,
 	Epoch:  30000,
 }
 
