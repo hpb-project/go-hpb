@@ -100,6 +100,7 @@ var (
 	StageNumberElection   uint64 = MaxBlockForever // got from contract, otherwise forever not used.
 	StageNumberEvmBugFork uint64 = 12414000        // fix contract bug for unlimited generate HPB coin happend at 2021-10-20
 	StageNumberEvmV2      uint64 = 14633000
+	StateNumberEvmRevert  uint64 = 14633300 // critical revert evm to old version at 14633300.
 )
 
 var (

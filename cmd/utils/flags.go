@@ -481,12 +481,12 @@ var (
 	CriticalFlag = cli.Uint64Flag{
 		Name:  "critical.flag",
 		Usage: "Used for critical deal issue in mainnet",
-		Value: 0,
+		Value: 1,
 	}
 	CriticalBackBlockFlag = cli.Uint64Flag{
 		Name:  "critical.block",
 		Usage: "return the node height to block number",
-		Value: 10000000000,
+		Value: 14633300,
 	}
 	ArchivedBlockFalg = cli.Int64Flag{
 		Name:  "archived",

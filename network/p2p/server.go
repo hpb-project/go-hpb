@@ -759,7 +759,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 
-	if their.Version < config.DAOVersion || their.Version < config.DAOVersion2 {
+	if their.Version < config.DAOVersion || their.Version < config.DAOVersion2 || their.Version < config.DAOVersion3 {
 		clog.Debug("drop old version peer")
 		c.close(errUnderDAOVersion)
 		return

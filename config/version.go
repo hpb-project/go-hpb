@@ -30,10 +30,11 @@ const (
 */
 const DAOVersion uint64 = 0x0005  // use a version to seperate network. 2021/5/5
 const DAOVersion2 uint64 = 0x0007 // use a version to seperate network. 2021/10/21
+const DAOVersion3 uint64 = 0x0008 // use a version to seperate network. 2021/10/21
 
 const VersionID uint64 = 0x0006 // not used.
 
-const HandShakeVersion uint64 = DAOVersion2 // current handshake proto version.
+const HandShakeVersion uint64 = DAOVersion3 // current handshake proto version.
 
 const HandShakeNoHIDVersion uint64 = 0x0006 // prepare for handshake not check hid.
 
@@ -41,7 +42,7 @@ const (
 	VersionMajor = 1        // Major version component of the current release
 	VersionHardv = 0        // Hardware version component of the current release
 	VersionMinor = 9        // Minor version component of the current release
-	VersionPatch = 0        // Patch version component of the current release
+	VersionPatch = 1        // Patch version component of the current release
 	VersionMeta  = "stable" // Version metadata to append to the version string
 )
 

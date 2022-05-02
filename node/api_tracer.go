@@ -217,7 +217,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				for i, tx := range task.block.Transactions() {
 					msg, _ := tx.AsMessage(signer)
 					var res interface{}
-					if task.block.NumberU64() >= consensus.StageNumberEvmV2 {
+					if task.block.NumberU64() >= consensus.StageNumberEvmV2 && task.block.NumberU64() < consensus.StateNumberEvmRevert {
 						res, err = api.traceTx_evm(ctx, msg, task.statedb, config, task.block.Header())
 					} else {
 						res, err = api.traceTx(ctx, msg, blockCtx, task.statedb, config, task.block.Header())
@@ -379,7 +379,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 	if block == nil {
 		return nil, fmt.Errorf("block #%d not found", number)
 	}
-	if number >= rpc.BlockNumber(consensus.StageNumberEvmV2) {
+	if number >= rpc.BlockNumber(consensus.StageNumberEvmV2) && number < rpc.BlockNumber(consensus.StateNumberEvmRevert) {
 		return api.traceBlock_evm(ctx, block, config)
 	}
 	return api.traceBlock(ctx, block, config)
@@ -392,7 +392,7 @@ func (api *PrivateDebugAPI) TraceBlockByHash(ctx context.Context, hash common.Ha
 	if block == nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
 	}
-	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 && block.Number().Uint64() < consensus.StateNumberEvmRevert {
 		return api.traceBlock_evm(ctx, block, config)
 	}
 	return api.traceBlock(ctx, block, config)
@@ -405,7 +405,7 @@ func (api *PrivateDebugAPI) TraceBlock(ctx context.Context, blob hexutil.Bytes, 
 	if err := rlp.Decode(bytes.NewReader(blob), block); err != nil {
 		return nil, fmt.Errorf("could not decode block: %v", err)
 	}
-	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 && block.Number().Uint64() < consensus.StateNumberEvmRevert {
 		return api.traceBlock_evm(ctx, block, config)
 	}
 	return api.traceBlock(ctx, block, config)
@@ -428,7 +428,7 @@ func (api *PrivateDebugAPI) TraceBadBlock(ctx context.Context, hash common.Hash,
 	blocks := api.hpb.BlockChain().BadBlocks()
 	for _, block := range blocks {
 		if block.Hash() == hash {
-			if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+			if block.Number().Uint64() >= consensus.StageNumberEvmV2 && block.Number().Uint64() < consensus.StateNumberEvmRevert {
 				return api.traceBlock_evm(ctx, block, config)
 			}
 			return api.traceBlock(ctx, block, config)
@@ -445,7 +445,7 @@ func (api *PrivateDebugAPI) StandardTraceBlockToFile(ctx context.Context, hash c
 	if block == nil {
 		return nil, fmt.Errorf("block %#x not found", hash)
 	}
-	if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+	if block.Number().Uint64() >= consensus.StageNumberEvmV2 && block.Number().Uint64() < consensus.StateNumberEvmRevert {
 		return api.standardTraceBlockToFile_evm(ctx, block, config)
 	}
 	return api.standardTraceBlockToFile(ctx, block, config)
@@ -458,7 +458,7 @@ func (api *PrivateDebugAPI) StandardTraceBadBlockToFile(ctx context.Context, has
 	blocks := api.hpb.BlockChain().BadBlocks()
 	for _, block := range blocks {
 		if block.Hash() == hash {
-			if block.Number().Uint64() >= consensus.StageNumberEvmV2 {
+			if block.Number().Uint64() >= consensus.StageNumberEvmV2 && block.Number().Uint64() < consensus.StateNumberEvmRevert {
 				return api.standardTraceBlockToFile_evm(ctx, block, config)
 			}
 			return api.standardTraceBlockToFile(ctx, block, config)
@@ -760,7 +760,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 	if err != nil {
 		return nil, err
 	}
-	if block.NumberU64() >= consensus.StageNumberEvmV2 {
+	if block.NumberU64() >= consensus.StageNumberEvmV2 && block.NumberU64() < consensus.StateNumberEvmRevert {
 		return api.traceTx_evm(ctx, msg, statedb, config, block.Header())
 	}
 	// Trace the transaction and return
@@ -796,7 +796,7 @@ func (api *PrivateDebugAPI) TraceCall(ctx context.Context, args hpbapi.CallArgs,
 	}
 	// Execute the trace
 	msg := args.ToMessage(api.hpb.ApiBackend.RPCGasCap())
-	if header.Number.Uint64() >= consensus.StageNumberEvmV2 {
+	if header.Number.Uint64() >= consensus.StageNumberEvmV2 && header.Number.Uint64() < consensus.StateNumberEvmRevert {
 		return api.traceTx_evm(ctx, msg, statedb, config, header)
 	}
 	vmctx := hvm.NewEVMContextWithoutMessage(header, api.hpb.BlockChain(), nil)
