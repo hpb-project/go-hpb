@@ -1051,10 +1051,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		mode = config.FullSync
 	}
 
-	abort, results := bc.engine.VerifyHeaders(bc, headers, seals, mode)
-
-	defer close(abort)
-
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
 		// If the chain is terminating, stop processing blocks
@@ -1062,11 +1058,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			log.Debug("Premature abort during blocks processing")
 			break
 		}
+		err := bc.engine.VerifyHeader(bc, block.Header(), true, mode)
 
 		// Wait for the block's verification to complete
 		bstart := time.Now()
-
-		err := <-results
 		if err == nil {
 			err = bc.Validator().ValidateBody(block)
 		}
