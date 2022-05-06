@@ -244,7 +244,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		extra.SetSignedLastRND(SignLastHWRealRnd[:])
 	}
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	snap, err := voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -404,7 +404,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	c.lock.RUnlock()
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	snap, err := voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 
 	SetNetNodeType(snap)
 
@@ -606,7 +606,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 		state.AddBalance(header.Coinbase, finalhpbrewards)
 	} else {
-		if hpsnap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
+		if hpsnap, err = voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
 			bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
 			finalhpbrewards := new(big.Int)
 			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int

@@ -34,7 +34,7 @@ func GetCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus.Ch
 
 	hpbAddressMap := make(map[common.Address]string)
 
-	if snap, err := GetHpbNodeSnap(db, recents, nil, nil, chain, number, hash, nil); err == nil {
+	if snap, err := GetSpecialHpbNodeSnap(db, recents, nil, nil, chain, number, hash, nil); err == nil {
 		for _, signer := range snap.GetHpbNodes() {
 			hpbAddressMap[signer] = "ok"
 		}
