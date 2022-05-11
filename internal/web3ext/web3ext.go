@@ -378,6 +378,12 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'getRandomAndBlock',
+			call: 'hpb_getRandomAndBlock',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'chainId',
 			call: 'hpb_chainId',
 			params: 0
