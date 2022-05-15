@@ -19,8 +19,9 @@ package bc
 import (
 	"errors"
 	"fmt"
-	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
+
+	"github.com/hpb-project/go-hpb/vmcore"
 
 	"github.com/hpb-project/go-hpb/blockchain/state"
 	"github.com/hpb-project/go-hpb/blockchain/types"

@@ -49,6 +49,8 @@ import (
 	"github.com/hpb-project/go-hpb/internal/hpbapi"
 	"github.com/hpb-project/go-hpb/network/rpc"
 	"github.com/hpb-project/go-hpb/node/tracers"
+	tracers_v2 "github.com/hpb-project/go-hpb/node/tracers_v2"
+	"github.com/hpb-project/go-hpb/node/tracers_v2/logger"
 )
 
 const (
@@ -218,7 +220,12 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 					msg, _ := tx.AsMessage(signer)
 					var res interface{}
 					if task.block.NumberU64() >= consensus.StageNumberEvmV2 {
-						res, err = api.traceTx_evm(ctx, msg, task.statedb, config, task.block.Header())
+						txctx := &tracers_v2.Context{
+							BlockHash: task.block.Hash(),
+							TxIndex:   i,
+							TxHash:    tx.Hash(),
+						}
+						res, err = api.traceV2Tx(ctx, msg, txctx, task.statedb, config, task.block.Header())
 					} else {
 						res, err = api.traceTx(ctx, msg, blockCtx, task.statedb, config, task.block.Header())
 					}
@@ -761,7 +768,12 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 		return nil, err
 	}
 	if block.NumberU64() >= consensus.StageNumberEvmV2 {
-		return api.traceTx_evm(ctx, msg, statedb, config, block.Header())
+		txctx := &tracers_v2.Context{
+			BlockHash: blockHash,
+			TxIndex:   int(index),
+			TxHash:    hash,
+		}
+		return api.traceV2Tx(ctx, msg, txctx, statedb, config, block.Header())
 	}
 	// Trace the transaction and return
 	return api.traceTx(ctx, msg, vmctx, statedb, config, block.Header())
@@ -797,7 +809,7 @@ func (api *PrivateDebugAPI) TraceCall(ctx context.Context, args hpbapi.CallArgs,
 	// Execute the trace
 	msg := args.ToMessage(api.hpb.ApiBackend.RPCGasCap())
 	if header.Number.Uint64() >= consensus.StageNumberEvmV2 {
-		return api.traceTx_evm(ctx, msg, statedb, config, header)
+		return api.traceV2Tx(ctx, msg, new(tracers_v2.Context), statedb, config, header)
 	}
 	vmctx := hvm.NewEVMContextWithoutMessage(header, api.hpb.BlockChain(), nil)
 	return api.traceTx(ctx, msg, vmctx, statedb, config, header)
@@ -938,6 +950,7 @@ func (api *PrivateDebugAPI) traceBlock_evm(ctx context.Context, block *types.Blo
 		threads = len(txs)
 	}
 	blockCtx := evm.NewEVMBlockContext(block.Header(), api.hpb.BlockChain(), nil)
+	blockHash := block.Hash()
 	for th := 0; th < threads; th++ {
 		pend.Add(1)
 		go func() {
@@ -945,7 +958,12 @@ func (api *PrivateDebugAPI) traceBlock_evm(ctx context.Context, block *types.Blo
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
 				msg, _ := txs[task.index].AsMessage(signer)
-				res, err := api.traceTx_evm(ctx, msg, task.statedb, config, block.Header())
+				txctx := &tracers_v2.Context{
+					BlockHash: blockHash,
+					TxIndex:   task.index,
+					TxHash:    txs[task.index].Hash(),
+				}
+				res, err := api.traceV2Tx(ctx, msg, txctx, task.statedb, config, block.Header())
 				if err != nil {
 					results[task.index] = &txTraceResult{Error: err.Error()}
 					continue
@@ -1102,7 +1120,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile_evm(ctx context.Context, bl
 	return dumps, nil
 }
 
-func (api *PrivateDebugAPI) traceTx_evm(ctx context.Context, message vmcore.Message, statedb *state.StateDB, config *TraceConfig, header *types.Header) (interface{}, error) {
+func (api *PrivateDebugAPI) traceV2Tx(ctx context.Context, message vmcore.Message, txctx *tracers_v2.Context, statedb *state.StateDB, config *TraceConfig, header *types.Header) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
 		tracer    eevm.EVMLogger
@@ -1110,7 +1128,9 @@ func (api *PrivateDebugAPI) traceTx_evm(ctx context.Context, message vmcore.Mess
 		txContext = evm.NewEVMTxContext(message)
 	)
 	switch {
-	case config != nil && config.Tracer != nil:
+	case config == nil:
+		tracer = logger.NewStructLogger(nil)
+	case config.Tracer != nil:
 		// Define a meaningful timeout of a single transaction trace
 		timeout := defaultTraceTimeout
 		if config.Timeout != nil {
@@ -1118,31 +1138,48 @@ func (api *PrivateDebugAPI) traceTx_evm(ctx context.Context, message vmcore.Mess
 				return nil, err
 			}
 		}
-		// Constuct the JavaScript tracer to execute with
-		if tracer, err = tracers.New2(*config.Tracer); err != nil {
+		if t, err := tracers_v2.New(*config.Tracer, txctx); err != nil {
 			return nil, err
+		} else {
+			deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
+			go func() {
+				<-deadlineCtx.Done()
+				if errors.Is(deadlineCtx.Err(), context.DeadlineExceeded) {
+					t.Stop(errors.New("execution timeout"))
+				}
+			}()
+			defer cancel()
+			tracer = t
 		}
-		// Handle timeouts and RPC cancellations
-		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
-		go func() {
-			<-deadlineCtx.Done()
-			tracer.(*tracers.JsTracer).Stop(errors.New("execution timeout"))
-		}()
-		defer cancel()
-
 	default:
-		tracer = eevm.NewStructLogger(nil)
+		logConfig := &logger.Config{
+			EnableMemory:     config.LogConfig.DisableMemory,
+			DisableStack:     config.LogConfig.DisableStack,
+			DisableStorage:   config.LogConfig.DisableStorage,
+			EnableReturnData: config.LogConfig.DisableReturnData,
+			Debug:            config.LogConfig.Debug,
+			Limit:            config.LogConfig.Limit,
+			Overrides:        config.LogConfig.Overrides,
+		}
+
+		tracer = logger.NewStructLogger(logConfig)
 	}
+
 	blockContext := evm.NewEVMBlockContext(header, api.hpb.BlockChain(), nil)
-	vmenv := eevm.NewEVM(blockContext, txContext, statedb, api.hpb.BlockChain().Config(), eevm.Config{Debug: true, Tracer: tracer})
+	// Run the transaction with tracing enabled.
+	vmenv := eevm.NewEVM(blockContext, txContext, statedb, api.hpb.BlockChain().Config(), eevm.Config{Debug: true, Tracer: tracer, NoBaseFee: true})
+
+	// Call Prepare to clear out the statedb access list
+	statedb.Prepare(txctx.TxHash, header.Hash(), txctx.TxIndex)
 
 	result, err := core.ApplyMessage(vmenv, message, new(core.GasPool).AddGas(message.Gas()), header)
 	if err != nil {
-		return nil, fmt.Errorf("tracing failed: %v", err)
+		return nil, fmt.Errorf("tracing failed: %w", err)
 	}
-	// Depending on the tracer type, format and return the output
+
+	// Depending on the tracer type, format and return the output.
 	switch tracer := tracer.(type) {
-	case *eevm.StructLogger:
+	case *logger.StructLogger:
 		// If the result contains a revert reason, return it.
 		returnVal := fmt.Sprintf("%x", result.Return())
 		if len(result.Revert()) > 0 {
@@ -1155,7 +1192,7 @@ func (api *PrivateDebugAPI) traceTx_evm(ctx context.Context, message vmcore.Mess
 			StructLogs:  vmcorevm.FormatLogs2(tracer.StructLogs()),
 		}, nil
 
-	case *tracers.JsTracer:
+	case tracers_v2.Tracer:
 		return tracer.GetResult()
 
 	default:

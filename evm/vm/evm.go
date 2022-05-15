@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"github.com/hpb-project/go-hpb/vmcore"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
 	params "github.com/hpb-project/go-hpb/config"
+	"github.com/hpb-project/go-hpb/vmcore"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
