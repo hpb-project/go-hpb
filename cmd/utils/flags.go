@@ -912,14 +912,14 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 		if nil == res || len(res) < 2 {
 			cfg.Node.TestCodeParam = 1
 		} else {
-			consensus.StageNumberII = uint64(res[0])
-			consensus.StageNumberIII = uint64(res[1])
+			config.StageNumberII = uint64(res[0])
+			config.StageNumberIII = uint64(res[1])
 		}
 
 		if nil != res || len(res) == 3 {
-			consensus.StageNumberII = uint64(res[0])
-			consensus.StageNumberIII = uint64(res[1])
-			consensus.StageNumberIV = uint64(res[2])
+			config.StageNumberII = uint64(res[0])
+			config.StageNumberIII = uint64(res[1])
+			config.StageNumberIV = uint64(res[2])
 		}
 
 	}
@@ -956,15 +956,15 @@ func SetNodeConfig(ctx *cli.Context, cfg *config.HpbConfig) {
 
 	if ctx.GlobalIsSet(HpNumFlag.Name) {
 		res := ctx.GlobalInt(HpNumFlag.Name)
-		consensus.HpbNodenumber = res
+		config.HpbNodenumber = res
 	}
 	if ctx.GlobalIsSet(HpVoteRndSelScpFlag.Name) {
 		res := ctx.GlobalInt(HpVoteRndSelScpFlag.Name)
-		consensus.NumberPrehp = res
+		config.NumberPrehp = res
 	}
 	if ctx.GlobalIsSet(IgnRewardRetErrFlag.Name) {
 		res := ctx.GlobalBool(IgnRewardRetErrFlag.Name)
-		consensus.IgnoreRetErr = res
+		config.IgnoreRetErr = res
 	}
 	if ctx.GlobalIsSet(GenBlkSecsFlag.Name) {
 		res := ctx.GlobalInt(GenBlkSecsFlag.Name)

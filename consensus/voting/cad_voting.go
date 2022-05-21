@@ -19,6 +19,7 @@ package voting
 import (
 	"bytes"
 	"errors"
+	"github.com/hpb-project/go-hpb/config"
 	"math"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -89,23 +90,23 @@ func GetAllCadNodeSnap(db hpbdb.Database, recents *lru.ARCCache, chain consensus
 	)
 
 	gobacknum := 200
-	if number > consensus.StageNumberIII {
-		if number <= consensus.CadNodeCheckpointInterval+200 {
+	if number > config.StageNumberIII {
+		if number <= config.CadNodeCheckpointInterval+200 {
 			return nil, nil
 		}
 		gobacknum = gobacknum + 200
 	} else {
 		// return nil
-		if number <= consensus.CadNodeCheckpointInterval {
+		if number <= config.CadNodeCheckpointInterval {
 			return nil, nil
 		}
 	}
 
-	latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.CadNodeCheckpointInterval))) * consensus.CadNodeCheckpointInterval
+	latestCheckPointNumber := uint64(math.Floor(float64(number/config.CadNodeCheckpointInterval))) * config.CadNodeCheckpointInterval
 	header := chain.GetHeaderByNumber(uint64(latestCheckPointNumber))
 	latestCadCheckPointHash := header.Hash()
 
-	if number%consensus.CadNodeCheckpointInterval != 0 {
+	if number%config.CadNodeCheckpointInterval != 0 {
 		if snapcd, err := GetCandDataFromCacheAndDb(db, recents, latestCadCheckPointHash); err == nil {
 			return snapcd, err
 		} else {

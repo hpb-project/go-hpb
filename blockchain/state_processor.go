@@ -67,7 +67,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit().Uint64())
 	)
-	bNewVersion := block.Number().Uint64() > consensus.NewContractVersion
+	bNewVersion := block.Number().Uint64() > config.NewContractVersion
 	synsigner := types.MakeSigner(p.config)
 	go func(txs types.Transactions) {
 		for _, tx := range txs {

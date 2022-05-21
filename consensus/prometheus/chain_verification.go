@@ -167,7 +167,7 @@ func (c *Prometheus) verifyCascadingFields(chain consensus.ChainReader, header *
 		return consensus.ErrInvalidTimestamp
 	}
 
-	if number > consensus.StageNumberIII && mode == config.FullSync {
+	if number > config.StageNumberIII && mode == config.FullSync {
 		state, _ := chain.StateAt(parent.Root)
 		if cadWinner, _, err := c.GetSelectPrehp(state, chain, header, number, true); nil == err {
 			if bytes.Compare(cadWinner[0].Address[:], header.CandAddress[:]) != 0 {
@@ -231,7 +231,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	if number > consensus.StageNumberRealRandom && mode == config.FullSync {
+	if number > config.StageNumberRealRandom && mode == config.FullSync {
 		var realrandom = make([]byte, 0)
 		var checkRandom = true
 		if number%200 == 0 {
@@ -281,7 +281,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 		}
 	}
 
-	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= consensus.StageNumberII {
+	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && config.GetHpbConfigInstance().Network.RoleType != "bootnode" && number >= config.StageNumberII {
 		// Retrieve the getHpbNodeSnap needed to verify this header and cache it
 
 		if config.GetHpbConfigInstance().Node.TestMode != 1 {
@@ -296,7 +296,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 				log.Error("verifySeal GetHeaderByNumber", "fail", "HardwareRandom is nil")
 				return consensus.ErrInvalidblockbutnodrop
 			}
-			if number >= consensus.StateNumberNewHash {
+			if number >= config.StateNumberNewHash {
 				if err = c.hboe.HashVerify(parentheader.HardwareRandom, header.HardwareRandom); err != nil {
 					log.Error("verify fail HashVerify", "error", err)
 					return consensus.Errrandcheck
@@ -316,7 +316,7 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 		if mode == config.FullSync {
 			var inturn bool
-			if number < consensus.StateNumberNewHash {
+			if number < config.StateNumberNewHash {
 				_, inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
@@ -394,11 +394,11 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	}
 	var err error
 	var bootnodeinfp []p2p.HwPair
-	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "consensus.NewContractVersion", consensus.NewContractVersion)
+	log.Debug("GetSelectPrehp", "number", header.Number.Uint64(), "config.NewContractVersion", config.NewContractVersion)
 
-	if header.Number.Uint64() > consensus.StageNumberElection {
+	if header.Number.Uint64() > config.StageNumberElection {
 		err, bootnodeinfp = c.GetNodeinfoFromElectContract(chain, header, state)
-	} else if header.Number.Uint64() > consensus.NewContractVersion {
+	} else if header.Number.Uint64() > config.NewContractVersion {
 		err, bootnodeinfp = c.GetNodeinfoFromNewContract(chain, header, state)
 	} else {
 		err, bootnodeinfp = c.GetNodeinfoFromContract(chain, header, state)
@@ -452,9 +452,9 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get all votes
 	var voteres map[common.Address]big.Int
 
-	if header.Number.Uint64() > consensus.StageNumberElection {
+	if header.Number.Uint64() > config.StageNumberElection {
 		err, voteres = c.GetVoteResFromElectionContract(chain, header, state)
-	} else if header.Number.Uint64() > consensus.NewContractVersion {
+	} else if header.Number.Uint64() > config.NewContractVersion {
 		err, voteres = c.GetVoteResFromNewContract(chain, header, state)
 	} else {
 		err, _, voteres = c.GetVoteRes(chain, header, state)
@@ -473,14 +473,14 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 	//get all balances
 	var allbalances map[common.Address]big.Int
 
-	if header.Number.Uint64() > consensus.StageNumberElection {
+	if header.Number.Uint64() > config.StageNumberElection {
 		errs, hpblist, coinaddresslist := c.GetCoinAddressFromElectionContract(chain, header, state)
 		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
 			log.Error("CoinAddress ERR", "errs", errs)
 		}
 		log.Debug("GetCoinAddressFromElectionContract", "lenhpblist", len(hpblist), "coinaddresslist", len(coinaddresslist))
 		allbalances, err = c.GetAllBalancesByCoin(hpblist, coinaddresslist, state)
-	} else if header.Number.Uint64() > consensus.NewContractVersion {
+	} else if header.Number.Uint64() > config.NewContractVersion {
 		errs, hpblist, coinaddresslist := c.GetCoinAddressFromNewContract(chain, header, state)
 		if errs != nil || coinaddresslist == nil || len(coinaddresslist) == 0 || hpblist == nil || len(hpblist) == 0 {
 			log.Error("CoinAddress ERR", "errs", errs)
@@ -516,9 +516,9 @@ func (c *Prometheus) GetSelectPrehp(state *state.StateDB, chain consensus.ChainR
 
 func (c *Prometheus) updateConsensusBlock(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	// update dynamic election block
-	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, consensus.StageElectionKey); err == nil {
-		log.Debug("getBlockNumber from contract", "key=", consensus.StageElectionKey, "value = ", electionNumber)
-		consensus.StageNumberElection = electionNumber
+	if err, electionNumber := c.GetBlockNumberFromBlockSetContract(chain, header, state, config.StageElectionKey); err == nil {
+		log.Debug("getBlockNumber from contract", "key=", config.StageElectionKey, "value = ", electionNumber)
+		config.StageNumberElection = electionNumber
 	} else {
 		log.Debug("getBlockNumber from contract failed", "err", err.Error())
 	}

@@ -24,7 +24,6 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/math"
 	"github.com/hpb-project/go-hpb/config"
-	"github.com/hpb-project/go-hpb/consensus"
 )
 
 // Config are the configuration options for the Interpreter
@@ -71,16 +70,16 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
 		switch num := evm.BlockNumber.Uint64(); {
-		case num > consensus.StageNumberEvmBugFork:
+		case num > config.StageNumberEvmBugFork:
 			cfg.JumpTable = yoloV1InstructionSetAddCreate2AndEvmPatch
 			opCodeToString = opCodeToString_v2
-		case num > consensus.StageNumberNewPrecompiledContract:
+		case num > config.StageNumberNewPrecompiledContract:
 			cfg.JumpTable = yoloV1InstructionSetddCreate2
 			opCodeToString = opCodeToString_v2
-		case num > consensus.StageNumberUpgradedEVM:
+		case num > config.StageNumberUpgradedEVM:
 			cfg.JumpTable = yoloV1InstructionSet
 			opCodeToString = opCodeToString_v2
-		case num > consensus.StageNumberRealRandom:
+		case num > config.StageNumberRealRandom:
 			cfg.JumpTable = constantinopleInstructionSet
 			opCodeToString = opCodeToString_v1
 		default:

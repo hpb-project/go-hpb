@@ -30,6 +30,7 @@ import (
 	"github.com/hpb-project/go-hpb/common/crypto"
 	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/config"
+	hpbconfig "github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 )
 
@@ -287,7 +288,7 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	for i := 0; i < len(snap.Tally); i++ {
 		for j := 0; j < len(snap.Tally)-i-1; j++ {
 			var switchcondition bool
-			if number >= consensus.StageNumberIII {
+			if number >= hpbconfig.StageNumberIII {
 				switchcondition = tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) < 0
 			} else {
 				switchcondition = tallytemp[j].VotePercent.Cmp(tallytemp[j+1].VotePercent) > 0
@@ -306,8 +307,8 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 	}
 
 	var hpnodeNO int
-	if len(finaltally) >= consensus.HpbNodenumber {
-		hpnodeNO = consensus.HpbNodenumber
+	if len(finaltally) >= hpbconfig.HpbNodenumber {
+		hpnodeNO = hpbconfig.HpbNodenumber
 		goto END
 
 	} else {
@@ -361,8 +362,8 @@ func CalculateHpbSnap(index uint64, signatures *lru.ARCCache, config *config.Pro
 			}
 
 			//calc how many last snap hps needing to add the latest snap
-			if len(finaltally)+len(delhpsmap) > consensus.HpbNodenumber {
-				for i := 0; i < consensus.HpbNodenumber-len(finaltally); i++ {
+			if len(finaltally)+len(delhpsmap) > hpbconfig.HpbNodenumber {
+				for i := 0; i < hpbconfig.HpbNodenumber-len(finaltally); i++ {
 					finaltally = append(finaltally, delhpsmap[i])
 				}
 			} else {

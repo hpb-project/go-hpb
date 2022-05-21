@@ -25,27 +25,26 @@ import (
 )
 
 var (
-	MainnetGenesisHash       = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash       = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
-	StageNumberEvmV2   int64 = 14633000
+	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
+	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 )
 
 // MainnetChainConfig is the chain parameters to run a node on the main network.
 var MainnetChainConfig = &ChainConfig{
 	ChainId:             big.NewInt(269),
 	Prometheus:          &DefaultPrometheusConfig,
-	HomesteadBlock:      big.NewInt(StageNumberEvmV2),
-	EIP150Block:         big.NewInt(StageNumberEvmV2),
-	EIP155Block:         big.NewInt(StageNumberEvmV2),
-	EIP158Block:         big.NewInt(StageNumberEvmV2),
-	ByzantiumBlock:      big.NewInt(StageNumberEvmV2),
-	ConstantinopleBlock: big.NewInt(StageNumberEvmV2),
-	PetersburgBlock:     big.NewInt(StageNumberEvmV2),
-	IstanbulBlock:       big.NewInt(StageNumberEvmV2),
-	MuirGlacierBlock:    big.NewInt(StageNumberEvmV2),
-	BerlinBlock:         big.NewInt(StageNumberEvmV2),
-	LondonBlock:         big.NewInt(StageNumberEvmV2),
-	ArrowGlacierBlock:   big.NewInt(StageNumberEvmV2),
+	HomesteadBlock:      big.NewInt(int64(StageNumberEvmV2)),
+	EIP150Block:         big.NewInt(int64(StageNumberEvmV2)),
+	EIP155Block:         big.NewInt(int64(StageNumberEvmV2)),
+	EIP158Block:         big.NewInt(int64(StageNumberEvmV2)),
+	ByzantiumBlock:      big.NewInt(int64(StageNumberEvmV2)),
+	ConstantinopleBlock: big.NewInt(int64(StageNumberEvmV2)),
+	PetersburgBlock:     big.NewInt(int64(StageNumberEvmV2)),
+	IstanbulBlock:       big.NewInt(int64(StageNumberEvmV2)),
+	MuirGlacierBlock:    big.NewInt(int64(StageNumberEvmV2)),
+	BerlinBlock:         big.NewInt(int64(StageNumberEvmV2)),
+	LondonBlock:         big.NewInt(int64(StageNumberEvmV2)),
+	ArrowGlacierBlock:   big.NewInt(int64(StageNumberEvmV2)),
 }
 
 var blockCacheLimit = 8192 // Maximum number of blocks to cache before throttling the download

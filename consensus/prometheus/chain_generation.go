@@ -123,7 +123,7 @@ func InstancePrometheus() *Prometheus {
 type SignerFn func(accounts.Account, []byte) ([]byte, error)
 
 func (c *Prometheus) GetNextRand(lastrand []byte, number uint64) ([]byte, error) {
-	if number < consensus.StateNumberNewHash {
+	if number < config.StateNumberNewHash {
 		return c.hboe.GetNextHash(lastrand)
 	} else {
 		return c.hboe.GetNextHash_v2(lastrand)
@@ -165,7 +165,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		copy(header.HardwareRandom, crypto.Keccak256(parentheader.HardwareRandom))
 		//header.HardwareRandom[len(header.HardwareRandom)-1] = header.HardwareRandom[len(header.HardwareRandom)-1] + 1
 		//set header hareware real random
-		if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+		if header.Number.Uint64() >= config.StageNumberRealRandom {
 			HWRealRand := consensus.Gen32BRandom()
 			extra.SetRealRND(HWRealRand[:])
 		}
@@ -196,7 +196,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 			}
 
 			//set header real random getting from boe
-			if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+			if header.Number.Uint64() >= config.StageNumberRealRandom {
 				HWRealRand, err := c.hboe.GetRandom()
 				if err != nil {
 					log.Error("PrepareBlockHeader boe gen real random fail", "error", err)
@@ -211,7 +211,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 	}
 
 	//block 0 has no HWRealRnd, so from block 1 beginning set SignLastHWRealRnd
-	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && number > consensus.StageNumberRealRandom {
+	if config.GetHpbConfigInstance().Network.RoleType != "synnode" && number > config.StageNumberRealRandom {
 		//set last number header hardware real random signature
 		signer, signFn := c.signer, c.signFn
 		if signFn == nil {
@@ -254,7 +254,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		return errors.New("prepare header get hpbnodesnap success, but snap`s singers is 0")
 	}
 	header.Difficulty = diffNoTurn
-	if number < consensus.StateNumberNewHash {
+	if number < config.StateNumberNewHash {
 		if _, inturn := snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), c.GetSinger()); inturn {
 			header.Difficulty = diffInTurn
 		}
@@ -348,7 +348,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		if nil == nonce {
 			copy(header.Nonce[:], consensus.NonceDropVote)
 		} else {
-			if number > consensus.StageNumberIII {
+			if number > config.StageNumberIII {
 				copy(header.Nonce[len(header.Nonce)-len(nonce):], nonce)
 			} else {
 				copy(header.Nonce[:], consensus.NonceDropVote)
@@ -522,7 +522,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 	err := c.CalculateRewards(chain, state, header, uncles)
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
-		if config.GetHpbConfigInstance().Node.TestMode != 1 && consensus.IgnoreRetErr != true {
+		if config.GetHpbConfigInstance().Node.TestMode != 1 && config.IgnoreRetErr != true {
 			return nil, err
 		}
 	}
@@ -532,7 +532,7 @@ func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header,
 }
 
 func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header, uncles []*types.Header) error {
-	if header.Number.Uint64()%consensus.HpbNodeCheckpointInterval != 0 && header.Number.Uint64() > consensus.StageNumberIV {
+	if header.Number.Uint64()%consensus.HpbNodeCheckpointInterval != 0 && header.Number.Uint64() > config.StageNumberIV {
 		log.Debug("CalculateRewards number is not 200 mulitple, do not reward", "number", header.Number)
 		return nil
 	}
@@ -551,7 +551,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	bigIntblocksoneyearfloat.SetInt(bigIntblocksoneyear)      //from big.Int to big.Float
 	A := bigrewards.Quo(bigrewards, bigIntblocksoneyearfloat) //calc reward mining one block
 
-	if header.Number.Uint64() >= consensus.StageNumberIII {
+	if header.Number.Uint64() >= config.StageNumberIII {
 		seconds := big.NewInt(0)
 		tempheader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 		fromtime := tempheader.Time
@@ -563,7 +563,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		seconds.Sub(fromtime, tempheader.Time)
 		secondsfloat := big.NewFloat(0)
 		secondsfloat.SetInt(seconds)
-		if header.Number.Uint64() <= consensus.StageNumberIV {
+		if header.Number.Uint64() <= config.StageNumberIV {
 			secondsfloat.Quo(secondsfloat, big.NewFloat(200))
 		}
 
@@ -581,7 +581,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 	var bigA13 = new(big.Float) //1/3 one block reward
 	bigA23.Set(A)
 	bigA13.Set(A)
-	if consensus.StageNumberVI < header.Number.Uint64() {
+	if config.StageNumberVI < header.Number.Uint64() {
 		bigA13.Quo(bigA13, big.NewFloat(200.0))
 	}
 
@@ -601,7 +601,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	var hpsnap *snapshots.HpbNodeSnap
 	var err error
-	if number < consensus.StageNumberII {
+	if number < config.StageNumberII {
 		finalhpbrewards := new(big.Int)
 		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 		state.AddBalance(header.Coinbase, finalhpbrewards)
@@ -621,7 +621,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	// fix bug : in full sync mode, process the block after StageNumberIII will occur a bad block,
 	// because there is no snap in promethus.recents , so need call voting.GetCadNodeSnap by manual.
-	if number == (consensus.StageNumberIII + 1) {
+	if number == (config.StageNumberIII + 1) {
 		chain := bc.InstanceBlockChain()
 		parentH := chain.GetHeaderByNumber(number - 1)
 		voting.GetCadNodeSnap(c.db, c.recents, chain, parentH.Number.Uint64(), parentH.ParentHash)
@@ -629,7 +629,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 
 	if csnap, err := voting.GetCadNodeSnap(c.db, c.recents, chain, number, header.ParentHash); err == nil {
 		if csnap != nil {
-			if number < consensus.StageNumberII {
+			if number < config.StageNumberII {
 				bigA23.Mul(bigA23, big.NewFloat(0.65))
 				canBlockReward := bigA23.Quo(bigA23, big.NewFloat(float64(len(csnap.VotePercents)))) //calc average reward coin part about cadidate nodes
 
@@ -660,7 +660,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				}
 			}
 
-			if number%consensus.HpbNodeCheckpointInterval == 0 && number <= consensus.NewContractVersion && number >= consensus.StageNumberII {
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number <= config.NewContractVersion && number >= config.StageNumberII {
 				var errreward error
 				loopcount := 3
 			GETCONTRACTLOOP:
@@ -673,7 +673,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				}
 				return errreward
 			}
-			if number%consensus.HpbNodeCheckpointInterval == 0 && number > consensus.NewContractVersion && number <= consensus.StageNumberElection {
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number > config.NewContractVersion && number <= config.StageNumberElection {
 				var errreward error
 				loopcount := 3
 				for i := 0; i < loopcount; i++ {
@@ -684,7 +684,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 				}
 				return errreward
 			}
-			if number%consensus.HpbNodeCheckpointInterval == 0 && number > consensus.StageNumberElection {
+			if number%consensus.HpbNodeCheckpointInterval == 0 && number > config.StageNumberElection {
 				var errreward error
 				loopcount := 3
 				for i := 0; i < loopcount; i++ {
@@ -750,7 +750,7 @@ func (c *Prometheus) rewardvotepercentcad(chain consensus.ChainReader, header *t
 
 	//use read contract addr and funstr get vote result
 	var realaddr common.Address
-	if (consensus.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < consensus.StageNumberVII) {
+	if (config.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < config.StageNumberVII) {
 		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
 	} else {
 		realaddr = common.BytesToAddress(resultaddr)
@@ -882,7 +882,7 @@ func (c *Prometheus) GetVoteRes(chain consensus.ChainReader, header *types.Heade
 
 	//use read contract addr and funstr get vote result
 	var realaddr common.Address
-	if (consensus.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < consensus.StageNumberVII) {
+	if (config.StageNumberVI < header.Number.Uint64()) && (header.Number.Uint64() < config.StageNumberVII) {
 		realaddr = common.HexToAddress("0x2072f300c98539760be185b05b738f9e94d2e48a")
 	} else {
 		realaddr = common.BytesToAddress(resultaddr)
@@ -957,7 +957,7 @@ func (c *Prometheus) GetBandwithRes(addrlist []common.Address, chain consensus.C
 	}
 
 	var bCalcZero = true
-	if number < consensus.StageNumberIV {
+	if number < config.StageNumberIV {
 		bCalcZero = false
 	}
 

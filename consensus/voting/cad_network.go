@@ -23,6 +23,7 @@ import (
 
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/log"
+	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/network/p2p"
@@ -46,7 +47,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 
 	//order the hpsmaptemp by put it into []common.address
 	delhpsmap := make(common.Addresses, 0, len(rankingdata))
-	selectres := make(common.Addresses, 0, consensus.NumberPrehp)
+	selectres := make(common.Addresses, 0, config.NumberPrehp)
 	for key, _ := range rankingdata {
 		delhpsmap = append(delhpsmap, key)
 	}
@@ -75,7 +76,7 @@ func GetCadNodeFromNetwork(random []byte, rankingdata map[common.Address]float64
 	}
 
 	input := random
-	for i := 0; i < consensus.NumberPrehp; i++ {
+	for i := 0; i < config.NumberPrehp; i++ {
 		err, output := snapshots.GenRand(input)
 		if nil != err {
 			return nil, nil, err

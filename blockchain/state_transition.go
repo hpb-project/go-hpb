@@ -26,7 +26,7 @@ import (
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/common/math"
-	"github.com/hpb-project/go-hpb/consensus"
+	"github.com/hpb-project/go-hpb/config"
 )
 
 var (
@@ -192,7 +192,7 @@ func (st *StateTransition) TransitionOnNative(bc *BlockChain) (ret []byte, requi
 	from := st.msg.From()
 	to := st.to().Address()
 
-	intrinsicGas := types.IntrinsicGas(st.data, false, st.header.Number.Uint64() > consensus.StageNumberNewPrecompiledContract)
+	intrinsicGas := types.IntrinsicGas(st.data, false, st.header.Number.Uint64() > config.StageNumberNewPrecompiledContract)
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
 		return nil, nil, nil, false, err
 	}
@@ -237,7 +237,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
-	intrinsicGas := types.IntrinsicGas(st.data, contractCreation, st.header.Number.Uint64() > consensus.StageNumberNewPrecompiledContract)
+	intrinsicGas := types.IntrinsicGas(st.data, contractCreation, st.header.Number.Uint64() > config.StageNumberNewPrecompiledContract)
 	if intrinsicGas.BitLen() > 64 {
 		return nil, vmcore.ErrOutOfGas
 	}

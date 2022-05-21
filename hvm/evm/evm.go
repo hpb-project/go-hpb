@@ -44,7 +44,7 @@ type (
 
 func (evm *EVM) ActivePrecompiles() map[common.Address]PrecompiledContract {
 	switch num := evm.BlockNumber.Uint64(); {
-	case num > consensus.StageNumberNewPrecompiledContract:
+	case num > config.StageNumberNewPrecompiledContract:
 		return PrecompiledContractsIstanbul
 	default:
 		return PrecompiledContractsByzantium

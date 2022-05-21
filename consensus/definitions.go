@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"errors"
+	"github.com/hpb-project/go-hpb/config"
 	"math/rand"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -72,36 +73,36 @@ const (
 )
 const BlockSetContractAddr = BlockSetProxyMainnet
 
-var (
-	HpbNodenumber = 31    //hpb nodes number
-	NumberPrehp   = 20    //nodes num from 151 nodes select
-	IgnoreRetErr  = false //ignore finalize return err
-
-	StageNumberII  uint64 = 260000
-	StageNumberIII uint64 = 1200000
-	StageNumberIV  uint64 = 2560000
-	StageNumberV   uint64 = 999999000000 // unused forever
-	StageNumberVI  uint64 = 2561790
-	StageNumberVII uint64 = 2896000
-
-	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
-	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
-
-	StageNumberUpgradedEVM uint64 = 8685000 // used to upgraded EVM .
-
-	StageNumberNewPrecompiledContract uint64 = 11850000
-
-	ContinuousGenBlkLimit uint64 = 2
-
-	NewContractVersion        uint64 = 3788000
-	CadNodeCheckpointInterval uint64 = 200
-
-	StageElectionKey             = "ElectionBlock"
-	StageNumberElection   uint64 = MaxBlockForever // got from contract, otherwise forever not used.
-	StageNumberEvmBugFork uint64 = 12414000        // fix contract bug for unlimited generate HPB coin happend at 2021-10-20
-	StageNumberEvmV2      uint64 = 14633000
-	StateNumberEvmRevert  uint64 = 14633300 // critical revert evm to old version at 14633300.
-)
+//var (
+//	HpbNodenumber = 31    //hpb nodes number
+//	NumberPrehp   = 20    //nodes num from 151 nodes select
+//	IgnoreRetErr  = false //ignore finalize return err
+//
+//	StageNumberII  uint64 = 260000
+//	StageNumberIII uint64 = 1200000
+//	StageNumberIV  uint64 = 2560000
+//	StageNumberV   uint64 = 999999000000 // unused forever
+//	StageNumberVI  uint64 = 2561790
+//	StageNumberVII uint64 = 2896000
+//
+//	StageNumberRealRandom uint64 = 5159000               // used to enable real random.
+//	StateNumberNewHash           = StageNumberRealRandom // used to enable fpga hashV2 and limit continue gen block.
+//
+//	StageNumberUpgradedEVM uint64 = 8685000 // used to upgraded EVM .
+//
+//	StageNumberNewPrecompiledContract uint64 = 11850000
+//
+//	ContinuousGenBlkLimit uint64 = 2
+//
+//	NewContractVersion        uint64 = 3788000
+//	CadNodeCheckpointInterval uint64 = 200
+//
+//	StageElectionKey             = "ElectionBlock"
+//	StageNumberElection   uint64 = MaxBlockForever // got from contract, otherwise forever not used.
+//	StageNumberEvmBugFork uint64 = 12414000        // fix contract bug for unlimited generate HPB coin happend at 2021-10-20
+//	StageNumberEvmV2      uint64 = 14633000
+//	StateNumberEvmRevert  uint64 = 14633300 // critical revert evm to old version at 14633300.
+//)
 
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor
@@ -225,9 +226,9 @@ func SigHash(header *types.Header) (hash common.Hash) {
 }
 
 func SetTestParam() {
-	StageNumberII = 1
-	StageNumberIII = 0
-	StageNumberIV = 1
+	config.StageNumberII = 1
+	config.StageNumberIII = 0
+	config.StageNumberIV = 1
 }
 
 func Gen32BRandom() [32]byte {

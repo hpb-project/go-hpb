@@ -402,7 +402,7 @@ func (self *worker) startNewMinerRound() {
 		Time:       big.NewInt(tstamp),
 	}
 	var extra *types.ExtraDetail
-	if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+	if header.Number.Uint64() >= config.StageNumberRealRandom {
 		extra, _ = types.NewExtraDetail(types.ExtraVersion)
 	} else {
 		extra, _ = types.NewExtraDetail(0)
@@ -581,7 +581,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	var err error
 	snap := env.state.Snapshot()
 	blockchain := bc.InstanceBlockChain()
-	bNewVersion := env.header.Number.Uint64() > consensus.NewContractVersion
+	bNewVersion := env.header.Number.Uint64() > config.NewContractVersion
 	if bNewVersion {
 		if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(env.state.GetCode(*tx.To())) > 0) {
 			_, receipt, _, err = bc.ApplyTransaction(env.config, blockchain, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed)

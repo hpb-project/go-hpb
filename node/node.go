@@ -290,9 +290,9 @@ func parseConsensusConfigFile(conf *config.HpbConfig) {
 		return
 	}
 
-	consensus.HpbNodenumber = cfgfile.HpNodesNum
-	consensus.NumberPrehp = cfgfile.HpVotingRndScope
-	consensus.IgnoreRetErr = cfgfile.FinalizeRetErrIg
+	config.HpbNodenumber = cfgfile.HpNodesNum
+	config.NumberPrehp = cfgfile.HpVotingRndScope
+	config.IgnoreRetErr = cfgfile.FinalizeRetErrIg
 	conf.Prometheus.Period = uint64(cfgfile.Time)
 
 	config.MainnetBootnodes = config.MainnetBootnodes[:0]
@@ -311,9 +311,9 @@ func (hpbnode *Node) Start(conf *config.HpbConfig) error {
 		consensus.SetTestParam()
 	}
 
-	log.Info("consensus.HpbNodenumber", "value", consensus.HpbNodenumber)
-	log.Info("consensus.NumberPrehp", "value", consensus.NumberPrehp)
-	log.Info("consensus.IgnoreRetErr", "value", consensus.IgnoreRetErr)
+	log.Info("config.HpbNodenumber", "value", config.HpbNodenumber)
+	log.Info("config.NumberPrehp", "value", config.NumberPrehp)
+	log.Info("config.IgnoreRetErr", "value", config.IgnoreRetErr)
 	log.Info("conf.Prometheus.Period", "value", conf.Prometheus.Period)
 	for _, v := range config.MainnetBootnodes {
 		log.Info("config.MainnetBootnodes", "value", v)
