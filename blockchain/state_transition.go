@@ -38,13 +38,13 @@ var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	ErrInsufficientBalance       = errors.New("insufficient balance")
 
-	gasDiscountContractAddr      = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
-	gasABI                       = "[{\"constant\":true,\"inputs\":[{\"name\":\"dappaddr\",\"type\":\"address\"}],\"name\":\"getratebyaddr\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\": \"\",\"type\": \"uint256\"}],\"payable\": false,\"stateMutability\": \"view\",\"type\": \"function\"}]"
-	gasFunname                   = "getratebyaddr"
-	gasCacheContractAddr         = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
-	gasCacheAddrs                = map[common.Address]bool{}
-	gasCacheFunname              = "getaddrs"
-	gasCacheFunABI               = "[{\"constant\":false,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+	gasDiscountContractAddr = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
+	gasABI                  = "[{\"constant\":true,\"inputs\":[{\"name\":\"dappaddr\",\"type\":\"address\"}],\"name\":\"getratebyaddr\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\": \"\",\"type\": \"uint256\"}],\"payable\": false,\"stateMutability\": \"view\",\"type\": \"function\"}]"
+	gasFunname              = "getratebyaddr"
+	gasCacheContractAddr    = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
+	gasCacheAddrs           = map[common.Address]bool{}
+	gasCacheFunname         = "getaddrs"
+	gasCacheFunABI          = "[{\"constant\":false,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 )
 
 /*
@@ -273,11 +273,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
 	}
 	if st.header.Number.Uint64() > config.StageNumberEvmV3 {
-		if *msg.To() == gasCacheContractAddr || len(gasCacheAddrs) == 0 {
-			st.gasCacheCall(msg.To())
-		}
-		if gasCacheAddrs[*msg.To()] {
-			st.gasCall(msg.To())
+		if msg.To() != nil {
+			if *msg.To() == gasCacheContractAddr || len(gasCacheAddrs) == 0 {
+				st.gasCacheCall(msg.To())
+			}
+			if gasCacheAddrs[*msg.To()] {
+				st.gasCall(msg.To())
+			}
 		}
 	}
 	st.refundGas()
@@ -328,7 +330,7 @@ func (st *StateTransition) gasCall(to *common.Address) {
 		max := new(big.Int).SetBytes(result[64:96]).Uint64()
 		gasused := st.gasUsed().Uint64()
 		if voted > 0 {
-			if gasused * rate / 100 > max {
+			if gasused*rate/100 > max {
 				gasused = max
 			} else {
 				gasused = gasused * rate / 100
@@ -356,9 +358,6 @@ func (st *StateTransition) gasCacheCall(to *common.Address) {
 		log.Error("cachegas", "result", result, "err", err, "lenout", len(gasCacheAddrs))
 	}
 }
-
-
-
 
 // ExecutionResult includes all output after executing given evm
 // message no matter the execution itself is successful or not.
