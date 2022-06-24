@@ -274,7 +274,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 	if st.header.Number.Uint64() > config.StageNumberEvmV3 {
 		if msg.To() != nil {
-			if *msg.To() == gasCacheContractAddr || len(gasCacheAddrs) == 0 {
+			if *msg.To() == gasCacheContractAddr {
 				st.gasCacheCall(msg.To())
 			}
 			if gasCacheAddrs[*msg.To()] {
@@ -349,6 +349,9 @@ func (st *StateTransition) gasCacheCall(to *common.Address) {
 	packres, err := fechABI.Pack(gasCacheFunname)
 	result, err := vmenv.InnerCall(vmcore.AccountRef(gasCacheContractAddr), gasCacheContractAddr, packres)
 	if err == nil {
+		if len(result) < 64 {
+			return
+		}
 		addrslength := new(big.Int).SetBytes(result[32 : 32+32])
 		for i := 0; i < int(addrslength.Int64()); i++ {
 			var tempaddr common.Address
