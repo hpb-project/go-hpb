@@ -38,10 +38,10 @@ var (
 	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	ErrInsufficientBalance       = errors.New("insufficient balance")
 
-	gasDiscountContractAddr = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
+	gasDiscountContractAddr = common.HexToAddress("0x236489BdbF9f4f297a214d365bE8F7238Fc247aE")
 	gasABI                  = "[{\"constant\":true,\"inputs\":[{\"name\":\"dappaddr\",\"type\":\"address\"}],\"name\":\"getratebyaddr\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"},{\"name\":\"\",\"type\":\"uint256\"},{\"name\": \"\",\"type\": \"uint256\"}],\"payable\": false,\"stateMutability\": \"view\",\"type\": \"function\"}]"
 	gasFunname              = "getratebyaddr"
-	gasCacheContractAddr    = common.HexToAddress("0x6c0c0bcc145672bd0Fd67dD771947F6420c4533d")
+	gasCacheContractAddr    = common.HexToAddress("0x236489BdbF9f4f297a214d365bE8F7238Fc247aE")
 	gasCacheAddrs           = map[common.Address]bool{}
 	gasCacheFunname         = "getaddrs"
 	gasCacheFunABI          = "[{\"constant\":false,\"inputs\":[],\"name\":\"getaddrs\",\"outputs\":[{\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
