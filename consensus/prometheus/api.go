@@ -17,12 +17,14 @@
 package prometheus
 
 import (
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/rpc"
+	"math/big"
 )
 
 type API struct {
@@ -61,6 +63,17 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 		return nil, err
 	}
 	return snap.GetHpbNodes(), nil
+}
+
+func (api *API) GetElectedMiner(number *rpc.BlockNumber) (common.Address, error) {
+	var bigblock = new(big.Int)
+	if number == nil || *number == rpc.LatestBlockNumber {
+		bigblock = api.chain.CurrentHeader().Number
+	} else {
+		bigblock = new(big.Int).SetInt64(number.Int64())
+	}
+	miner := bc.GetBlockElectedMiner(api.prometheus.db, bigblock)
+	return miner, nil
 }
 
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) (snapshots.CadNodeSnap, error) {

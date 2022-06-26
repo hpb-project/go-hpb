@@ -18,6 +18,7 @@ package prometheus
 import (
 	"bytes"
 	"errors"
+	bc "github.com/hpb-project/go-hpb/blockchain"
 	"math"
 	"math/big"
 	"sort"
@@ -316,8 +317,9 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 
 		if mode == config.FullSync {
 			var inturn bool
+			var electedMiner common.Address
 			if number < consensus.StateNumberNewHash {
-				_, inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
+				electedMiner, inturn = snap.CalculateCurrentMinerorigin(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer)
 			} else {
 				//statistics the miners` addresses donnot care repeat address
 				latestCheckPointNumber := uint64(math.Floor(float64(number/consensus.HpbNodeCheckpointInterval))) * consensus.HpbNodeCheckpointInterval
@@ -365,12 +367,13 @@ func (c *Prometheus) verifySeal(chain consensus.ChainReader, header *types.Heade
 							}
 						}
 					} else {
-						_, inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSet)
+						electedMiner, inturn = snap.CalculateCurrentMiner(new(big.Int).SetBytes(header.HardwareRandom).Uint64(), signer, chooseSet)
 					}
 					retry = 5
 					i++
 				}
 			}
+			bc.WriteBlockElectedMiner(c.db, header.Number, electedMiner)
 			//Ensure that the difficulty corresponds to the turn-ness of the signerHash
 			if inturn {
 				if header.Difficulty.Cmp(diffInTurn) != 0 {

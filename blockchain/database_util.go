@@ -64,6 +64,8 @@ var (
 	preimagePrefix = "secure-key-"         // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("hpb-config-") // config prefix for the db
 
+	electedPrefix = "elected-"
+
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 
@@ -398,6 +400,14 @@ func GetBloomBits(db DatabaseReader, bit uint, section uint64, head common.Hash)
 	return bits
 }
 
+func GetBlockElectedMiner(db DatabaseReader, blocknumber *big.Int) common.Address {
+	key := electedPrefix + blocknumber.Text(10)
+	v, _ := db.Get([]byte(key))
+	var r = common.Address{}
+	r.SetBytes(v)
+	return r
+}
+
 // WriteCanonicalHash stores the canonical hash for the given block number.
 func WriteCanonicalHash(db hpbdb.Putter, hash common.Hash, number uint64) error {
 	key := append(append(headerPrefix, encodeBlockNumber(number)...), numSuffix...)
@@ -548,6 +558,11 @@ func WriteBloomBits(db hpbdb.Putter, bit uint, section uint64, head common.Hash,
 	if err := db.Put(key, bits); err != nil {
 		log.Crit("Failed to store bloom bits", "err", err)
 	}
+}
+
+func WriteBlockElectedMiner(db hpbdb.Putter, blocknumber *big.Int, elected common.Address) {
+	key := electedPrefix + blocknumber.Text(10)
+	db.Put([]byte(key), elected.Bytes())
 }
 
 // DeleteCanonicalHash removes the number to hash canonical mapping.
