@@ -95,6 +95,12 @@ web3._extend({
 	property: 'prometheus',
 	methods: [
 		new web3._extend.Method({
+			name: 'getElectedMiner',
+			call: 'prometheus_getElectedMiner',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getHpbNodeSnap',
 			call: 'prometheus_getHpbNodeSnap',
 			params: 1,
