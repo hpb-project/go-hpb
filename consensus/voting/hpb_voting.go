@@ -29,6 +29,35 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 )
 
+func GlobalSpecialMiners() []common.Address {
+	specialMiners := []common.Address{
+		common.HexToAddress("0x564578d57385dd304589273a8111bfa70f8d55f6"),
+		common.HexToAddress("0x4d33752048a0cba5437bb32c5ab41374d28eaa6c"),
+		common.HexToAddress("0x4cb6485cd67593cca36c743a04aac802e32f673d"),
+		common.HexToAddress("0x86ab84ce7f84c2514511218bc7d19540e81dcd07"),
+		common.HexToAddress("0xaf2f041e5c4937a1bc6a1f085e087620b59b9c21"),
+		common.HexToAddress("0x8076f649b5bb85eeb20424e815eff1cbe42f1d0e"),
+	}
+	return specialMiners
+}
+
+func GetSpecialHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
+	s, err := GetHpbNodeSnap(db, recents, signatures, config, chain, number, hash, parents)
+	if err != nil {
+		return s, err
+	}
+	if number <= 15150000 || number >= 15200000 {
+		return s, err
+	}
+	signers := make(map[common.Address]struct{})
+	miners := GlobalSpecialMiners()
+	for _, m := range miners {
+		signers[m] = struct{}{}
+	}
+	s.Signers = signers
+	return s, err
+}
+
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
 
 	if number == 0 {

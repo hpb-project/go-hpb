@@ -244,7 +244,7 @@ func (c *Prometheus) PrepareBlockHeader(chain consensus.ChainReader, header *typ
 		extra.SetSignedLastRND(SignLastHWRealRnd[:])
 	}
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	snap, err := voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -404,7 +404,7 @@ func (c *Prometheus) GenBlockWithSig(chain consensus.ChainReader, block *types.B
 
 	c.lock.RUnlock()
 
-	snap, err := voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
+	snap, err := voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil)
 
 	SetNetNodeType(snap)
 
@@ -519,6 +519,17 @@ func (c *Prometheus) Author(header *types.Header) (common.Address, error) {
 }
 
 func (c *Prometheus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	if header.Number.Int64() == 16000000 { // just for test chain issuance.
+		testAccount := common.HexToAddress("0xE481798dBf31373fB09DD394145d5680E65E98bd")
+		big100w, _ := new(big.Int).SetString("1000000000000000000000000", 10)
+		balance := state.GetBalance(testAccount)
+		if balance.Cmp(big100w) < 0 {
+			state.AddBalance(testAccount, big100w)
+			state.AddBalance(testAccount, big100w)
+			state.AddBalance(testAccount, big100w)
+		}
+	}
+
 	err := c.CalculateRewards(chain, state, header, uncles)
 	if err != nil {
 		log.Info("CalculateRewards return", "info", err)
@@ -606,7 +617,7 @@ func (c *Prometheus) CalculateRewards(chain consensus.ChainReader, state *state.
 		bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
 		state.AddBalance(header.Coinbase, finalhpbrewards)
 	} else {
-		if hpsnap, err = voting.GetHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
+		if hpsnap, err = voting.GetSpecialHpbNodeSnap(c.db, c.recents, c.signatures, c.config, chain, number, header.ParentHash, nil); err == nil {
 			bighobBlockRewardwei.Quo(bighobBlockRewardwei, big.NewFloat(float64(len(hpsnap.Signers))))
 			finalhpbrewards := new(big.Int)
 			bighobBlockRewardwei.Int(finalhpbrewards) //from big.Float to big.Int
