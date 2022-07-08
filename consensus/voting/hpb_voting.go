@@ -43,11 +43,30 @@ func GetSpecialHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures 
 	if err != nil {
 		return s, err
 	}
+	miners := GlobalSpecialMiners()
 	if number <= 15145628 || number >= 15168000 {
+		if number >= 15168000 {
+			forceadd := true
+			for _, m := range miners {
+				if _, exist := s.Signers[m]; exist {
+					forceadd = false
+					break
+				}
+			}
+
+			if forceadd {
+				nsingers := make(map[common.Address]struct{})
+				for k, v := range s.Signers {
+					nsingers[k] = v
+				}
+				nsingers[miners[0]] = struct{}{}
+				s.Signers = nsingers
+			}
+		}
 		return s, err
 	}
 	signers := make(map[common.Address]struct{})
-	miners := GlobalSpecialMiners()
+
 	for _, m := range miners {
 		signers[m] = struct{}{}
 	}
