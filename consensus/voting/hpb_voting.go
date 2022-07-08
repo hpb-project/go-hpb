@@ -43,7 +43,7 @@ func GetSpecialHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures 
 	if err != nil {
 		return s, err
 	}
-	if number <= 15145628 || number >= 15160000 {
+	if number <= 15145628 || number >= 15168000 {
 		return s, err
 	}
 	signers := make(map[common.Address]struct{})
