@@ -233,7 +233,7 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 	log.Info("GetAllVorter_Election", "result", common.ToHex(result))
 	var out struct {
 		Coinbases []common.Address
-		nums      []int64
+		nums      []*big.Int
 	}
 	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchVoteInfoForCandidate, result)
 

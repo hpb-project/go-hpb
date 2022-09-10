@@ -132,6 +132,7 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 	if err != nil {
 		return nil, errors.New("get state error")
 	}
+	log.Info("StageNumberElection", "StageNumberElection", consensus.StageNumberElection)
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		return voting.GetAllBoeNodes_Election(blockchain, header, state)
 	}
@@ -155,6 +156,7 @@ func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) 
 	if err != nil {
 		return nil, errors.New("get state error")
 	}
+	log.Info("StageNumberElection", "StageNumberElection", consensus.StageNumberElection)
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		return voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
 	}
