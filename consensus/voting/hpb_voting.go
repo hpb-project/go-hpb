@@ -17,6 +17,7 @@
 package voting
 
 import (
+	"encoding/hex"
 	"errors"
 	"math"
 	"math/big"
@@ -160,13 +161,13 @@ func GetElectionContractAddress(chain consensus.ChainReader, header *types.Heade
 			return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("return bootnode info result is nil or length is 0")
 		}
 	}
-	log.Info("GetElectionContractAddress", "result", common.ToHex(result))
-
-	err = fechABI.UnpackIntoInterface(&out, consensus.NewGetcontract, result)
-
-	if err != nil {
-		return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("GetElectionContractAddress Unpack error")
-	}
+	log.Info("GetElectionContractAddress", "result", hex.EncodeToString(result))
+	out.nodeaddr = common.BytesToAddress(result[0:32])
+	out.lockaddr = common.BytesToAddress(result[32:64])
+	out.voteaddr = common.BytesToAddress(result[64:96])
+	log.Info("GetElectionContractAddress", "node", out.nodeaddr)
+	log.Info("GetElectionContractAddress", "node", out.lockaddr)
+	log.Info("GetElectionContractAddress", "node", out.voteaddr)
 	return out.nodeaddr, out.lockaddr, out.voteaddr, nil
 }
 
