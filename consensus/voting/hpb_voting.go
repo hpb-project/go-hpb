@@ -172,10 +172,12 @@ func GetElectionContractAddress(chain consensus.ChainReader, header *types.Heade
 }
 
 func GetAllBoeNodes_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
-	fechaddr, _, _, err := GetElectionContractAddress(chain, header, state)
-	if err != nil {
-		return nil, err
-	}
+	// fechaddr, _, _, err := GetElectionContractAddress(chain, header, state)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	fechaddr := common.HexToAddress("0x451d785A0379E637d17C1C0E96cA150168A5Ab9A")
+
 	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
 		func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
 	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewgetAllBoeNodesABI))
@@ -206,10 +208,11 @@ func GetAllBoeNodes_Election(chain consensus.ChainReader, header *types.Header, 
 }
 
 func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, error) {
-	_, _, fechaddr, err := GetElectionContractAddress(chain, header, state)
-	if err != nil {
-		return nil, err
-	}
+	// _, _, fechaddr, err := GetElectionContractAddress(chain, header, state)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	fechaddr := common.HexToAddress("0x35a3445C0ca0B01B7CEA2F867D762f6410c9e952")
 	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
 		func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
 	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewfetchVoteInfoForCandidateABI))
