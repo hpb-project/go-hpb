@@ -235,10 +235,20 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 		Coinbases []common.Address
 		nums      []*big.Int
 	}
-	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchVoteInfoForCandidate, result)
 
-	if err != nil {
-		return nil, errors.New("GetAllVorter_Election Unpack error")
+	// err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchVoteInfoForCandidate, result)
+
+	// if err != nil {
+	// 	return nil, errors.New("GetAllVorter_Election Unpack error")
+	// }
+	if len(result) > 64 {
+		base := 64
+		index := 1
+		length := (len(result)/32 - 2) / 2 // coinbase length
+		for index < length {
+			out.Coinbases = append(out.Coinbases, common.BytesToAddress(result[base+index*32:base+index*32+32]))
+			index = index + 1
+		}
 	}
 
 	return out.Coinbases, nil
