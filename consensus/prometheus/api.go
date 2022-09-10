@@ -17,14 +17,15 @@
 package prometheus
 
 import (
-	bc "github.com/hpb-project/go-hpb/blockchain"
+	"errors"
+
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"math/big"
 )
 
 type API struct {
@@ -63,17 +64,6 @@ func (api *API) GetHpbNodes(number *rpc.BlockNumber) ([]common.Address, error) {
 		return nil, err
 	}
 	return snap.GetHpbNodes(), nil
-}
-
-func (api *API) GetElectedMiner(number *rpc.BlockNumber) (common.Address, error) {
-	var bigblock = new(big.Int)
-	if number == nil || *number == rpc.LatestBlockNumber {
-		bigblock = api.chain.CurrentHeader().Number
-	} else {
-		bigblock = new(big.Int).SetInt64(number.Int64())
-	}
-	miner := bc.GetBlockElectedMiner(api.prometheus.db, bigblock)
-	return miner, nil
 }
 
 func (api *API) GetCandidateNodes(number *rpc.BlockNumber) (snapshots.CadNodeSnap, error) {
@@ -124,4 +114,50 @@ func (api *API) Discard(address common.Address, confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
 	delete(api.prometheus.proposals, address)
+}
+
+func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, error) {
+	blockchain := api.chain
+	var header *types.Header
+	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
+		header = blockchain.CurrentHeader()
+	} else {
+		log.Debug("getRandom", "num", blocknum.Int64())
+		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
+	}
+	if header == nil {
+		return nil, errors.New("get header error")
+	}
+	state, err := blockchain.StateAt(header.Root)
+	if err != nil {
+		return nil, errors.New("get state error")
+	}
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		return voting.GetAllBoeNodes_Election(blockchain, header, state)
+	}
+
+	return api.GetHpbNodes(blocknum)
+}
+
+func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) ([]common.Address, error) {
+	blockchain := api.chain
+	var header *types.Header
+	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
+		header = blockchain.CurrentHeader()
+	} else {
+		log.Debug("getRandom", "num", blocknum.Int64())
+		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
+	}
+	if header == nil {
+		return nil, errors.New("get header error")
+	}
+	state, err := blockchain.StateAt(header.Root)
+	if err != nil {
+		return nil, errors.New("get state error")
+	}
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		return voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
+	}
+
+	return voting.GetOlderVorter(blockchain, header, state, boeaddr)
 }

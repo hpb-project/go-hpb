@@ -17,9 +17,14 @@
 package voting
 
 import (
+	"errors"
 	"math"
+	"math/big"
+	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/hpb-project/go-hpb/account/abi"
+	"github.com/hpb-project/go-hpb/blockchain/state"
 	hpbdb "github.com/hpb-project/go-hpb/blockchain/storage"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -27,6 +32,8 @@ import (
 	"github.com/hpb-project/go-hpb/config"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
+	"github.com/hpb-project/go-hpb/vmcore"
+	"github.com/hpb-project/go-hpb/vmcore/vm"
 )
 
 func GetHpbNodeSnap(db hpbdb.Database, recents *lru.ARCCache, signatures *lru.ARCCache, config *config.PrometheusConfig, chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*snapshots.HpbNodeSnap, error) {
@@ -128,4 +135,140 @@ func StoreDataToCacheAndDb(recents *lru.ARCCache, db hpbdb.Database, snap *snaps
 	}
 
 	return err
+}
+
+func GetElectionContractAddress(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (common.Address, common.Address, common.Address, error) {
+	fechaddr := common.HexToAddress(consensus.ElectionContractAddr)
+	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
+		func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewProxyElectionABI))
+	var out struct {
+		nodeaddr common.Address
+		lockaddr common.Address
+		voteaddr common.Address
+	}
+	//get bootnode info "addr,cid,hid"
+	packres, _ := fechABI.Pack(consensus.NewGetcontract)
+	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
+	if err != nil {
+		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		return out.nodeaddr, out.lockaddr, out.voteaddr, err
+	} else {
+		if result == nil || len(result) == 0 {
+			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("return bootnode info result is nil or length is 0")
+		}
+	}
+	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewGetcontract, result)
+
+	if err != nil {
+		return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("Unpack error")
+	}
+	return out.nodeaddr, out.lockaddr, out.voteaddr, nil
+}
+
+func GetAllBoeNodes_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
+	fechaddr, _, _, err := GetElectionContractAddress(chain, header, state)
+	if err != nil {
+		return nil, err
+	}
+	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
+		func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewgetAllBoeNodesABI))
+
+	//get bootnode info "addr,cid,hid"
+	packres, _ := fechABI.Pack(consensus.NewgetAllBoeNodes)
+	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
+	if err != nil {
+		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		return nil, err
+	} else {
+		if result == nil || len(result) == 0 {
+			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			return nil, errors.New("return bootnode info result is nil or length is 0")
+		}
+	}
+	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	var out struct {
+		Coinbases []common.Address
+	}
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewgetAllBoeNodes, result)
+
+	if err != nil {
+		return nil, errors.New("Unpack error")
+	}
+	return out.Coinbases, nil
+}
+
+func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, error) {
+	_, _, fechaddr, err := GetElectionContractAddress(chain, header, state)
+	if err != nil {
+		return nil, err
+	}
+	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
+		func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
+	fechABI, _ := abi.JSON(strings.NewReader(consensus.NewfetchVoteInfoForCandidateABI))
+
+	//get bootnode info "addr,cid,hid"
+	packres, _ := fechABI.Pack(consensus.NewfetchVoteInfoForCandidate, boeaddr)
+	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
+	if err != nil {
+		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		return nil, err
+	} else {
+		if result == nil || len(result) == 0 {
+			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			return nil, errors.New("return bootnode info result is nil or length is 0")
+		}
+	}
+	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	var out struct {
+		Coinbases []common.Address
+		nums      []int64
+	}
+	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchVoteInfoForCandidate, result)
+
+	if err != nil {
+		return nil, errors.New("Unpack error")
+	}
+
+	return out.Coinbases, nil
+}
+
+func GetOlderVorter(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, error) {
+	var result struct {
+		CandidateAddrs []common.Address
+		Nums           []*big.Int
+	}
+	if header.Number.Uint64() > consensus.NewContractVersion {
+		fechaddr := common.HexToAddress(consensus.NewContractAddr)
+		vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
+			func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
+		fechABI, _ := abi.JSON(strings.NewReader(consensus.NewfetchVoteInfoForCandidateABI))
+		packres, _ := fechABI.Pack(consensus.NewfetchVoteInfoForCandidate, boeaddr)
+		resultvote, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
+		if err != nil {
+			log.Error("getFunStr InnerCall fail", "err", err)
+			return nil, err
+		} else {
+			if resultvote == nil || len(resultvote) == 0 {
+				return nil, errors.New("return resultaddr is nil or length is 0")
+			}
+		}
+		log.Trace("resultvote", "resultvote", common.ToHex(resultvote))
+
+		err = fechABI.UnpackIntoInterface(&result, consensus.NewfetchVoteInfoForCandidate, resultvote)
+		if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
+			log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
+			return nil, nil
+		}
+		return result.CandidateAddrs, nil
+
+	}
+	return result.CandidateAddrs, nil
 }
