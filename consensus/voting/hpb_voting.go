@@ -149,23 +149,23 @@ func GetElectionContractAddress(chain consensus.ChainReader, header *types.Heade
 	}
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewGetcontract)
-	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	log.Info("GetElectionContractAddress", "packres", common.ToHex(packres))
 	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
 	if err != nil {
-		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		log.Error("GetElectionContractAddress bootnode info from InnerCall fail", "err", err)
 		return out.nodeaddr, out.lockaddr, out.voteaddr, err
 	} else {
 		if result == nil || len(result) == 0 {
-			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			log.Error("GetElectionContractAddress bootnode info from InnerCall fail", "err", err)
 			return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("return bootnode info result is nil or length is 0")
 		}
 	}
-	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	log.Info("GetElectionContractAddress", "result", common.ToHex(result))
 
 	err = fechABI.UnpackIntoInterface(&out, consensus.NewGetcontract, result)
 
 	if err != nil {
-		return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("Unpack error")
+		return out.nodeaddr, out.lockaddr, out.voteaddr, errors.New("GetElectionContractAddress Unpack error")
 	}
 	return out.nodeaddr, out.lockaddr, out.voteaddr, nil
 }
@@ -181,25 +181,25 @@ func GetAllBoeNodes_Election(chain consensus.ChainReader, header *types.Header, 
 
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewgetAllBoeNodes)
-	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	log.Info("GetAllBoeNodes_Election", "packres", common.ToHex(packres))
 	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
 	if err != nil {
-		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		log.Error("GetAllBoeNodes_Election bootnode info from InnerCall fail", "err", err)
 		return nil, err
 	} else {
 		if result == nil || len(result) == 0 {
-			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			log.Error("GetAllBoeNodes_Election bootnode info from InnerCall fail", "err", err)
 			return nil, errors.New("return bootnode info result is nil or length is 0")
 		}
 	}
-	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	log.Info("GetAllBoeNodes_Election", "result", common.ToHex(result))
 	var out struct {
 		Coinbases []common.Address
 	}
 	err = fechABI.UnpackIntoInterface(&out, consensus.NewgetAllBoeNodes, result)
 
 	if err != nil {
-		return nil, errors.New("Unpack error")
+		return nil, errors.New("GetAllBoeNodes_Election Unpack error")
 	}
 	return out.Coinbases, nil
 }
@@ -215,18 +215,18 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 
 	//get bootnode info "addr,cid,hid"
 	packres, _ := fechABI.Pack(consensus.NewfetchVoteInfoForCandidate, boeaddr)
-	log.Trace("GetNodeinfoFromElectContract", "packres", common.ToHex(packres))
+	log.Trace("GetAllVorter_Election", "packres", common.ToHex(packres))
 	result, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
 	if err != nil {
-		log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+		log.Error("GetAllVorter_Election bootnode info from InnerCall fail", "err", err)
 		return nil, err
 	} else {
 		if result == nil || len(result) == 0 {
-			log.Error("GetNodeinfoFromElectContract bootnode info from InnerCall fail", "err", err)
+			log.Error("GetAllVorter_Election bootnode info from InnerCall fail", "err", err)
 			return nil, errors.New("return bootnode info result is nil or length is 0")
 		}
 	}
-	log.Trace("GetNodeinfoFromElectContract", "result", common.ToHex(result))
+	log.Info("GetAllVorter_Election", "result", common.ToHex(result))
 	var out struct {
 		Coinbases []common.Address
 		nums      []int64
@@ -234,7 +234,7 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 	err = fechABI.UnpackIntoInterface(&out, consensus.NewfetchVoteInfoForCandidate, result)
 
 	if err != nil {
-		return nil, errors.New("Unpack error")
+		return nil, errors.New("GetAllVorter_Election Unpack error")
 	}
 
 	return out.Coinbases, nil
@@ -265,7 +265,7 @@ func GetOlderVorter(chain consensus.ChainReader, header *types.Header, state *st
 		err = fechABI.UnpackIntoInterface(&result, consensus.NewfetchVoteInfoForCandidate, resultvote)
 		if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
 			log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
-			return nil, nil
+			return result.CandidateAddrs, nil
 		}
 		return result.CandidateAddrs, nil
 
