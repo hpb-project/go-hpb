@@ -273,6 +273,9 @@ func (api *PublicHpbAPI) GetLogsAndIntxFromPending(intxs []string) string {
 		}
 	} else if len(pendingtxs) == 1 {
 		pendingtx := api.e.ApiBackend.GetPoolTransaction(pendingtxs[0])
+		if pendingtx == nil {
+			return ""
+		}
 		state.Prepare(pendingtx.Hash(), common.Hash{}, 0)
 		err, logs, diffinfo := api.committx(api.e.ApiBackend.ChainConfig(), pendingtx, api.e.hpberbase, gp, state, header)
 		log.Info("committx", "err", err, "diffinfo", diffinfo, "logs", logs)
@@ -326,6 +329,9 @@ func (api *PublicHpbAPI) GetLogsAndIntxFromPending(intxs []string) string {
 				txindex++
 			}
 		}
+	}
+	if len(result) == 0 {
+		return ""
 	}
 
 	jsons, errs := json.Marshal(result)
