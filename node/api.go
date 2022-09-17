@@ -26,7 +26,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/network/p2p/discover"
 
 	bc "github.com/hpb-project/go-hpb/blockchain"
@@ -70,6 +72,22 @@ func (statediff StateDiff) MarshalJSON() ([]byte, error) {
 		"txhash":     statediff.txhash,
 		"state_diff": statediff.accountdiff,
 		"evmdiff":    statediff.evmdiff,
+	})
+}
+
+type PendingLogs struct {
+	txhash  common.Hash
+	logs    []*types.Log
+	evmdiff string
+	msg     string
+}
+
+func (self PendingLogs) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"txhash":  self.txhash,
+		"logs":    self.logs,
+		"evmdiff": self.evmdiff,
+		"message": self.msg,
 	})
 }
 
@@ -136,6 +154,183 @@ func (api *PublicHpbAPI) Coinbase() (common.Address, error) {
 // Mining returns the miner is mining
 func (api *PublicHpbAPI) Mining() bool {
 	return api.e.miner.Mining()
+}
+
+func (api *PublicHpbAPI) committx(config *config.ChainConfig, tx *types.Transaction, coinbase common.Address, gp *bc.GasPool, state *state.StateDB, header *types.Header) (error, []*types.Log, string) {
+	var receipt *types.Receipt
+	var statediff string
+	var err error
+	snap := state.Snapshot()
+	blockchain := bc.InstanceBlockChain()
+	bNewVersion := header.Number.Uint64() > consensus.NewContractVersion
+	if bNewVersion {
+		if (tx.To() == nil && len(tx.Data()) > 0) || (tx.To() != nil && len(state.GetCode(*tx.To())) > 0) {
+			statediff, receipt, _, err = bc.ApplyTransaction(config, blockchain, &coinbase, gp, state, header, tx, header.GasUsed)
+			if err != nil {
+				state.RevertToSnapshot(snap)
+				return err, nil, ""
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(config, blockchain, &coinbase, gp, state, header, tx, header.GasUsed)
+			if err != nil {
+				state.RevertToSnapshot(snap)
+				return err, nil, ""
+			}
+		}
+	} else {
+		if len(tx.Data()) > 0 {
+			statediff, receipt, _, err = bc.ApplyTransaction(config, blockchain, &coinbase, gp, state, header, tx, header.GasUsed)
+			if err != nil {
+				state.RevertToSnapshot(snap)
+				return err, nil, ""
+			}
+		} else {
+			receipt, _, err = bc.ApplyTransactionNonContract(config, blockchain, &coinbase, gp, state, header, tx, header.GasUsed)
+			if err != nil {
+				state.RevertToSnapshot(snap)
+				return err, nil, ""
+			}
+		}
+	}
+	return nil, receipt.Logs, statediff
+}
+
+func (api *PublicHpbAPI) GetLogsAndIntxFromPending(intxs []string) string {
+	log.Info("GetLogsAndIntxFromPending", "input", intxs, "length", len(intxs))
+	var pendingtxs []common.Hash
+	var pendingtxsMap = make(map[common.Hash]bool)
+	for _, tx := range intxs {
+		pendingtxs = append(pendingtxs, common.HexToHash(tx))
+		pendingtxsMap[common.HexToHash(tx)] = true
+	}
+	parent := api.e.BlockChain().CurrentBlock()
+	num := parent.Number()
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num.Add(num, common.Big1),
+		GasLimit:   bc.CalcGasLimit(parent),
+		GasUsed:    new(big.Int),
+		Time:       big.NewInt(time.Now().Unix()),
+		Difficulty: big.NewInt(2),
+	}
+	var extra *types.ExtraDetail
+	if header.Number.Uint64() >= consensus.StageNumberRealRandom {
+		extra, _ = types.NewExtraDetail(types.ExtraVersion)
+	} else {
+		extra, _ = types.NewExtraDetail(0)
+	}
+	header.Extra = common.CopyBytes(extra.ToBytes())
+	state, err := api.e.BlockChain().StateAt(parent.Root())
+	if err != nil {
+		return "state error"
+	}
+	if err := api.e.Hpbengine.PrepareBlockHeader(api.e.BlockChain(), header, state); err != nil {
+		log.Info("Failed to prepare header for mining", "err", err)
+		header = &types.Header{
+			ParentHash:     parent.Hash(),
+			Number:         num.Add(num, common.Big1),
+			GasLimit:       bc.CalcGasLimit(parent),
+			GasUsed:        new(big.Int),
+			Time:           big.NewInt(time.Now().Unix()),
+			Difficulty:     big.NewInt(2),
+			Extra:          []byte{},
+			HardwareRandom: []byte{},
+		}
+	}
+	gp := new(bc.GasPool).AddGas(header.GasLimit.Uint64())
+	signer := types.NewBoeSigner(config.MainnetChainConfig.ChainId)
+	var result = []PendingLogs{}
+	if len(pendingtxs) == 0 {
+		txs, _ := api.e.Hpbtxpool.Pending()
+		log.Info("txlength", "txpool", len(txs))
+		if len(txs) > 0 {
+			newtxs := types.NewTransactionsByPriceAndNonce(signer, txs)
+			txindex := 0
+			for {
+				pendingtx := newtxs.Peek()
+				if pendingtx == nil {
+					break
+				}
+				state.Prepare(pendingtx.Hash(), common.Hash{}, txindex)
+				err, logs, diffinfo := api.committx(api.e.ApiBackend.ChainConfig(), pendingtx, api.e.hpberbase, gp, state, header)
+				log.Info("committx", "err", err, "diffinfo", diffinfo, "logs", logs)
+				msg := ""
+				if err == nil {
+					msg = "success"
+				} else {
+					msg = err.Error()
+				}
+				pendinglogs := PendingLogs{
+					txhash:  pendingtx.Hash(),
+					logs:    logs,
+					evmdiff: diffinfo,
+					msg:     msg,
+				}
+				result = append(result, pendinglogs)
+				newtxs.Shift()
+				txindex++
+			}
+		}
+	} else if len(pendingtxs) == 1 {
+		pendingtx := api.e.ApiBackend.GetPoolTransaction(pendingtxs[0])
+		state.Prepare(pendingtx.Hash(), common.Hash{}, 0)
+		err, logs, diffinfo := api.committx(api.e.ApiBackend.ChainConfig(), pendingtx, api.e.hpberbase, gp, state, header)
+		log.Info("committx", "err", err, "diffinfo", diffinfo, "logs", logs)
+		msg := ""
+		if err == nil {
+			msg = "success"
+		} else {
+			msg = err.Error()
+		}
+		pendinglogs := PendingLogs{
+			txhash:  pendingtx.Hash(),
+			logs:    logs,
+			evmdiff: diffinfo,
+			msg:     msg,
+		}
+		result = append(result, pendinglogs)
+	} else {
+		txs, _ := api.e.Hpbtxpool.Pending()
+		if len(txs) > 0 {
+			txindex := 0
+			newtxs := types.NewTransactionsByPriceAndNonce(signer, txs)
+			for {
+
+				pendingtx := newtxs.Peek()
+				log.Info("txlength", "txpool", pendingtx)
+				if pendingtx == nil {
+					break
+				}
+				if !pendingtxsMap[pendingtx.Hash()] {
+					newtxs.Shift()
+					continue
+				}
+				state.Prepare(pendingtx.Hash(), common.Hash{}, txindex)
+
+				err, logs, diffinfo := api.committx(api.e.ApiBackend.ChainConfig(), pendingtx, api.e.hpberbase, gp, state, header)
+				msg := ""
+				if err == nil {
+					msg = "success"
+					newtxs.Shift()
+				} else {
+					msg = err.Error()
+					newtxs.Pop()
+				}
+				pendinglogs := PendingLogs{
+					txhash:  pendingtx.Hash(),
+					logs:    logs,
+					evmdiff: diffinfo,
+					msg:     msg,
+				}
+				result = append(result, pendinglogs)
+				txindex++
+			}
+		}
+	}
+
+	jsons, errs := json.Marshal(result)
+	log.Info("json----", "jsons", string(jsons), "errs", errs)
+	return string(jsons)
 }
 
 func (api *PublicHpbAPI) GetStatediffbyblockandTx(data string, hash string) string {

@@ -95,6 +95,12 @@ web3._extend({
 	property: 'prometheus',
 	methods: [
 		new web3._extend.Method({
+			name: 'getElectedMiner',
+			call: 'prometheus_getElectedMiner',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getHpbNodeSnap',
 			call: 'prometheus_getHpbNodeSnap',
 			params: 1,
@@ -116,18 +122,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getCandidateNodeSnap',
 			call: 'prometheus_getCandidateNodeSnap',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'getAllVoters',
-			call: 'prometheus_getAllVoters',
-			params: 2,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'getAllHpbNodes',
-			call: 'prometheus_getAllHpbNodes',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		})
@@ -390,6 +384,12 @@ web3._extend({
 	property: 'hpb',
 	methods: [
 		new web3._extend.Method({
+			name: 'getRandomAndBlock',
+			call: 'hpb_getRandomAndBlock',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'chainId',
 			call: 'hpb_chainId',
 			params: 0
@@ -399,6 +399,12 @@ web3._extend({
 			call: 'hpb_getRandom',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getLogsAndIntxFromPending',
+			call: 'hpb_getLogsAndIntxFromPending',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'getStatediffbyblock',
