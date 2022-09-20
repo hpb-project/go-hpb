@@ -124,6 +124,18 @@ web3._extend({
 			call: 'prometheus_getCandidateNodeSnap',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getAllVoters',
+			call: 'prometheus_getAllVoters',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getAllHpbNodes',
+			call: 'prometheus_getAllHpbNodes',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	]
 });
