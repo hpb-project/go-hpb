@@ -17,6 +17,9 @@
 package prometheus
 
 import (
+	"errors"
+	"math/big"
+
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
@@ -24,7 +27,6 @@ import (
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"math/big"
 )
 
 type API struct {
@@ -124,4 +126,48 @@ func (api *API) Discard(address common.Address, confRand string) {
 	api.prometheus.lock.Lock()
 	defer api.prometheus.lock.Unlock()
 	delete(api.prometheus.proposals, address)
+}
+
+func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, error) {
+	blockchain := api.chain
+	var header *types.Header
+	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
+		header = blockchain.CurrentHeader()
+	} else {
+		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
+	}
+	if header == nil {
+		return nil, errors.New("get header error")
+	}
+	state, err := blockchain.StateAt(header.Root)
+	if err != nil {
+		return nil, errors.New("get state error")
+	}
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		return voting.GetAllBoeNodes_Election(blockchain, header, state)
+	}
+
+	return api.GetHpbNodes(blocknum)
+}
+
+func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) ([]common.Address, []*big.Int, error) {
+	blockchain := api.chain
+	var header *types.Header
+	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
+		header = blockchain.CurrentHeader()
+	} else {
+		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
+	}
+	if header == nil {
+		return nil, nil, errors.New("get header error")
+	}
+	state, err := blockchain.StateAt(header.Root)
+	if err != nil {
+		return nil, nil, errors.New("get state error")
+	}
+	if header.Number.Uint64() > consensus.StageNumberElection {
+		return voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
+	}
+
+	return voting.GetOlderVorter(blockchain, header, state, boeaddr)
 }
