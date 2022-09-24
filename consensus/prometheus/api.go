@@ -18,15 +18,15 @@ package prometheus
 
 import (
 	"errors"
+	"math/big"
+
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
-	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
 	"github.com/hpb-project/go-hpb/network/rpc"
-	"math/big"
 )
 
 type API struct {
@@ -134,7 +134,6 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
 		header = blockchain.CurrentHeader()
 	} else {
-		log.Debug("getRandom", "num", blocknum.Int64())
 		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
 	}
 	if header == nil {
@@ -144,7 +143,6 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 	if err != nil {
 		return nil, errors.New("get state error")
 	}
-	log.Info("StageNumberElection", "StageNumberElection", consensus.StageNumberElection)
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		return voting.GetAllBoeNodes_Election(blockchain, header, state)
 	}
@@ -152,23 +150,21 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 	return api.GetHpbNodes(blocknum)
 }
 
-func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) ([]common.Address, error) {
+func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) ([]common.Address, []*big.Int, error) {
 	blockchain := api.chain
 	var header *types.Header
 	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
 		header = blockchain.CurrentHeader()
 	} else {
-		log.Debug("getRandom", "num", blocknum.Int64())
 		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
 	}
 	if header == nil {
-		return nil, errors.New("get header error")
+		return nil, nil, errors.New("get header error")
 	}
 	state, err := blockchain.StateAt(header.Root)
 	if err != nil {
-		return nil, errors.New("get state error")
+		return nil, nil, errors.New("get state error")
 	}
-	log.Info("StageNumberElection", "StageNumberElection", consensus.StageNumberElection)
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		return voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
 	}
