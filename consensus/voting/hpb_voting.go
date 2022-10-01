@@ -201,6 +201,7 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 			index = index + 1
 		}
 	}
-
+	log.Error("getvoters", "voters", out.Coinbases)
+	log.Error("getvoters", "nums", out.nums)
 	return out.Coinbases, out.nums, nil
 }

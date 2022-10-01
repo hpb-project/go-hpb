@@ -23,6 +23,7 @@ import (
 	bc "github.com/hpb-project/go-hpb/blockchain"
 	"github.com/hpb-project/go-hpb/blockchain/types"
 	"github.com/hpb-project/go-hpb/common"
+	"github.com/hpb-project/go-hpb/common/log"
 	"github.com/hpb-project/go-hpb/consensus"
 	"github.com/hpb-project/go-hpb/consensus/snapshots"
 	"github.com/hpb-project/go-hpb/consensus/voting"
@@ -158,7 +159,7 @@ type VoterInfo struct {
 func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) (*VoterInfo, error) {
 	blockchain := api.chain
 	var header *types.Header
-	var voterinfo *VoterInfo
+	var voterinfo *VoterInfo = &VoterInfo{}
 	var votererror error
 	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
 		header = blockchain.CurrentHeader()
@@ -177,6 +178,9 @@ func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) 
 		voterinfo.voters = voters
 		voterinfo.nums = nums
 		votererror = gerr
+		log.Error("getvoters", "voters", voterinfo.voters)
+		log.Error("getvoters", "nums", voterinfo.nums)
+		log.Error("getvoters", "error", votererror)
 	}
 	return voterinfo, votererror
 }
