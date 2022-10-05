@@ -17,7 +17,6 @@
 package prometheus
 
 import (
-	"encoding/json"
 	"errors"
 	"math/big"
 
@@ -152,18 +151,11 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 }
 
 type VoterInfo struct {
-	voters []common.Address
-	nums   []uint64
+	Voters []common.Address `json:"voters"       gencodec:"required"`
+	Nums   []uint64         `json:"nums"       gencodec:"required"`
 }
 
-func (voterinfo VoterInfo) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"voters": voterinfo.voters,
-		"nums":   voterinfo.nums,
-	})
-}
-
-func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) (string, error) {
+func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) (*VoterInfo, error) {
 	blockchain := api.chain
 	var header *types.Header
 	var voterinfo *VoterInfo = &VoterInfo{}
@@ -174,18 +166,17 @@ func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) 
 		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
 	}
 	if header == nil {
-		return "", errors.New("get header error")
+		return nil, errors.New("get header error")
 	}
 	state, err := blockchain.StateAt(header.Root)
 	if err != nil {
-		return "", errors.New("get state error")
+		return nil, errors.New("get state error")
 	}
 	if header.Number.Uint64() > consensus.StageNumberElection {
 		voters, nums, gerr := voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
-		voterinfo.voters = voters
-		voterinfo.nums = nums
+		voterinfo.Voters = voters
+		voterinfo.Nums = nums
 		votererror = gerr
 	}
-	data, _ := json.Marshal(voterinfo)
-	return string(data), votererror
+	return voterinfo, votererror
 }
