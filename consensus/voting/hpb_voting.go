@@ -165,7 +165,7 @@ func GetAllBoeNodes_Election(chain consensus.ChainReader, header *types.Header, 
 	return out.Coinbases, nil
 }
 
-func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, []*big.Int, error) {
+func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, []uint64, error) {
 
 	fechaddr := common.HexToAddress(consensus.VoteAddress)
 	vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
@@ -183,7 +183,7 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 	}
 	var out struct {
 		Coinbases []common.Address
-		nums      []*big.Int
+		nums      []uint64
 	}
 
 	if len(result) > 64 {
@@ -196,40 +196,10 @@ func GetAllVorter_Election(chain consensus.ChainReader, header *types.Header, st
 		}
 		index = index + 1
 		for index < 2*length {
-			out.nums = append(out.nums, new(big.Int).SetBytes(result[base+index*32:base+index*32+32]))
+			num := new(big.Int).SetBytes(result[base+index*32 : base+index*32+32])
+			out.nums = append(out.nums, num.Uint64())
 			index = index + 1
 		}
 	}
-
 	return out.Coinbases, out.nums, nil
-}
-
-func GetOlderVorter(chain consensus.ChainReader, header *types.Header, state *state.StateDB, boeaddr common.Address) ([]common.Address, []*big.Int, error) {
-	var result struct {
-		CandidateAddrs []common.Address
-		Nums           []*big.Int
-	}
-	if header.Number.Uint64() > consensus.NewContractVersion {
-		fechaddr := common.HexToAddress(consensus.NewContractAddr)
-		vmenv := vm.NewEVMForGeneration(&config.GetHpbConfigInstance().BlockChain, header, header.Coinbase, state,
-			func(u uint64) common.Hash { return chain.GetHeaderByNumber(u).Hash() }, 1000)
-		fechABI, _ := abi.JSON(strings.NewReader(consensus.NewfetchVoteInfoForCandidateABI))
-		packres, _ := fechABI.Pack(consensus.NewfetchVoteInfoForCandidate, boeaddr)
-		resultvote, err := vmenv.InnerCall(vmcore.AccountRef(header.Coinbase), fechaddr, packres)
-		if err != nil {
-			return nil, nil, err
-		} else {
-			if resultvote == nil || len(resultvote) == 0 {
-				return nil, nil, errors.New("return resultaddr is nil or length is 0")
-			}
-		}
-		err = fechABI.UnpackIntoInterface(&result, consensus.NewfetchVoteInfoForCandidate, resultvote)
-		if len(result.CandidateAddrs) == 0 || len(result.Nums) == 0 || len(result.CandidateAddrs) != len(result.Nums) {
-			log.Error("getVote err", "len(addrs)", len(result.CandidateAddrs), "len(nums)", len(result.Nums), "err", err)
-			return result.CandidateAddrs, result.Nums, nil
-		}
-		return result.CandidateAddrs, result.Nums, nil
-
-	}
-	return result.CandidateAddrs, result.Nums, nil
 }

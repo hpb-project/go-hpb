@@ -150,24 +150,33 @@ func (api *API) GetAllHpbNodes(blocknum *rpc.BlockNumber) ([]common.Address, err
 	return api.GetHpbNodes(blocknum)
 }
 
-func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) ([]common.Address, []*big.Int, error) {
+type VoterInfo struct {
+	Voters []common.Address `json:"voters"       gencodec:"required"`
+	Nums   []uint64         `json:"nums"       gencodec:"required"`
+}
+
+func (api *API) GetAllVoters(boeaddr common.Address, blocknum *rpc.BlockNumber) (*VoterInfo, error) {
 	blockchain := api.chain
 	var header *types.Header
+	var voterinfo *VoterInfo = &VoterInfo{}
+	var votererror error
 	if blocknum == nil || *blocknum == rpc.LatestBlockNumber {
 		header = blockchain.CurrentHeader()
 	} else {
 		header = blockchain.GetHeaderByNumber(uint64(blocknum.Int64()))
 	}
 	if header == nil {
-		return nil, nil, errors.New("get header error")
+		return nil, errors.New("get header error")
 	}
 	state, err := blockchain.StateAt(header.Root)
 	if err != nil {
-		return nil, nil, errors.New("get state error")
+		return nil, errors.New("get state error")
 	}
 	if header.Number.Uint64() > consensus.StageNumberElection {
-		return voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
+		voters, nums, gerr := voting.GetAllVorter_Election(blockchain, header, state, boeaddr)
+		voterinfo.Voters = voters
+		voterinfo.Nums = nums
+		votererror = gerr
 	}
-
-	return voting.GetOlderVorter(blockchain, header, state, boeaddr)
+	return voterinfo, votererror
 }
