@@ -809,9 +809,10 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	clog.Info("Verify the remote hardware.", "id", c.id.TerminalString(), "result", c.isboe)
 
 	if !srv.TestMode && srv.localType == discover.SynNode && c.isboe == false {
-		clog.Debug("SynNode peer SynNode, dorp peer.")
-		c.close(DiscHwSignError)
-		return
+		clog.Debug("SynNode peer SynNode, add peer.")
+		//clog.Debug("SynNode peer SynNode, dorp peer.")
+		//c.close(DiscHwSignError)
+		//return
 	}
 
 	{
